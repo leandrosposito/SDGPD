@@ -1,0 +1,36 @@
+.tabs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: 100%;
+}
+
+.tabs__header {
+  display: flex;
+  align-items: center;
+  border-bottom: 0.0625rem solid var(--color-border);
+  gap: var(--space-6);
+}
+
+.tabs__btn {
+  padding: var(--space-3) 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  border-bottom: 0.125rem solid transparent;
+  transition: color var(--transition-fast), border-color var(--transition-fast);
+  margin-bottom: -0.0625rem;
+}
+
+.tabs__btn:hover {
+  color: var(--color-text-primary);
+}
+
+.tabs__btn--active {
+  color: var(--color-accent-light);
+  border-bottom-color: var(--color-accent-light);
+}
+
+.tabs__content {
+  width: 100%;
+}

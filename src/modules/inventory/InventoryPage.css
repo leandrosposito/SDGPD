@@ -1,0 +1,92 @@
+.inventory-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.page-header__title-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-1);
+}
+
+.inventory-page__tab-content {
+  padding-top: var(--space-4);
+}
+
+.inventory-page__btn-new {
+  background: var(--color-accent);
+  color: white;
+  padding: var(--space-2) var(--space-6);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  transition: background-color var(--transition-fast);
+}
+
+.inventory-page__btn-new:hover {
+  background: var(--color-accent-hover);
+}
+
+.inventory-page__stock-cell {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.text-warning {
+  color: var(--color-warning);
+}
+
+.inventory-page__actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.btn-action {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-sm);
+  transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.btn-action:hover {
+  background: var(--color-accent);
+  color: white;
+}
+
+.btn-action--outline {
+  background: transparent;
+  color: var(--color-accent);
+  border: 0.0625rem solid var(--color-accent);
+}
+
+.btn-action--outline:hover {
+  background: var(--color-accent);
+  color: white;
+}
+
+.btn-action--ghost {
+  background: transparent;
+  color: var(--color-text-secondary);
+  border: 0.0625rem solid transparent;
+}
+
+.btn-action--ghost:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+}
+
+.btn-action--ghost.text-danger:hover {
+  background: var(--color-danger);
+  color: white;
+}
+
+.font-mono {
+  font-family: var(--font-family-mono);
+}

@@ -1,7 +1,14 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppShell } from '../components/layout/AppShell';
 import { DashboardPage } from '../modules/dashboard/DashboardPage';
-import { PlaceholderPage } from '../components/layout/PlaceholderPage';
+import { ClientsPage } from '../modules/clients/ClientsPage';
+import { InventoryPage } from '../modules/inventory/InventoryPage';
+import { LogisticsPage } from '../modules/logistics/LogisticsPage';
+import { CashPage } from '../modules/cash/CashPage';
+import { SuppliersPage } from '../modules/suppliers/SuppliersPage';
+import { OrdersPage } from '../modules/orders/OrdersPage';
+import { AnalyticsPage } from '../modules/analytics/AnalyticsPage';
+
 
 // ============================================================
 // AppRouter — Application routes (React Router v6)
@@ -20,56 +27,43 @@ export function AppRouter() {
           {/* Pedidos y Ventas */}
           <Route
             path="pedidos"
-            element={
-              <PlaceholderPage
-                title="Pedidos y Ventas"
-                description="Gestion de pedidos en tiempo real, detalle de cada pedido, estado de preparacion y seguimiento de ventas."
-              />
-            }
+            element={<OrdersPage />}
           />
 
           {/* Inventario */}
           <Route
             path="inventario"
-            element={
-              <PlaceholderPage
-                title="Inventario y Categorias"
-                description="ABM de productos, control de stock, alertas de bajo inventario, actualizacion de precios y categorizacion."
-              />
-            }
+            element={<InventoryPage />}
           />
 
           {/* Clientes */}
           <Route
             path="clientes"
-            element={
-              <PlaceholderPage
-                title="Directorio de Clientes"
-                description="Fichas individuales, historial de compras, nivel de deuda y asociacion a zonas geograficas."
-              />
-            }
+            element={<ClientsPage />}
           />
 
           {/* Proveedores */}
           <Route
             path="proveedores"
-            element={
-              <PlaceholderPage
-                title="Gestion de Proveedores"
-                description="Base de datos de fabricantes, seguimiento de ordenes de compra para reponer stock y contactos comerciales."
-              />
-            }
+            element={<SuppliersPage />}
           />
 
           {/* Logistica */}
           <Route
             path="logistica"
-            element={
-              <PlaceholderPage
-                title="Logistica y Rutas"
-                description="Asignacion de pedidos a repartidores, organizacion de zonas de reparto y seguimiento de entregas."
-              />
-            }
+            element={<LogisticsPage />}
+          />
+
+          {/* Caja */}
+          <Route
+            path="caja"
+            element={<CashPage />}
+          />
+
+          {/* Analitica */}
+          <Route
+            path="analitica"
+            element={<AnalyticsPage />}
           />
 
           {/* Catch-all redirect */}

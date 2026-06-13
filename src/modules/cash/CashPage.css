@@ -1,0 +1,80 @@
+.cash-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.cash-page__btn-close {
+  background: var(--color-accent);
+  color: white;
+  padding: var(--space-2) var(--space-6);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  transition: background-color var(--transition-fast);
+}
+
+.cash-page__btn-close:hover {
+  background: var(--color-accent-hover);
+}
+
+.cash-page__summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-5);
+}
+
+.cash-card {
+  background: var(--color-bg-surface);
+  border: 0.0625rem solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.cash-card--highlight {
+  border-color: var(--color-accent-light);
+  box-shadow: var(--shadow-accent);
+}
+
+.cash-card__label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wide);
+  font-weight: var(--font-weight-medium);
+}
+
+.cash-card__value {
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  line-height: 1;
+}
+
+.cash-page__columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-6);
+}
+
+.cash-page__col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.cash-page__col-title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+}
+
+@media (max-width: 64rem) {
+  .cash-page__summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .cash-page__columns {
+    grid-template-columns: 1fr;
+  }
+}

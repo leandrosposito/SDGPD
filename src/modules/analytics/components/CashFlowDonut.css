@@ -1,0 +1,49 @@
+.cashflow-donut__layout {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  flex: 1;
+  min-height: 0;
+}
+
+.cashflow-donut__chart {
+  position: relative;
+  width: 10rem;
+  height: 10rem;
+  flex-shrink: 0;
+}
+
+.cashflow-donut__center-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.cashflow-donut__center-pct {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  line-height: 1;
+}
+
+.cashflow-donut__center-sub {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wide);
+  margin-top: var(--space-1);
+}
+
+.cashflow-donut__net {
+  border-top: 0.0625rem solid var(--color-border);
+  padding-top: var(--space-3);
+  margin-top: var(--space-1);
+}
+
+.cashflow-donut__net .chart-legend__value {
+  color: var(--color-success);
+}

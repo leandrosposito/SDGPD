@@ -1,0 +1,88 @@
+.supplier-detail__tab-content {
+  padding-top: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.supplier-detail__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.supplier-detail__section-title {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wider);
+  padding-bottom: var(--space-2);
+  border-bottom: 0.0625rem solid var(--color-border);
+}
+
+.supplier-detail__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+.supplier-detail__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.supplier-detail__field--full {
+  grid-column: 1 / -1;
+}
+
+.supplier-detail__label {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wide);
+}
+
+.supplier-detail__value {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+}
+
+.supplier-detail__balance-card {
+  background: var(--color-bg-subtle);
+  border: 0.0625rem solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4) var(--space-5);
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.supplier-detail__balance-label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  flex: 1;
+}
+
+.supplier-detail__balance-amount {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+}
+
+.sp-btn-order {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-accent-light);
+  background: var(--color-accent-muted);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-sm);
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+  white-space: nowrap;
+}
+
+.sp-btn-order:hover {
+  background: var(--color-accent);
+  color: white;
+}

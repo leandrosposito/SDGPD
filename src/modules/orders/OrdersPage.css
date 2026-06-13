@@ -1,0 +1,53 @@
+.orders-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.orders-page__btn-new {
+  background: var(--color-accent);
+  color: white;
+  padding: var(--space-2) var(--space-5);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  transition: background-color var(--transition-fast);
+  white-space: nowrap;
+}
+
+.orders-page__btn-new:hover {
+  background: var(--color-accent-hover);
+}
+
+.orders-page__content {
+  width: 100%;
+}
+
+.orders-page__order-number {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-accent-light);
+}
+
+.orders-page__client-cell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.orders-page__row-btn {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-accent-light);
+  background: var(--color-accent-muted);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-sm);
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+  white-space: nowrap;
+}
+
+.orders-page__row-btn:hover {
+  background: var(--color-accent);
+  color: white;
+}

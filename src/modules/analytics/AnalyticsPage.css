@@ -1,0 +1,47 @@
+.analytics-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+/* KPI grid */
+.analytics-page__kpis {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-5);
+}
+
+/* Primary chart row: wide line chart + narrow bar chart */
+.analytics-page__charts-primary {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: var(--space-5);
+  min-height: 20rem;
+}
+
+/* Secondary chart row: donut + debtors table */
+.analytics-page__charts-secondary {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: var(--space-5);
+  min-height: 18rem;
+}
+
+.analytics-page__chart-main,
+.analytics-page__chart-side,
+.analytics-page__chart-donut,
+.analytics-page__chart-debtors {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+@media (max-width: 72rem) {
+  .analytics-page__kpis {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .analytics-page__charts-primary,
+  .analytics-page__charts-secondary {
+    grid-template-columns: 1fr;
+  }
+}

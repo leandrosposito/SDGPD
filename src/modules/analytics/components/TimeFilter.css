@@ -1,0 +1,30 @@
+.time-filter {
+  display: flex;
+  align-items: center;
+  background-color: var(--color-bg-subtle);
+  border: 0.0625rem solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-1);
+  gap: var(--space-1);
+}
+
+.time-filter__btn {
+  padding: var(--space-1) var(--space-4);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  border-radius: var(--radius-sm);
+  transition: color var(--transition-fast), background-color var(--transition-fast);
+  white-space: nowrap;
+}
+
+.time-filter__btn:hover {
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-hover);
+}
+
+.time-filter__btn--active {
+  background-color: var(--color-bg-surface);
+  color: var(--color-accent-light);
+  box-shadow: var(--shadow-sm);
+}

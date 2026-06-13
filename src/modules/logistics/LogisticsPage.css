@@ -1,0 +1,106 @@
+.logistics-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  height: 100%;
+}
+
+.logistics-page__board {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-5);
+  flex: 1;
+  min-height: 0;
+}
+
+.logistics-page__column {
+  background: var(--color-bg-subtle);
+  border: 0.0625rem solid var(--color-border);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  max-height: 100%;
+}
+
+.logistics-page__column-header {
+  padding: var(--space-4);
+  border-bottom: 0.0625rem solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.logistics-page__column-title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wide);
+}
+
+.logistics-page__column-count {
+  background: var(--color-bg-hover);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-full);
+}
+
+.logistics-page__column-list {
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  overflow-y: auto;
+  flex: 1;
+}
+
+.logistics-card {
+  background: var(--color-bg-surface);
+  border: 0.0625rem solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  cursor: grab;
+  transition: box-shadow var(--transition-fast), border-color var(--transition-fast);
+}
+
+.logistics-card:hover {
+  border-color: var(--color-border-strong);
+  box-shadow: var(--shadow-sm);
+}
+
+.logistics-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+
+.logistics-card__id {
+  font-size: var(--font-size-xs);
+  font-family: var(--font-family-mono);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-accent-light);
+}
+
+.logistics-card__client {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-1);
+}
+
+.logistics-card__address {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+.logistics-card--empty {
+  text-align: center;
+  padding: var(--space-6);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+  border: 0.0625rem dashed var(--color-border);
+  border-radius: var(--radius-md);
+}

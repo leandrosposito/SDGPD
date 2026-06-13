@@ -60,6 +60,20 @@ const IconLogistics: FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
+const IconCash: FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <rect x="2" y="6" width="20" height="12" rx="2" stroke="currentColor" strokeWidth="1.75"/>
+    <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.75"/>
+    <path d="M6 12h.01M18 12h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+  </svg>
+);
+
+const IconAnalytics: FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <path d="M18 20V10M12 20V4M6 20v-6" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
 const IconCollapse: FC<{ className?: string }> = ({ className }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
     <path d="M11 19l-7-7 7-7M18 19l-7-7 7-7" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
@@ -73,6 +87,8 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'nav-clients',    label: 'Clientes',      path: '/clientes',   icon: IconClients },
   { id: 'nav-suppliers',  label: 'Proveedores',   path: '/proveedores',icon: IconSuppliers },
   { id: 'nav-logistics',  label: 'Logistica',     path: '/logistica',  icon: IconLogistics },
+  { id: 'nav-cash',       label: 'Caja',          path: '/caja',       icon: IconCash },
+  { id: 'nav-analytics',  label: 'Analitica',     path: '/analitica',  icon: IconAnalytics },
 ];
 
 interface SidebarProps {
