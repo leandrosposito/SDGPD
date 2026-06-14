@@ -15,6 +15,9 @@ export const SUPPLIERS_MOCK_DATA: Supplier[] = [
     address: 'Av. Corrientes 4521, Piso 8',
     city: 'Buenos Aires',
     paymentTerms: '30 dias',
+    category: 'Alimentos Secos',
+    pendingOrdersCount: 1,
+    daysUntilExpiration: 15,
     currentBalance: 95000,
     hasOverdueDebt: false,
     products: [
@@ -36,6 +39,9 @@ export const SUPPLIERS_MOCK_DATA: Supplier[] = [
     address: 'Ruta Provincial 5, Km 12',
     city: 'Apostoles, Misiones',
     paymentTerms: '60 dias',
+    category: 'Infusiones',
+    pendingOrdersCount: 0,
+    daysUntilExpiration: null,
     currentBalance: 210000,
     hasOverdueDebt: true,
     products: [
@@ -57,6 +63,9 @@ export const SUPPLIERS_MOCK_DATA: Supplier[] = [
     address: 'Av. del Libertador 7208',
     city: 'Buenos Aires',
     paymentTerms: '15 dias',
+    category: 'Golosinas',
+    pendingOrdersCount: 2,
+    daysUntilExpiration: 5,
     currentBalance: 0,
     hasOverdueDebt: false,
     products: [

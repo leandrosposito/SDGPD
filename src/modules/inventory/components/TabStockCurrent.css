@@ -1,0 +1,46 @@
+.tab-stock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.tab-stock__kpis {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+}
+
+.tab-stock__kpi-card {
+  background: var(--color-bg-elevated);
+  border: 0.0625rem solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.tab-stock__kpi-label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-medium);
+}
+
+.tab-stock__kpi-value {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+}
+
+.tab-stock__content {
+  background: var(--color-bg-elevated);
+  border: 0.0625rem solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+@media (max-width: 64rem) {
+  .tab-stock__kpis {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

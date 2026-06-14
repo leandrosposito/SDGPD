@@ -1,80 +1,267 @@
+/* ============================================================
+   Cash Page Root Layout
+   ============================================================ */
+
 .cash-page {
   display: flex;
   flex-direction: column;
   gap: var(--space-6);
+  height: 100%;
 }
 
-.cash-page__btn-close {
-  background: var(--color-accent);
-  color: white;
-  padding: var(--space-2) var(--space-6);
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-  transition: background-color var(--transition-fast);
-}
+/* ============================================================
+   KPIs & Expense Widget
+   ============================================================ */
 
-.cash-page__btn-close:hover {
-  background: var(--color-accent-hover);
-}
-
-.cash-page__summary {
+.cash-kpis {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: var(--space-5);
+  grid-template-columns: repeat(6, 1fr);
+  gap: var(--space-4);
 }
 
-.cash-card {
+.cash-kpi-card {
+  grid-column: span 1;
+  background: var(--color-bg-surface);
+  border: 0.0625rem solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-1);
+  min-height: 4.5rem;
+}
+
+.cash-kpi-card--highlight {
+  border-color: var(--color-accent-light);
+  box-shadow: var(--shadow-accent);
+}
+
+.cash-kpi-card__label {
+  font-size: 0.7rem;
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wide);
+  font-weight: var(--font-weight-semibold);
+}
+
+.cash-kpi-card__value {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  line-height: 1;
+  color: var(--color-text-primary);
+}
+
+/* Widget Analysis */
+.cash-expense-widget {
+  background: var(--color-bg-base);
+  border: 0.0625rem solid var(--color-border);
+  border-top: 0.25rem solid var(--color-danger);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--space-3);
+  grid-column: span 2;
+}
+
+.cash-expense-widget__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cash-expense-widget__title {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wide);
+  font-weight: var(--font-weight-semibold);
+}
+
+.cash-expense-widget__trend {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-subtle);
+}
+
+.cash-expense-widget__trend.text-danger {
+  color: var(--color-danger);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.cash-expense-widget__trend.text-success {
+  color: var(--color-success);
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.cash-expense-widget__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  flex: 1;
+  justify-content: center;
+}
+
+.cash-expense-widget__item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.cash-expense-widget__item-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.cash-expense-widget__bar-bg {
+  width: 100%;
+  height: 0.25rem;
+  background: var(--color-border);
+  border-radius: var(--radius-full);
+}
+
+.cash-expense-widget__bar-fill {
+  height: 100%;
+  background: var(--color-danger);
+  border-radius: var(--radius-full);
+}
+
+/* ============================================================
+   Transactions Table
+   ============================================================ */
+
+.cash-page__table-container {
   background: var(--color-bg-surface);
   border: 0.0625rem solid var(--color-border);
   border-radius: var(--radius-lg);
   padding: var(--space-5);
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-4);
+  flex: 1;
+  min-height: 0; /* allows scrolling if table is large */
+  overflow: hidden;
 }
 
-.cash-card--highlight {
-  border-color: var(--color-accent-light);
-  box-shadow: var(--shadow-accent);
+.cash-page__table-title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
 }
 
-.cash-card__label {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-tertiary);
-  text-transform: uppercase;
-  letter-spacing: var(--letter-spacing-wide);
+.cash-transactions-table-wrapper {
+  overflow-y: auto;
+  flex: 1;
+}
+
+.cash-type-indicator {
+  display: inline-flex;
+  align-items: center;
   font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-sm);
 }
 
-.cash-card__value {
-  font-size: var(--font-size-3xl);
-  font-weight: var(--font-weight-bold);
-  line-height: 1;
+.cash-entity {
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
 }
 
-.cash-page__columns {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-6);
+.cash-voucher {
+  color: var(--color-accent-light);
+  text-decoration: underline;
+  cursor: pointer;
+  transition: color var(--transition-fast) ease;
 }
 
-.cash-page__col {
+.cash-voucher:hover {
+  color: var(--color-accent-hover);
+}
+
+/* ============================================================
+   Modal Forms
+   ============================================================ */
+
+.cash-modal-form {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
 }
 
-.cash-page__col-title {
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
+.cash-type-toggle {
+  display: flex;
+  gap: var(--space-2);
+  background: var(--color-bg-subtle);
+  padding: var(--space-1);
+  border-radius: var(--radius-md);
 }
 
-@media (max-width: 64rem) {
-  .cash-page__summary {
-    grid-template-columns: repeat(2, 1fr);
+.cash-toggle-btn {
+  flex: 1;
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: all var(--transition-fast) ease;
+}
+
+.cash-toggle-btn.active {
+  background: var(--color-bg-surface);
+  box-shadow: var(--shadow-sm);
+  color: var(--color-text-primary);
+}
+
+.cash-toggle-btn.active.success {
+  border-bottom: 0.125rem solid var(--color-success);
+}
+
+.cash-toggle-btn.active.danger {
+  border-bottom: 0.125rem solid var(--color-danger);
+}
+
+.cash-voucher-select {
+  padding: var(--space-3);
+  background: rgba(139, 92, 246, 0.05); /* very subtle accent background */
+  border-left: 0.25rem solid var(--color-accent);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+}
+
+.modal-actions .btn-danger {
+  background: var(--color-danger);
+}
+
+.modal-actions .btn-danger:hover {
+  background: #dc2626; /* red-600 */
+}
+
+/* Responsive */
+@media (max-width: 80rem) {
+  .cash-kpis {
+    grid-template-columns: repeat(3, 1fr);
   }
-  .cash-page__columns {
-    grid-template-columns: 1fr;
+  .cash-expense-widget {
+    grid-column: span 3;
+    flex-direction: row;
+    align-items: center;
+  }
+  .cash-expense-widget__list {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: var(--space-6);
+  }
+  .cash-expense-widget__item {
+    min-width: 8rem;
   }
 }

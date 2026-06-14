@@ -8,6 +8,8 @@ export const LOGISTICS_MOCK_DATA: LogisticsOrder[] = [
     address: 'Av. Belgrano 1234',
     status: 'pending',
     zone: 'Norte',
+    priority: 'high',
+    collectionAmount: 150000,
   },
   {
     id: 'log-002',
@@ -16,6 +18,8 @@ export const LOGISTICS_MOCK_DATA: LogisticsOrder[] = [
     address: 'San Martin 567',
     status: 'in_transit',
     zone: 'Centro',
+    priority: 'low',
+    collectionAmount: 25000,
   },
   {
     id: 'log-003',
@@ -24,6 +28,8 @@ export const LOGISTICS_MOCK_DATA: LogisticsOrder[] = [
     address: 'Rivadavia 890',
     status: 'delivered',
     zone: 'Sur',
+    priority: 'medium',
+    collectionAmount: 12000,
   },
   {
     id: 'log-004',
@@ -32,5 +38,7 @@ export const LOGISTICS_MOCK_DATA: LogisticsOrder[] = [
     address: 'Sarmiento 111',
     status: 'pending',
     zone: 'Norte',
+    priority: 'medium',
+    collectionAmount: 48500,
   },
 ];

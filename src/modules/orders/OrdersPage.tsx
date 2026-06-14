@@ -5,7 +5,8 @@ import { Table } from '../../components/ui/Table';
 import { Badge } from '../../components/ui/Badge';
 import { OrderFilters } from './components/OrderFilters';
 import { OrderDetailPanel } from './components/OrderDetailPanel';
-import { OrderFormModal } from './components/OrderFormModal';
+import { CreateOrderModal } from './components/create-order/CreateOrderModal';
+import { OrderKpis } from './components/OrderKpis';
 import './OrdersPage.css';
 
 // ============================================================
@@ -17,6 +18,7 @@ const STATUS_LABEL: Record<OrderStatus, string> = {
   preparing:  'Preparando',
   dispatched: 'Despachado',
   delivered:  'Entregado',
+  invoiced:   'Facturado',
   cancelled:  'Cancelado',
 };
 
@@ -25,6 +27,7 @@ const STATUS_VARIANT: Record<OrderStatus, 'neutral' | 'warning' | 'info' | 'succ
   preparing:  'warning',
   dispatched: 'info',
   delivered:  'success',
+  invoiced:   'success',
   cancelled:  'danger',
 };
 
@@ -32,6 +35,7 @@ const STATUS_FLOW: Partial<Record<OrderStatus, OrderStatus>> = {
   pending:    'preparing',
   preparing:  'dispatched',
   dispatched: 'delivered',
+  delivered:  'invoiced',
 };
 
 function formatCurrency(value: number): string {
@@ -51,17 +55,25 @@ export const OrdersPage: FC = () => {
   const [orders, setOrders] = useState<Order[]>(ORDERS_MOCK_DATA);
   const [activeStatus, setActiveStatus] = useState<OrderStatus | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [seller, setSeller] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
-  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const filteredOrders = useMemo(() => {
     return orders.filter((o) => {
       const statusMatch = activeStatus === 'all' || o.status === activeStatus;
       const searchMatch = o.clientName.toLowerCase().includes(searchQuery.toLowerCase());
-      return statusMatch && searchMatch;
+      const sellerMatch = !seller || o.sellerName === seller;
+      const paymentMatch = !paymentMethod || o.paymentMethod === paymentMethod;
+      const dateFromMatch = !dateFrom || o.date >= dateFrom;
+      const dateToMatch = !dateTo || o.date.split('T')[0] <= dateTo;
+      return statusMatch && searchMatch && sellerMatch && paymentMatch && dateFromMatch && dateToMatch;
     });
-  }, [orders, activeStatus, searchQuery]);
+  }, [orders, activeStatus, searchQuery, seller, paymentMethod, dateFrom, dateTo]);
 
   const handleRowClick = (order: Order) => {
     setSelectedOrder(order);
@@ -94,18 +106,28 @@ export const OrdersPage: FC = () => {
           <p className="page-header__subtitle">Ingreso, seguimiento y gestion de pedidos</p>
         </div>
         <button
-          className="orders-page__btn-new"
-          onClick={() => setIsFormModalOpen(true)}
+          className="client-modal-btn client-modal-btn--primary"
+          onClick={() => setIsCreateModalOpen(true)}
         >
-          Nuevo Pedido Manual
+          Nuevo Pedido
         </button>
       </header>
+
+      <OrderKpis orders={orders} />
 
       <OrderFilters
         activeStatus={activeStatus}
         searchQuery={searchQuery}
         onStatusChange={setActiveStatus}
         onSearchChange={setSearchQuery}
+        dateFrom={dateFrom}
+        onDateFromChange={setDateFrom}
+        dateTo={dateTo}
+        onDateToChange={setDateTo}
+        seller={seller}
+        onSellerChange={setSeller}
+        paymentMethod={paymentMethod}
+        onPaymentMethodChange={setPaymentMethod}
         totalCount={orders.length}
         filteredCount={filteredOrders.length}
       />
@@ -133,12 +155,19 @@ export const OrdersPage: FC = () => {
               accessor: (o) => (
                 <div className="orders-page__client-cell">
                   <span className="font-medium">{o.clientName}</span>
-                  <span className="text-tertiary text-xs">{o.clientZone}</span>
                 </div>
               ),
             },
             {
-              header: 'Importe Total',
+              header: 'Vendedor',
+              accessor: 'sellerName'
+            },
+            {
+              header: 'Forma de Pago',
+              accessor: 'paymentMethod'
+            },
+            {
+              header: 'Importe',
               align: 'right',
               accessor: (o) => (
                 <span className="font-bold">{formatCurrency(o.totalAmount)}</span>
@@ -152,7 +181,7 @@ export const OrdersPage: FC = () => {
               ),
             },
             {
-              header: '',
+              header: 'Acciones',
               align: 'right',
               accessor: (o) => (
                 <button
@@ -176,9 +205,9 @@ export const OrdersPage: FC = () => {
         onCancel={handleCancel}
       />
 
-      <OrderFormModal
-        isOpen={isFormModalOpen}
-        onClose={() => setIsFormModalOpen(false)}
+      <CreateOrderModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
       />
     </div>
   );

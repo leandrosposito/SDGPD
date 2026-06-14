@@ -4,10 +4,17 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
   {
     id: 'cli-001',
     clientName: 'Almacen La Esquina',
+    cuit: '30-71234567-8',
+    address: 'Av. Belgrano 1234',
+    phone: '11 4321-8765',
     zone: 'Norte',
+    sellerName: 'Gonzalez, Maria',
+    creditLimit: 100000,
     totalDebit: 150000,
     totalCredit: 100000,
     currentBalance: 50000,
+    daysOverdue: 0,
+    status: 'Con Deuda',
     transactions: [
       {
         id: 'tx-101',
@@ -32,10 +39,17 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
   {
     id: 'cli-002',
     clientName: 'Supermercado Lider',
+    cuit: '30-87654321-9',
+    address: 'San Martin 567',
+    phone: '11 5555-4444',
     zone: 'Centro',
+    sellerName: 'Ramirez, Carlos',
+    creditLimit: 200000,
     totalDebit: 500000,
     totalCredit: 500000,
     currentBalance: 0,
+    daysOverdue: 0,
+    status: 'Al dia',
     transactions: [
       {
         id: 'tx-201',
@@ -57,4 +71,30 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
       },
     ],
   },
+  {
+    id: 'cli-003',
+    clientName: 'Kiosco El Paso (Excedido)',
+    cuit: '27-12345678-0',
+    address: 'Rivadavia 890',
+    phone: '11 2233-4455',
+    zone: 'Sur',
+    sellerName: 'Gonzalez, Maria',
+    creditLimit: 50000,
+    totalDebit: 150000,
+    totalCredit: 20000,
+    currentBalance: 130000,
+    daysOverdue: 15,
+    status: 'Con Deuda',
+    transactions: [
+      {
+        id: 'tx-301',
+        date: '2026-05-20T09:00:00Z',
+        type: 'invoice',
+        description: 'Factura A-0003',
+        debit: 130000,
+        credit: 0,
+        balance: 130000,
+      }
+    ],
+  }
 ];

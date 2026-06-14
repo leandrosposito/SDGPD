@@ -58,3 +58,23 @@
   border: 0.0625rem solid var(--color-border);
   border-radius: var(--radius-md);
 }
+
+/* Custom Scrollbar for dark theme */
+.table-container::-webkit-scrollbar {
+  height: 0.5rem;
+  width: 0.5rem;
+}
+
+.table-container::-webkit-scrollbar-track {
+  background: var(--color-bg-base);
+  border-radius: var(--radius-sm);
+}
+
+.table-container::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.table-container::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-tertiary);
+}

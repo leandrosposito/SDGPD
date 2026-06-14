@@ -16,12 +16,16 @@
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-xl);
   width: 100%;
-  max-width: 32rem;
   max-height: 100%;
   display: flex;
   flex-direction: column;
   animation: modal-enter var(--transition-normal) ease-out;
 }
+
+.modal-content--sm { max-width: 24rem; }
+.modal-content--md { max-width: 32rem; }
+.modal-content--lg { max-width: 48rem; }
+.modal-content--xl { max-width: 72rem; }
 
 @keyframes modal-enter {
   from {

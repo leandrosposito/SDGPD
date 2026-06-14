@@ -1,0 +1,75 @@
+.tab-pricelists {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.tab-pricelists__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.tab-pricelists__title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-2);
+}
+
+.tab-pricelists__subtitle {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.tab-pricelists__btn-save {
+  background: var(--color-accent-primary);
+  color: white;
+  border: none;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.tab-pricelists__btn-save:hover {
+  background: var(--color-accent-hover);
+}
+
+.tab-pricelists__content {
+  background: var(--color-bg-elevated);
+  border: 0.0625rem solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.tab-pricelists__input-margin {
+  background: var(--color-bg-base);
+  border: 0.0625rem solid var(--color-border);
+  color: var(--color-text-primary);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  width: 4rem;
+  text-align: right;
+  outline: none;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.tab-pricelists__input-margin:focus {
+  border-color: var(--color-accent-primary);
+  box-shadow: 0 0 0 0.125rem var(--color-accent-muted);
+}
+
+/* Hide spin buttons for number input */
+.tab-pricelists__input-margin::-webkit-outer-spin-button,
+.tab-pricelists__input-margin::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.tab-pricelists__input-margin[type=number] {
+  -moz-appearance: textfield;
+}

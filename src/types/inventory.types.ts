@@ -2,6 +2,13 @@
 // SHARED TYPE DEFINITIONS — Inventory domain
 // ============================================================
 
+export interface ProductLot {
+  id: string;
+  lotNumber: string;
+  quantity: number;
+  expirationDate: string;
+}
+
 export interface InventoryItem {
   id: string;
   sku: string;
@@ -12,6 +19,20 @@ export interface InventoryItem {
   minStock: number;
   cost: number;
   price: number;
+  wholesaleMargin?: number;
+  distributorMargin?: number;
+  retailMargin?: number;
+  lots?: ProductLot[];
+}
+
+export interface ProductHistoryEvent {
+  id: string;
+  date: string;
+  sku: string;
+  productName: string;
+  eventType: string;
+  description: string;
+  user: string;
 }
 
 export interface InventoryMovement {
@@ -40,4 +61,5 @@ export interface InventoryData {
   items: InventoryItem[];
   movements: InventoryMovement[];
   suggestions: PurchaseSuggestion[];
+  history: ProductHistoryEvent[];
 }

@@ -1,0 +1,191 @@
+/* ============================================================
+   Create Client Form Styles
+   ============================================================ */
+
+.client-form-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.client-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--space-4);
+}
+
+.client-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.client-form-label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+}
+
+.client-form-input,
+.client-form-select {
+  width: 100%;
+  height: 2.75rem;
+  padding: 0 var(--space-3);
+  font-family: inherit;
+  font-size: var(--font-size-base);
+  color: var(--color-text-primary);
+  background: var(--color-bg-surface);
+  border: 0.0625rem solid var(--color-border);
+  border-radius: var(--radius-md);
+  outline: none;
+  transition: all var(--transition-fast) ease;
+}
+
+.client-form-input:focus,
+.client-form-select:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px var(--color-accent-muted);
+}
+
+.client-form-input--error {
+  border-color: var(--color-danger);
+}
+
+.client-form-input--error:focus {
+  border-color: var(--color-danger);
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+}
+
+.client-form-input--textarea {
+  height: 6rem;
+  padding: var(--space-3);
+  resize: vertical;
+}
+
+.client-form-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23888'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--space-3) center;
+  background-size: 1.25rem;
+  padding-right: var(--space-8);
+}
+
+/* Checkbox Toggle */
+.client-form-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  user-select: none;
+}
+
+.client-form-checkbox {
+  width: 1.25rem;
+  height: 1.25rem;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+
+/* Switch Toggle (Active/Inactive) */
+.client-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  cursor: pointer;
+}
+
+.client-toggle-label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+}
+
+.client-toggle-input {
+  display: none;
+}
+
+.client-toggle-switch {
+  position: relative;
+  width: 2.75rem;
+  height: 1.5rem;
+  background: var(--color-border-strong);
+  border-radius: var(--radius-full);
+  transition: background var(--transition-fast) ease;
+}
+
+.client-toggle-switch::after {
+  content: '';
+  position: absolute;
+  top: 0.125rem;
+  left: 0.125rem;
+  width: 1.25rem;
+  height: 1.25rem;
+  background: white;
+  border-radius: 50%;
+  transition: transform var(--transition-fast) cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.client-toggle-input:checked + .client-toggle-switch {
+  background: var(--color-success);
+}
+
+.client-toggle-input:checked + .client-toggle-switch::after {
+  transform: translateX(1.25rem);
+}
+
+/* Footer & Actions */
+.client-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 0.0625rem solid var(--color-border);
+}
+
+.client-modal-btn {
+  height: 2.5rem;
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  transition: all var(--transition-fast) ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.client-modal-btn--outline {
+  background: transparent;
+  color: var(--color-text-secondary);
+  border: 0.0625rem solid var(--color-border-strong);
+}
+
+.client-modal-btn--outline:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+}
+
+.client-modal-btn--primary {
+  background: var(--color-accent);
+  color: white;
+  border: none;
+}
+
+.client-modal-btn--primary:hover {
+  background: var(--color-accent-hover);
+}
+
+.client-modal-btn--special {
+  background: var(--color-success);
+  color: white;
+  border: none;
+}
+
+.client-modal-btn--special:hover {
+  background: #059669; /* darker success */
+}

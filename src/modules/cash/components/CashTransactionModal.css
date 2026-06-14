@@ -1,0 +1,236 @@
+/* ============================================================
+   Cash Transaction Modal Styles
+   ============================================================ */
+
+.cash-modal-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  width: 100%;
+}
+
+/* ----------------------------------------------------------
+   Type Selector (Ingreso / Egreso)
+   ---------------------------------------------------------- */
+.tx-type-selector {
+  display: flex;
+  gap: var(--space-4);
+  width: 100%;
+}
+
+.tx-type-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  background: var(--color-bg-subtle);
+  border: 0.125rem solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+}
+
+.tx-type-btn:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+}
+
+/* Dynamic State Colors */
+.tx-type-btn.active.income {
+  background: var(--color-success-muted);
+  border-color: var(--color-success);
+  color: var(--color-success);
+  box-shadow: 0 0 1rem var(--color-success-muted);
+}
+
+.tx-type-btn.active.expense {
+  background: var(--color-danger-muted);
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+  box-shadow: 0 0 1rem var(--color-danger-muted);
+}
+
+/* ----------------------------------------------------------
+   Dynamic Form Variables based on Context
+   ---------------------------------------------------------- */
+.cash-modal-container[data-type="income"] {
+  --active-accent: var(--color-success);
+  --active-accent-muted: var(--color-success-muted);
+}
+
+.cash-modal-container[data-type="expense"] {
+  --active-accent: var(--color-danger);
+  --active-accent-muted: var(--color-danger-muted);
+}
+
+/* ----------------------------------------------------------
+   Form Fields
+   ---------------------------------------------------------- */
+.tx-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-5);
+}
+
+.tx-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.tx-form-group.full-width {
+  grid-column: 1 / -1;
+}
+
+.tx-label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+}
+
+.tx-input, .tx-select, .tx-textarea {
+  width: 100%;
+  padding: var(--space-3);
+  background: var(--color-bg-base);
+  border: 0.0625rem solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-md);
+  transition: border-color var(--transition-fast);
+}
+
+.tx-input:focus, .tx-select:focus, .tx-textarea:focus {
+  outline: none;
+  border-color: var(--active-accent, var(--color-accent));
+}
+
+.tx-textarea {
+  min-height: 5rem;
+  resize: vertical;
+}
+
+/* Big Amount Input */
+.tx-amount-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.tx-amount-symbol {
+  position: absolute;
+  left: var(--space-4);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--active-accent, var(--color-text-primary));
+}
+
+.tx-amount-input {
+  width: 100%;
+  padding: var(--space-4);
+  padding-left: 3rem;
+  background: var(--color-bg-base);
+  border: 0.125rem solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.tx-amount-input:focus {
+  outline: none;
+  border-color: var(--active-accent, var(--color-accent));
+  box-shadow: 0 0 0 0.25rem var(--active-accent-muted, var(--color-accent-muted));
+}
+
+/* ----------------------------------------------------------
+   Dropzone
+   ---------------------------------------------------------- */
+.tx-dropzone {
+  border: 0.125rem dashed var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  background: var(--color-bg-subtle);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.tx-dropzone:hover {
+  border-color: var(--active-accent, var(--color-accent));
+  background: var(--active-accent-muted, var(--color-accent-muted));
+}
+
+.tx-dropzone-icon {
+  color: var(--active-accent, var(--color-accent-light));
+}
+
+/* ----------------------------------------------------------
+   Footer Actions
+   ---------------------------------------------------------- */
+.tx-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
+  border-top: 0.0625rem solid var(--color-border);
+}
+
+.tx-btn {
+  padding: var(--space-3) var(--space-5);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  border: none;
+}
+
+.tx-btn--outline {
+  background: transparent;
+  border: 0.0625rem solid var(--color-border-strong);
+  color: var(--color-text-primary);
+}
+
+.tx-btn--outline:hover {
+  background: var(--color-bg-hover);
+}
+
+.tx-btn--primary {
+  background: var(--active-accent, var(--color-accent));
+  color: #FFFFFF;
+}
+
+.tx-btn--primary:hover {
+  filter: brightness(1.1);
+}
+
+.tx-btn--secondary {
+  background: var(--active-accent-muted, var(--color-accent-muted));
+  color: var(--active-accent, var(--color-accent-light));
+}
+
+.tx-btn--secondary:hover {
+  filter: brightness(1.2);
+}
+
+/* Responsive */
+@media (max-width: 48rem) {
+  .tx-form-grid {
+    grid-template-columns: 1fr;
+  }
+}

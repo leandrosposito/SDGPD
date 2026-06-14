@@ -12,6 +12,7 @@ interface ModalProps {
   title: string;
   children: ReactNode;
   footer?: ReactNode;
+  size?: 'sm' | 'md' | 'lg' | 'xl';
 }
 
 const IconClose: FC<{ className?: string }> = ({ className }) => (
@@ -20,7 +21,7 @@ const IconClose: FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
-export const Modal: FC<ModalProps> = ({ isOpen, onClose, title, children, footer }) => {
+export const Modal: FC<ModalProps> = ({ isOpen, onClose, title, children, footer, size = 'md' }) => {
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -36,7 +37,7 @@ export const Modal: FC<ModalProps> = ({ isOpen, onClose, title, children, footer
 
   return createPortal(
     <div className="modal-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="modal-title">
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+      <div className={`modal-content modal-content--${size}`} onClick={(e) => e.stopPropagation()}>
         <header className="modal-header">
           <h3 id="modal-title" className="modal-title">{title}</h3>
           <button className="modal-close-btn" onClick={onClose} aria-label="Cerrar modal">

@@ -1,19 +1,10 @@
-import type { FC } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useState, useEffect, type FC } from 'react';
+import { Link } from 'react-router-dom';
 import './Header.css';
 
 // ============================================================
-// Header — Top bar with page title, search and user area
+// Header — Top bar with search and user area
 // ============================================================
-
-const ROUTE_TITLES: Record<string, string> = {
-  '/':            'Dashboard',
-  '/pedidos':     'Pedidos y Ventas',
-  '/inventario':  'Inventario y Categorias',
-  '/clientes':    'Directorio de Clientes',
-  '/proveedores': 'Gestion de Proveedores',
-  '/logistica':   'Logistica y Rutas',
-};
 
 const IconSearch: FC = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -35,29 +26,84 @@ const IconRefresh: FC = () => (
   </svg>
 );
 
+const IconSun: FC = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="5"></circle>
+    <line x1="12" y1="1" x2="12" y2="3"></line>
+    <line x1="12" y1="21" x2="12" y2="23"></line>
+    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+    <line x1="1" y1="12" x2="3" y2="12"></line>
+    <line x1="21" y1="12" x2="23" y2="12"></line>
+    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+  </svg>
+);
+
+const IconMoon: FC = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+  </svg>
+);
+
 interface HeaderProps {
   onRefresh?: () => void;
 }
 
 export const Header: FC<HeaderProps> = ({ onRefresh }) => {
-  const { pathname } = useLocation();
-  const pageTitle = ROUTE_TITLES[pathname] ?? 'DistGestion';
+  // Theme Toggle Logic
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('app-theme') as 'dark' | 'light';
+    if (savedTheme) {
+      setTheme(savedTheme);
+      document.documentElement.setAttribute('data-theme', savedTheme);
+    }
+  }, []);
+
+  const toggleTheme = (e: React.MouseEvent) => {
+    const newTheme = theme === 'dark' ? 'light' : 'dark';
+
+    const applyTheme = () => {
+      setTheme(newTheme);
+      document.documentElement.setAttribute('data-theme', newTheme);
+      localStorage.setItem('app-theme', newTheme);
+    };
+
+    if (!(document as any).startViewTransition) {
+      applyTheme();
+      return;
+    }
+
+    const x = e.clientX;
+    const y = e.clientY;
+    const endRadius = Math.hypot(
+      Math.max(x, window.innerWidth - x),
+      Math.max(y, window.innerHeight - y)
+    );
+
+    const transition = (document as any).startViewTransition(applyTheme);
+
+    transition.ready.then(() => {
+      document.documentElement.animate(
+        {
+          clipPath: [
+            `circle(0px at ${x}px ${y}px)`,
+            `circle(${endRadius}px at ${x}px ${y}px)`,
+          ],
+        },
+        {
+          duration: 600,
+          easing: 'ease-in-out',
+          pseudoElement: '::view-transition-new(root)',
+        }
+      );
+    });
+  };
 
   return (
     <header className="header" role="banner">
-      {/* Left: Page title */}
-      <div className="header__left">
-        <h1 className="header__title">{pageTitle}</h1>
-        <span className="header__date" aria-label="Fecha actual">
-          {new Date().toLocaleDateString('es-AR', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-          })}
-        </span>
-      </div>
-
       {/* Center: Search */}
       <div className="header__search" role="search">
         <label htmlFor="global-search" className="sr-only">
@@ -91,6 +137,15 @@ export const Header: FC<HeaderProps> = ({ onRefresh }) => {
         )}
 
         <button
+          className="header__action-btn"
+          onClick={toggleTheme}
+          aria-label="Cambiar tema"
+          title="Modo Oscuro / Claro"
+        >
+          {theme === 'dark' ? <IconSun /> : <IconMoon />}
+        </button>
+
+        <button
           id="header-notifications-btn"
           className="header__action-btn header__action-btn--notify"
           aria-label="Notificaciones (3 nuevas)"
@@ -100,15 +155,15 @@ export const Header: FC<HeaderProps> = ({ onRefresh }) => {
           <span className="header__notify-badge" aria-hidden="true">3</span>
         </button>
 
-        <div className="header__user" aria-label="Usuario actual">
+        <Link to="/settings" className="header__user" aria-label="Configuración de Usuario" style={{ textDecoration: 'none' }}>
           <div className="header__avatar" aria-hidden="true">
             <span>AD</span>
           </div>
           <div className="header__user-info">
             <span className="header__user-name">Admin</span>
-            <span className="header__user-role">Administrador</span>
+            <span className="header__user-role">Configuración</span>
           </div>
-        </div>
+        </Link>
       </div>
     </header>
   );

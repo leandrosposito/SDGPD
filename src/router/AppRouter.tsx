@@ -8,6 +8,7 @@ import { CashPage } from '../modules/cash/CashPage';
 import { SuppliersPage } from '../modules/suppliers/SuppliersPage';
 import { OrdersPage } from '../modules/orders/OrdersPage';
 import { AnalyticsPage } from '../modules/analytics/AnalyticsPage';
+import { SettingsPage } from '../modules/settings/SettingsPage';
 
 
 // ============================================================
@@ -64,6 +65,12 @@ export function AppRouter() {
           <Route
             path="analitica"
             element={<AnalyticsPage />}
+          />
+
+          {/* Configuración */}
+          <Route
+            path="settings"
+            element={<SettingsPage />}
           />
 
           {/* Catch-all redirect */}

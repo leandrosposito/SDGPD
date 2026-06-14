@@ -11,4 +11,6 @@ export interface LogisticsOrder {
   address: string;
   status: DeliveryStatus;
   zone: 'Norte' | 'Centro' | 'Sur';
+  priority: 'high' | 'medium' | 'low';
+  collectionAmount: number;
 }

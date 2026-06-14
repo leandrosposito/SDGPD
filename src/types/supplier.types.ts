@@ -29,6 +29,9 @@ export interface Supplier {
   address: string;
   city: string;
   paymentTerms: string;
+  category: string;
+  pendingOrdersCount: number;
+  daysUntilExpiration: number | null;
   currentBalance: number;
   hasOverdueDebt: boolean;
   products: SupplierProduct[];

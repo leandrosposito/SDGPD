@@ -1,99 +1,205 @@
-.supplier-form {
+/* ============================================================
+   Supplier Modals CSS - Global Form Structures
+   ============================================================ */
+
+.supplier-modal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.supplier-form-section {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
 }
 
-.form-row {
-  display: flex;
-  gap: var(--space-4);
+.supplier-section-title {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-2);
+  border-bottom: 0.0625rem solid var(--color-border);
+  padding-bottom: var(--space-2);
 }
 
-.form-row > .form-group {
-  flex: 1;
-}
+/* ============================================================
+   Document Dropzone Component
+   ============================================================ */
 
-.form-group {
+.document-dropzone {
   display: flex;
   flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-6);
+  border: 0.125rem dashed var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-surface);
+  cursor: pointer;
+  transition: all var(--transition-fast) ease;
+  text-align: center;
+}
+
+.document-dropzone:hover,
+.document-dropzone--drag-active {
+  border-color: var(--color-accent);
+  background: var(--color-accent-muted);
+}
+
+.document-dropzone__icon {
+  color: var(--color-accent);
+}
+
+.document-dropzone__text {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+.document-dropzone__help {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+/* ============================================================
+   Purchase Order Advanced Form
+   ============================================================ */
+
+.po-header-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.po-search-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.po-history-link {
+  display: inline-flex;
+  align-items: center;
   gap: var(--space-2);
-}
-
-.form-label {
+  color: var(--color-accent-light);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
-  color: var(--color-text-secondary);
+  text-decoration: none;
+  cursor: pointer;
+  height: 2.75rem;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-md);
+  background: rgba(139, 92, 246, 0.1);
+  transition: all var(--transition-fast) ease;
+  white-space: nowrap;
 }
 
-.form-input {
-  padding: var(--space-2) var(--space-3);
-  font-size: var(--font-size-sm);
-  color: var(--color-text-primary);
-  background-color: var(--color-bg-surface);
-  border: 0.0625rem solid var(--color-border);
-  border-radius: var(--radius-sm);
-  outline: none;
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
-}
-
-.form-input:focus {
-  border-color: var(--color-accent-light);
-  box-shadow: 0 0 0 0.125rem var(--color-accent-muted);
-}
-
-.form-textarea {
-  resize: vertical;
-  min-height: 4.5rem;
-}
-
-.btn-primary {
-  background-color: var(--color-accent);
-  color: white;
-  padding: var(--space-2) var(--space-4);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  border-radius: var(--radius-sm);
-  transition: background-color var(--transition-fast);
-}
-
-.btn-primary:hover {
-  background-color: var(--color-accent-hover);
-}
-
-.btn-secondary {
-  background-color: transparent;
-  color: var(--color-text-secondary);
-  padding: var(--space-2) var(--space-4);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  border-radius: var(--radius-sm);
-  border: 0.0625rem solid var(--color-border);
-  transition: background-color var(--transition-fast), color var(--transition-fast);
-}
-
-.btn-secondary:hover {
-  background-color: var(--color-bg-hover);
-  color: var(--color-text-primary);
-}
-
-.btn-secondary--danger {
-  color: var(--color-danger);
-  border-color: var(--color-danger);
-}
-
-.btn-secondary--danger:hover {
-  background-color: var(--color-danger);
+.po-history-link:hover {
+  background: rgba(139, 92, 246, 0.2);
   color: white;
 }
 
-.supplier-modal-footer {
+/* Internal Table */
+.po-items-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: var(--space-6);
+  background: var(--color-bg-surface);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 0.0625rem solid var(--color-border);
+}
+
+.po-items-table th {
+  background: var(--color-bg-subtle);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: var(--space-3) var(--space-4);
+  text-align: left;
+  border-bottom: 0.0625rem solid var(--color-border);
+}
+
+.po-items-table th.text-right,
+.po-items-table td.text-right {
+  text-align: right;
+}
+
+.po-items-table td {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 0.0625rem solid var(--color-border);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+}
+
+.po-items-table tr:last-child td {
+  border-bottom: none;
+}
+
+/* Financial Summary Block */
+.po-financial-summary {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--space-6);
+}
+
+.po-financial-box {
+  width: 20rem;
+  background: var(--color-bg-surface);
+  border: 0.0625rem solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+
+.po-financial-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  width: 100%;
+  padding: var(--space-2) 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
 }
 
-.supplier-modal-footer__actions {
+.po-financial-row--total {
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 0.0625rem solid var(--color-border-strong);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+}
+
+.po-financial-input {
+  width: 6rem;
+  height: 2rem;
+  background: var(--color-bg-base);
+  border: 0.0625rem solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-primary);
+  text-align: right;
+  padding: 0 var(--space-2);
+  font-size: var(--font-size-sm);
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+.po-financial-input:focus {
+  border-color: var(--color-accent);
+}
+
+/* Footers */
+.modal-footer {
   display: flex;
+  justify-content: flex-end;
   gap: var(--space-3);
+  padding-top: var(--space-4);
+  margin-top: var(--space-4);
+  border-top: 0.0625rem solid var(--color-border);
 }

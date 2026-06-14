@@ -2,8 +2,16 @@
 // SHARED TYPE DEFINITIONS — Orders domain
 // ============================================================
 
-export type OrderStatus = 'pending' | 'preparing' | 'dispatched' | 'delivered' | 'cancelled';
+export type OrderStatus = 'pending' | 'preparing' | 'dispatched' | 'delivered' | 'invoiced' | 'cancelled';
 export type OrderSource = 'mobile' | 'manual';
+export type PaymentMethod = 'Cuenta Corriente' | 'Efectivo' | 'Transferencia';
+
+export interface OrderHistoryEvent {
+  id: string;
+  date: string;
+  status: OrderStatus;
+  description: string;
+}
 
 export interface OrderItem {
   id: string;
@@ -24,7 +32,12 @@ export interface Order {
   sellerName: string;
   status: OrderStatus;
   source: OrderSource;
+  paymentMethod: PaymentMethod;
+  subtotal: number;
+  discount: number;
+  tax: number;
   totalAmount: number;
   notes: string;
   items: OrderItem[];
+  history: OrderHistoryEvent[];
 }

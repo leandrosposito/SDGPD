@@ -36,6 +36,7 @@ const ADVANCE_LABEL: Partial<Record<OrderStatus, string>> = {
   pending:    'Pasar a Preparando',
   preparing:  'Despachar Pedido',
   dispatched: 'Confirmar Entrega',
+  delivered:  'Facturar Pedido',
 };
 
 const SOURCE_LABEL: Record<string, string> = {
@@ -58,7 +59,7 @@ export const OrderDetailPanel: FC<OrderDetailPanelProps> = ({
   if (!order) return null;
 
   const advanceLabel = ADVANCE_LABEL[order.status];
-  const canCancel = order.status !== 'delivered' && order.status !== 'cancelled';
+  const canCancel = order.status !== 'delivered' && order.status !== 'invoiced' && order.status !== 'cancelled';
 
   return (
     <SidePanel
@@ -81,6 +82,10 @@ export const OrderDetailPanel: FC<OrderDetailPanelProps> = ({
           <div className="order-detail__meta-field">
             <span className="order-detail__meta-label">Direccion</span>
             <span className="order-detail__meta-value">{order.clientAddress}</span>
+          </div>
+          <div className="order-detail__meta-field">
+            <span className="order-detail__meta-label">Forma de Pago</span>
+            <span className="order-detail__meta-value font-medium">{order.paymentMethod}</span>
           </div>
           <div className="order-detail__meta-field">
             <span className="order-detail__meta-label">Origen</span>
@@ -112,11 +117,26 @@ export const OrderDetailPanel: FC<OrderDetailPanelProps> = ({
           />
         </div>
 
-        {/* Footer: total + actions */}
         <div className="order-detail__footer">
-          <div className="order-detail__total">
-            <span className="order-detail__total-label">Total del Pedido</span>
-            <span className="order-detail__total-amount">{formatCurrency(order.totalAmount)}</span>
+          <div className="order-detail__financials">
+            <div className="order-detail__financial-row">
+              <span>Subtotal</span>
+              <span>{formatCurrency(order.subtotal)}</span>
+            </div>
+            {order.discount > 0 && (
+              <div className="order-detail__financial-row text-success">
+                <span>Descuento</span>
+                <span>-{formatCurrency(order.discount)}</span>
+              </div>
+            )}
+            <div className="order-detail__financial-row">
+              <span>IVA</span>
+              <span>{formatCurrency(order.tax)}</span>
+            </div>
+            <div className="order-detail__financial-row order-detail__total">
+              <span>Total del Pedido</span>
+              <span>{formatCurrency(order.totalAmount)}</span>
+            </div>
           </div>
 
           {(advanceLabel || canCancel) && (
@@ -141,6 +161,27 @@ export const OrderDetailPanel: FC<OrderDetailPanelProps> = ({
             </div>
           )}
         </div>
+
+        {/* Timeline */}
+        {order.history && order.history.length > 0 && (
+          <div className="order-detail__timeline">
+            <h4 className="order-detail__section-title">Historial del Pedido</h4>
+            <div className="order-detail__timeline-list">
+              {order.history.map((event, index) => (
+                <div key={event.id} className="order-detail__timeline-item">
+                  <div className="order-detail__timeline-dot"></div>
+                  {index !== order.history.length - 1 && <div className="order-detail__timeline-line"></div>}
+                  <div className="order-detail__timeline-content">
+                    <span className="order-detail__timeline-time">
+                      {new Date(event.date).toLocaleString('es-AR', { hour: '2-digit', minute: '2-digit' })} - {event.status.toUpperCase()}
+                    </span>
+                    <p className="order-detail__timeline-desc">{event.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </SidePanel>
   );
