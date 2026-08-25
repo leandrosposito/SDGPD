@@ -1,0 +1,50 @@
+Unidad de Negocio: Doc03=True, Doc02=True
+Centro de Costo: Doc03=False, Doc02=True
+Calendario: Doc03=True, Doc02=True
+Feriado: Doc03=False, Doc02=False
+Bloqueo: Doc03=True, Doc02=False
+Suspensi: Doc03=True, Doc02=False
+Contraseña: Doc03=True, Doc02=False
+Sesi: Doc03=True, Doc02=True
+Contactos: Doc03=True, Doc02=True
+Agrupación: Doc03=True, Doc02=False
+Segmentación: Doc03=True, Doc02=False
+Evaluación: Doc03=True, Doc02=True
+Atributos: Doc03=True, Doc02=True
+Variantes: Doc03=True, Doc02=True
+Conversión: Doc03=True, Doc02=True
+Unidad de Medida: Doc03=True, Doc02=True
+Promociones: Doc03=True, Doc02=True
+Lotes: Doc03=True, Doc02=True
+Vencimientos: Doc03=True, Doc02=True
+Inventario Físico: Doc03=True, Doc02=True
+Reservado: Doc03=True, Doc02=True
+Comprometido: Doc03=True, Doc02=True
+Solicitud de Compra: Doc03=True, Doc02=True
+Devoluciones a Proveedor: Doc03=True, Doc02=True
+Actualización Automática: Doc03=False, Doc02=True
+Autorizaciones: Doc03=True, Doc02=True
+POS: Doc03=True, Doc02=True
+Venta Directa: Doc03=True, Doc02=False
+Modificación de Pedido: Doc03=False, Doc02=True
+Historial: Doc03=True, Doc02=True
+Incidencias: Doc03=True, Doc02=True
+Priorización: Doc03=True, Doc02=False
+Vehículos: Doc03=True, Doc02=True
+Choferes: Doc03=False, Doc02=True
+Recorridos: Doc03=True, Doc02=True
+Reprogramación: Doc03=True, Doc02=True
+Evidencia de Entrega: Doc03=True, Doc02=False
+Nota de Débito: Doc03=True, Doc02=False
+Masiva: Doc03=True, Doc02=True
+Cuenta Corriente: Doc03=True, Doc02=True
+Saldos Deudores: Doc03=False, Doc02=False
+Arqueo: Doc03=True, Doc02=False
+Múltiples Medios de Pago: Doc03=True, Doc02=False
+Flujo de Fondos: Doc03=True, Doc02=True
+Exportaciones: Doc03=True, Doc02=True
+Reportes Históricos: Doc03=True, Doc02=False
+Auditoría: Doc03=True, Doc02=True
+Notificaciones: Doc03=True, Doc02=True
+Mercado Pago: Doc03=False, Doc02=True
+Mensajería: Doc03=True, Doc02=True

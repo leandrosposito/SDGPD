@@ -1,0 +1,42 @@
+# DOC 03 AUDIT
+Chapters found: 48
+- Cap 1: Informaci
+- Cap 2: Objetivo del Documento2
+- Cap 3: Alcance Funcional3
+- Cap 4: Principios del Modelo Funcional4
+- Cap 5: Modelo Funcional Global5
+- Cap 6: Organizaci
+- Cap 7: Usuarios
+- Cap 8: Clientes8
+- Cap 9: Productos9
+- Cap 10: Inventario y Stock10
+- Cap 11: Compras y Abastecimiento11
+- Cap 12: Ventas y Gesti
+- Cap 13: Log
+- Cap 14: Finanzas
+- Cap 15: Gesti
+- Cap 16: Gesti
+- Cap 17: Gesti
+- Cap 18: Gesti
+- Cap 19: Gesti
+- Cap 20: Gesti
+- Cap 21: Gesti
+- Cap 22: Gesti
+- Cap 23: Gesti
+- Cap 24: Gesti
+- Cap 25: Auditor
+- Cap 26: Notificaciones
+- Cap 27: Configuraci
+- Cap 28: Reportes
+- Cap 29: Importaci
+- Cap 30: Integraciones
+
+Capacities found: 1
+- Gestión de clientesCAP-INV-001 — Gestión de existenciasCAP-VEN-001 — Gestión de ventas1
+
+Operations found: 1
+- Ajustar StockReglas aplicables:RN-INV-001RN-INV-003RN-AUD-002Esto permite modificar una regla en una única fuente
+
+DOC 02 Entities found: 2
+- elemento
+- Pedido
