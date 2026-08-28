@@ -13,6 +13,8 @@ FrontEnd/src/router/
 FrontEnd/src/types/
 FrontEnd/src/components/ui/
 FrontEnd/src/shared/hooks/
+FrontEnd/src/shared/utils/
+FrontEnd/src/shared/services/
 FrontEnd/src/assets/icons/
 FrontEnd/src/assets/images/
 
