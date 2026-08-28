@@ -1,0 +1,20 @@
+# node_modules y builds
+FrontEnd/node_modules/
+FrontEnd/dist/
+
+# Documentación pesada — solo se leen los extractos .md/.txt derivados
+Documentacion/**/*.docx
+Documentacion/**/*.pdf
+
+# Placeholders vacíos, sin uso real todavía
+FrontEnd/src/core/
+FrontEnd/src/infrastructure/
+FrontEnd/src/router/
+FrontEnd/src/types/
+FrontEnd/src/components/ui/
+FrontEnd/src/shared/hooks/
+FrontEnd/src/assets/icons/
+FrontEnd/src/assets/images/
+
+# BackEnd vacía por ahora
+BackEnd/
