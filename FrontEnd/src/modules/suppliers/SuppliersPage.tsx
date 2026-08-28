@@ -1,6 +1,13 @@
-import { useState, type FC } from 'react';
-import { SUPPLIERS_MOCK_DATA } from '../../data/mock/suppliers.data';
-import type { Supplier } from '../../shared/types/supplier.types';
+import { useEffect, useState, type FC } from 'react';
+import { toast } from 'sonner';
+import type { Supplier, SupplierPurchaseOrder } from '../../shared/types/supplier.types';
+import {
+  fetchSuppliers,
+  createSupplier,
+  updateSupplier,
+  addPurchaseOrder,
+  type SupplierFormInput,
+} from '../../services/mock/suppliers.service';
 import { SupplierDetailPanel } from './components/SupplierDetailPanel';
 import { SupplierFormModal } from './components/SupplierFormModal';
 import { PurchaseOrderModal } from './components/PurchaseOrderModal';
@@ -15,6 +22,7 @@ import './SuppliersPage.css';
 
 
 export const SuppliersPage: FC = () => {
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -23,7 +31,43 @@ export const SuppliersPage: FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
 
-  const filteredSuppliers = SUPPLIERS_MOCK_DATA.filter(supplier => {
+  useEffect(() => {
+    let cancelled = false;
+    fetchSuppliers()
+      .then((data) => {
+        if (!cancelled) setSuppliers(data);
+      })
+      .catch(() => {
+        if (!cancelled) toast.error('No se pudo cargar el listado de proveedores.');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // RF-PRO-001: Alta / Modificacion de proveedor contra el mock service
+  // (persiste en memoria durante la sesion, ver services/mock/suppliers.service.ts).
+  const handleSaveSupplier = async (input: SupplierFormInput, supplierId?: string) => {
+    if (supplierId) {
+      const updated = await updateSupplier(supplierId, input);
+      setSuppliers(prev => prev.map(s => (s.id === updated.id ? updated : s)));
+      setSelectedSupplier(prev => (prev?.id === updated.id ? updated : prev));
+      return updated;
+    }
+    const created = await createSupplier(input);
+    setSuppliers(prev => [...prev, created]);
+    return created;
+  };
+
+  // RF-CMP-001 (alcance frontend): emite una OC y la agrega al historial del proveedor.
+  const handleEmitPurchaseOrder = async (supplierId: string, order: Omit<SupplierPurchaseOrder, 'id'>) => {
+    const updated = await addPurchaseOrder(supplierId, order);
+    setSuppliers(prev => prev.map(s => (s.id === updated.id ? updated : s)));
+    setSelectedSupplier(prev => (prev?.id === updated.id ? updated : prev));
+    return updated;
+  };
+
+  const filteredSuppliers = suppliers.filter(supplier => {
     const matchesSearch = supplier.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           supplier.cuit.includes(searchTerm);
     const matchesCategory = selectedCategory ? supplier.category === selectedCategory : true;
@@ -86,12 +130,14 @@ export const SuppliersPage: FC = () => {
         isOpen={isFormModalOpen}
         onClose={() => setIsFormModalOpen(false)}
         supplier={selectedSupplier}
+        onSave={handleSaveSupplier}
       />
 
       <PurchaseOrderModal
         isOpen={isOrderModalOpen}
         onClose={() => setIsOrderModalOpen(false)}
         supplier={selectedSupplier}
+        onEmit={handleEmitPurchaseOrder}
       />
     </div>
   );

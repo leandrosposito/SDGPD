@@ -1,6 +1,7 @@
 import { useState, type FC } from 'react';
 import type { KeyboardEvent } from 'react';
-import { INVENTORY_MOCK_DATA } from '../../../../data/mock/inventory.data';
+import { toast } from 'sonner';
+import type { InventoryItem } from '../../../../shared/types/inventory.types';
 
 // ============================================================
 // OrderProductsSection — Core product search and table
@@ -21,6 +22,7 @@ interface OrderProductsSectionProps {
   items: OrderProductItem[];
   onItemsChange: (items: OrderProductItem[]) => void;
   priceList: string;
+  products: InventoryItem[];
 }
 
 function formatCurrency(value: number): string {
@@ -30,7 +32,8 @@ function formatCurrency(value: number): string {
 export const OrderProductsSection: FC<OrderProductsSectionProps> = ({
   items,
   onItemsChange,
-  priceList
+  priceList,
+  products
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -38,13 +41,12 @@ export const OrderProductsSection: FC<OrderProductsSectionProps> = ({
     // Intercept Enter key for barcode scanners
     if (e.key === 'Enter') {
       e.preventDefault();
-      const match = INVENTORY_MOCK_DATA.items.find(p => 
-        p.sku.toLowerCase() === searchTerm.toLowerCase() || 
-        // @ts-ignore -- assuming we add barcode later or it doesn't exist
-        (p as any).barcode === searchTerm || 
+      const match = products.find(p =>
+        p.sku.toLowerCase() === searchTerm.toLowerCase() ||
+        p.barcode === searchTerm ||
         p.name.toLowerCase().includes(searchTerm.toLowerCase())
       );
-      
+
       if (match) {
         // Adjust price mock based on price list
         const modifier = priceList === 'Mayorista' ? 0.9 : priceList === 'Distribuidor' ? 0.8 : 1;
@@ -70,7 +72,7 @@ export const OrderProductsSection: FC<OrderProductsSectionProps> = ({
         }
         setSearchTerm('');
       } else {
-        alert('Producto no encontrado');
+        toast.error('Producto no encontrado');
       }
     }
   };

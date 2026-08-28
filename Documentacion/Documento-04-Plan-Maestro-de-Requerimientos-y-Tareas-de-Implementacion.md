@@ -497,7 +497,7 @@ Garantiza cobertura funcional total y elimina funcionalidades no respaldadas.
 ### RF-PRD-001: ABM Central de Productos
 - **Módulo**: Productos (PRD)
 - **Etapa**: MVP
-- **Estado de implementación**: [ ] Pendiente
+- **Estado de implementación**: [ ] Pendiente (Frontend implementado con datos mock; Backend/Persistencia real pendiente — ver Checklist)
 - **Objetivo**: Mantener el inventario maestro de artículos comercializables.
 - **Alcance funcional**: Registro de producto, SKU, código de barras (EAN), descripción, categoría, estado (Activo/Inactivo) y unidad de medida base.
 - **Datos involucrados**: SKU, Código Barras, Nombre, Descripción, Unidad Medida Base, Categoría ID, Estado.
@@ -508,11 +508,11 @@ Garantiza cobertura funcional total y elimina funcionalidades no respaldadas.
 
 ## Checklist de Implementación
 ### Base de Datos / Persistencia
-- [ ] Tabla `products` con unique index en `sku` y `barcode`.
+- [ ] Tabla `products` con unique index en `sku` y `barcode`. (Pendiente — no hay Backend; hoy la unicidad se valida en el mock service del Frontend)
 ### Frontend
-- [ ] ABM de Productos con buscador predictivo por SKU o Descripción.
+- [x] ABM de Productos con buscador predictivo por SKU o Descripción. (`InventoryPage` > pestaña "Stock Actual": `ProductSearchBar` + `TabStockCurrent`, filtra por SKU/código de barras/nombre/descripción; Alta/Modificación/Baja vía `ProductFormModal` contra `services/mock/products.service.ts`)
 ### Validaciones
-- [ ] Evitar códigos de barra malformados (validación EAN-13 si aplica).
+- [x] Evitar códigos de barra malformados (validación EAN-13 si aplica). (`ProductFormModal.schema.ts`: formato de 13 dígitos + validación de dígito verificador EAN-13, con zod + react-hook-form)
 
 ---
 

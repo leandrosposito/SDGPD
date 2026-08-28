@@ -98,6 +98,11 @@ export const OrdersPage: FC = () => {
     );
   };
 
+  // RF-PED-001: agrega el pedido armado en CreateOrderModal a la lista real.
+  const handleCreateOrder = (order: Order) => {
+    setOrders((prev) => [order, ...prev]);
+  };
+
   return (
     <div className="orders-page page-enter">
       <header className="page-header">
@@ -208,6 +213,7 @@ export const OrdersPage: FC = () => {
       <CreateOrderModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
+        onConfirm={handleCreateOrder}
       />
     </div>
   );
