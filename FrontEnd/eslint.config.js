@@ -18,5 +18,30 @@ export default defineConfig([
     languageOptions: {
       globals: globals.browser,
     },
+    rules: {
+      'no-restricted-imports': [
+        'warn',
+        {
+          patterns: [
+            {
+              group: ['../../**'],
+              message:
+                "Use the '@/' alias instead of relative imports that go up more than one level (e.g. '@/shared/...' instead of '../../shared/...').",
+            },
+          ],
+        },
+      ],
+      '@typescript-eslint/naming-convention': [
+        'warn',
+        {
+          selector: 'typeLike',
+          format: ['PascalCase'],
+        },
+        {
+          selector: 'function',
+          format: ['camelCase', 'PascalCase'],
+        },
+      ],
+    },
   },
 ])
