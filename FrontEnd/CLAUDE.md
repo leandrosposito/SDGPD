@@ -21,6 +21,8 @@ Package manager is npm (`package-lock.json` present). Note: `package.json`'s `na
 
 Stack: React 19 + Vite 8, TypeScript 6, react-router-dom v7, recharts, zustand, zod + react-hook-form, plain CSS per module (no Tailwind, no CSS-in-JS). Prettier is configured (`.prettierrc.json`: no semicolons, single quotes, 100 print width, `avoid` arrow parens) but **not yet applied to existing code** — don't assume current files are Prettier-formatted, and don't do a blanket reformat as a side effect of unrelated changes.
 
+An `@/` import alias (mapped to `src/`) is configured in `vite.config.ts` and `tsconfig.app.json`. New imports should use `@/shared/...`, `@/modules/...`, etc. instead of deep relative paths (`../../../shared/...`); existing relative imports were left as-is and haven't been migrated.
+
 ### Module structure
 
 `src/modules/` has one folder per business domain, each with a `<Name>Page.tsx` + matching `.css` + a `components/` subfolder of `.tsx`/`.css` pairs: `dashboard`, `orders`, `clients`, `suppliers`, `inventory`, `logistics`, `cash`, `analytics`, `settings`. There is no `_template/` to copy — if you need a pattern for a new module, use `src/modules/dashboard/`. Route paths are mostly Spanish (`/pedidos`, `/inventario`, `/clientes`, `/proveedores`, `/logistica`, `/caja`, `/analitica`) except `/settings` — this inconsistency is pre-existing, not a bug to silently "fix" unless asked.
