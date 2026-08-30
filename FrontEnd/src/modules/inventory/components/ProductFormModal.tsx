@@ -45,6 +45,10 @@ export const ProductFormModal: FC<ProductFormModalProps> = ({
     [existingProducts, product?.id]
   );
 
+  // useForm con 3 generics (input, context, output): cost/price/stock/minStock
+  // usan z.coerce.number(), cuyo input (pre-coercion) es distinto del output
+  // (number). register/errors operan sobre ProductFormInput; el callback de
+  // handleSubmit recibe el ProductFormValues ya coercido/validado.
   const {
     register,
     handleSubmit,

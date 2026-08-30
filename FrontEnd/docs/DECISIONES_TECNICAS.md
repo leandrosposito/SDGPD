@@ -22,3 +22,154 @@ Se incorporan herramientas transversales clave (validación, estado global, icon
 
 ### 4. Norma de no duplicación
 Ninguna herramienta nueva puede agregarse a futuro para resolver un problema ya cubierto por las herramientas de esta tabla, sin que quede documentada la razón específica por la cual la solución existente no es suficiente, y sin registrar esa excepción en este mismo archivo.
+
+## [28/08/2026] — Inconsistencias Encontradas Entre Módulos (Relevamiento)
+
+### 1. Contexto
+Registro de inconsistencias detectadas al relevar el código real de los 9 módulos de `src/modules/`, `src/shared/components/ui/` y `src/shared/types/`, previo a sumar features nuevas. Es un registro de lectura — **no se corrigió nada acá**, queda para decidir prioridad después.
+
+### 2. Inconsistencias encontradas
+
+1. **El tooling "obligatorio" de la sección 2 no se usa en ningún lado todavía.** 0 archivos en `src/` importan `zod`, `zustand`, `lucide-react` o `sonner` (verificado por búsqueda de imports en todo `src/`). Todos los formularios (`CreateOrderModal`, `CreateClientModal`, `ProductFormModal`, `SupplierFormModal`, etc.) usan `useState` plano sin validación declarativa; todo el estado es local por página, sin ningún store de `zustand` (`src/shared/state/` ni siquiera existe como carpeta); todos los íconos del proyecto son SVGs inline escritos a mano (`IconClose`, `IconSearch`, `IconRevenue`, etc.) en vez de `lucide-react`; no hay un solo `toast` de `sonner` en el código.
+
+   > **Actualización 28/08/2026 (mismo día, después de este relevamiento):** ya no es cierto para `zustand`, `lucide-react` y `sonner` — `logistics` los adoptó de verdad (ver `[28/08/2026] — Primer Uso Real de zustand, lucide-react y sonner...` más abajo). `zod` sigue con 0 usos: esa feature no tenía ningún formulario. Ver también `[28/08/2026] — Cumplimiento Obligatorio de Tooling y Nomenclatura de Estados` al final de este archivo.
+
+2. **Patrón de lista de datos triplicado.** Para la misma necesidad (listar filas de datos) conviven: (a) el componente compartido `Table` (14 archivos: `cash`, `inventory`, `orders`, `settings`, `suppliers`), (b) tablas HTML locales que no reutilizan `Table` (`dashboard/RecentOrdersTable.tsx`, `analytics/TopDebtorsTable.tsx`, `clients/ClientDirectoryTable.tsx`, `clients/ClientAccountsTable.tsx`, `suppliers/OrderItemsTable.tsx`, la matriz de permisos de `settings/TabUsersRoles.tsx`), y (c) un tablero Kanban (`logistics/LogisticsCard.tsx`, ya documentado como excepción en `COMPONENTES_Y_LAYOUTS.md`). Ninguna de las tres pagina.
+
+   > **Actualización 28/08/2026 (mismo día, después de este relevamiento):** el punto (c) ya no aplica — `logistics/LogisticsCard.tsx` se eliminó, `logistics` pasó a usar `Table` compartido + paginación real (ver `[28/08/2026] — Primer Uso Real de zustand, lucide-react y sonner...`). Los puntos (a) y (b) siguen exactamente igual en el resto de los módulos.
+
+3. **Tarjeta de KPI reimplementada 5 veces.** `shared/components/ui/StatCard.tsx` (acoplado al tipo `KpiMetric`, solo lo usa `dashboard`), `modules/analytics/components/KpiCard.tsx`, `modules/orders/components/OrderKpis.tsx`, `modules/logistics/components/LogisticsKPIs.tsx` y `modules/cash/components/CashKPIs.tsx` implementan cada uno su propio markup y CSS para mostrar "label + valor + variación", sin reutilizar ningún componente común.
+
+4. **Navegación por tabs duplicada.** `shared/components/ui/Tabs.tsx` existe y lo usan `inventory` y `suppliers` (`SupplierDetailPanel`), pero `settings/SettingsPage.tsx` y `clients/ClientsPage.tsx` reimplementan su propia navegación de tabs (botones + estado local) sin usarlo.
+
+5. **Convención de valores de "estado" inconsistente entre dominios.** La mayoría de los tipos usan uniones en inglés minúscula (`OrderStatus`, `DeliveryStatus`: `'pending'|'preparing'|...`), pero `ClientAccount.status` usa strings en español capitalizados (`'Al dia' | 'Con Deuda'`) y `SupplierPurchaseOrder.status`/`InvoiceRecord.status` usan otro set distinto (`'paid'|'pending'|...`/`'paid'|'pending'`). No hay un tipo de estado único ni una convención de nomenclatura común entre dominios.
+
+   > **Actualización 28/08/2026 (mismo día, después de este relevamiento):** este hallazgo pasó de "detectado" a norma oficial obligatoria para tipos de estado nuevos — ver `[28/08/2026] — Cumplimiento Obligatorio de Tooling y Nomenclatura de Estados` al final de este archivo. Los tres tipos ya existentes que no cumplen quedan como deuda técnica registrada ahí mismo; no se tocaron.
+
+6. **`src/shared/types/` no contiene tipos genéricos, solo tipos por dominio.** Los 9 archivos (`analytics.types.ts`, `cash.types.ts`, etc.) son 100% específicos de un módulo — no existe ningún tipo verdaderamente reutilizable entre módulos (p. ej. `ID`, `Paginated<T>`, `Money`, `Address`), pese a que la carpeta está documentada en `ESTRUCTURA_Y_ARQUITECTURA.md` como el lugar para "tipos e interfaces compartidos".
+
+7. **La forma de los datos mock no sigue un estándar único entre módulos.** `orders`, `clients`, `suppliers` y `logistics` exportan un array plano en la raíz del archivo; `dashboard` e `inventory` exportan un objeto único con varios arrays anidados por categoría; `analytics` exporta un objeto indexado por período (`TimePeriod`); `settings` exporta varias constantes sueltas en vez de un objeto único. Ninguna de estas formas está documentada como la esperada.
+
+### 3. Norma de este registro
+Estos hallazgos no implican una corrección automática. Cualquier decisión de unificación (elegir una única implementación de tabla, un único componente de KPI, adoptar `zod`/`zustand` realmente, etc.) debe registrarse como una entrada nueva y fechada en este archivo o en `COMPONENTES_Y_LAYOUTS.md`, igual que las decisiones anteriores.
+
+## [28/08/2026] — Primer Uso Real de zustand, lucide-react y sonner; Reemplazo del Kanban de Logística
+
+### 1. Contexto
+`logistics` reemplaza su tablero Kanban por una tabla paginada de "Entregas del Día" (pendiente / en ruta / completada). Es la primera feature del proyecto que usa de verdad 3 de las 4 herramientas "obligatorias" declaradas en `[25/08/2026] — Utilidades Esenciales del Frontend` — hasta ahora ninguna se usaba en ningún archivo (ver `[28/08/2026] — Inconsistencias Encontradas Entre Módulos`, punto 1). Esta entrada fija la convención para las próximas veces que se use cada una.
+
+### 2. Reemplazo del Kanban por tabla — decisión y motivo
+El tablero Kanban de `LogisticsCard` (3 columnas) se eliminó por completo (no quedó como vista alternativa) porque no escala a un volumen alto de entregas: no es paginable por columna y obliga a renderizar todas las tarjetas de cada estado en el DOM. Se reemplazó por la tabla paginada + filtro por estado que ya estaba definida como patrón oficial en `COMPONENTES_Y_LAYOUTS.md` (`[28/08/2026] — Patrón Estándar para Listas de Datos`), y esta es su primera implementación real — ver el detalle técnico completo en `[28/08/2026] — Primera Tabla Paginada Real` de ese mismo archivo. La excepción que este mismo `DECISIONES_TECNICAS.md`/`COMPONENTES_Y_LAYOUTS.md` le tenía documentada al Kanban queda revertida, no vigente.
+
+### 3. `zustand` — primer store real, convención de referencia
+`src/modules/logistics/state/useDeliveriesStore.ts` es el primer store de `zustand` del proyecto. Convención fijada para los que vengan después:
+- **Ubicación**: `modules/<modulo>/state/use<Nombre>Store.ts` mientras el estado sea específico de un módulo (no `shared/` todavía, según se indicó para esta tarea). Si en el futuro un store necesita compartirse entre módulos, se promueve a `shared/state/use<Nombre>Store.ts` — mismo nombre de carpeta (`state/`) en ambos casos, para que promoverlo sea mover el archivo, no reescribirlo.
+- **Nombres genéricos, no acoplados al módulo**: el store se llama `useDeliveriesStore` (no `useLogisticsStore`) y su acción se llama `advanceDeliveryStatus` (no `advanceLogisticsStatus`), porque "entrega" y "estado de entrega" son un concepto de negocio que no es exclusivo de logística. El tipo `DeliveryStatus` ya vivía en `shared/types/logistics.types.ts` con este mismo criterio desde antes.
+- **Las acciones devuelven un resultado estructurado, no texto de UI**: `advanceDeliveryStatus` devuelve `{ success, deliveryId, previousStatus?, newStatus?, reason? }` en vez de lanzar una excepción o incluir un mensaje en español. Quien llama (`LogisticsPage`) decide cómo mostrarlo — en este caso, con un toast de `sonner`. Esto mantiene el store libre de texto de presentación, para que sea igual de válido si mañana se promueve a `shared/` y lo consume una pantalla distinta con otro copy.
+- **Transiciones de estado unidireccionales**: la única acción que cambia el estado es `advanceDeliveryStatus`, que avanza un solo paso según un mapa fijo (`pending → in_transit → delivered`). No existe ningún setter genérico de estado expuesto al UI, así que retroceder un estado no es posible por diseño de la API del store, no por una validación que se pueda saltear.
+
+### 4. `lucide-react` — primer uso real
+`Pagination.tsx` (`ChevronLeft`, `ChevronRight`) y `DeliveriesTable.tsx` (`Clock`, `MapPin`, `Truck`, `CheckCircle2`) importan íconos de `lucide-react` en vez de SVGs inline a mano, como venía siendo la práctica real en todo el resto del proyecto pese a la decisión de `[25/08/2026]`.
+
+### 5. `sonner` — primer uso real
+Se montó `<Toaster richColors position="top-right" />` en `src/App.tsx` (no existía en ningún lado — sin esto, `toast()` no renderiza nada visible). `LogisticsPage` dispara `toast.success(...)` al avanzar una entrega de estado y `toast.error(...)` si la transición no es válida (entrega ya completada) o no se encuentra la entrega. No se usó `alert()` en ningún punto nuevo.
+
+### 6. `zod` — sigue sin primer uso real
+Esta feature no agrega ningún formulario (el cambio de estado es un botón por fila, no un form), así que no había nada que validar con `zod` acá. No se forzó un uso artificial solo para marcar la casilla. Sigue pendiente el primer uso real de `zod` + `react-hook-form` el día que se implemente el primer formulario nuevo del proyecto (o se migre uno existente).
+
+### 7. `orderId` como referencia real (no por convención de nombre)
+`shared/types/logistics.types.ts` tipa `Delivery.orderId` como `Order['id']` (importando el tipo `Order` desde `shared/types/order.types.ts`), no como un `string` suelto. Es el primer campo del proyecto que declara explícitamente una relación entre dominios a nivel de tipo, en vez de solo coincidir por nombre de campo (el problema que documenta el punto 5 de `[28/08/2026] — Inconsistencias Encontradas Entre Módulos`, sobre convenciones de estado, aplica de forma similar a estas relaciones informales). Sigue sin haber una importación en tiempo de ejecución entre `modules/logistics` y `modules/orders`: el mock de `logistics.data.ts` tiene los IDs de pedidos reales copiados a mano desde `orders.data.ts` (`ord-001`..`ord-006`, reutilizados varias veces porque ese mock solo tiene 6 pedidos), no importados. Este patrón (tipar la referencia con `Order['id']`, sin importar `modules/orders`) queda como el de referencia para la próxima relación cross-módulo que necesite ser real y no por convención de nombre.
+
+> **Nota 28/08/2026 (cierre posterior):** esta implementación se hizo sin pasar antes por el paso de "proponer 2-3 opciones y esperar decisión" que exige la regla de relación entre módulos. Quedó señalado como punto abierto y se cerró formalmente confirmando esta misma opción — ver `[28/08/2026] — Cierre: Relación logistics↔orders (Opción A confirmada)` al final de este archivo, con las opciones descartadas y el trigger de revisión.
+
+### 8. Renombre de `LogisticsOrder` a `Delivery`
+El tipo `LogisticsOrder` (en `shared/types/logistics.types.ts`) se renombró a `Delivery`. Motivo: el nombre anterior mezclaba dos conceptos de dominio distintos ("pedido", que vive en `orders`, y "entrega", que es lo que de verdad modela este tipo) — exactamente la ambigüedad que el punto anterior busca evitar con `orderId: Order['id']`. Se verificó que el tipo y `DeliveryStatus` solo se usaban dentro de `modules/logistics/` y `data/mock/logistics.data.ts` antes de renombrar, así que no rompe nada fuera de ese alcance.
+
+## [28/08/2026] — Cumplimiento Obligatorio de Tooling y Nomenclatura de Estados
+
+### 1. Contexto
+Limpieza de documentación previa a seguir sumando features: esta entrada convierte dos hallazgos de relevamiento (`[28/08/2026] — Inconsistencias Encontradas Entre Módulos`, puntos 1 y 5) en normas oficiales obligatorias hacia adelante, y deja registrada la deuda técnica existente sin corregirla.
+
+### 2. Norma: nomenclatura de tipos de "estado"
+Todo tipo de "estado" (`*Status`) que se cree de acá en adelante en el proyecto debe ser una unión de strings en inglés, minúscula, siguiendo el patrón ya mayoritario de `OrderStatus`/`DeliveryStatus` (`'pending' | 'preparing' | 'dispatched' | ...`). Queda prohibido:
+- Reproducir la variante en español/capitalizado que usa `ClientAccount.status` (`'Al dia' | 'Con Deuda'`).
+- Inventar cualquier otro formato nuevo (otro idioma, otra convención de casing, etc.) para un campo de estado.
+
+**Deuda técnica conocida — no se toca en esta tarea:** los siguientes tipos de estado ya existentes no siguen esta norma y quedan señalados para corregir más adelante, cuando corresponda:
+- `ClientAccount.status` (`shared/types/client.types.ts`) — viola la norma en idioma y casing (`'Al dia' | 'Con Deuda'`).
+- `SupplierPurchaseOrder.status` (`shared/types/supplier.types.ts`) — ya está en inglés minúscula, pero define un vocabulario de estados propio y desconectado (`'paid' | 'pending' | 'overdue'`) en vez de alinearse a los ya existentes.
+- `InvoiceRecord.status` (`shared/types/settings.types.ts`) — mismo caso que el anterior (`'paid' | 'pending'`).
+
+### 3. Norma: cumplimiento obligatorio de zod / zustand / lucide-react / sonner
+`[25/08/2026] — Utilidades Esenciales del Frontend` ya declaraba estas 4 herramientas como obligatorias, pero durante meses de código real ninguna se usó (ver `[28/08/2026] — Inconsistencias Encontradas Entre Módulos`, punto 1). `logistics` rompió esa inercia para 3 de las 4 (`zustand`, `lucide-react`, `sonner` — ver `[28/08/2026] — Primer Uso Real de...` más arriba), pero `zod` todavía no tiene ningún caso real porque esa feature no incluyó un formulario.
+
+Queda fijado como norma, sin excepción, a partir de ahora:
+- **Todo formulario nuevo** que se programe de acá en adelante debe validar con `zod` + `react-hook-form` (`@hookform/resolvers/zod`), sin importar que el resto de los formularios legacy del proyecto (`CreateOrderModal`, `CreateClientModal`, `ProductFormModal`, `SupplierFormModal`, etc.) todavía no lo hagan.
+- **Todo ícono nuevo** debe salir de `lucide-react`, nunca un SVG inline a mano — aunque el proyecto siga lleno de SVGs inline preexistentes.
+- **Toda notificación nueva** de éxito/error/advertencia debe usar `sonner` (`toast.success`/`toast.error`/etc.), nunca `alert()` ni una implementación ad-hoc.
+- **Todo estado compartido nuevo** que amerite un store (no estado local de un solo componente) debe usar `zustand`, siguiendo la convención de ubicación y contrato de acciones fijada en `[28/08/2026] — Primer Uso Real de zustand, lucide-react y sonner...`, punto 3.
+
+Que el código legacy no cumpla no es excusa ni precedente para que código nuevo tampoco cumpla — es exactamente la deuda que estas normas buscan dejar de acumular.
+
+### 4. Norma de este registro
+Cuando se corrija alguno de los ítems de deuda técnica listados en el punto 2, o se implemente el primer formulario real con `zod`, se registra como una entrada nueva y fechada acá — no se edita esta entrada para dar la corrección por hecha antes de tiempo.
+
+## [28/08/2026] — Cierre: Relación logistics↔orders (Opción A confirmada)
+
+### 1. Contexto
+La feature "Entregas del Día" (`[28/08/2026] — Primer Uso Real de zustand, lucide-react y sonner...`, punto 7) implementó `Delivery.orderId: Order['id']` sin pasar antes por el paso de "proponer 2-3 opciones y esperar decisión" que exige la regla de relación entre módulos. Se presentaron después, retroactivamente, 3 opciones con pros/contras. Esta entrada cierra esa decisión: **no hay cambios de código en esta tarea**, solo se confirma por escrito lo ya implementado.
+
+### 2. Decisión confirmada — Opción A
+La relación `logistics → orders` se resuelve con `Delivery.orderId` tipado como `Order['id']` (`shared/types/logistics.types.ts` importa únicamente el *tipo* `Order` desde `shared/types/order.types.ts`). No existe ningún import en tiempo de ejecución entre `modules/logistics` y `modules/orders` — ni de componentes ni de lógica. El mock de `logistics.data.ts` tiene los IDs de pedidos reales copiados a mano desde `orders.data.ts`, no importados en runtime.
+
+### 3. Opciones descartadas y motivo
+
+| Opción | Descripción | Motivo de descarte |
+|---|---|---|
+| **B** | Servicio/repositorio compartido en `shared/services/` que resuelve datos de un pedido por ID, consumido por ambos módulos | Resuelve un problema que hoy no existe (mostrar datos reales del pedido en la tabla de logística): agrega superficie nueva — hay que definir el contrato de ese repositorio compartido — sin necesidad concreta todavía; `shared/services/` sigue sin ningún archivo real. Queda como la opción a adoptar si ese problema aparece de verdad (ver punto 4). |
+| **C** | Evento/mensaje desacoplado (domain event) en vez de referencia directa | Sobre-ingeniería para el tamaño y la arquitectura actual del proyecto: no hay backend, no hay bus de eventos, es un único frontend monolítico. Diseñar para ese escenario ahora viola la norma general de no construir para requisitos hipotéticos futuros. |
+
+### 4. Trigger de revisión explícito
+Si en el futuro se necesita mostrar **datos reales del pedido** (número de pedido, cliente real, etc.) en la tabla de entregas de `logistics`, en vez de seguir agregando campos duplicados al mock de `Delivery`, **reevaluar hacia la Opción B** (servicio/repositorio compartido en `shared/services/`). Ese es el momento de implementarla, no antes.
+
+### 5. Verificación de comentarios pendientes en código
+Se revisó `src/modules/logistics/` y `shared/types/logistics.types.ts` buscando `TODO`/`FIXME`/notas de "pendiente de decisión" relacionadas a esta relación. No se encontró ninguno — la implementación de `orderId` no tenía ningún comentario marcando esto como abierto, el punto solo estaba señalado en el resumen de la tarea anterior y en este documento. No hubo nada que limpiar.
+
+## [28/08/2026] — Productos Bajo Stock Mínimo (inventory)
+
+### 1. Contexto
+Feature nueva: listado de productos con stock por debajo del mínimo, con acción de "solicitar reposición" por producto. Antes de escribir código se investigó el estado real de `src/modules/inventory/` y de `shared/types/inventory.types.ts` — no se asumió nada.
+
+### 2. Campo de stock mínimo: ya existía, se reutilizó
+`InventoryItem.minStock` y `InventoryItem.stock` ya existían en `shared/types/inventory.types.ts` (y en `data/mock/inventory.data.ts`) desde antes de esta tarea — probablemente del pase de estructuración inicial del proyecto. **No se agregó ningún campo nuevo ni se creó una entidad de producto paralela.** El mock de `items[]` se extendió de 2 a 18 productos para tener variedad real: 11 por debajo del mínimo, 2 exactamente en el límite (`stock === minStock`, deben quedar afuera del listado — caso borde probado a propósito) y 5 por encima.
+
+### 3. Decisión estructural: tab nueva, no se tocó la tab "Reposición" existente
+`InventoryPage.tsx` ya tenía 8 tabs, y una de ellas — `purchases` / "Reposicion" (`TabPurchases.tsx`) — ya mostraba "productos con stock por debajo de su mínimo", pero modela un concepto **distinto y más específico**: `PurchaseSuggestion`, con `supplierName` (string libre, no ID tipado — el mismo anti-patrón que este documento ya viene señalando como deuda), `suggestedQuantity` y `estimatedCost` — básicamente un borrador de orden de compra a un proveedor concreto, con botón "Generar OC".
+
+Lo que pide esta tarea es más simple y genérico: marcar un producto como "reposición solicitada" sin comprometer proveedor ni cantidad. Conflicionar ambos conceptos en la misma tab, o reescribir `TabPurchases`/`PurchaseSuggestion`, hubiera sido tocar una feature existente sin que se haya pedido. Se decidió agregar una **tab nueva** — `low-stock` / "Bajo Stock Mínimo", ubicada justo después de "Stock Actual" — que reutiliza `InventoryItem` tal cual y no toca `TabPurchases.tsx` ni `PurchaseSuggestion` en absoluto.
+
+### 4. `ReplenishmentStatus` — modelado genérico
+`shared/types/inventory.types.ts` agrega:
+```ts
+export type ReplenishmentStatus = 'not_requested' | 'requested';
+```
+Nombre genérico (no `InventoryReplenishmentStatus`), mismo criterio que `DeliveryStatus` en `logistics.types.ts`. El estado de reposición **no se guarda en `InventoryItem`** ni se mezcla con `PurchaseSuggestion`: vive aparte, en el store de `zustand` (`Record<string, ReplenishmentStatus>` indexado por `productId`), para que el día que se conecte con `suppliers` de verdad alcance con sumarle un campo (ej. `supplierId`) al registro de reposición, sin tocar `InventoryItem` ni el tipo de estado.
+
+### 5. `useReplenishmentStore` — segundo store real del proyecto, mismo contrato que `useDeliveriesStore`
+`modules/inventory/state/useReplenishmentStore.ts` sigue al pie de la letra la convención fijada en `[28/08/2026] — Primer Uso Real de zustand, lucide-react y sonner...`, punto 3:
+- Ubicación `modules/<modulo>/state/use<Nombre>Store.ts`.
+- La acción `requestReplenishment(productId)` devuelve un resultado estructurado (`{ success, productId, status, reason? }`), no un mensaje de UI — `TabLowStock.tsx` decide el texto del toast de `sonner`.
+- Transición unidireccional: la única acción posible es pasar de `'not_requested'` a `'requested'`; un segundo intento sobre el mismo producto devuelve `success: false, reason: 'already-requested'` en vez de sobrescribir en silencio. La UI además retira el botón de acción una vez solicitado, igual que en logística con las entregas ya completadas.
+
+### 6. Relación futura con `suppliers` — opciones propuestas, sin implementar
+
+| Opción | Descripción | Pros / Contras |
+|---|---|---|
+| **A (recomendada)** | `supplierId: Supplier['id']` tipado en el registro de reposición, importando solo el *tipo* `Supplier` desde `shared/types/supplier.types.ts` — mismo patrón ya adoptado y documentado para `logistics↔orders` | Pro: mínimo acoplamiento, consistente con el precedente ya establecido en el proyecto. Contra: para elegir un proveedor real en la UI hoy no hay una forma compartida de leer datos de `suppliers` sin importar el módulo o duplicar su mock. |
+| **B** | Servicio/repositorio compartido en `shared/services/` que resuelve datos de proveedor por ID, consumido por ambos módulos | Pro: mismo mecanismo ya evaluado (y pospuesto) para `logistics↔orders` — consistencia entre módulos. Contra: mismo costo ya señalado ahí: `shared/services/` sigue sin ningún archivo real, no hay necesidad concreta todavía. |
+| **C — descartada** | Reusar `InventoryItem.supplier` (ya existe, string libre con el nombre del proveedor) como si fuera la referencia | Es exactamente el anti-patrón que `PurchaseSuggestion.supplierName` ya reproduce y que este documento señala como deuda (coincidencia informal de nombre, no ID tipado). No cumple la regla base de relación entre módulos — descartada. |
+
+**Trigger de revisión** (mismo criterio que en `logistics↔orders`): implementar la Opción A recién cuando la UI necesite de verdad elegir/mostrar un proveedor real para una reposición — no antes.
+
+### 7. Hallazgo colateral (no corregido, fuera de alcance)
+Al revisar `TabStockCurrent.tsx`/`TabPurchases.tsx` para esta tarea se encontró que usan clases CSS que no están definidas en ningún lado (`text-danger`, `.btn-action`, `.btn-action--ghost`) — no aplican ningún color/estilo real. `text-warning` y `font-mono` sí están definidos, pero de forma local en `InventoryPage.css`, no como tokens centrales. `TabLowStock.css` (esta tarea) no reutiliza ninguna de esas clases — define las suyas propias con variables de `src/styles/variables.css`. No se tocó `TabStockCurrent.css`/`TabPurchases.tsx` — no era parte de esta tarea.

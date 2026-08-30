@@ -76,3 +76,10 @@ export interface InventoryData {
   suggestions: PurchaseSuggestion[];
   history: ProductHistoryEvent[];
 }
+
+// Estado de una solicitud de reposicion sobre un producto bajo stock
+// minimo. Nombre generico (no "InventoryReplenishmentStatus"): hoy vive
+// en este archivo por ser el unico dominio que lo usa, pero el concepto
+// no es exclusivo de inventory — pensado para el futuro vinculo con
+// suppliers (ver DECISIONES_TECNICAS.md).
+export type ReplenishmentStatus = 'not_requested' | 'requested';

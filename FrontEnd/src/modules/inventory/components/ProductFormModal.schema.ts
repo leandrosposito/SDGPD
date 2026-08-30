@@ -61,6 +61,9 @@ const baseProductFormSchema = z.object({
 // coercido). react-hook-form necesita ambos por separado: el estado del
 // formulario usa el tipo de entrada (ProductFormInput) y el resultado ya
 // validado/coercido que llega a onSubmit usa el tipo de salida (ProductFormValues).
+// Fix: tipar useForm con los 3 generics (input, context, output) que
+// react-hook-form 7.55+ / @hookform/resolvers 3+ soportan para este caso
+// exacto — ver ProductFormModal.tsx.
 export type ProductFormInput = z.input<typeof baseProductFormSchema>;
 export type ProductFormValues = z.output<typeof baseProductFormSchema>;
 

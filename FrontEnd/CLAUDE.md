@@ -23,23 +23,31 @@ Stack: React 19 + Vite 8, TypeScript 6, react-router-dom v7, recharts, zustand, 
 
 An `@/` import alias (mapped to `src/`) is configured in `vite.config.ts` and `tsconfig.app.json` and is the project-wide convention: use `@/shared/...`, `@/modules/...`, etc. instead of relative paths that go up more than one level (`../../shared/...`). All existing imports were migrated to this convention. A same-folder or one-level-up relative import (`./Foo`, `../Foo`) is still fine and does not need the alias. ESLint enforces this as a warning via `no-restricted-imports` (flags `../../**`).
 
+### Mandatory tooling (do not duplicate)
+
+Per `docs/DECISIONES_TECNICAS.md`, these are locked in; introducing an alternative for something already covered here requires documenting why in that file:
+- **Forms/validation** — `zod` schema in a `*.schema.ts` file per module, wired to `react-hook-form` via `@hookform/resolvers/zod`.
+- **Shared state** — `zustand`, store files named `use<Nombre>Store.ts`. Convention actually in use: a per-module `state/` folder (e.g. `modules/logistics/state/useDeliveriesStore.ts`, `modules/inventory/state/useReplenishmentStore.ts`), not a single global `src/shared/state/`.
+- **Icons** — `lucide-react` exclusively.
+- **User feedback** (success/error/warning) — `sonner` exclusively; never native `alert()` or a custom toast.
+
 ### Module structure
 
-`src/modules/` has one folder per business domain, each with a `<Name>Page.tsx` + matching `.css` + a `components/` subfolder of `.tsx`/`.css` pairs: `dashboard`, `orders`, `clients`, `suppliers`, `inventory`, `logistics`, `cash`, `analytics`, `settings`. There is no `_template/` to copy — if you need a pattern for a new module, use `src/modules/dashboard/`. Route paths are mostly Spanish (`/pedidos`, `/inventario`, `/clientes`, `/proveedores`, `/logistica`, `/caja`, `/analitica`) except `/settings` — this inconsistency is pre-existing, not a bug to silently "fix" unless asked.
+`src/modules/` has one folder per business domain, each with a `<Name>Page.tsx` + matching `.css` + a `components/` subfolder of `.tsx`/`.css` pairs: `dashboard`, `orders`, `clients`, `suppliers`, `inventory`, `logistics`, `cash`, `analytics`, `settings`. There is no `_template/` to copy — if you need a pattern for a new module, use `src/modules/dashboard/`. A module that owns zustand state keeps it in its own `state/` subfolder (see above), not in a shared location. Route paths are mostly Spanish (`/pedidos`, `/inventario`, `/clientes`, `/proveedores`, `/logistica`, `/caja`, `/analitica`) except `/settings` — this inconsistency is pre-existing, not a bug to silently "fix" unless asked.
 
 Routes are wired in `src/shared/routes/AppRoutes.tsx` (imported by `App.tsx`), all nested under the shared `AppShell` layout — this is the single, only place routes are declared. To add a new route: import the page component in `AppRoutes.tsx` and add a `<Route path="..." element={<Component />} />` inside the `<Routes>` block.
 
 Shared/preexisting UI layer — treat as stable, don't restructure without being asked. Everything here lives under `src/shared/`:
 - `src/shared/layouts/` — `AppShell` (`AppShell.tsx`), `Header`, `Sidebar` (each with matching `.css`)
-- `src/shared/components/ui/` — `Badge`, `Modal`, `SidePanel`, `SkeletonLoader`, `StatCard`, `Table`, `Tabs` (each with matching `.css`)
-- `src/shared/hooks/` — `useDashboard.ts` (data-fetching state for the dashboard module); the only hook so far, and the only file in that folder
+- `src/shared/components/ui/` — `Badge`, `Modal`, `SidePanel`, `SkeletonLoader`, `StatCard`, `Table`, `Tabs`, `Pagination`, `ErrorBoundary` (each with matching `.css`)
+- `src/shared/hooks/` — `useDashboard.ts` (data-fetching state for the dashboard module), `usePagination.ts` (paginated-table state, pairs with `Pagination.tsx`)
 - `src/styles/` (variables.css, reset.css, global.css, typography.css — design tokens and global styles)
 
 Convention for new shared elements: a component used in 2+ places belongs in `src/shared/components/`, never duplicated per-module; a new layout goes in `src/shared/layouts/`. Check these folders before adding something that might already exist there.
 
 ### Mock data / service pattern
 
-`src/data/mock/*.data.ts` holds one mock dataset per module (9 files, one per module listed above). `src/services/mock/` currently has service wrappers for `dashboard`, `clients`, `suppliers`, and `products` (the last one wraps `InventoryItem`/`inventory.data.ts`, not a separate `products.data.ts` — there is no data file per service, only per module). The other modules (`orders`, `inventory`-the-page, `logistics`, `cash`, `analytics`, `settings`) still have no service wrapper and read `data/mock/*` directly. Each existing service follows this shape, set by `dashboard.service.ts`:
+`src/data/mock/*.data.ts` holds one mock dataset per module (9 files, one per module listed above). `src/services/mock/` currently has service wrappers for `dashboard`, `clients`, `suppliers`, and `products` (the last one wraps `InventoryItem`/`inventory.data.ts`, not a separate `products.data.ts` — there is no data file per service, only per module). `logistics` has its own service under `src/modules/logistics/services/`. The other modules (`orders`, `cash`, `analytics`, `settings`) still have no service wrapper and read `data/mock/*` directly. Each existing service follows this shape, set by `dashboard.service.ts`:
 
 ```ts
 async function fetchX(): Promise<X> {

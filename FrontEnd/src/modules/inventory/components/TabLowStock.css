@@ -1,0 +1,97 @@
+.tab-low-stock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.tab-low-stock__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.tab-low-stock__title-group {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.tab-low-stock__icon {
+  flex-shrink: 0;
+  color: var(--color-warning);
+  margin-top: var(--space-1);
+}
+
+.tab-low-stock__title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+}
+
+.tab-low-stock__subtitle {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-top: var(--space-1);
+}
+
+.tab-low-stock__count {
+  flex-shrink: 0;
+  padding: var(--space-1) var(--space-3);
+  background: var(--color-warning-muted);
+  color: var(--color-warning);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+}
+
+.tab-low-stock__table-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.tab-low-stock__code {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.tab-low-stock__stock--current {
+  color: var(--color-danger);
+  font-weight: var(--font-weight-bold);
+}
+
+.tab-low-stock__deficit {
+  color: var(--color-danger);
+  font-weight: var(--font-weight-semibold);
+}
+
+.tab-low-stock__action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  background: var(--color-accent);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: background var(--transition-fast) ease;
+}
+
+.tab-low-stock__action-btn:hover {
+  background: var(--color-accent-hover);
+}
+
+.tab-low-stock__requested-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-success);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+}
