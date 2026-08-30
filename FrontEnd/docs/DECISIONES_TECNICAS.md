@@ -173,3 +173,24 @@ Nombre genérico (no `InventoryReplenishmentStatus`), mismo criterio que `Delive
 
 ### 7. Hallazgo colateral (no corregido, fuera de alcance)
 Al revisar `TabStockCurrent.tsx`/`TabPurchases.tsx` para esta tarea se encontró que usan clases CSS que no están definidas en ningún lado (`text-danger`, `.btn-action`, `.btn-action--ghost`) — no aplican ningún color/estilo real. `text-warning` y `font-mono` sí están definidos, pero de forma local en `InventoryPage.css`, no como tokens centrales. `TabLowStock.css` (esta tarea) no reutiliza ninguna de esas clases — define las suyas propias con variables de `src/styles/variables.css`. No se tocó `TabStockCurrent.css`/`TabPurchases.tsx` — no era parte de esta tarea.
+
+## [30/08/2026] — Reconciliación con origin/lean: alias `@/` y descarte del sistema de ADRs
+
+### 1. Contexto
+Esta rama local (`lean`, sobre `4d1e8a2`) quedó 9 commits atrás de `origin/lean` mientras acumulaba el trabajo de paginación/zustand/low-stock documentado arriba, todo sin commitear. Antes de perder ese trabajo, se resguardó en la rama `respaldo-pre-reconciliacion-30-08-2026`, y esta entrada documenta las dos decisiones de fondo tomadas al traer esos 9 commits de vuelta.
+
+### 2. Decisiones adoptadas
+
+| Propuesta | Resultado | Justificación |
+|---|---|---|
+| Alias de imports `@/` (mapeado a `src/`) | Adoptado para todo el proyecto | Ya venía configurado en `vite.config.ts`/`tsconfig.app.json` en `origin/lean`. Se migraron a `@/...` todos los imports relativos de 2+ niveles (`../../...`) del proyecto, incluyendo los del trabajo local (paginación, stores de zustand, `TabLowStock`, módulo `logistics` nuevo). Reforzado por la regla ESLint `no-restricted-imports` (warning sobre `../../**`), también traída de `origin/lean`. |
+| Sistema de ADRs (`Documentacion/decisiones/`, `docs/implementacion/`) | Evaluado y descartado | `origin/lean` los había agregado (commits `dae1937` y parte de `df70812`). Se decidió no adoptarlos: habrían duplicado el registro de decisiones que ya cubren este mismo archivo y los `docs/*.md` de arquitectura de módulo (`ESTRUCTURA_Y_ARQUITECTURA.md`, `COMPONENTES_Y_LAYOUTS.md`, `RUTAS_Y_MODULOS.md`) — ver el historial completo de este documento como prueba de que ese sistema único ya viene funcionando bien. No fue un olvido: se evaluó el contenido real que traían esos commits y se eliminó deliberadamente por esta razón, en ambas copias del proyecto en las que se probó.
+
+### 3. Otros ajustes de la reconciliación (sin decisión nueva, solo registro)
+- El shape nuevo de `InventoryItem` que trae `origin/lean` (`barcode`, `unitOfMeasure`, `status`, `description?`) se aceptó tal cual; los 16 productos de bajo stock del mock local (que fueron escritos contra el shape viejo) se completaron con valores realistas por producto para cumplir el shape nuevo.
+- La tab "Bajo Stock Mínimo" (`TabLowStock`, ver entrada `[28/08/2026] — Productos Bajo Stock Mínimo` arriba) se reconectó para leer del mismo estado async (`products`, vía `fetchProducts()`) que ya usa la tab "Stock Actual" de `origin/lean`, en vez del mock estático.
+- El fix de tipos de zod v4 + `@hookform/resolvers` en `ProductFormModal` (necesario porque `origin/lean` usa `z.coerce.number()`) ya existía de forma independiente en el trabajo local, con el mismo patrón exacto (3 generics de `useForm`). Se unificó a una sola versión, sin código duplicado.
+
+### 4. Estándar de uso obligatorio en el código
+- **Imports:** usar `@/shared/...`, `@/modules/...`, etc. en vez de rutas relativas que suban más de un nivel (`../../...`). Un import al mismo nivel o un nivel arriba (`./Foo`, `../Foo`) sigue siendo válido y no necesita el alias.
+- **Decisiones técnicas:** todo registro de decisión de arquitectura/estructura de proyecto va en este archivo (`docs/DECISIONES_TECNICAS.md`); no crear un sistema de ADR paralelo ni una carpeta `decisiones/` nueva.
