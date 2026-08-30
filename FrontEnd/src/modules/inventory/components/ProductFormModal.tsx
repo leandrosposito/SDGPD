@@ -7,6 +7,7 @@ import type { InventoryItem } from '../../../shared/types/inventory.types';
 import {
   createProductFormSchema,
   productFormDefaultValues,
+  type ProductFormInput,
   type ProductFormValues,
 } from './ProductFormModal.schema';
 import './InventoryModals.css';
@@ -49,7 +50,7 @@ export const ProductFormModal: FC<ProductFormModalProps> = ({
     handleSubmit,
     reset,
     formState: { errors },
-  } = useForm<ProductFormValues>({
+  } = useForm<ProductFormInput, unknown, ProductFormValues>({
     resolver: zodResolver(schema),
     defaultValues: productFormDefaultValues(product),
   });

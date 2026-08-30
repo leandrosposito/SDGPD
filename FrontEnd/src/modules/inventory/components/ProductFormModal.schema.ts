@@ -56,7 +56,13 @@ const baseProductFormSchema = z.object({
   minStock: z.coerce.number().min(0, 'El stock minimo no puede ser negativo.'),
 });
 
-export type ProductFormValues = z.infer<typeof baseProductFormSchema>;
+// zod v4 + @hookform/resolvers: z.coerce.number() tiene un tipo de entrada
+// (unknown, antes de coercion) distinto del tipo de salida (number, ya
+// coercido). react-hook-form necesita ambos por separado: el estado del
+// formulario usa el tipo de entrada (ProductFormInput) y el resultado ya
+// validado/coercido que llega a onSubmit usa el tipo de salida (ProductFormValues).
+export type ProductFormInput = z.input<typeof baseProductFormSchema>;
+export type ProductFormValues = z.output<typeof baseProductFormSchema>;
 
 // Regla de negocio RF-PRD-001: "SKU y Codigo de Barras deben ser unicos".
 // La unicidad depende de la lista de productos existentes y del producto
@@ -88,7 +94,7 @@ export function createProductFormSchema(existingProducts: InventoryItem[], curre
   });
 }
 
-export function productFormDefaultValues(product?: InventoryItem | null): ProductFormValues {
+export function productFormDefaultValues(product?: InventoryItem | null): ProductFormInput {
   if (!product) {
     return {
       sku: '',
