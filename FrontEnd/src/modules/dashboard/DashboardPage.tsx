@@ -1,5 +1,5 @@
 import type { FC } from 'react';
-import { useDashboard } from '../../hooks/useDashboard';
+import { useDashboard } from '../../shared/hooks/useDashboard';
 import { KpiGrid } from './components/KpiGrid';
 import { SalesChart } from './components/SalesChart';
 import { TopProductsChart } from './components/TopProductsChart';

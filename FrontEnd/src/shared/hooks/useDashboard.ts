@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import type { DashboardData } from '../shared/types/dashboard.types';
-import { fetchDashboardData } from '../services/mock/dashboard.service';
+import type { DashboardData } from '../types/dashboard.types';
+import { fetchDashboardData } from '../../services/mock/dashboard.service';
 
 // ============================================================
 // useDashboard — Custom hook for dashboard data fetching
