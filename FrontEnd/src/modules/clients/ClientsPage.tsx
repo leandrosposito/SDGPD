@@ -1,5 +1,7 @@
-import { useState, useMemo, type FC } from 'react';
-import { CLIENTS_MOCK_DATA } from '../../data/mock/clients.data';
+import { useEffect, useState, useMemo, type FC } from 'react';
+import { toast } from 'sonner';
+import type { ClientAccount } from '../../shared/types/client.types';
+import { fetchClients, createClient, updateClient, type ClientFormInput } from '../../services/mock/clients.service';
 import { ClientActionBar } from './components/ClientActionBar';
 import { ClientFilters } from './components/ClientFilters';
 import { ClientDirectoryTable } from './components/ClientDirectoryTable';
@@ -14,18 +16,46 @@ import './ClientsPage.css';
 type ActiveTab = 'directory' | 'accounts';
 
 export const ClientsPage: FC = () => {
+  const [clients, setClients] = useState<ClientAccount[]>([]);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<ActiveTab>('directory');
-  
+
   // Filters State
   const [searchQuery, setSearchQuery] = useState('');
   const [zone, setZone] = useState('');
   const [seller, setSeller] = useState('');
   const [status, setStatus] = useState('');
 
+  useEffect(() => {
+    let cancelled = false;
+    fetchClients()
+      .then((data) => {
+        if (!cancelled) setClients(data);
+      })
+      .catch(() => {
+        if (!cancelled) toast.error('No se pudo cargar el listado de clientes.');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // RF-CLI-001: Alta / Modificacion de cliente contra el mock service
+  // (persiste en memoria durante la sesion, ver services/mock/clients.service.ts).
+  const handleSaveClient = async (input: ClientFormInput, clientId?: string) => {
+    if (clientId) {
+      const updated = await updateClient(clientId, input);
+      setClients(prev => prev.map(c => (c.id === updated.id ? updated : c)));
+      return updated;
+    }
+    const created = await createClient(input);
+    setClients(prev => [...prev, created]);
+    return created;
+  };
+
   // Filter Logic
   const filteredClients = useMemo(() => {
-    return CLIENTS_MOCK_DATA.filter(c => {
+    return clients.filter(c => {
       const q = searchQuery.toLowerCase();
       const matchSearch = c.clientName.toLowerCase().includes(q) || c.cuit.includes(q);
       const matchZone = zone === '' || c.zone === zone;
@@ -33,7 +63,7 @@ export const ClientsPage: FC = () => {
       const matchStatus = status === '' || c.status === status;
       return matchSearch && matchZone && matchSeller && matchStatus;
     });
-  }, [searchQuery, zone, seller, status]);
+  }, [clients, searchQuery, zone, seller, status]);
 
   return (
     <div className="clients-page page-enter">
@@ -80,9 +110,11 @@ export const ClientsPage: FC = () => {
         )}
       </div>
 
-      <CreateClientModal 
+      <CreateClientModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
+        client={null}
+        onSave={handleSaveClient}
       />
     </div>
   );

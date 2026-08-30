@@ -7,6 +7,7 @@ import { ProductFormModal } from './components/ProductFormModal';
 import { PurchaseEntryModal } from './components/PurchaseEntryModal';
 import { ProductLotsPanel } from './components/ProductLotsPanel';
 import { TabStockCurrent } from './components/TabStockCurrent';
+import { TabLowStock } from './components/TabLowStock';
 import { TabMovements } from './components/TabMovements';
 import { TabPurchases } from './components/TabPurchases';
 import { TabAdjustments } from './components/TabAdjustments';
@@ -51,6 +52,11 @@ export const InventoryPage: FC = () => {
           userRole={USER_ROLE}
         />
       )
+    },
+    {
+      id: 'low-stock',
+      label: 'Bajo Stock Minimo',
+      content: <TabLowStock data={INVENTORY_MOCK_DATA.items} />
     },
     {
       id: 'movements',

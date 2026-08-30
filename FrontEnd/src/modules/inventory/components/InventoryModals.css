@@ -116,6 +116,21 @@
   gap: var(--space-3);
 }
 
+/* RF-PRD-001 — confirmacion de baja de producto (ProductFormModal) */
+.product-delete-confirm {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-4);
+  width: 100%;
+}
+
+.product-delete-confirm__text {
+  font-size: var(--font-size-sm);
+  color: var(--color-danger);
+  font-weight: var(--font-weight-medium);
+}
+
 .stock-adjustment-info {
   background-color: var(--color-bg-subtle);
   border: 0.0625rem solid var(--color-border);

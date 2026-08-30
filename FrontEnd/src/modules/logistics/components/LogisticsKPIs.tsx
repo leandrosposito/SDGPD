@@ -1,23 +1,23 @@
 import { type FC } from 'react';
-import { type LogisticsOrder } from '../../../shared/types/logistics.types';
+import { type Delivery } from '../../../shared/types/logistics.types';
 import '../LogisticsPage.css';
 
 interface LogisticsKPIsProps {
-  orders: LogisticsOrder[];
+  deliveries: Delivery[];
 }
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(value);
 }
 
-export const LogisticsKPIs: FC<LogisticsKPIsProps> = ({ orders }) => {
-  const totalOrders = orders.length;
-  const deliveredOrders = orders.filter(o => o.status === 'delivered').length;
+export const LogisticsKPIs: FC<LogisticsKPIsProps> = ({ deliveries }) => {
+  const totalOrders = deliveries.length;
+  const deliveredOrders = deliveries.filter(d => d.status === 'delivered').length;
   const deliveryProgress = totalOrders > 0 ? (deliveredOrders / totalOrders) * 100 : 0;
 
-  const pendingCollection = orders
-    .filter(o => o.status === 'in_transit' || o.status === 'pending')
-    .reduce((acc, order) => acc + order.collectionAmount, 0);
+  const pendingCollection = deliveries
+    .filter(d => d.status === 'in_transit' || d.status === 'pending')
+    .reduce((acc, delivery) => acc + delivery.collectionAmount, 0);
 
   return (
     <div className="logistics-kpis">

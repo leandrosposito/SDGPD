@@ -1,18 +1,21 @@
 import { useState, useEffect, type FC } from 'react';
+import { toast } from 'sonner';
 import { Modal } from '../../../shared/components/ui/Modal';
 import { OrderItemsTable, type OrderItem } from './OrderItemsTable';
 import { OrderFinancialSummary } from './OrderFinancialSummary';
-import type { Supplier } from '../../../shared/types/supplier.types';
+import type { Supplier, SupplierPurchaseOrder } from '../../../shared/types/supplier.types';
 import './SupplierModals.css';
 
 interface PurchaseOrderModalProps {
   isOpen: boolean;
   onClose: () => void;
   supplier: Supplier | null;
+  onEmit?: (supplierId: string, order: Omit<SupplierPurchaseOrder, 'id'>) => Promise<Supplier>;
 }
 
-export const PurchaseOrderModal: FC<PurchaseOrderModalProps> = ({ isOpen, onClose, supplier }) => {
+export const PurchaseOrderModal: FC<PurchaseOrderModalProps> = ({ isOpen, onClose, supplier, onEmit }) => {
   const [selectedSupplierId, setSelectedSupplierId] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Financial State
   const [currency, setCurrency] = useState<'ARS' | 'USD'>('ARS');
@@ -67,6 +70,30 @@ export const PurchaseOrderModal: FC<PurchaseOrderModalProps> = ({ isOpen, onClos
 
   const subtotal = items.reduce((acc, item) => acc + (item.quantity * item.unitPrice), 0);
 
+  const handleEmit = async () => {
+    if (!activeSupplier || !onEmit) {
+      onClose();
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const ivaAmount = subtotal * (ivaPercentage / 100);
+      const amount = subtotal + ivaAmount + percepciones;
+      await onEmit(activeSupplier.id, {
+        date: new Date().toISOString(),
+        description: `Orden de compra (${items.length} producto${items.length === 1 ? '' : 's'})`,
+        amount,
+        status: 'pending',
+      });
+      toast.success('Orden de compra emitida correctamente.');
+      onClose();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'No se pudo emitir la orden de compra.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <Modal
       isOpen={isOpen}
@@ -75,9 +102,11 @@ export const PurchaseOrderModal: FC<PurchaseOrderModalProps> = ({ isOpen, onClos
       size="xl"
       footer={
         <div className="modal-footer">
-          <button className="client-modal-btn client-modal-btn--outline" onClick={onClose}>Cancelar</button>
-          <button className="client-modal-btn client-modal-btn--outline" onClick={onClose}>Guardar Borrador</button>
-          <button className="client-modal-btn client-modal-btn--primary" onClick={onClose}>Emitir Orden de Compra</button>
+          <button className="client-modal-btn client-modal-btn--outline" onClick={onClose} disabled={isSubmitting}>Cancelar</button>
+          <button className="client-modal-btn client-modal-btn--outline" onClick={onClose} disabled={isSubmitting}>Guardar Borrador</button>
+          <button className="client-modal-btn client-modal-btn--primary" onClick={handleEmit} disabled={isSubmitting}>
+            {isSubmitting ? 'Emitiendo...' : 'Emitir Orden de Compra'}
+          </button>
         </div>
       }
     >

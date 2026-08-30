@@ -37,6 +37,25 @@ export const INVENTORY_MOCK_DATA: InventoryData = {
         { id: 'lot-003', lotNumber: 'L20240630A', quantity: 50, expirationDate: '2026-06-30T00:00:00Z' }
       ]
     },
+    // --- Por debajo del minimo ---
+    { id: 'inv-003', sku: 'HAR-0000-1K',  name: 'Harina 0000 1kg',          category: 'Almacen',    supplier: 'Molinos Cañuelas',      stock: 80,  minStock: 150, cost: 380,  price: 550 },
+    { id: 'inv-004', sku: 'AZU-REF-1K',   name: 'Azucar Refinada 1kg',      category: 'Almacen',    supplier: 'Ledesma',                stock: 40,  minStock: 100, cost: 420,  price: 600 },
+    { id: 'inv-005', sku: 'GAL-AGU-200',  name: 'Galletitas de Agua 200g',  category: 'Golosinas',  supplier: 'Bagley',                 stock: 30,  minStock: 120, cost: 280,  price: 420 },
+    { id: 'inv-006', sku: 'ACE-OLI-05',   name: 'Aceite de Oliva 500ml',    category: 'Aceites',    supplier: 'Molinos Cañuelas',      stock: 12,  minStock: 50,  cost: 4200, price: 5600 },
+    { id: 'inv-007', sku: 'YER-UNI-05',   name: 'Yerba Union 500g',         category: 'Infusiones', supplier: 'Las Marias',             stock: 25,  minStock: 80,  cost: 1100, price: 1520 },
+    { id: 'inv-012', sku: 'LAV-CLA-1L',   name: 'Lavandina 1L',             category: 'Limpieza',   supplier: 'Clorox',                 stock: 5,   minStock: 40,  cost: 320,  price: 480 },
+    { id: 'inv-013', sku: 'PAP-HIG-X4',   name: 'Papel Higienico x4',       category: 'Limpieza',   supplier: 'Kimberly-Clark',         stock: 15,  minStock: 60,  cost: 950,  price: 1350 },
+    { id: 'inv-014', sku: 'JAB-POL-800',  name: 'Jabon en Polvo 800g',      category: 'Limpieza',   supplier: 'Unilever',               stock: 8,   minStock: 50,  cost: 1100, price: 1580 },
+    { id: 'inv-016', sku: 'AGU-MIN-15',   name: 'Agua Mineral 1.5L',        category: 'Bebidas',    supplier: 'Danone',                 stock: 3,   minStock: 100, cost: 280,  price: 420 },
+    { id: 'inv-018', sku: 'VIN-TIN-750',  name: 'Vino Tinto 750ml',         category: 'Bebidas',    supplier: 'Bodegas Trapiche',       stock: 0,   minStock: 30,  cost: 2200, price: 3200 },
+    // --- Exactamente en el limite del minimo (no debe listarse como "bajo minimo") ---
+    { id: 'inv-008', sku: 'FID-GUI-500',  name: 'Fideos Guisero 500g',      category: 'Almacen',    supplier: 'Molinos Rio de la Plata', stock: 60,  minStock: 60,  cost: 310,  price: 460 },
+    { id: 'inv-009', sku: 'ARR-LAR-1K',   name: 'Arroz Largo Fino 1kg',     category: 'Almacen',    supplier: 'Molinos Rio de la Plata', stock: 90,  minStock: 90,  cost: 650,  price: 890 },
+    // --- Por encima del minimo ---
+    { id: 'inv-010', sku: 'TOM-PUR-520',  name: 'Pure de Tomate 520g',      category: 'Almacen',    supplier: 'Arcor',                  stock: 300, minStock: 100, cost: 480,  price: 690 },
+    { id: 'inv-011', sku: 'DET-LIQ-750',  name: 'Detergente Liquido 750ml', category: 'Limpieza',   supplier: 'Unilever',               stock: 200, minStock: 80,  cost: 890,  price: 1250 },
+    { id: 'inv-015', sku: 'GAS-COL-225',  name: 'Gaseosa Cola 2.25L',       category: 'Bebidas',    supplier: 'Coca-Cola Femsa',        stock: 500, minStock: 150, cost: 890,  price: 1300 },
+    { id: 'inv-017', sku: 'CER-RUB-1L',   name: 'Cerveza Rubia 1L',         category: 'Bebidas',    supplier: 'Quilmes',                stock: 400, minStock: 200, cost: 980,  price: 1450 },
   ],
   movements: [
     {

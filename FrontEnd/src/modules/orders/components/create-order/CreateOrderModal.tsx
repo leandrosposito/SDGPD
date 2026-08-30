@@ -1,5 +1,9 @@
 import { type FC, useState, useMemo, useEffect } from 'react';
+import { toast } from 'sonner';
 import { Modal } from '../../../../shared/components/ui/Modal';
+import type { InventoryItem } from '../../../../shared/types/inventory.types';
+import type { Order } from '../../../../shared/types/order.types';
+import { fetchProducts } from '../../../../services/mock/products.service';
 import { OrderClientSection } from './OrderClientSection';
 import { OrderDatesSection } from './OrderDatesSection';
 import { OrderProductsSection, type OrderProductItem } from './OrderProductsSection';
@@ -14,9 +18,19 @@ import './CreateOrder.css';
 interface CreateOrderModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onConfirm?: (order: Order) => void;
 }
 
-export const CreateOrderModal: FC<CreateOrderModalProps> = ({ isOpen, onClose }) => {
+export const CreateOrderModal: FC<CreateOrderModalProps> = ({ isOpen, onClose, onConfirm }) => {
+  // Products available to add to the order (RF-PRD-001 master data, en memoria).
+  const [products, setProducts] = useState<InventoryItem[]>([]);
+
+  useEffect(() => {
+    fetchProducts()
+      .then(setProducts)
+      .catch(() => toast.error('No se pudo cargar el listado de productos.'));
+  }, []);
+
   // Client Section State
   const [client, setClient] = useState('');
   const [seller, setSeller] = useState('');
@@ -71,8 +85,41 @@ export const CreateOrderModal: FC<CreateOrderModalProps> = ({ isOpen, onClose })
   };
 
   const handleConfirm = () => {
-    // Mock save logic
-    alert('Pedido guardado con exito!');
+    const tax = (subtotal - discount) * 0.21;
+    const totalAmount = subtotal - discount + tax;
+    const now = new Date().toISOString();
+
+    const newOrder: Order = {
+      id: `ord-${Date.now()}`,
+      orderNumber: `PED-${Date.now().toString().slice(-5)}`,
+      date: now,
+      clientName: client,
+      clientAddress: address,
+      clientZone: locality,
+      sellerName: seller,
+      status: 'pending',
+      source: 'manual',
+      paymentMethod: paymentMethod as Order['paymentMethod'],
+      subtotal,
+      discount,
+      tax,
+      totalAmount,
+      notes,
+      items: items.map((item) => ({
+        id: item.id,
+        sku: item.sku,
+        name: item.name,
+        quantity: item.quantity,
+        unitPrice: item.price,
+        subtotal: item.subtotal,
+      })),
+      history: [
+        { id: `h-${Date.now()}`, date: now, status: 'pending', description: 'Pedido creado manualmente' },
+      ],
+    };
+
+    onConfirm?.(newOrder);
+    toast.success('Pedido guardado con exito!');
     handleClose();
   };
 
@@ -104,6 +151,7 @@ export const CreateOrderModal: FC<CreateOrderModalProps> = ({ isOpen, onClose })
           items={items}
           onItemsChange={setItems}
           priceList={priceList}
+          products={products}
         />
 
         <OrderTotalsSection

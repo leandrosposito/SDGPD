@@ -1,5 +1,8 @@
-import { useState, type FC } from 'react';
+import { useEffect, useState, type FC } from 'react';
+import { toast } from 'sonner';
 import { Modal } from '../../../../shared/components/ui/Modal';
+import type { ClientAccount } from '../../../../shared/types/client.types';
+import type { ClientFormInput } from '../../../../services/mock/clients.service';
 import { ClientGeneralTab } from './ClientGeneralTab';
 import { ClientLogisticsTab } from './ClientLogisticsTab';
 import { ClientCommercialTab } from './ClientCommercialTab';
@@ -9,13 +12,16 @@ import './CreateClient.css';
 interface CreateClientModalProps {
   isOpen: boolean;
   onClose: () => void;
+  client?: ClientAccount | null;
+  onSave?: (input: ClientFormInput, clientId?: string) => Promise<ClientAccount>;
 }
 
 type TabType = 'general' | 'logistica' | 'comercial' | 'ajustes';
 
-export const CreateClientModal: FC<CreateClientModalProps> = ({ isOpen, onClose }) => {
+export const CreateClientModal: FC<CreateClientModalProps> = ({ isOpen, onClose, client, onSave }) => {
   const [activeTab, setActiveTab] = useState<TabType>('general');
   const [showErrors, setShowErrors] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form State
   const [cuit, setCuit] = useState('');
@@ -51,6 +57,26 @@ export const CreateClientModal: FC<CreateClientModalProps> = ({ isOpen, onClose 
     setCategoria('Kiosco'); setNotas(''); setIsActive(true);
   };
 
+  // Precarga los campos que persiste ClientAccount al abrir el modal en modo edicion.
+  useEffect(() => {
+    if (isOpen) {
+      if (client) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setActiveTab('general');
+        setShowErrors(false);
+        setCuit(client.cuit);
+        setRazonSocial(client.clientName);
+        setTelefono(client.phone);
+        setDireccionFiscal(client.address);
+        setZona(client.zone);
+        setVendedor(client.sellerName);
+        setLimiteCredito(client.creditLimit);
+      } else {
+        resetForm();
+      }
+    }
+  }, [isOpen, client]);
+
   const validateAndClose = () => {
     if (!cuit || !razonSocial || cuit === '30-11111111-1') {
       setShowErrors(true);
@@ -60,19 +86,54 @@ export const CreateClientModal: FC<CreateClientModalProps> = ({ isOpen, onClose 
     return true;
   };
 
-  const handleSave = () => {
-    if (validateAndClose()) {
+  const buildClientInput = (): ClientFormInput => ({
+    clientName: razonSocial,
+    cuit,
+    address: direccionFiscal,
+    phone: telefono,
+    zone: zona,
+    sellerName: vendedor,
+    creditLimit: limiteCredito,
+  });
+
+  const handleSave = async () => {
+    if (!validateAndClose()) return;
+    if (!onSave) {
       onClose();
       resetForm();
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      await onSave(buildClientInput(), client?.id);
+      toast.success(client ? 'Cliente actualizado correctamente.' : 'Cliente creado correctamente.');
+      onClose();
+      resetForm();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'No se pudo guardar el cliente.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-
-  const handleSaveAndOrder = () => {
-    if (validateAndClose()) {
+  const handleSaveAndOrder = async () => {
+    if (!validateAndClose()) return;
+    if (!onSave) {
       onClose();
       resetForm();
-      alert('Simulando apertura del Nuevo Pedido para el cliente recién creado.');
+      toast.success('Simulando apertura del Nuevo Pedido para el cliente recién creado.');
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      await onSave(buildClientInput(), client?.id);
+      onClose();
+      resetForm();
+      toast.success('Cliente guardado. Simulando apertura del Nuevo Pedido...');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'No se pudo guardar el cliente.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -83,13 +144,13 @@ export const CreateClientModal: FC<CreateClientModalProps> = ({ isOpen, onClose 
 
   const footer = (
     <div className="client-modal-footer">
-      <button className="client-modal-btn client-modal-btn--outline" onClick={handleClose}>
+      <button className="client-modal-btn client-modal-btn--outline" onClick={handleClose} disabled={isSubmitting}>
         Cancelar
       </button>
-      <button className="client-modal-btn client-modal-btn--primary" onClick={handleSave}>
-        Guardar
+      <button className="client-modal-btn client-modal-btn--primary" onClick={handleSave} disabled={isSubmitting}>
+        {isSubmitting ? 'Guardando...' : 'Guardar'}
       </button>
-      <button className="client-modal-btn client-modal-btn--special" onClick={handleSaveAndOrder}>
+      <button className="client-modal-btn client-modal-btn--special" onClick={handleSaveAndOrder} disabled={isSubmitting}>
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
@@ -99,7 +160,7 @@ export const CreateClientModal: FC<CreateClientModalProps> = ({ isOpen, onClose 
   );
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Nuevo Cliente" size="xl" footer={footer}>
+    <Modal isOpen={isOpen} onClose={handleClose} title={client ? 'Editar Cliente' : 'Nuevo Cliente'} size="xl" footer={footer}>
       <div className="client-tabs" style={{ marginTop: 0, marginBottom: '1.5rem' }}>
         <button 
           className={`client-tab ${activeTab === 'general' ? 'active' : ''}`}

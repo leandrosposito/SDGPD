@@ -1,3 +1,4 @@
+import { Toaster } from 'sonner';
 import { AppRoutes } from './shared/routes/AppRoutes';
 
 // ============================================================
@@ -5,7 +6,12 @@ import { AppRoutes } from './shared/routes/AppRoutes';
 // ============================================================
 
 function App() {
-  return <AppRoutes />;
+  return (
+    <>
+      <AppRoutes />
+      <Toaster richColors position="top-right" />
+    </>
+  );
 }
 
 export default App;
