@@ -1,5 +1,5 @@
 import { type FC } from 'react';
-import { type LogisticsOrder } from '../../../shared/types/logistics.types';
+import { type LogisticsOrder } from '@/shared/types/logistics.types';
 import '../LogisticsPage.css';
 
 interface LogisticsKPIsProps {

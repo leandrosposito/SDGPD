@@ -1,4 +1,4 @@
-import type { ClientAccount } from '../../shared/types/client.types';
+import type { ClientAccount } from '@/shared/types/client.types';
 
 export const CLIENTS_MOCK_DATA: ClientAccount[] = [
   {

@@ -1,5 +1,5 @@
-import type { ClientAccount } from '../../shared/types/client.types';
-import { CLIENTS_MOCK_DATA } from '../../data/mock/clients.data';
+import type { ClientAccount } from '@/shared/types/client.types';
+import { CLIENTS_MOCK_DATA } from '@/data/mock/clients.data';
 
 // ============================================================
 // CLIENTS SERVICE — RF-CLI-001 (corrige C4: "Guardar" no persistia nada)

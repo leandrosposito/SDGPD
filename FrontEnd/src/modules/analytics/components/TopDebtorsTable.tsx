@@ -1,6 +1,6 @@
 import { type FC } from 'react';
-import type { TopDebtor } from '../../../shared/types/analytics.types';
-import { Badge } from '../../../shared/components/ui/Badge';
+import type { TopDebtor } from '@/shared/types/analytics.types';
+import { Badge } from '@/shared/components/ui/Badge';
 import './TopDebtorsTable.css';
 
 // ============================================================

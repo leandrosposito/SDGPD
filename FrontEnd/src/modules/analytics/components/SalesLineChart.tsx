@@ -8,7 +8,7 @@ import {
   CartesianGrid,
   Tooltip,
 } from 'recharts';
-import type { SalesDataPoint } from '../../../shared/types/analytics.types';
+import type { SalesDataPoint } from '@/shared/types/analytics.types';
 import './ChartCard.css';
 
 // ============================================================

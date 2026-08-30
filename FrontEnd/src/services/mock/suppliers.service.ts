@@ -1,5 +1,5 @@
-import type { Supplier, SupplierPurchaseOrder } from '../../shared/types/supplier.types';
-import { SUPPLIERS_MOCK_DATA } from '../../data/mock/suppliers.data';
+import type { Supplier, SupplierPurchaseOrder } from '@/shared/types/supplier.types';
+import { SUPPLIERS_MOCK_DATA } from '@/data/mock/suppliers.data';
 
 // ============================================================
 // SUPPLIERS SERVICE — RF-PRO-001 / RF-CMP-001 (corrige C4: "Guardar"

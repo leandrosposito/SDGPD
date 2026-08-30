@@ -1,9 +1,9 @@
 import { useState, useEffect, type FC } from 'react';
 import { toast } from 'sonner';
-import { Modal } from '../../../shared/components/ui/Modal';
+import { Modal } from '@/shared/components/ui/Modal';
 import { OrderItemsTable, type OrderItem } from './OrderItemsTable';
 import { OrderFinancialSummary } from './OrderFinancialSummary';
-import type { Supplier, SupplierPurchaseOrder } from '../../../shared/types/supplier.types';
+import type { Supplier, SupplierPurchaseOrder } from '@/shared/types/supplier.types';
 import './SupplierModals.css';
 
 interface PurchaseOrderModalProps {

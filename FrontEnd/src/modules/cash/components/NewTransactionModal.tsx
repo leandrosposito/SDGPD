@@ -1,8 +1,8 @@
 import { useState, useEffect, type FC } from 'react';
-import { Modal } from '../../../shared/components/ui/Modal';
+import { Modal } from '@/shared/components/ui/Modal';
 import { TransactionTypeSelector } from './TransactionTypeSelector';
 import { TransactionDropzone } from './TransactionDropzone';
-import type { TransactionType } from '../../../shared/types/cash.types';
+import type { TransactionType } from '@/shared/types/cash.types';
 import './CashTransactionModal.css';
 
 interface NewTransactionModalProps {

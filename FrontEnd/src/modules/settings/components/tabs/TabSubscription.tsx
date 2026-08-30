@@ -1,8 +1,8 @@
 import type { FC } from 'react';
-import { SETTINGS_MOCK_INVOICES } from '../../../../data/mock/settings.data';
-import { Table } from '../../../../shared/components/ui/Table';
-import { Badge } from '../../../../shared/components/ui/Badge';
-import '../../SettingsPage.css';
+import { SETTINGS_MOCK_INVOICES } from '@/data/mock/settings.data';
+import { Table } from '@/shared/components/ui/Table';
+import { Badge } from '@/shared/components/ui/Badge';
+import '@/modules/settings/SettingsPage.css';
 
 export const TabSubscription: FC = () => {
   return (

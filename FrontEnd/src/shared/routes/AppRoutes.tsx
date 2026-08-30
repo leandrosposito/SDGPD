@@ -1,14 +1,14 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppShell } from '../layouts/AppShell';
-import { DashboardPage } from '../../modules/dashboard/DashboardPage';
-import { ClientsPage } from '../../modules/clients/ClientsPage';
-import { InventoryPage } from '../../modules/inventory/InventoryPage';
-import { LogisticsPage } from '../../modules/logistics/LogisticsPage';
-import { CashPage } from '../../modules/cash/CashPage';
-import { SuppliersPage } from '../../modules/suppliers/SuppliersPage';
-import { OrdersPage } from '../../modules/orders/OrdersPage';
-import { AnalyticsPage } from '../../modules/analytics/AnalyticsPage';
-import { SettingsPage } from '../../modules/settings/SettingsPage';
+import { DashboardPage } from '@/modules/dashboard/DashboardPage';
+import { ClientsPage } from '@/modules/clients/ClientsPage';
+import { InventoryPage } from '@/modules/inventory/InventoryPage';
+import { LogisticsPage } from '@/modules/logistics/LogisticsPage';
+import { CashPage } from '@/modules/cash/CashPage';
+import { SuppliersPage } from '@/modules/suppliers/SuppliersPage';
+import { OrdersPage } from '@/modules/orders/OrdersPage';
+import { AnalyticsPage } from '@/modules/analytics/AnalyticsPage';
+import { SettingsPage } from '@/modules/settings/SettingsPage';
 
 
 // ============================================================

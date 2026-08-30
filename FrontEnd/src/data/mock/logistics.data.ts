@@ -1,4 +1,4 @@
-import type { LogisticsOrder } from '../../shared/types/logistics.types';
+import type { LogisticsOrder } from '@/shared/types/logistics.types';
 
 export const LOGISTICS_MOCK_DATA: LogisticsOrder[] = [
   {

@@ -1,6 +1,6 @@
 import { useState, type FC } from 'react';
-import { CASH_MOCK_DATA } from '../../data/mock/cash.data';
-import type { CashTransaction } from '../../shared/types/cash.types';
+import { CASH_MOCK_DATA } from '@/data/mock/cash.data';
+import type { CashTransaction } from '@/shared/types/cash.types';
 import { CashKPIs } from './components/CashKPIs';
 import { CashTransactionsTable } from './components/CashTransactionsTable';
 import { NewTransactionModal } from './components/NewTransactionModal';

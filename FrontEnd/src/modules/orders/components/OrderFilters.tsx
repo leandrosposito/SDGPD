@@ -1,5 +1,5 @@
 import { type FC } from 'react';
-import type { OrderStatus } from '../../../shared/types/order.types';
+import type { OrderStatus } from '@/shared/types/order.types';
 import './OrderFilters.css';
 
 // ============================================================

@@ -1,5 +1,5 @@
 import { type FC } from 'react';
-import type { TimePeriod } from '../../../shared/types/analytics.types';
+import type { TimePeriod } from '@/shared/types/analytics.types';
 import './TimeFilter.css';
 
 // ============================================================

@@ -1,5 +1,5 @@
 import type { FC } from 'react';
-import type { TransactionType } from '../../../shared/types/cash.types';
+import type { TransactionType } from '@/shared/types/cash.types';
 import './CashTransactionModal.css';
 
 interface TransactionTypeSelectorProps {

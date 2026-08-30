@@ -1,5 +1,5 @@
 import type { FC } from 'react';
-import type { Order } from '../../../shared/types/order.types';
+import type { Order } from '@/shared/types/order.types';
 import './OrderKpis.css';
 
 // ============================================================

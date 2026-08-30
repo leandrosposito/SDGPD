@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { InventoryItem } from '../../../shared/types/inventory.types';
+import type { InventoryItem } from '@/shared/types/inventory.types';
 
 // ============================================================
 // ProductFormModal.schema — RF-PRD-001 (ABM Central de Productos)

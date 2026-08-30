@@ -1,4 +1,4 @@
-import type { AuditLogItem, InvoiceRecord, PermissionMatrix, UserAccount } from '../../shared/types/settings.types';
+import type { AuditLogItem, InvoiceRecord, PermissionMatrix, UserAccount } from '@/shared/types/settings.types';
 
 export const SETTINGS_MOCK_USERS: UserAccount[] = [
   { id: 'usr-1', name: 'Administrador General', email: 'admin@distribuidora.com', role: 'Admin', status: 'active' },

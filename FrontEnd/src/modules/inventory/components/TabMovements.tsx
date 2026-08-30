@@ -1,7 +1,7 @@
 import type { FC } from 'react';
-import { Table } from '../../../shared/components/ui/Table';
-import { Badge } from '../../../shared/components/ui/Badge';
-import type { InventoryMovement } from '../../../shared/types/inventory.types';
+import { Table } from '@/shared/components/ui/Table';
+import { Badge } from '@/shared/components/ui/Badge';
+import type { InventoryMovement } from '@/shared/types/inventory.types';
 
 // ============================================================
 // TabMovements — Historial de entradas y salidas fisicas

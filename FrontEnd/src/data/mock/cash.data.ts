@@ -1,4 +1,4 @@
-import type { CashRegister } from '../../shared/types/cash.types';
+import type { CashRegister } from '@/shared/types/cash.types';
 
 export const CASH_MOCK_DATA: CashRegister = {
   date: '2026-06-14',

@@ -1,4 +1,4 @@
-import type { DashboardData } from '../../shared/types/dashboard.types';
+import type { DashboardData } from '@/shared/types/dashboard.types';
 
 // ============================================================
 // MOCK DATA — Dashboard

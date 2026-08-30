@@ -1,6 +1,6 @@
 import { useState, type FC } from 'react';
-import { Table } from '../../../shared/components/ui/Table';
-import type { ProductHistoryEvent } from '../../../shared/types/inventory.types';
+import { Table } from '@/shared/components/ui/Table';
+import type { ProductHistoryEvent } from '@/shared/types/inventory.types';
 
 // ============================================================
 // TabProductHistory — Auditoria de eventos de inventario

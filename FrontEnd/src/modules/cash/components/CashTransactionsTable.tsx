@@ -1,7 +1,7 @@
 import { type FC } from 'react';
-import type { CashTransaction } from '../../../shared/types/cash.types';
-import { Table } from '../../../shared/components/ui/Table';
-import { Badge } from '../../../shared/components/ui/Badge';
+import type { CashTransaction } from '@/shared/types/cash.types';
+import { Table } from '@/shared/components/ui/Table';
+import { Badge } from '@/shared/components/ui/Badge';
 import '../CashPage.css';
 
 interface CashTransactionsTableProps {

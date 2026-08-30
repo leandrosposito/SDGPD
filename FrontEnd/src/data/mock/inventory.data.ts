@@ -1,4 +1,4 @@
-import type { InventoryData } from '../../shared/types/inventory.types';
+import type { InventoryData } from '@/shared/types/inventory.types';
 
 export const INVENTORY_MOCK_DATA: InventoryData = {
   items: [

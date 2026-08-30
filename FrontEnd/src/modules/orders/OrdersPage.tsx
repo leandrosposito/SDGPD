@@ -1,8 +1,8 @@
 import { useState, useMemo, type FC } from 'react';
-import { ORDERS_MOCK_DATA } from '../../data/mock/orders.data';
-import type { Order, OrderStatus } from '../../shared/types/order.types';
-import { Table } from '../../shared/components/ui/Table';
-import { Badge } from '../../shared/components/ui/Badge';
+import { ORDERS_MOCK_DATA } from '@/data/mock/orders.data';
+import type { Order, OrderStatus } from '@/shared/types/order.types';
+import { Table } from '@/shared/components/ui/Table';
+import { Badge } from '@/shared/components/ui/Badge';
 import { OrderFilters } from './components/OrderFilters';
 import { OrderDetailPanel } from './components/OrderDetailPanel';
 import { CreateOrderModal } from './components/create-order/CreateOrderModal';

@@ -1,8 +1,8 @@
 import { type FC } from 'react';
-import { SidePanel } from '../../../shared/components/ui/SidePanel';
-import { Table } from '../../../shared/components/ui/Table';
-import { Badge } from '../../../shared/components/ui/Badge';
-import type { Order, OrderStatus } from '../../../shared/types/order.types';
+import { SidePanel } from '@/shared/components/ui/SidePanel';
+import { Table } from '@/shared/components/ui/Table';
+import { Badge } from '@/shared/components/ui/Badge';
+import type { Order, OrderStatus } from '@/shared/types/order.types';
 import './OrderDetailPanel.css';
 
 // ============================================================

@@ -1,6 +1,6 @@
 import type { FC } from 'react';
-import { Table } from '../../../shared/components/ui/Table';
-import type { PurchaseSuggestion } from '../../../shared/types/inventory.types';
+import { Table } from '@/shared/components/ui/Table';
+import type { PurchaseSuggestion } from '@/shared/types/inventory.types';
 
 // ============================================================
 // TabPurchases — Filtro de productos bajo stock y generacion de OC

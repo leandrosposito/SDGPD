@@ -1,6 +1,6 @@
 import { useState, type FC } from 'react';
-import { ANALYTICS_DATA } from '../../data/mock/analytics.data';
-import type { TimePeriod } from '../../shared/types/analytics.types';
+import { ANALYTICS_DATA } from '@/data/mock/analytics.data';
+import type { TimePeriod } from '@/shared/types/analytics.types';
 import { TimeFilter } from './components/TimeFilter';
 import { KpiCard } from './components/KpiCard';
 import { SalesLineChart } from './components/SalesLineChart';

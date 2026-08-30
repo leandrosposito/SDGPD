@@ -1,6 +1,6 @@
 import { type FC } from 'react';
-import { Modal } from '../../../shared/components/ui/Modal';
-import type { InventoryItem } from '../../../shared/types/inventory.types';
+import { Modal } from '@/shared/components/ui/Modal';
+import type { InventoryItem } from '@/shared/types/inventory.types';
 import './InventoryModals.css';
 
 // ============================================================

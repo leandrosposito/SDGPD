@@ -1,9 +1,9 @@
 import { useState, type FC } from 'react';
-import { SidePanel } from '../../../shared/components/ui/SidePanel';
-import { Tabs, type TabItem } from '../../../shared/components/ui/Tabs';
-import { Table } from '../../../shared/components/ui/Table';
-import { Badge } from '../../../shared/components/ui/Badge';
-import type { Supplier } from '../../../shared/types/supplier.types';
+import { SidePanel } from '@/shared/components/ui/SidePanel';
+import { Tabs, type TabItem } from '@/shared/components/ui/Tabs';
+import { Table } from '@/shared/components/ui/Table';
+import { Badge } from '@/shared/components/ui/Badge';
+import type { Supplier } from '@/shared/types/supplier.types';
 import './SupplierDetailPanel.css';
 
 // ============================================================

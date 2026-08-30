@@ -1,6 +1,6 @@
 import { useState, type FC } from 'react';
-import { LOGISTICS_MOCK_DATA } from '../../data/mock/logistics.data';
-import type { DeliveryStatus, LogisticsOrder } from '../../shared/types/logistics.types';
+import { LOGISTICS_MOCK_DATA } from '@/data/mock/logistics.data';
+import type { DeliveryStatus, LogisticsOrder } from '@/shared/types/logistics.types';
 import { LogisticsKPIs } from './components/LogisticsKPIs';
 import { LogisticsCard } from './components/LogisticsCard';
 import { DeliveryProofModal } from './components/DeliveryProofModal';

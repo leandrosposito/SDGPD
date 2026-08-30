@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState, type FC } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
-import { Modal } from '../../../shared/components/ui/Modal';
-import type { InventoryItem } from '../../../shared/types/inventory.types';
+import { Modal } from '@/shared/components/ui/Modal';
+import type { InventoryItem } from '@/shared/types/inventory.types';
 import {
   createProductFormSchema,
   productFormDefaultValues,

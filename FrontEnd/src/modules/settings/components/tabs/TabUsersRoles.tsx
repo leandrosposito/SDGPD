@@ -1,8 +1,8 @@
 import { useState, type FC } from 'react';
-import { SETTINGS_MOCK_PERMISSIONS, SETTINGS_MOCK_USERS } from '../../../../data/mock/settings.data';
-import { Table } from '../../../../shared/components/ui/Table';
-import { Badge } from '../../../../shared/components/ui/Badge';
-import '../../SettingsPage.css';
+import { SETTINGS_MOCK_PERMISSIONS, SETTINGS_MOCK_USERS } from '@/data/mock/settings.data';
+import { Table } from '@/shared/components/ui/Table';
+import { Badge } from '@/shared/components/ui/Badge';
+import '@/modules/settings/SettingsPage.css';
 
 const IconCheck: FC = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

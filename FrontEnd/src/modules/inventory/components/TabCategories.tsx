@@ -1,6 +1,6 @@
 import type { FC } from 'react';
-import { Table } from '../../../shared/components/ui/Table';
-import { Badge } from '../../../shared/components/ui/Badge';
+import { Table } from '@/shared/components/ui/Table';
+import { Badge } from '@/shared/components/ui/Badge';
 import './TabCategories.css';
 
 // ============================================================

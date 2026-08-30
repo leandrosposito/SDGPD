@@ -1,13 +1,13 @@
 import { useEffect, useState, type FC } from 'react';
 import { toast } from 'sonner';
-import type { Supplier, SupplierPurchaseOrder } from '../../shared/types/supplier.types';
+import type { Supplier, SupplierPurchaseOrder } from '@/shared/types/supplier.types';
 import {
   fetchSuppliers,
   createSupplier,
   updateSupplier,
   addPurchaseOrder,
   type SupplierFormInput,
-} from '../../services/mock/suppliers.service';
+} from '@/services/mock/suppliers.service';
 import { SupplierDetailPanel } from './components/SupplierDetailPanel';
 import { SupplierFormModal } from './components/SupplierFormModal';
 import { PurchaseOrderModal } from './components/PurchaseOrderModal';

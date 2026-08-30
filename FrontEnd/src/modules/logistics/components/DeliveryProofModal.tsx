@@ -1,6 +1,6 @@
 import { useState, type FC } from 'react';
-import { Modal } from '../../../shared/components/ui/Modal';
-import { type LogisticsOrder } from '../../../shared/types/logistics.types';
+import { Modal } from '@/shared/components/ui/Modal';
+import { type LogisticsOrder } from '@/shared/types/logistics.types';
 import '../LogisticsPage.css';
 
 interface DeliveryProofModalProps {

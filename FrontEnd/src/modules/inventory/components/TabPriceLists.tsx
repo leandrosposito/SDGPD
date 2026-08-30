@@ -1,5 +1,5 @@
 import type { FC } from 'react';
-import { Table } from '../../../shared/components/ui/Table';
+import { Table } from '@/shared/components/ui/Table';
 import './TabPriceLists.css';
 
 // ============================================================

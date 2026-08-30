@@ -11,8 +11,8 @@ import {
   ResponsiveContainer,
   Legend,
 } from 'recharts';
-import type { SalesDataPoint } from '../../../shared/types/dashboard.types';
-import { SkeletonLoader } from '../../../shared/components/ui/SkeletonLoader';
+import type { SalesDataPoint } from '@/shared/types/dashboard.types';
+import { SkeletonLoader } from '@/shared/components/ui/SkeletonLoader';
 import './SalesChart.css';
 
 // ============================================================

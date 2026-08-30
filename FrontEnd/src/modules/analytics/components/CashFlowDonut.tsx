@@ -6,7 +6,7 @@ import {
   Cell,
   Tooltip,
 } from 'recharts';
-import type { CashFlowData } from '../../../shared/types/analytics.types';
+import type { CashFlowData } from '@/shared/types/analytics.types';
 import './ChartCard.css';
 
 // ============================================================

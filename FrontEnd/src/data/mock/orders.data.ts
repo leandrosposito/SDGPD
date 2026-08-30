@@ -1,4 +1,4 @@
-import type { Order } from '../../shared/types/order.types';
+import type { Order } from '@/shared/types/order.types';
 
 // ============================================================
 // MOCK DATA — Orders

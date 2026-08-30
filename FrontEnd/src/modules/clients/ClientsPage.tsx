@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo, type FC } from 'react';
 import { toast } from 'sonner';
-import type { ClientAccount } from '../../shared/types/client.types';
-import { fetchClients, createClient, updateClient, type ClientFormInput } from '../../services/mock/clients.service';
+import type { ClientAccount } from '@/shared/types/client.types';
+import { fetchClients, createClient, updateClient, type ClientFormInput } from '@/services/mock/clients.service';
 import { ClientActionBar } from './components/ClientActionBar';
 import { ClientFilters } from './components/ClientFilters';
 import { ClientDirectoryTable } from './components/ClientDirectoryTable';

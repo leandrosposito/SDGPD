@@ -1,7 +1,7 @@
 import { useState, type FC } from 'react';
-import { Table } from '../../../shared/components/ui/Table';
-import { Badge } from '../../../shared/components/ui/Badge';
-import type { Supplier } from '../../../shared/types/supplier.types';
+import { Table } from '@/shared/components/ui/Table';
+import { Badge } from '@/shared/components/ui/Badge';
+import type { Supplier } from '@/shared/types/supplier.types';
 
 interface SuppliersTableProps {
   suppliers: Supplier[];

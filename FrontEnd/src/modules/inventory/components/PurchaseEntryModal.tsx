@@ -1,5 +1,5 @@
 import { type FC } from 'react';
-import { Modal } from '../../../shared/components/ui/Modal';
+import { Modal } from '@/shared/components/ui/Modal';
 import './InventoryModals.css';
 
 // ============================================================

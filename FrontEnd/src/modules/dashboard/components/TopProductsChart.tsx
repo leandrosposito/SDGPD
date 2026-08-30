@@ -9,8 +9,8 @@ import {
   ResponsiveContainer,
   Cell,
 } from 'recharts';
-import type { TopProduct } from '../../../shared/types/dashboard.types';
-import { SkeletonLoader } from '../../../shared/components/ui/SkeletonLoader';
+import type { TopProduct } from '@/shared/types/dashboard.types';
+import { SkeletonLoader } from '@/shared/components/ui/SkeletonLoader';
 import './TopProductsChart.css';
 
 // ============================================================

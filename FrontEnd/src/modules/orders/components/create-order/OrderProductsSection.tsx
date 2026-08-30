@@ -1,7 +1,7 @@
 import { useState, type FC } from 'react';
 import type { KeyboardEvent } from 'react';
 import { toast } from 'sonner';
-import type { InventoryItem } from '../../../../shared/types/inventory.types';
+import type { InventoryItem } from '@/shared/types/inventory.types';
 
 // ============================================================
 // OrderProductsSection — Core product search and table

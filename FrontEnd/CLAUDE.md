@@ -21,7 +21,7 @@ Package manager is npm (`package-lock.json` present). Note: `package.json`'s `na
 
 Stack: React 19 + Vite 8, TypeScript 6, react-router-dom v7, recharts, zustand, zod + react-hook-form, plain CSS per module (no Tailwind, no CSS-in-JS). Prettier is configured (`.prettierrc.json`: no semicolons, single quotes, 100 print width, `avoid` arrow parens) but **not yet applied to existing code** — don't assume current files are Prettier-formatted, and don't do a blanket reformat as a side effect of unrelated changes.
 
-An `@/` import alias (mapped to `src/`) is configured in `vite.config.ts` and `tsconfig.app.json`. New imports should use `@/shared/...`, `@/modules/...`, etc. instead of deep relative paths (`../../../shared/...`); existing relative imports were left as-is and haven't been migrated.
+An `@/` import alias (mapped to `src/`) is configured in `vite.config.ts` and `tsconfig.app.json` and is the project-wide convention: use `@/shared/...`, `@/modules/...`, etc. instead of relative paths that go up more than one level (`../../shared/...`). All existing imports were migrated to this convention. A same-folder or one-level-up relative import (`./Foo`, `../Foo`) is still fine and does not need the alias. ESLint enforces this as a warning via `no-restricted-imports` (flags `../../**`).
 
 ### Module structure
 

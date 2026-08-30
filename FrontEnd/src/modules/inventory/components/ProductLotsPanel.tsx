@@ -1,8 +1,8 @@
 import { type FC } from 'react';
-import { SidePanel } from '../../../shared/components/ui/SidePanel';
-import { Table } from '../../../shared/components/ui/Table';
-import { Badge } from '../../../shared/components/ui/Badge';
-import type { InventoryItem } from '../../../shared/types/inventory.types';
+import { SidePanel } from '@/shared/components/ui/SidePanel';
+import { Table } from '@/shared/components/ui/Table';
+import { Badge } from '@/shared/components/ui/Badge';
+import type { InventoryItem } from '@/shared/types/inventory.types';
 
 // ============================================================
 // ProductLotsPanel — Visualiza los lotes de un producto

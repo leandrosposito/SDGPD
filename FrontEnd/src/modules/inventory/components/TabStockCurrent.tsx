@@ -1,8 +1,8 @@
 import type { FC } from 'react';
-import { Table } from '../../../shared/components/ui/Table';
-import { Badge } from '../../../shared/components/ui/Badge';
+import { Table } from '@/shared/components/ui/Table';
+import { Badge } from '@/shared/components/ui/Badge';
 import { ProductSearchBar } from './ProductSearchBar';
-import type { InventoryItem } from '../../../shared/types/inventory.types';
+import type { InventoryItem } from '@/shared/types/inventory.types';
 import './TabStockCurrent.css';
 
 // ============================================================

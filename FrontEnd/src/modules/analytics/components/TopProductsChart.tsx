@@ -9,7 +9,7 @@ import {
   Tooltip,
   Cell,
 } from 'recharts';
-import type { TopProduct } from '../../../shared/types/analytics.types';
+import type { TopProduct } from '@/shared/types/analytics.types';
 import './ChartCard.css';
 
 // ============================================================

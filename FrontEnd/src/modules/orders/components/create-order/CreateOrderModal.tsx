@@ -1,9 +1,9 @@
 import { type FC, useState, useMemo, useEffect } from 'react';
 import { toast } from 'sonner';
-import { Modal } from '../../../../shared/components/ui/Modal';
-import type { InventoryItem } from '../../../../shared/types/inventory.types';
-import type { Order } from '../../../../shared/types/order.types';
-import { fetchProducts } from '../../../../services/mock/products.service';
+import { Modal } from '@/shared/components/ui/Modal';
+import type { InventoryItem } from '@/shared/types/inventory.types';
+import type { Order } from '@/shared/types/order.types';
+import { fetchProducts } from '@/services/mock/products.service';
 import { OrderClientSection } from './OrderClientSection';
 import { OrderDatesSection } from './OrderDatesSection';
 import { OrderProductsSection, type OrderProductItem } from './OrderProductsSection';

@@ -1,5 +1,5 @@
 import type { FC } from 'react';
-import type { KpiMetric } from '../../types/dashboard.types';
+import type { KpiMetric } from '@/shared/types/dashboard.types';
 import { SkeletonLoader } from './SkeletonLoader';
 import './StatCard.css';
 

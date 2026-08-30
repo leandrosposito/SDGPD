@@ -1,4 +1,4 @@
-import type { Supplier } from '../../shared/types/supplier.types';
+import type { Supplier } from '@/shared/types/supplier.types';
 
 // ============================================================
 // MOCK DATA — Suppliers

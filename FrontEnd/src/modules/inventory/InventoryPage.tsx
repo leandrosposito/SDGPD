@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState, type FC } from 'react';
 import { toast } from 'sonner';
-import { INVENTORY_MOCK_DATA } from '../../data/mock/inventory.data';
-import type { InventoryItem } from '../../shared/types/inventory.types';
-import { Tabs, type TabItem } from '../../shared/components/ui/Tabs';
-import { Badge } from '../../shared/components/ui/Badge';
-import { SkeletonTable } from '../../shared/components/ui/SkeletonLoader';
+import { INVENTORY_MOCK_DATA } from '@/data/mock/inventory.data';
+import type { InventoryItem } from '@/shared/types/inventory.types';
+import { Tabs, type TabItem } from '@/shared/components/ui/Tabs';
+import { Badge } from '@/shared/components/ui/Badge';
+import { SkeletonTable } from '@/shared/components/ui/SkeletonLoader';
 import { ProductFormModal } from './components/ProductFormModal';
 import { PurchaseEntryModal } from './components/PurchaseEntryModal';
 import { ProductLotsPanel } from './components/ProductLotsPanel';
@@ -21,7 +21,7 @@ import {
   createProduct,
   updateProduct,
   deleteProduct,
-} from '../../services/mock/products.service';
+} from '@/services/mock/products.service';
 import type { ProductFormValues } from './components/ProductFormModal.schema';
 import './InventoryPage.css';
 

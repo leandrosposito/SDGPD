@@ -1,5 +1,5 @@
-import type { InventoryItem } from '../../shared/types/inventory.types';
-import { INVENTORY_MOCK_DATA } from '../../data/mock/inventory.data';
+import type { InventoryItem } from '@/shared/types/inventory.types';
+import { INVENTORY_MOCK_DATA } from '@/data/mock/inventory.data';
 
 // ============================================================
 // PRODUCTS SERVICE — RF-PRD-001 (ABM Central de Productos)

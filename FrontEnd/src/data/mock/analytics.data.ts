@@ -1,4 +1,4 @@
-import type { TimePeriod, AnalyticsPeriodData } from '../../shared/types/analytics.types';
+import type { TimePeriod, AnalyticsPeriodData } from '@/shared/types/analytics.types';
 
 // ============================================================
 // MOCK DATA — Analytics (indexed by TimePeriod)

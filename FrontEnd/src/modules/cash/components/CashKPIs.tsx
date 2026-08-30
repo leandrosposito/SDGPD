@@ -1,5 +1,5 @@
 import { type FC } from 'react';
-import type { CashRegister } from '../../../shared/types/cash.types';
+import type { CashRegister } from '@/shared/types/cash.types';
 import '../CashPage.css';
 
 interface CashKPIsProps {

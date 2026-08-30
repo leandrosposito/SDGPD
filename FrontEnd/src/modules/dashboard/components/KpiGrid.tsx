@@ -1,6 +1,6 @@
 import type { FC } from 'react';
-import type { KpiMetric } from '../../../shared/types/dashboard.types';
-import { StatCard, StatCardSkeleton } from '../../../shared/components/ui/StatCard';
+import type { KpiMetric } from '@/shared/types/dashboard.types';
+import { StatCard, StatCardSkeleton } from '@/shared/components/ui/StatCard';
 import './KpiGrid.css';
 
 // ============================================================

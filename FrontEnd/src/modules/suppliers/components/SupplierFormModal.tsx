@@ -1,9 +1,9 @@
 import { useEffect, useState, type FC } from 'react';
 import { toast } from 'sonner';
-import { Modal } from '../../../shared/components/ui/Modal';
+import { Modal } from '@/shared/components/ui/Modal';
 import { DocumentDropzone } from './DocumentDropzone';
-import type { Supplier } from '../../../shared/types/supplier.types';
-import type { SupplierFormInput } from '../../../services/mock/suppliers.service';
+import type { Supplier } from '@/shared/types/supplier.types';
+import type { SupplierFormInput } from '@/services/mock/suppliers.service';
 import './SupplierModals.css';
 
 interface SupplierFormModalProps {

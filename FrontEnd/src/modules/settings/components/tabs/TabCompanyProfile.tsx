@@ -1,5 +1,5 @@
 import type { FC } from 'react';
-import '../../SettingsPage.css';
+import '@/modules/settings/SettingsPage.css';
 
 export const TabCompanyProfile: FC = () => {
   return (

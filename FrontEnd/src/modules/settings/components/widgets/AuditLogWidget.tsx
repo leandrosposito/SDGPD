@@ -1,6 +1,6 @@
 import type { FC } from 'react';
-import { SETTINGS_MOCK_AUDIT } from '../../../../data/mock/settings.data';
-import '../../SettingsPage.css';
+import { SETTINGS_MOCK_AUDIT } from '@/data/mock/settings.data';
+import '@/modules/settings/SettingsPage.css';
 
 export const AuditLogWidget: FC = () => {
   return (

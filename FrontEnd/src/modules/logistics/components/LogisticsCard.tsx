@@ -1,6 +1,6 @@
 import { type FC } from 'react';
-import { type LogisticsOrder } from '../../../shared/types/logistics.types';
-import { Badge } from '../../../shared/components/ui/Badge';
+import { type LogisticsOrder } from '@/shared/types/logistics.types';
+import { Badge } from '@/shared/components/ui/Badge';
 import '../LogisticsPage.css';
 
 interface LogisticsCardProps {

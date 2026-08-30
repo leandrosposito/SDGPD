@@ -1,7 +1,7 @@
 import type { FC } from 'react';
-import type { RecentOrder } from '../../../shared/types/dashboard.types';
-import { Badge, type BadgeVariant } from '../../../shared/components/ui/Badge';
-import { SkeletonTable } from '../../../shared/components/ui/SkeletonLoader';
+import type { RecentOrder } from '@/shared/types/dashboard.types';
+import { Badge, type BadgeVariant } from '@/shared/components/ui/Badge';
+import { SkeletonTable } from '@/shared/components/ui/SkeletonLoader';
 import './RecentOrdersTable.css';
 
 // ============================================================

@@ -1,5 +1,5 @@
 import { type FC } from 'react';
-import type { ClientAccount } from '../../../shared/types/client.types';
+import type { ClientAccount } from '@/shared/types/client.types';
 
 interface ClientDirectoryTableProps {
   clients: ClientAccount[];

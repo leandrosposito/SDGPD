@@ -1,5 +1,5 @@
-import type { DashboardData } from '../../shared/types/dashboard.types';
-import { DASHBOARD_MOCK_DATA } from '../../data/mock/dashboard.data';
+import type { DashboardData } from '@/shared/types/dashboard.types';
+import { DASHBOARD_MOCK_DATA } from '@/data/mock/dashboard.data';
 
 // ============================================================
 // DASHBOARD SERVICE — Simulates async API calls
