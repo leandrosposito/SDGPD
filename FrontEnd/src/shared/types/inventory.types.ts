@@ -9,8 +9,7 @@ export interface ProductLot {
   expirationDate: string;
 }
 
-// NOTA (C1/C5 — docs/implementacion/CONTRADICCIONES.md):
-// InventoryItem mezcla datos de mas de un RF del Doc 04 porque el codigo
+// NOTA: InventoryItem mezcla datos de mas de un RF del Doc 04 porque el codigo
 // unifico visualmente "Productos" e "Inventario" en un unico modulo. No se
 // separa la interfaz para no romper a los consumidores existentes; en su
 // lugar cada grupo de campos se anota con el RF al que pertenece.
