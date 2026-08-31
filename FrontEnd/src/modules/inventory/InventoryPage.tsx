@@ -48,7 +48,6 @@ export const InventoryPage: FC = () => {
 
   useEffect(() => {
     let cancelled = false;
-    setIsLoadingProducts(true);
     fetchProducts()
       .then((data) => {
         if (!cancelled) setProducts(data);

@@ -3,7 +3,7 @@ import { CASH_MOCK_DATA } from '@/data/mock/cash.data';
 import type { CashTransaction } from '@/shared/types/cash.types';
 import { CashKPIs } from './components/CashKPIs';
 import { CashTransactionsTable } from './components/CashTransactionsTable';
-import { NewTransactionModal } from './components/NewTransactionModal';
+import { NewTransactionModal, type NewTransactionData } from './components/NewTransactionModal';
 import './CashPage.css';
 
 // ============================================================
@@ -14,10 +14,9 @@ export const CashPage: FC = () => {
   const [cashData, setCashData] = useState(CASH_MOCK_DATA);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const handleSaveTransaction = (data: any) => {
+  const handleSaveTransaction = (data: NewTransactionData) => {
     const newTx: CashTransaction = {
       id: `ctx-new-${Date.now()}`,
-      time: new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
       ...data
     };
 

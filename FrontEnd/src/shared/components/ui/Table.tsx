@@ -6,7 +6,7 @@ import './Table.css';
 // ============================================================
 
 interface Column<T> {
-  header: string;
+  header: ReactNode;
   accessor: keyof T | ((row: T) => ReactNode);
   align?: 'left' | 'center' | 'right';
   width?: string;

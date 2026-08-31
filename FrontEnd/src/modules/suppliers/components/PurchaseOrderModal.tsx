@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import { Modal } from '@/shared/components/ui/Modal';
 import { OrderItemsTable, type OrderItem } from './OrderItemsTable';
 import { OrderFinancialSummary } from './OrderFinancialSummary';
-import type { Supplier, SupplierPurchaseOrder } from '@/shared/types/supplier.types';
+import type { Supplier, SupplierProduct, SupplierPurchaseOrder } from '@/shared/types/supplier.types';
 import './SupplierModals.css';
 
 interface PurchaseOrderModalProps {
@@ -23,9 +23,15 @@ export const PurchaseOrderModal: FC<PurchaseOrderModalProps> = ({ isOpen, onClos
   const [ivaPercentage, setIvaPercentage] = useState<number>(21);
   const [percepciones, setPercepciones] = useState<number>(0);
 
-  // Sync initial supplier when opened
+  // Sync initial supplier when opened.
+  // Not a pure derived value: selectedSupplierId/currency/items/percepciones are
+  // all user-editable draft state after opening (see the selects/inputs/handlers
+  // below), so they can't be recomputed on every render without wiping edits.
+  // Not async either — this genuinely needs to re-run once per (re)open to reset
+  // that draft state, which is a legitimate use of an effect.
   useEffect(() => {
     if (isOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- see comment above
       setSelectedSupplierId(supplier?.id || '');
       setPercepciones(1500); // Mock percepcion for testing
       setCurrency('ARS');
@@ -50,7 +56,7 @@ export const PurchaseOrderModal: FC<PurchaseOrderModalProps> = ({ isOpen, onClos
 
   const suggestions = activeSupplier?.products || [];
 
-  const handleAddSuggestion = (prod: any) => {
+  const handleAddSuggestion = (prod: SupplierProduct) => {
     setItems(prev => {
       const existing = prev.find(i => i.id === prod.id);
       if (existing) {

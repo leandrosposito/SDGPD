@@ -2,13 +2,15 @@ import { useState, useEffect, type FC } from 'react';
 import { Modal } from '@/shared/components/ui/Modal';
 import { TransactionTypeSelector } from './TransactionTypeSelector';
 import { TransactionDropzone } from './TransactionDropzone';
-import type { TransactionType } from '@/shared/types/cash.types';
+import type { CashTransaction, TransactionCategory, TransactionType } from '@/shared/types/cash.types';
 import './CashTransactionModal.css';
+
+export type NewTransactionData = Omit<CashTransaction, 'id'>;
 
 interface NewTransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: any) => void;
+  onSave: (data: NewTransactionData) => void;
 }
 
 export const NewTransactionModal: FC<NewTransactionModalProps> = ({ isOpen, onClose, onSave }) => {
@@ -17,17 +19,23 @@ export const NewTransactionModal: FC<NewTransactionModalProps> = ({ isOpen, onCl
   
   // Data form
   const [amount, setAmount] = useState<string>('');
-  const [category, setCategory] = useState<string>('gasto');
+  const [category, setCategory] = useState<TransactionCategory>('gasto');
   const [entity, setEntity] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<string>('efectivo');
   const [reference, setReference] = useState<string>('');
   const [description, setDescription] = useState<string>('');
   const [costCenter, setCostCenter] = useState<string>('');
 
+  // Not a pure derived value: currentTime/amount/reference/description are all
+  // user-editable draft state once the modal is open (see the inputs below), and
+  // the modal never unmounts between opens (rendered unconditionally by CashPage),
+  // so this genuinely needs to re-run once per (re)open to reset that draft state
+  // to fresh defaults — a legitimate use of an effect, not something derivable.
   useEffect(() => {
     if (isOpen) {
       // Set initial time when opening
       const now = new Date();
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- see comment above
       setCurrentTime(now.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }));
       // Reset defaults
       setAmount('');
@@ -77,7 +85,7 @@ export const NewTransactionModal: FC<NewTransactionModalProps> = ({ isOpen, onCl
           </div>
           <div className="tx-form-group">
             <label className="tx-label">Categoría</label>
-            <select className="tx-select" value={category} onChange={(e) => setCategory(e.target.value)}>
+            <select className="tx-select" value={category} onChange={(e) => setCategory(e.target.value as TransactionCategory)}>
               {type === 'income' ? (
                 <>
                   <option value="cobro">Cobro a Cliente</option>

@@ -41,6 +41,15 @@ export const CashTransactionsTable: FC<CashTransactionsTableProps> = ({ transact
                 case 'supplier': label = 'Proveedor'; variant = 'danger'; break;
                 case 'expense': label = 'Gasto'; variant = 'danger'; break;
                 case 'advance': label = 'Anticipo'; variant = 'warning'; break;
+                case 'cobro': label = 'Cobro a Cliente'; variant = 'success'; break;
+                case 'anticipo_ingreso': label = 'Anticipo Recibido'; variant = 'warning'; break;
+                case 'aporte': label = 'Aporte de Capital'; variant = 'success'; break;
+                case 'otros_ingresos': label = 'Otros Ingresos'; variant = 'success'; break;
+                case 'gasto': label = 'Gasto Operativo'; variant = 'danger'; break;
+                case 'pago_proveedor': label = 'Pago a Proveedor'; variant = 'danger'; break;
+                case 'retiro': label = 'Retiro Dueño'; variant = 'danger'; break;
+                case 'anticipo_egreso': label = 'Anticipo Otorgado'; variant = 'warning'; break;
+                case 'otros_egresos': label = 'Otros Egresos'; variant = 'danger'; break;
               }
               
               return <Badge label={label} variant={variant} />;

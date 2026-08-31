@@ -25,31 +25,30 @@ export const ClientGeneralTab: FC<ClientGeneralTabProps> = ({
   email, setEmail,
   showErrors
 }) => {
-  const [isSearchingAfip, setIsSearchingAfip] = useState(false);
-  const [duplicateError, setDuplicateError] = useState(false);
+  // CUIT para el cual ya se resolvio la busqueda simulada de AFIP (se setea
+  // unicamente dentro del callback async del timer, al completarse).
+  const [lastResolvedCuit, setLastResolvedCuit] = useState<string | null>(null);
 
-  // AFIP Mock Logic
+  // Duplicado es un valor puro derivado del CUIT, sin latencia simulada de por medio.
+  const duplicateError = cuit.length >= 11 && cuit === '30-11111111-1';
+  // "Buscando" tambien es derivado: true mientras el CUIT actual todavia no fue resuelto.
+  const isSearchingAfip = cuit.length >= 11 && !duplicateError && lastResolvedCuit !== cuit;
+
+  // AFIP Mock Logic — la busqueda si simula latencia de red real (setTimeout).
   useEffect(() => {
-    if (cuit.length >= 11) {
-      if (cuit === '30-11111111-1') {
-        setDuplicateError(true);
-        setRazonSocial('');
-        setIsSearchingAfip(false);
-      } else {
-        setDuplicateError(false);
-        setIsSearchingAfip(true);
-        // Simulate AFIP network request
-        const timer = setTimeout(() => {
-          setRazonSocial('Distribuidora del Centro S.A.');
-          setIsSearchingAfip(false);
-        }, 1500);
-        return () => clearTimeout(timer);
-      }
-    } else {
-      setDuplicateError(false);
-      setIsSearchingAfip(false);
+    if (duplicateError) {
+      setRazonSocial('');
+      return;
     }
-  }, [cuit, setRazonSocial]);
+    if (cuit.length >= 11) {
+      // Simulate AFIP network request
+      const timer = setTimeout(() => {
+        setRazonSocial('Distribuidora del Centro S.A.');
+        setLastResolvedCuit(cuit);
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [cuit, duplicateError, setRazonSocial]);
 
   return (
     <div className="client-form-grid">

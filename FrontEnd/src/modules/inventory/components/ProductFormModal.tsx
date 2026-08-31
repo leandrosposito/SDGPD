@@ -59,13 +59,18 @@ export const ProductFormModal: FC<ProductFormModalProps> = ({
     defaultValues: productFormDefaultValues(product),
   });
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect
+  // Not a pure derived value: confirmingDelete is local UI state toggled by the
+  // user while the modal is open (see the "Eliminar"/"Cancelar" buttons below),
+  // and the modal never unmounts between opens (rendered unconditionally by
+  // InventoryPage), so this genuinely needs to re-run once per (re)open/product
+  // change to reset it — a legitimate use of an effect, not something derivable.
   useEffect(() => {
     if (isOpen) {
       reset(productFormDefaultValues(product));
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- see comment above
       setConfirmingDelete(false);
     }
-  }, [isOpen, product]);
+  }, [isOpen, product, reset]);
 
   const onSubmit = async (values: ProductFormValues) => {
     if (!onSave) {

@@ -36,16 +36,9 @@ export const CreateOrderModal: FC<CreateOrderModalProps> = ({ isOpen, onClose, o
   const [seller, setSeller] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('');
   const [priceList, setPriceList] = useState('Mayorista');
-  const [hasDebtAlert, setHasDebtAlert] = useState(false);
 
-  // Trigger mock debt alert if a specific client is typed
-  useEffect(() => {
-    if (client.toLowerCase().includes('excedido') || client.toLowerCase().includes('deuda')) {
-      setHasDebtAlert(true);
-    } else {
-      setHasDebtAlert(false);
-    }
-  }, [client]);
+  // Mock debt alert if a specific client is typed
+  const hasDebtAlert = client.toLowerCase().includes('excedido') || client.toLowerCase().includes('deuda');
 
   // Dates Section State
   const [orderDate, setOrderDate] = useState(new Date().toISOString().split('T')[0]);

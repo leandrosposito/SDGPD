@@ -73,7 +73,7 @@ export const SuppliersTable: FC<SuppliersTableProps> = ({ suppliers, onRowClick 
       keyExtractor={(s) => s.id}
       columns={[
         {
-          header: renderSortableHeader('Razon Social', 'name') as any,
+          header: renderSortableHeader('Razon Social', 'name'),
           accessor: (s) => (
             <div className="suppliers-page__name-cell">
               <span className="font-medium text-truncate" style={{ maxWidth: '12rem' }} title={s.name}>
@@ -86,11 +86,11 @@ export const SuppliersTable: FC<SuppliersTableProps> = ({ suppliers, onRowClick 
           ),
         },
         { 
-          header: renderSortableHeader('Rubro', 'category') as any,
+          header: renderSortableHeader('Rubro', 'category'),
           accessor: 'category' 
         },
         { 
-          header: renderSortableHeader('CUIT', 'cuit') as any,
+          header: renderSortableHeader('CUIT', 'cuit'),
           accessor: (s) => <span className="font-mono text-sm">{s.cuit}</span> 
         },
         { 
@@ -125,7 +125,7 @@ export const SuppliersTable: FC<SuppliersTableProps> = ({ suppliers, onRowClick 
           }
         },
         {
-          header: renderSortableHeader('Saldo Actual', 'currentBalance') as any,
+          header: renderSortableHeader('Saldo Actual', 'currentBalance'),
           align: 'right',
           accessor: (s) => (
             <span className={s.currentBalance > 0 ? 'text-danger font-bold' : ''}>

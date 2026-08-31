@@ -3,7 +3,21 @@
 // ============================================================
 
 export type TransactionType = 'income' | 'expense';
-export type TransactionCategory = 'sale' | 'collection' | 'supplier' | 'expense' | 'advance';
+export type TransactionCategory =
+  | 'sale'
+  | 'collection'
+  | 'supplier'
+  | 'expense'
+  | 'advance'
+  | 'cobro'
+  | 'anticipo_ingreso'
+  | 'aporte'
+  | 'otros_ingresos'
+  | 'gasto'
+  | 'pago_proveedor'
+  | 'retiro'
+  | 'anticipo_egreso'
+  | 'otros_egresos';
 
 export interface CashTransaction {
   id: string;

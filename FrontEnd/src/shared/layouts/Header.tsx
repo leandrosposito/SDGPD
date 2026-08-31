@@ -52,12 +52,14 @@ interface HeaderProps {
 
 export const Header: FC<HeaderProps> = ({ onRefresh }) => {
   // Theme Toggle Logic
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    const savedTheme = localStorage.getItem('app-theme');
+    return savedTheme === 'light' ? 'light' : 'dark';
+  });
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('app-theme') as 'dark' | 'light';
     if (savedTheme) {
-      setTheme(savedTheme);
       document.documentElement.setAttribute('data-theme', savedTheme);
     }
   }, []);
@@ -71,7 +73,7 @@ export const Header: FC<HeaderProps> = ({ onRefresh }) => {
       localStorage.setItem('app-theme', newTheme);
     };
 
-    if (!(document as any).startViewTransition) {
+    if (!document.startViewTransition) {
       applyTheme();
       return;
     }
@@ -83,7 +85,7 @@ export const Header: FC<HeaderProps> = ({ onRefresh }) => {
       Math.max(y, window.innerHeight - y)
     );
 
-    const transition = (document as any).startViewTransition(applyTheme);
+    const transition = document.startViewTransition(applyTheme);
 
     transition.ready.then(() => {
       document.documentElement.animate(
