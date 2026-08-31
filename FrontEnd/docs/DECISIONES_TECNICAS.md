@@ -23,6 +23,22 @@ Se incorporan herramientas transversales clave (validación, estado global, icon
 ### 4. Norma de no duplicación
 Ninguna herramienta nueva puede agregarse a futuro para resolver un problema ya cubierto por las herramientas de esta tabla, sin que quede documentada la razón específica por la cual la solución existente no es suficiente, y sin registrar esa excepción en este mismo archivo.
 
+## [28/08/2026] — Limpieza estructural del FrontEnd y alias de imports `@/` (warning-only)
+
+### 1. Contexto
+Se auditó el proyecto contra el filesystem real (`find`/`grep`, no contra lo que decían los docs existentes) y se encontraron dos problemas relacionados: `FrontEnd/ARCHITECTURE.md` describía una estructura (componentes en `src/components/`, tipos en `src/types/`, router en `src/router/`) que una migración anterior ya había dejado atrás moviendo todo a `src/shared/` sin actualizar el doc, con varias carpetas placeholder sin uso real de por medio. Los imports relativos profundos resultantes (`../../../shared/...`) eran además frágiles ante cualquier reorganización de carpetas — justo el tipo de cambio que esta misma limpieza estaba haciendo.
+
+### 2. Decisiones adoptadas
+
+| Decisión | Resultado | Justificación |
+|---|---|---|
+| Limpieza estructural: eliminar `FrontEnd/ARCHITECTURE.md`, `src/core/`, `src/infrastructure/`, `src/shared/utils/`, `src/shared/services/`, `src/modules/_template/`, `src/components/layout/PlaceholderPage` y las carpetas vacías resultantes; mover `src/hooks/useDashboard.ts` a `src/shared/hooks/` | Ejecutado | Placeholders `.gitkeep`-only y documentación redundante sin uso real (0 usos verificados por grep), o contenido ya migrado a `src/shared/` sin actualizar el doc. `src/services/mock/` se dejó donde está (4 archivos, 7 consumidores — moverlo era un cambio más grande que esta limpieza, no una decisión de placeholder). Se descartó dejar `ARCHITECTURE.md` como registro histórico: es exactamente el tipo de documento que ya demostró desactualizarse en silencio. **Vigente, no revertida.** |
+| Alias de imports `@/` configurado como *warning-only*, sin migrar en la misma pasada los ~142 imports relativos profundos ya existentes (142 warnings nuevas en 70 archivos vía `no-restricted-imports`, severidad `warn` para no romper `npm run lint`) | Adoptado en su momento; **superado después** | Se priorizó dejar el alias disponible para código nuevo sin tocar imports ya escritos, migrando gradualmente por módulo a medida que se tocara cada archivo. Se descartó poner la regla en `error` (habría roto el lint sobre código que nadie había arreglado todavía) y setear `baseUrl` en `tsconfig.app.json` (deprecado en TS 6, innecesario con `moduleResolution: "bundler"`). **Esta decisión quedó superada por la entrada `[30/08/2026]` de este mismo archivo** ("Reconciliación con origin/lean: alias `@/` y descarte del sistema de ADRs"): ahí se migraron los ~142 imports de una sola vez en vez de gradualmente. Se deja este registro para que quede el razonamiento de ambos lados, no solo el que terminó vigente. |
+
+### 3. Estándar de uso obligatorio en el código
+- La limpieza estructural sigue vigente: no recrear `src/core/`, `src/infrastructure/`, `src/shared/utils/`, `src/shared/services/` ni `src/modules/_template/` sin una decisión nueva que lo justifique explícitamente.
+- Para el estándar de imports vigente (migración completa, no warning-only gradual), ver la entrada `[30/08/2026]` de este mismo archivo.
+
 ## [28/08/2026] — Inconsistencias Encontradas Entre Módulos (Relevamiento)
 
 ### 1. Contexto
