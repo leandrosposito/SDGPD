@@ -36,7 +36,7 @@ export const NewTransactionModal: FC<NewTransactionModalProps> = ({ isOpen, onCl
       // Set initial time when opening
       const now = new Date();
       // eslint-disable-next-line react-hooks/set-state-in-effect -- see comment above
-      setCurrentTime(now.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }));
+      setCurrentTime(now.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false }));
       // Reset defaults
       setAmount('');
       setReference('');
