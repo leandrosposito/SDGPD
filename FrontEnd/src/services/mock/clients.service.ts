@@ -1,10 +1,26 @@
-import type { ClientAccount } from '@/shared/types/client.types';
+import type {
+  AgingBucket,
+  AgingBucketAggregate,
+  ClientAccount,
+  ClientTransaction,
+  Currency,
+  OpenInvoice,
+  OverdueAmountByCurrency,
+  OverdueClientRow,
+  OverdueClientsAggregates,
+  OverdueClientsQueryFilters,
+  OverdueClientsSortField,
+} from '@/shared/types/client.types';
+import type { PageQuery, PageResult } from '@/shared/types/pagination.types';
 import { CLIENTS_MOCK_DATA } from '@/data/mock/clients.data';
 
 // ============================================================
 // CLIENTS SERVICE — RF-CLI-001 (corrige C4: "Guardar" no persistia nada)
-// Simula llamadas asincronicas a una API de Clientes.
-// Sigue el mismo patron que src/services/mock/products.service.ts.
+// + deuda vencida / aging (M1-M10, DECISIONES_TECNICAS.md).
+// Simula llamadas asincronicas a una API de Clientes. Sigue el mismo
+// patron que products.service.ts/deliveries.service.ts (delay +
+// structuredClone; el servicio filtra/ordena/cuenta/corta, nunca
+// devuelve el dataset completo para que la vista lo procese — P1).
 // Reemplazar por llamadas HTTP reales cuando exista Backend.
 // ============================================================
 
@@ -54,4 +70,356 @@ export async function updateClient(id: string, input: ClientFormInput): Promise<
   const updated: ClientAccount = { ...existing, ...input };
   clientsStore = clientsStore.map((c) => (c.id === id ? updated : c));
   return structuredClone(updated);
+}
+
+// ============================================================
+// CUENTAS CORRIENTES — paginado server-side (M7/3.5). Reemplaza a la
+// tabla HTML propia de ClientAccountsTable, que recibia el array
+// completo ya filtrado por ClientsPage. Solo busqueda por nombre/CUIT
+// (M6) — zona/vendedor/estado del filtro superior siguen aplicando
+// unicamente al Directorio (fuera de alcance de esta tarea, ver
+// DECISIONES_TECNICAS.md): agregarlos al contrato paginado no fue
+// pedido y hubiera sido diseñar filtros que nadie definio.
+// ============================================================
+
+export interface ClientAccountsQueryFilters {
+  search?: string;
+}
+
+export type ClientAccountsSortField = 'clientName' | 'currentBalance' | 'creditLimit';
+
+function matchesSearch(text: string, cuit: string, search: string | undefined): boolean {
+  if (!search || !search.trim()) return true;
+  const q = search.trim().toLowerCase();
+  return text.toLowerCase().includes(q) || cuit.includes(q);
+}
+
+function compareClientAccounts(a: ClientAccount, b: ClientAccount, field: ClientAccountsSortField): number {
+  switch (field) {
+    case 'currentBalance':
+      return a.currentBalance - b.currentBalance;
+    case 'creditLimit':
+      return a.creditLimit - b.creditLimit;
+    case 'clientName':
+    default:
+      return a.clientName.localeCompare(b.clientName);
+  }
+}
+
+export async function getClientAccountsPage(
+  query: PageQuery<ClientAccountsQueryFilters, ClientAccountsSortField>
+): Promise<PageResult<ClientAccount>> {
+  await delay(SIMULATED_DELAY_MS);
+
+  const { filters, sort, page, pageSize } = query;
+  const filtered = clientsStore.filter((c) => matchesSearch(c.clientName, c.cuit, filters.search));
+
+  const sortField = sort?.field ?? 'clientName';
+  const direction = sort?.direction ?? 'asc';
+  const sorted = [...filtered].sort((a, b) => {
+    const cmp = compareClientAccounts(a, b, sortField);
+    const primary = direction === 'asc' ? cmp : -cmp;
+    // Desempate estable por id (3.3): un orden ambiguo hace que el
+    // mismo cliente aparezca en dos paginas o en ninguna al paginar.
+    return primary !== 0 ? primary : a.id.localeCompare(b.id);
+  });
+
+  const total = sorted.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const safePage = Math.min(Math.max(1, page), totalPages);
+  const start = (safePage - 1) * pageSize;
+  const items = sorted.slice(start, start + pageSize);
+
+  return { items: structuredClone(items), total, page: safePage, pageSize };
+}
+
+// ============================================================
+// DEUDA VENCIDA / AGING (M1-M4) — imputacion FIFO de pagos y ajustes
+// contra facturas, tramos de aging y agregados por tramo. Ver
+// DECISIONES_TECNICAS.md, entrada de esta tarea, para el razonamiento
+// completo de la regla de negocio y de por que el computo vive en un
+// cache invalidado por referencia (no se reimputa por pagina — 3.3).
+// ============================================================
+
+const AGING_BUCKETS: readonly AgingBucket[] = ['1-30', '31-60', '61-90', '90+'];
+
+function bucketForDays(daysOverdue: number): AgingBucket {
+  if (daysOverdue <= 30) return '1-30';
+  if (daysOverdue <= 60) return '31-60';
+  if (daysOverdue <= 90) return '61-90';
+  return '90+';
+}
+
+// Imputacion FIFO (M2, decision de negocio): las facturas se cancelan
+// de la mas vieja a la mas nueva con el total disponible de pagos +
+// ajustes de credito. Se suma primero TODO el pool disponible y se
+// aplica en orden — matematicamente equivalente a aplicar cada pago en
+// el momento historico en que ocurrio (lo unico que determina el saldo
+// abierto final de cada factura es cuanto dinero llego en total y en
+// que orden de antiguedad se cancelan las facturas, no la fecha exacta
+// de cada pago individual), pero mucho mas simple de calcular sobre un
+// snapshot.
+//
+// Por MONEDA (C1, DECISIONES_TECNICAS.md): un pago en ARS no puede
+// cancelar una factura en USD. El pool no es un numero unico: es un
+// Map por moneda, y cada factura solo consume del pool de SU propia
+// moneda. Antes de este fix el pool era un solo numero — un pago en
+// cualquier moneda cancelaba facturas de cualquier otra, lo cual
+// contradecia M5 y no se notaba porque el mock era todo ARS.
+//
+// Ajustes: un ajuste con credit > 0 (nota de credito / descuento) se
+// suma al pool de su moneda igual que un pago. Un ajuste con debit > 0
+// (nota de debito / recargo) NO se imputa contra ninguna factura ni
+// genera un item vencible propio — no tiene dueDate (M1: "los ajustes
+// no vencen"), asi que no puede entrar en un tramo de mora por si
+// mismo. Queda reflejado solo en los totales legacy de la cuenta
+// (ClientAccount.totalDebit/currentBalance), fuera del calculo de
+// aging de esta vista.
+//
+// Orden del pool (C3, DECISIONES_TECNICAS.md): las facturas se ordenan
+// por `date` (fecha de EMISION), no por `dueDate` (vencimiento). Es una
+// decision de negocio tomada por defecto al construir la imputacion
+// original — se documenta y se deja asi en esta tarea, ver la entrada
+// de C3 para el razonamiento y el caso en que da un resultado distinto
+// del criterio alternativo.
+function imputeOpenInvoices(transactions: ClientTransaction[], today: Date): OpenInvoice[] {
+  const invoices = transactions
+    .filter((t) => t.type === 'invoice')
+    .slice()
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  const poolByCurrency = new Map<Currency, number>();
+  for (const t of transactions) {
+    if (t.type === 'payment' || t.type === 'adjustment') {
+      // solo el credito se imputa; el debito de un ajuste se ignora a proposito
+      poolByCurrency.set(t.currency, (poolByCurrency.get(t.currency) ?? 0) + t.credit);
+    }
+  }
+
+  const open: OpenInvoice[] = [];
+  for (const invoice of invoices) {
+    const pool = poolByCurrency.get(invoice.currency) ?? 0;
+    const applied = Math.min(pool, invoice.debit);
+    poolByCurrency.set(invoice.currency, pool - applied);
+    const openBalance = invoice.debit - applied;
+    if (openBalance <= 0) continue;
+
+    const dueDate = new Date(invoice.dueDate);
+    const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / 86400000);
+    const isOverdue = daysOverdue > 0;
+
+    open.push({
+      transactionId: invoice.id,
+      dueDate: invoice.dueDate,
+      originalAmount: invoice.debit,
+      openBalance,
+      currency: invoice.currency,
+      daysOverdue: isOverdue ? daysOverdue : 0,
+      bucket: isOverdue ? bucketForDays(daysOverdue) : null,
+    });
+  }
+  return open;
+}
+
+interface OverdueSnapshotEntry {
+  row: OverdueClientRow;
+  openInvoices: OpenInvoice[]; // solo las vencidas, para los agregados por tramo
+}
+
+// Cache invalidado por referencia (3.3): la imputacion FIFO es
+// invariante respecto de la consulta (pagina/busqueda/tramo/orden) —
+// solo depende de los datos crudos. Se recalcula UNA vez por cada
+// version de `clientsStore` (comparando la referencia del array, que
+// cambia en createClient/updateClient) y se reutiliza para cualquier
+// cantidad de paginas que se pidan despues, en vez de recorrer las
+// transacciones de los 29 (o 50.000) clientes en cada request. Pedir
+// la pagina 5 solo filtra/ordena/corta el snapshot ya calculado.
+let overdueSnapshotCache: {
+  computedFor: ClientAccount[];
+  computedOnDay: string;
+  snapshot: OverdueSnapshotEntry[];
+} | null = null;
+
+function computeOverdueSnapshot(clients: ClientAccount[]): OverdueSnapshotEntry[] {
+  const today = new Date();
+  const entries: OverdueSnapshotEntry[] = [];
+
+  for (const client of clients) {
+    const openInvoices = imputeOpenInvoices(client.transactions, today);
+    const overdueInvoices = openInvoices.filter((inv) => inv.bucket !== null);
+    if (overdueInvoices.length === 0) continue; // al dia o solo con facturas no vencidas (M8/M3)
+
+    // El tramo/antiguedad mas critico es del CLIENTE, no de una moneda
+    // en particular (C1): los dias de mora no se suman ni se mezclan,
+    // solo se compara "cual es mayor", asi que da igual que las
+    // facturas comparadas esten en distinta moneda.
+    const oldest = overdueInvoices.reduce((older, inv) =>
+      inv.daysOverdue > older.daysOverdue ? inv : older
+    );
+
+    // Total vencido POR MONEDA (C1): nunca un numero suelto que suma
+    // monedas distintas. La moneda de la factura mas antigua queda
+    // primera en el array (la mas relevante para cobranza), el resto
+    // en orden alfabetico para que el orden sea deterministico.
+    const totalsByCurrency = new Map<Currency, number>();
+    for (const inv of overdueInvoices) {
+      totalsByCurrency.set(inv.currency, (totalsByCurrency.get(inv.currency) ?? 0) + inv.openBalance);
+    }
+    const overdueByCurrency: OverdueAmountByCurrency[] = [...totalsByCurrency.entries()]
+      .sort(([currencyA], [currencyB]) => {
+        if (currencyA === oldest.currency) return -1;
+        if (currencyB === oldest.currency) return 1;
+        return currencyA.localeCompare(currencyB);
+      })
+      .map(([currency, amount]) => ({ currency, amount }));
+
+    entries.push({
+      row: {
+        clientId: client.id,
+        clientName: client.clientName,
+        cuit: client.cuit,
+        overdueByCurrency,
+        oldestOverdueDays: oldest.daysOverdue,
+        oldestBucket: oldest.bucket as AgingBucket,
+        creditLimit: client.creditLimit,
+        currentBalance: client.currentBalance,
+      },
+      openInvoices: overdueInvoices,
+    });
+  }
+  return entries;
+}
+
+// Dia calendario (local) con el que se calculo el snapshot cacheado
+// (C2, DECISIONES_TECNICAS.md). computeOverdueSnapshot usa `new
+// Date()` para dias de mora/tramos, pero el cache solo invalidaba por
+// referencia de `clientsStore` — si la sesion queda abierta y cruza la
+// medianoche, la pagina 5 de manana seguia devolviendo el aging de
+// ayer hasta que alguien editara un cliente. `toDateString()` alcanza
+// como clave: no importa la hora exacta, solo si cambio el dia.
+function currentDayKey(): string {
+  return new Date().toDateString();
+}
+
+function getOverdueSnapshot(): OverdueSnapshotEntry[] {
+  const day = currentDayKey();
+  if (
+    overdueSnapshotCache &&
+    overdueSnapshotCache.computedFor === clientsStore &&
+    overdueSnapshotCache.computedOnDay === day
+  ) {
+    return overdueSnapshotCache.snapshot;
+  }
+  const snapshot = computeOverdueSnapshot(clientsStore);
+  overdueSnapshotCache = { computedFor: clientsStore, computedOnDay: day, snapshot };
+  return snapshot;
+}
+
+// Suma nominal entre monedas SOLO para ordenar (nunca se muestra este
+// numero en la UI, y no hay orden clickeable expuesto todavia — ver
+// M4/3.4). No es el mismo error que C1: ahi se mostraba un total
+// combinado como si fuera plata real; aca es un criterio de
+// desempate interno que nunca llega a pantalla. Si el dia de manana
+// se agregan monedas de magnitud muy distinta (ej. una con miles de
+// unidades por peso) esta heuristica dejaria de ordenar de forma util
+// y habria que revisarla — documentado a proposito para no perderlo.
+function totalOverdueForSorting(row: OverdueClientRow): number {
+  return row.overdueByCurrency.reduce((sum, entry) => sum + entry.amount, 0);
+}
+
+function compareOverdueRows(a: OverdueClientRow, b: OverdueClientRow, field: OverdueClientsSortField): number {
+  switch (field) {
+    case 'overdueAmount':
+      return totalOverdueForSorting(a) - totalOverdueForSorting(b);
+    case 'oldestDueDate':
+      return a.oldestOverdueDays - b.oldestOverdueDays;
+    case 'clientName':
+    default:
+      return a.clientName.localeCompare(b.clientName);
+  }
+}
+
+// Agregados por tramo (M4): sobre TODAS las facturas vencidas de los
+// clientes que matchean la busqueda (search SI acota el universo, como
+// branchId+date en logistics), sin aplicar el filtro de tramo — asi el
+// resumen de aging no cambia segun cual tramo este seleccionado, mismo
+// criterio que DeliveryAggregates en deliveries.service.ts. clientCount
+// cuenta clientes distintos con al menos una factura vencida en ese
+// tramo especifico (un cliente con facturas en dos tramos cuenta en
+// los dos — reporte de antiguedad de saldos estandar).
+function computeAggregates(entries: OverdueSnapshotEntry[]): OverdueClientsAggregates {
+  const totals = new Map<string, AgingBucketAggregate>(); // key = `${bucket}:${currency}`
+  const clientsSeen = new Map<string, Set<string>>(); // key = `${bucket}:${currency}` -> set de clientId
+
+  for (const entry of entries) {
+    for (const inv of entry.openInvoices) {
+      const bucket = inv.bucket as AgingBucket;
+      const key = `${bucket}:${inv.currency}`;
+      const current = totals.get(key) ?? { bucket, currency: inv.currency, totalOverdue: 0, clientCount: 0 };
+      current.totalOverdue += inv.openBalance;
+      totals.set(key, current);
+
+      const seen = clientsSeen.get(key) ?? new Set<string>();
+      seen.add(entry.row.clientId);
+      clientsSeen.set(key, seen);
+    }
+  }
+
+  for (const [key, bucketTotal] of totals) {
+    bucketTotal.clientCount = clientsSeen.get(key)?.size ?? 0;
+  }
+
+  // Devuelve siempre los 4 tramos (en orden), en 0 si no hay datos —
+  // asi el resumen de aging no "salta" columnas cuando un tramo queda
+  // vacio tras una busqueda.
+  const currencies = new Set<Currency>(totals.size > 0 ? [...totals.values()].map((t) => t.currency) : (['ARS'] as Currency[]));
+  const byBucket: AgingBucketAggregate[] = [];
+  for (const currency of currencies) {
+    for (const bucket of AGING_BUCKETS) {
+      byBucket.push(totals.get(`${bucket}:${currency}`) ?? { bucket, currency, totalOverdue: 0, clientCount: 0 });
+    }
+  }
+  return { byBucket };
+}
+
+export async function getOverdueClientsPage(
+  query: PageQuery<OverdueClientsQueryFilters, OverdueClientsSortField>
+): Promise<PageResult<OverdueClientRow, OverdueClientsAggregates>> {
+  await delay(SIMULATED_DELAY_MS);
+
+  const { filters, sort, page, pageSize } = query;
+  const snapshot = getOverdueSnapshot();
+
+  const inScope = snapshot.filter((entry) =>
+    matchesSearch(entry.row.clientName, entry.row.cuit, filters.search)
+  );
+
+  const aggregates = computeAggregates(inScope);
+
+  const filtered = filters.bucket
+    ? inScope.filter((entry) => entry.row.oldestBucket === filters.bucket)
+    : inScope;
+
+  const sortField = sort?.field ?? 'oldestDueDate';
+  const direction = sort?.direction ?? 'desc'; // mas vencido primero por default, tiene mas sentido para cobranzas
+  const sorted = [...filtered].sort((a, b) => {
+    const cmp = compareOverdueRows(a.row, b.row, sortField);
+    const primary = direction === 'asc' ? cmp : -cmp;
+    // Desempate estable por id (3.3).
+    return primary !== 0 ? primary : a.row.clientId.localeCompare(b.row.clientId);
+  });
+
+  const total = sorted.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const safePage = Math.min(Math.max(1, page), totalPages);
+  const start = (safePage - 1) * pageSize;
+  const items = sorted.slice(start, start + pageSize).map((entry) => entry.row);
+
+  return {
+    items: structuredClone(items),
+    total,
+    page: safePage,
+    pageSize,
+    aggregates,
+  };
 }
