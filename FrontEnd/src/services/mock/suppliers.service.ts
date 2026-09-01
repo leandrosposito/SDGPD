@@ -1,4 +1,4 @@
-import type { Supplier, SupplierPurchaseOrder } from '@/shared/types/supplier.types';
+import type { Supplier } from '@/shared/types/supplier.types';
 import { SUPPLIERS_MOCK_DATA } from '@/data/mock/suppliers.data';
 
 // ============================================================
@@ -45,7 +45,6 @@ export async function createSupplier(input: SupplierFormInput): Promise<Supplier
     currentBalance: 0,
     hasOverdueDebt: false,
     products: [],
-    purchaseOrders: [],
   };
   suppliersStore = [...suppliersStore, newSupplier];
   return structuredClone(newSupplier);
@@ -66,18 +65,8 @@ export async function updateSupplier(id: string, input: SupplierFormInput): Prom
   return structuredClone(updated);
 }
 
-// RF-CMP-001 (alcance frontend): agrega una OC recien emitida al historial del proveedor.
-export async function addPurchaseOrder(
-  supplierId: string,
-  order: Omit<SupplierPurchaseOrder, 'id'>
-): Promise<Supplier> {
-  await delay(SIMULATED_DELAY_MS);
-
-  const existing = suppliersStore.find((s) => s.id === supplierId);
-  if (!existing) throw new SupplierServiceError('El proveedor seleccionado ya no existe.');
-
-  const newOrder: SupplierPurchaseOrder = { ...order, id: `oc-${Date.now()}` };
-  const updated: Supplier = { ...existing, purchaseOrders: [newOrder, ...existing.purchaseOrders] };
-  suppliersStore = suppliersStore.map((s) => (s.id === supplierId ? updated : s));
-  return structuredClone(updated);
-}
+// RF-CMP-001: addPurchaseOrder se elimino (O3, DECISIONES_TECNICAS.md).
+// Las OC de un proveedor ya no se agregan a Supplier.purchaseOrders[]:
+// se crean contra Compras (services/mock/purchaseOrders.service#createPurchaseOrder)
+// y se consultan por supplierId (getPurchaseOrdersBySupplierId) — ver
+// SupplierDetailPanel.tsx y modules/compras/.

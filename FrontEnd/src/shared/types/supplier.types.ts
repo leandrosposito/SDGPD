@@ -11,14 +11,6 @@ export interface SupplierProduct {
   lastUpdate: string;
 }
 
-export interface SupplierPurchaseOrder {
-  id: string;
-  date: string;
-  description: string;
-  amount: number;
-  status: 'paid' | 'pending' | 'overdue';
-}
-
 export interface Supplier {
   id: string;
   name: string;
@@ -35,5 +27,9 @@ export interface Supplier {
   currentBalance: number;
   hasOverdueDebt: boolean;
   products: SupplierProduct[];
-  purchaseOrders: SupplierPurchaseOrder[];
+  // purchaseOrders (SupplierPurchaseOrder embebido) se elimino (O3,
+  // DECISIONES_TECNICAS.md): Compras (modules/compras/) es la unica
+  // fuente de verdad para las ordenes de un proveedor. Para verlas, se
+  // consulta services/mock/purchaseOrders.service#getPurchaseOrdersBySupplierId(id)
+  // — ver SupplierDetailPanel.tsx.
 }

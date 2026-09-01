@@ -24,10 +24,6 @@ export const SUPPLIERS_MOCK_DATA: Supplier[] = [
       { id: 'sp-101', sku: 'ACE-GIR-15', name: 'Aceite Girasol 1.5L', category: 'Aceites', cost: 1500, lastUpdate: '2026-06-01T00:00:00Z' },
       { id: 'sp-102', sku: 'ACE-OLI-05', name: 'Aceite Oliva 500ml', category: 'Aceites', cost: 4200, lastUpdate: '2026-05-20T00:00:00Z' },
     ],
-    purchaseOrders: [
-      { id: 'oc-1001', date: '2026-06-10T00:00:00Z', description: 'Pedido mensual aceites', amount: 120000, status: 'paid' },
-      { id: 'oc-1002', date: '2026-06-01T00:00:00Z', description: 'Reposicion aceite girasol', amount: 95000, status: 'pending' },
-    ],
   },
   {
     id: 'sup-002',
@@ -48,10 +44,6 @@ export const SUPPLIERS_MOCK_DATA: Supplier[] = [
       { id: 'sp-201', sku: 'YER-TAR-1K', name: 'Yerba Taragui 1kg', category: 'Infusiones', cost: 2800, lastUpdate: '2026-06-05T00:00:00Z' },
       { id: 'sp-202', sku: 'YER-UNI-05', name: 'Yerba Union 500g', category: 'Infusiones', cost: 1450, lastUpdate: '2026-05-28T00:00:00Z' },
     ],
-    purchaseOrders: [
-      { id: 'oc-2001', date: '2026-05-01T00:00:00Z', description: 'Pedido yerba mayo', amount: 210000, status: 'overdue' },
-      { id: 'oc-2002', date: '2026-04-01T00:00:00Z', description: 'Pedido yerba abril', amount: 185000, status: 'paid' },
-    ],
   },
   {
     id: 'sup-003',
@@ -70,9 +62,6 @@ export const SUPPLIERS_MOCK_DATA: Supplier[] = [
     hasOverdueDebt: false,
     products: [
       { id: 'sp-301', sku: 'GAL-SUR-200', name: 'Galletitas Surtidas 200g', category: 'Golosinas', cost: 680, lastUpdate: '2026-06-08T00:00:00Z' },
-    ],
-    purchaseOrders: [
-      { id: 'oc-3001', date: '2026-06-12T00:00:00Z', description: 'Reposicion galletitas', amount: 45000, status: 'paid' },
     ],
   },
 ];
