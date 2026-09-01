@@ -2,9 +2,14 @@ import { useState, type FC } from 'react';
 import type { KeyboardEvent } from 'react';
 import { toast } from 'sonner';
 import type { InventoryItem } from '@/shared/types/inventory.types';
+import { useSessionStore } from '@/shared/state/useSessionStore';
+import { getStockForBranch } from '@/services/mock/products.service';
 
 // ============================================================
 // OrderProductsSection — Core product search and table
+// El stock que se copia al agregar un producto es el de la sucursal
+// activa (E1, tarea de inventario multi-deposito): antes era
+// InventoryItem.stock, un numero global que ya no existe.
 // ============================================================
 
 export interface OrderProductItem {
@@ -36,8 +41,9 @@ export const OrderProductsSection: FC<OrderProductsSectionProps> = ({
   products
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const activeBranchId = useSessionStore((s) => s.activeBranchId);
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = async (e: KeyboardEvent<HTMLInputElement>) => {
     // Intercept Enter key for barcode scanners
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -51,6 +57,8 @@ export const OrderProductsSection: FC<OrderProductsSectionProps> = ({
         // Adjust price mock based on price list
         const modifier = priceList === 'Mayorista' ? 0.9 : priceList === 'Distribuidor' ? 0.8 : 1;
         const price = match.price * modifier;
+        const stockRecord = activeBranchId ? await getStockForBranch(match.id, activeBranchId) : undefined;
+        const stock = stockRecord?.stock ?? 0;
 
         const existingItemIndex = items.findIndex(i => i.sku === match.sku);
         if (existingItemIndex >= 0) {
@@ -63,7 +71,7 @@ export const OrderProductsSection: FC<OrderProductsSectionProps> = ({
             id: match.id,
             sku: match.sku,
             name: match.name,
-            stock: match.stock,
+            stock,
             quantity: 1,
             price: price,
             discount: 0,
