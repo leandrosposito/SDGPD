@@ -13,8 +13,13 @@
 // Convencion para un store nuevo: llamar a registerResettableStore
 // una sola vez, en el mismo archivo del store, inmediatamente
 // despues de `export const use<Nombre>Store = create(...)`. Ver
-// modules/logistics/state/useDeliveriesStore.ts o
 // modules/inventory/state/useReplenishmentStore.ts como referencia.
+//
+// Nota: useDeliveriesStore (logistics) llegó a registrarse aca pero se
+// eliminó al migrar logistics a paginacion server-side — con branchId
+// viajando en los filtros de la consulta (P9), un cambio de sucursal ya
+// dispara un refetch por si solo, sin necesitar un reset explicito. Ver
+// DECISIONES_TECNICAS.md, P10.
 // ============================================================
 
 type ResetFn = () => void;

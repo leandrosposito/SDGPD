@@ -1,13 +1,18 @@
-import { useMemo, useState, type FC } from 'react';
+import { useEffect, useMemo, useState, type FC } from 'react';
 import { toast } from 'sonner';
 import type { DeliveryStatus } from '@/shared/types/logistics.types';
-import { usePagination } from '@/shared/hooks/usePagination';
+import { usePagedQuery } from '@/shared/hooks/usePagedQuery';
 import { Pagination } from '@/shared/components/ui/Pagination';
 import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary';
 import { SkeletonTable } from '@/shared/components/ui/SkeletonLoader';
+import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay';
 import { useSessionStore } from '@/shared/state/useSessionStore';
-import { useDeliveriesStore } from './state/useDeliveriesStore';
-import { getDeliveriesForDate } from './services/deliveries.service';
+import {
+  getDeliveriesPage,
+  advanceDeliveryStatus,
+  toISODate,
+  type DeliveryQueryFilters,
+} from './services/deliveries.service';
 import { LogisticsKPIs } from './components/LogisticsKPIs';
 import { DeliveryFilters, type DeliveryStatusFilter } from './components/DeliveryFilters';
 import { DeliveriesTable } from './components/DeliveriesTable';
@@ -16,60 +21,67 @@ import './LogisticsPage.css';
 
 // ============================================================
 // LogisticsPage — Entregas del Dia
-// Tabla paginada de entregas, filtrable por estado
-// (pendiente / en ruta / completada).
+// Tabla paginada server-side de entregas (P1-P10, DECISIONES_TECNICAS.md),
+// filtrable por estado (pendiente / en ruta / completada). Los KPIs y los
+// contadores del filtro salen de agregados calculados por el servicio,
+// no del array de la pagina actual (P3).
 // ============================================================
 
-const PAGE_SIZE = 8;
-
 export const LogisticsPage: FC = () => {
-  // Fecha "hoy" tomada una sola vez del sistema; la funcion que
-  // filtra por dia (getDeliveriesForDate) la recibe como parametro,
-  // no la calcula ella misma.
-  const [today] = useState(() => new Date());
+  // Fecha "hoy" tomada una sola vez del sistema, como ISO string (asi
+  // viaja tal cual en los filtros de la consulta).
+  const [todayISO] = useState(() => toISODate(new Date()));
 
-  const deliveries = useDeliveriesStore((s) => s.deliveries);
-  const advanceDeliveryStatus = useDeliveriesStore((s) => s.advanceDeliveryStatus);
   const activeBranchId = useSessionStore((s) => s.activeBranchId);
-
   const [statusFilter, setStatusFilter] = useState<DeliveryStatusFilter>('all');
 
-  // activeBranchId es null mientras la sesion todavia no cargo (ver
-  // BranchSelector/AppShell): sin sucursal activa no hay nada que
-  // filtrar todavia, se muestra un skeleton en vez de una lista vacia.
-  const todayDeliveries = useMemo(
-    () => (activeBranchId ? getDeliveriesForDate(deliveries, today, activeBranchId) : []),
-    [deliveries, today, activeBranchId]
+  // Memoizado: usePagedQuery compara `filters` por referencia para
+  // decidir si hay que volver a pagina 1 (P9) — solo debe cambiar de
+  // referencia cuando de verdad cambia sucursal o estado.
+  const filters: DeliveryQueryFilters = useMemo(
+    () => ({
+      branchId: activeBranchId ?? '',
+      date: todayISO,
+      status: statusFilter === 'all' ? undefined : statusFilter,
+    }),
+    [activeBranchId, todayISO, statusFilter]
   );
 
-  const filteredDeliveries = useMemo(
-    () =>
-      statusFilter === 'all'
-        ? todayDeliveries
-        : todayDeliveries.filter((d) => d.status === statusFilter),
-    [todayDeliveries, statusFilter]
-  );
+  const {
+    items: deliveries,
+    aggregates,
+    page,
+    pageSize,
+    totalItems,
+    totalPages,
+    isFetching,
+    error,
+    setPage,
+    setPageSize,
+    refetch,
+  } = usePagedQuery(getDeliveriesPage, filters, { enabled: activeBranchId !== null });
 
-  // resetKey combina sucursal + filtro de estado: al cambiar cualquiera
-  // de los dos, la paginacion vuelve a la pagina 1 (evita quedar en una
-  // pagina vacia de la sucursal/filtro anterior).
-  const { pageItems, currentPage, totalPages, totalItems, setPage } = usePagination(
-    filteredDeliveries,
-    PAGE_SIZE,
-    `${activeBranchId ?? ''}:${statusFilter}`
-  );
+  useEffect(() => {
+    if (error) toast.error('No se pudo cargar la lista de entregas.');
+  }, [error]);
 
   const handlePrintRoute = () => {
     // Mock print action
     console.log('Imprimiendo hoja de ruta...');
   };
 
-  const handleAdvanceStatus = (deliveryId: string) => {
-    const result = advanceDeliveryStatus(deliveryId);
+  const handleAdvanceStatus = async (deliveryId: string) => {
+    const result = await advanceDeliveryStatus(deliveryId);
 
     if (result.success && result.newStatus) {
       const label: DeliveryStatus = result.newStatus;
       toast.success(`Entrega ${deliveryId} actualizada a "${DELIVERY_STATUS_LABEL[label]}".`);
+      // P10: la lista y los agregados son responsabilidad del servidor
+      // (mock hoy); en vez de actualizar `deliveries`/`aggregates` a
+      // mano en el cliente (lo que obligaria a recalcular countByStatus
+      // y pendingCollectionAmount ahi, violando P3), se vuelve a pedir
+      // la pagina que se esta viendo.
+      refetch();
       return;
     }
 
@@ -94,10 +106,10 @@ export const LogisticsPage: FC = () => {
         </div>
       </header>
 
-      <LogisticsKPIs deliveries={todayDeliveries} />
+      <LogisticsKPIs aggregates={aggregates} />
 
       <DeliveryFilters
-        deliveries={todayDeliveries}
+        aggregates={aggregates}
         activeStatus={statusFilter}
         onStatusChange={setStatusFilter}
       />
@@ -108,19 +120,22 @@ export const LogisticsPage: FC = () => {
           fallbackMessage="Recarga la pagina para intentar de nuevo."
         >
           <div className="logistics-page__table-container">
-            <DeliveriesTable deliveries={pageItems} onAdvanceStatus={handleAdvanceStatus} />
+            <FetchingOverlay isFetching={isFetching}>
+              <DeliveriesTable deliveries={deliveries} onAdvanceStatus={handleAdvanceStatus} />
+            </FetchingOverlay>
             <Pagination
-              currentPage={currentPage}
+              currentPage={page}
               totalPages={totalPages}
               totalItems={totalItems}
-              pageSize={PAGE_SIZE}
+              pageSize={pageSize}
               onPageChange={setPage}
+              onPageSizeChange={setPageSize}
             />
           </div>
         </ErrorBoundary>
       ) : (
         <div className="logistics-page__table-container">
-          <SkeletonTable rows={PAGE_SIZE} cols={6} />
+          <SkeletonTable rows={8} cols={6} />
         </div>
       )}
     </div>

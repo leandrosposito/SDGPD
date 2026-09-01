@@ -1,23 +1,27 @@
 import { type FC } from 'react';
-import { type Delivery } from '@/shared/types/logistics.types';
+import type { DeliveryAggregates } from '../services/deliveries.service';
 import '../LogisticsPage.css';
 
+// ============================================================
+// LogisticsKPIs — Lee agregados calculados por el servicio (P3,
+// DECISIONES_TECNICAS.md), nunca cuenta/suma sobre un array de
+// entregas: con paginacion server-side ese array solo tiene la pagina
+// actual, y un KPI calculado sobre 8 filas de miles seria incorrecto.
+// ============================================================
+
 interface LogisticsKPIsProps {
-  deliveries: Delivery[];
+  aggregates: DeliveryAggregates | undefined;
 }
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(value);
 }
 
-export const LogisticsKPIs: FC<LogisticsKPIsProps> = ({ deliveries }) => {
-  const totalOrders = deliveries.length;
-  const deliveredOrders = deliveries.filter(d => d.status === 'delivered').length;
+export const LogisticsKPIs: FC<LogisticsKPIsProps> = ({ aggregates }) => {
+  const totalOrders = aggregates?.totalForScope ?? 0;
+  const deliveredOrders = aggregates?.countByStatus.delivered ?? 0;
   const deliveryProgress = totalOrders > 0 ? (deliveredOrders / totalOrders) * 100 : 0;
-
-  const pendingCollection = deliveries
-    .filter(d => d.status === 'in_transit' || d.status === 'pending')
-    .reduce((acc, delivery) => acc + delivery.collectionAmount, 0);
+  const pendingCollection = aggregates?.pendingCollectionAmount ?? 0;
 
   return (
     <div className="logistics-kpis">
@@ -26,8 +30,8 @@ export const LogisticsKPIs: FC<LogisticsKPIsProps> = ({ deliveries }) => {
           <span className="logistics-kpi-label">Entregas del Dia</span>
           <span className="logistics-kpi-value">{deliveredOrders} / {totalOrders}</span>
           <div className="logistics-kpi-progress-bg">
-            <div 
-              className="logistics-kpi-progress-bar" 
+            <div
+              className="logistics-kpi-progress-bar"
               style={{ width: `${deliveryProgress}%` }}
             ></div>
           </div>
