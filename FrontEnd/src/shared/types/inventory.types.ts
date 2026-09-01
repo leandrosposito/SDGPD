@@ -86,13 +86,20 @@ export interface InventoryMovement {
 
 export interface PurchaseSuggestion {
   id: string;
+  // productId (O9, DECISIONES_TECNICAS.md): referencia tipada al
+  // producto real (InventoryItem), agregada para poder resolver su
+  // supplierId al generar una OC — "Generar OC" nunca debe resolver el
+  // proveedor por `supplierName` (texto libre, puede no coincidir con
+  // ningun Supplier real), siempre por ID (R2).
+  productId: InventoryItem['id'];
   sku: string;
   productName: string;
+  // supplierName es SOLO de exhibicion (columna "Proveedor" de la
+  // tabla) — nunca se usa para resolver el proveedor real al generar
+  // la OC, ver TabPurchases.tsx.
   supplierName: string;
   // La sugerencia de compra ahora es por sucursal (E1: el stock que la
-  // origina es de sucursal, no del producto). No conecta "Generar OC"
-  // todavia (tarea 5 en README de la tarea) — el dato queda disponible
-  // para cuando se implemente.
+  // origina es de sucursal, no del producto).
   branchId: Branch['id'];
   currentStock: number;
   minStock: number;

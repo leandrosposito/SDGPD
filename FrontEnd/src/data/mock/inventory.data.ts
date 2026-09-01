@@ -61,6 +61,10 @@ export const INVENTORY_MOCK_DATA: InventoryData = {
     { id: 'inv-011', sku: 'DET-LIQ-750',  barcode: '7791011000013', name: 'Detergente Liquido 750ml', description: 'Detergente liquido para vajilla, botella 750ml', category: 'Limpieza', unitOfMeasure: 'Botella', status: 'active', supplierId: 'sup-003', cost: 890,  price: 1250 },
     { id: 'inv-015', sku: 'GAS-COL-225',  barcode: '7791015000019', name: 'Gaseosa Cola 2.25L',       description: 'Gaseosa sabor cola, botella 2.25L',          category: 'Bebidas',    unitOfMeasure: 'Botella', status: 'active', supplierId: 'sup-003', cost: 890,  price: 1300 },
     { id: 'inv-017', sku: 'CER-RUB-1L',   barcode: '7791017000017', name: 'Cerveza Rubia 1L',         description: 'Cerveza rubia, botella retornable 1L',       category: 'Bebidas',    unitOfMeasure: 'Botella', status: 'active', supplierId: 'sup-002', cost: 980,  price: 1450 },
+    // supplierId 'sup-999' no existe en suppliers.data.ts a proposito
+    // (O9, DECISIONES_TECNICAS.md): caso de borde para probar "Generar
+    // OC" con un producto sin proveedor valido — ver sug-004 abajo.
+    { id: 'inv-019', sku: 'DESC-LEG-500', barcode: '7791019000015', name: 'Producto Descontinuado 500g', description: 'Proveedor dado de baja del sistema',  category: 'Almacen',    unitOfMeasure: 'Unidad',  status: 'active', supplierId: 'sup-999', cost: 500,  price: 700 },
   ],
   movements: [
     {
@@ -93,6 +97,7 @@ export const INVENTORY_MOCK_DATA: InventoryData = {
   suggestions: [
     {
       id: 'sug-001',
+      productId: 'inv-002',
       sku: 'YER-MAT-1K',
       productName: 'Yerba Mate 1kg Paquete',
       supplierName: 'Las Marias S.A.C.I.',
@@ -104,6 +109,7 @@ export const INVENTORY_MOCK_DATA: InventoryData = {
     },
     {
       id: 'sug-002',
+      productId: 'inv-001',
       sku: 'ACE-GIR-15',
       productName: 'Aceite de Girasol 1.5L',
       supplierName: 'Molinos Canuelas S.A.',
@@ -115,6 +121,7 @@ export const INVENTORY_MOCK_DATA: InventoryData = {
     },
     {
       id: 'sug-003',
+      productId: 'inv-006',
       sku: 'ACE-OLI-05',
       productName: 'Aceite de Oliva 500ml',
       supplierName: 'Molinos Canuelas S.A.',
@@ -123,6 +130,21 @@ export const INVENTORY_MOCK_DATA: InventoryData = {
       minStock: 55,
       suggestedQuantity: 100,
       estimatedCost: 420000,
+    },
+    // Caso de borde O9: producto con supplierId que no existe entre los
+    // proveedores reales (inv-019, ver arriba) — "Generar OC" debe
+    // rechazarse con feedback claro, sin romper la pantalla.
+    {
+      id: 'sug-004',
+      productId: 'inv-019',
+      sku: 'DESC-LEG-500',
+      productName: 'Producto Descontinuado 500g',
+      supplierName: 'Proveedor Desconocido',
+      branchId: 'branch-001',
+      currentStock: 3,
+      minStock: 40,
+      suggestedQuantity: 60,
+      estimatedCost: 30000,
     },
   ],
   history: [

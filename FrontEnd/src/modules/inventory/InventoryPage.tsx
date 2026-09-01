@@ -211,7 +211,13 @@ export const InventoryPage: FC = () => {
       content: !activeBranchId ? (
         <SkeletonTable rows={3} cols={6} />
       ) : (
-        <TabPurchases data={purchaseSuggestions} branchName={activeBranchName} />
+        <TabPurchases
+          data={purchaseSuggestions}
+          branchName={activeBranchName}
+          branchId={activeBranchId}
+          products={products}
+          suppliers={suppliers}
+        />
       )
     },
     {
