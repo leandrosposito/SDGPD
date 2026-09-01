@@ -90,3 +90,21 @@ También se preserva, porque tampoco estaba en ningún otro doc, el detalle de `
 
 ### 4. Resultado
 `FrontEnd/ARCHITECTURE.md` fue eliminado. Su contenido vigente y no duplicado quedó migrado en el punto 3 de esta entrada; el resto ya estaba (más actualizado) en las demás secciones de este archivo.
+
+## [01/09/2026] — Contexto de sesión y sucursal activa: primer store en `shared/state/`
+
+### 1. Contexto
+Infraestructura para el modelo SaaS multi-sucursal: una empresa (inquilino) puede tener varias sucursales, y el usuario opera cambiando la sucursal activa durante la sesión. Tarea de infraestructura pura — no agrega ninguna pantalla de negocio nueva. Cubre tipos, mock/servicio de sesión, el store de sesión, el mecanismo de reset entre stores y la integración de filtrado en `logistics` (único módulo integrado en esta etapa).
+
+### 2. `shared/state/` deja de ser una carpeta solo declarada — primer store real ahí
+Desde `[25/08/2026]` el mapa de carpetas de este archivo declara `src/shared/state/` como "Stores de estado global (zustand)", pero hasta esta tarea la carpeta no existía: los dos stores reales del proyecto (`useDeliveriesStore`, `useReplenishmentStore`) viven en `modules/<modulo>/state/`, siguiendo la convención fijada en `[28/08/2026] — Primer `services/` real de un módulo, y carpeta `state/` para stores de zustand` de `RUTAS_Y_MODULOS.md`: un store vive en su módulo mientras sea específico de un dominio, y se promueve a `shared/state/` (mismo nombre de subcarpeta, para que promoverlo sea mover el archivo) cuando deja de serlo.
+
+`useSessionStore` (`shared/state/useSessionStore.ts`) es la primera vez que ese trigger de promoción se activa de entrada, no como migración posterior: la sesión y la sucursal activa no son de un dominio de negocio particular — las consume el layout (selector de sucursal en `Header`) y cualquier módulo que necesite filtrar por sucursal (hoy, `logistics`; a futuro, otros). No tenía sentido crearlo dentro de `modules/logistics/` para después promoverlo.
+
+### 3. `shared/state/resettableStores.ts` — registro central de reset, no importar stores de módulo desde `shared/`
+Cuando el usuario cambia de sucursal activa, todo store con datos de negocio debe volver a su estado inicial (si no, se ve stock/estado de la sucursal anterior bajo el rótulo de la nueva — ver `DECISIONES_TECNICAS.md`, D5). La alternativa obvia — que `useSessionStore` importe `useDeliveriesStore` y `useReplenishmentStore` directamente y llame a sus `reset()` — se descartó porque invierte la dirección de dependencia del proyecto: `modules/` depende de `shared/`, nunca al revés (ver `RUTAS_Y_MODULOS.md`, "no importar directamente entre módulos"; el mismo principio aplica a que `shared/` no debería depender de `modules/`).
+
+En su lugar, `shared/state/resettableStores.ts` expone `registerResettableStore(reset)`/`resetAllStores()`: cada store de módulo se auto-registra con una sola línea, junto a su propio `create(...)`, inmediatamente después de definirse (ver `useDeliveriesStore.ts`/`useReplenishmentStore.ts`). `useSessionStore.setActiveBranch` solo conoce `resetAllStores()`, nunca los stores concretos. Se eligió este mecanismo (en vez de que `useSessionStore` importe cada store) precisamente para que quede evidente dónde registrar un store nuevo: la convención está escrita en el propio `resettableStores.ts`, y el patrón a copiar es literal (una línea `registerResettableStore(...)` justo debajo del `export const use...Store = create(...)`).
+
+### 4. `services/mock/session.service.ts` y `data/mock/session.mock.ts` — mismo patrón que el resto
+Siguen el patrón ya fijado por `dashboard.service.ts` (`delay` + `structuredClone`), sin ninguna variación nueva. `session.types.ts` se agrega a `shared/types/` junto a los 9 archivos de dominio existentes (ver catálogo en la sección "Types" de `FrontEnd/CLAUDE.md`).

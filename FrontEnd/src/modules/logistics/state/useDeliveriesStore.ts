@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { Delivery, DeliveryStatus } from '@/shared/types/logistics.types';
 import { LOGISTICS_MOCK_DATA } from '@/data/mock/logistics.data';
+import { registerResettableStore } from '@/shared/state/resettableStores';
 
 // ============================================================
 // useDeliveriesStore — Estado global de entregas (logistics)
@@ -39,12 +40,18 @@ interface DeliveriesState {
   deliveries: Delivery[];
   setDeliveries: (deliveries: Delivery[]) => void;
   advanceDeliveryStatus: (deliveryId: string) => DeliveryStatusTransitionResult;
+  reset: () => void;
 }
 
 export const useDeliveriesStore = create<DeliveriesState>()((set, get) => ({
   // Semilla mock por ahora; el dia que exista API real, un fetch
   // llama a setDeliveries(resultado) sin cambiar el resto del store.
-  deliveries: LOGISTICS_MOCK_DATA,
+  // structuredClone (no la referencia directa a LOGISTICS_MOCK_DATA):
+  // advanceDeliveryStatus ya es inmutable (map que devuelve objetos
+  // nuevos), pero clonar aca evita que un futuro cambio que SI mute un
+  // registro in-place corrompa el modulo mock compartido — mismo patron
+  // que ya usa la capa de services/mock/ (delay + structuredClone).
+  deliveries: structuredClone(LOGISTICS_MOCK_DATA),
 
   setDeliveries: (deliveries) => set({ deliveries }),
 
@@ -79,4 +86,13 @@ export const useDeliveriesStore = create<DeliveriesState>()((set, get) => ({
       newStatus: nextStatus,
     };
   },
+
+  // Vuelve al mock completo (estado inicial). Se invoca al cambiar de
+  // sucursal para no arrastrar avances de estado hechos bajo otra
+  // sucursal — ver DECISIONES_TECNICAS.md, D5. structuredClone por el
+  // mismo motivo que el estado inicial de arriba.
+  reset: () => set({ deliveries: structuredClone(LOGISTICS_MOCK_DATA) }),
 }));
+
+// Auto-registro: ver shared/state/resettableStores.ts para la convencion.
+registerResettableStore(() => useDeliveriesStore.getState().reset());

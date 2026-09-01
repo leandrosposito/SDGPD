@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { ReplenishmentStatus } from '@/shared/types/inventory.types';
+import { registerResettableStore } from '@/shared/state/resettableStores';
 
 // ============================================================
 // useReplenishmentStore — Estado de solicitudes de reposicion
@@ -27,6 +28,7 @@ export interface ReplenishmentActionResult {
 interface ReplenishmentState {
   statusByProductId: Record<string, ReplenishmentStatus>;
   requestReplenishment: (productId: string) => ReplenishmentActionResult;
+  reset: () => void;
 }
 
 export const useReplenishmentStore = create<ReplenishmentState>()((set, get) => ({
@@ -46,4 +48,11 @@ export const useReplenishmentStore = create<ReplenishmentState>()((set, get) => 
 
     return { success: true, productId, status: 'requested' };
   },
+
+  // Vuelve a "nada solicitado" (estado inicial). Se invoca al cambiar
+  // de sucursal — ver DECISIONES_TECNICAS.md, D5.
+  reset: () => set({ statusByProductId: {} }),
 }));
+
+// Auto-registro: ver shared/state/resettableStores.ts para la convencion.
+registerResettableStore(() => useReplenishmentStore.getState().reset());
