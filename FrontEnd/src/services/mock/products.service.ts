@@ -1,5 +1,6 @@
 import type { InventoryItem, ProductStock, StockedInventoryItem } from '@/shared/types/inventory.types';
 import type { Branch } from '@/shared/types/session.types';
+import type { PageQuery, PageResult } from '@/shared/types/pagination.types';
 import { INVENTORY_MOCK_DATA } from '@/data/mock/inventory.data';
 import { PRODUCT_STOCK_MOCK_DATA } from '@/data/mock/productStock.data';
 
@@ -103,7 +104,9 @@ export async function getStockForBranch(
 // producto sin registro en esa sucursal aparece con stock/minStock en 0
 // (E5) en vez de quedar afuera de la lista — esta es la vista de
 // "catalogo con su stock aca", no la de "stock cargado en esta sucursal"
-// (para esa segunda vista ver getLowStockForBranch).
+// (para esa segunda vista ver getLowStockPage). No esta paginada (P8,
+// tarea de paginacion server-side): TabStockCurrent no usaba el patron
+// paginado antes de esa tarea y queda fuera de su alcance.
 export async function getStockedProductsForBranch(
   branchId: Branch['id']
 ): Promise<StockedInventoryItem[]> {
@@ -129,30 +132,68 @@ export async function getStockedProductsForBranch(
   });
 }
 
+// ============================================================
+// BAJO STOCK MINIMO — PAGINADO SERVER-SIDE (P1, DECISIONES_TECNICAS.md)
+// Reemplaza a la antigua getLowStockForBranch (devolvia el array
+// completo). El servicio filtra, ordena, cuenta y corta el (mismo
+// patron que deliveries.service.ts#getDeliveriesPage).
+// ============================================================
+
+export interface LowStockQueryFilters {
+  branchId: Branch['id'];
+}
+
+export type LowStockSortField = 'sku' | 'name' | 'stock' | 'minStock';
+
+function compareLowStock(a: StockedInventoryItem, b: StockedInventoryItem, field: LowStockSortField): number {
+  switch (field) {
+    case 'name':
+      return a.name.localeCompare(b.name);
+    case 'stock':
+      return a.stock - b.stock;
+    case 'minStock':
+      return a.minStock - b.minStock;
+    case 'sku':
+    default:
+      return a.sku.localeCompare(b.sku);
+  }
+}
+
 // Productos bajo stock minimo (E6: stock <= minStock, ya no < estricto)
-// en una sucursal. A diferencia de getStockedProductsForBranch, esta NO
-// completa con ceros los productos sin registro de stock en la sucursal
-// (E5): un producto no dado de alta ahi no tiene minimo definido, asi
-// que no puede estar "bajo minimo" — se excluye en vez de aparecer con
-// minStock 0 (mostrar eso haria parecer que su minimo es cero en vez de
-// "no cargado"). Centralizado aca para que TabLowStock no tenga que
-// reproducir este criterio a mano.
-export async function getLowStockForBranch(
-  branchId: Branch['id']
-): Promise<StockedInventoryItem[]> {
+// en una sucursal. Igual que la version anterior, NO completa con ceros
+// los productos sin registro de stock en la sucursal (E5): un producto
+// no dado de alta ahi no tiene minimo definido, asi que no puede estar
+// "bajo minimo" — se excluye en vez de aparecer con minStock 0.
+export async function getLowStockPage(
+  query: PageQuery<LowStockQueryFilters, LowStockSortField>
+): Promise<PageResult<StockedInventoryItem>> {
   await delay(SIMULATED_DELAY_MS);
-  // Mismo problema que getStockedProductsForBranch (find() dentro de un
-  // map(), O(stock bajo minimo x productos)): se indexa productsStore en
-  // un Map por id una sola vez, antes del filtro/map, y la union queda
-  // O(1) por registro. El criterio de filtrado no cambia (E6: stock <=
-  // minStock; solo registros reales de la sucursal, nunca se completa
-  // con ceros — E5).
+
+  const { filters, sort, page, pageSize } = query;
   const productById = new Map(productsStore.map((p) => [p.id, p]));
-  return stockStore
-    .filter((record) => record.branchId === branchId && record.stock <= record.minStock)
-    .map((record) => {
-      const product = productById.get(record.productId);
-      return product ? structuredClone({ ...product, ...record }) : null;
-    })
-    .filter((item): item is StockedInventoryItem => item !== null);
+
+  const matches: StockedInventoryItem[] = [];
+  for (const record of stockStore) {
+    if (record.branchId !== filters.branchId || record.stock > record.minStock) continue;
+    const product = productById.get(record.productId);
+    if (product) matches.push({ ...product, ...record });
+  }
+
+  const sortField = sort?.field ?? 'sku';
+  const direction = sort?.direction ?? 'asc';
+  const sorted = matches.sort((a, b) => {
+    const cmp = compareLowStock(a, b, sortField);
+    const primary = direction === 'asc' ? cmp : -cmp;
+    // Desempate estable por id (3.4): un orden ambiguo hace que el
+    // mismo producto aparezca en dos paginas o en ninguna al paginar.
+    return primary !== 0 ? primary : a.id.localeCompare(b.id);
+  });
+
+  const total = sorted.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const safePage = Math.min(Math.max(1, page), totalPages);
+  const start = (safePage - 1) * pageSize;
+  const items = sorted.slice(start, start + pageSize);
+
+  return { items: structuredClone(items), total, page: safePage, pageSize };
 }

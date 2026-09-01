@@ -93,6 +93,8 @@ Todo módulo nuevo que muestre un listado de datos debe usar el patrón de este 
 No existe ningún componente de paginación (`Pagination`) ni de virtualización en el proyecto todavía.
 
 > **Actualización 28/08/2026 (mismo día, después de este relevamiento):** se agregaron `shared/components/ui/Pagination.tsx` (8vo componente) y `shared/components/ui/ErrorBoundary.tsx` (9no componente — primer Error Boundary del proyecto; `children`, `fallbackTitle?`, `fallbackMessage?`; clase de React, no hook, porque `getDerivedStateFromError`/`componentDidCatch` no tienen equivalente en hooks). Ver `[28/08/2026] — Primera Tabla Paginada Real` al final de este archivo.
+>
+> **Actualización 01/09/2026:** se agregó `shared/components/ui/FetchingOverlay.tsx` (10mo componente — `isFetching: boolean`, `children`). Envuelve contenido paginado (una `Table`, etc.): mientras `isFetching`, atenúa el contenido anterior y muestra un spinner encima en vez de vaciarlo — usado por `LogisticsPage` y `TabLowStock` para el estado de carga por cambio de página (ver `DECISIONES_TECNICAS.md`, `[01/09/2026] — Contrato de datos paginado server-side`, y `[28/08/2026] — Primera Tabla Paginada Real` más abajo, ya actualizada con el patrón vigente).
 
 ### 2. Estado real de adopción del patrón de listas (relevamiento, no una nueva decisión)
 La sección `[28/08/2026] — Patrón Estándar para Listas de Datos` de más arriba define el **objetivo**: tabla paginada + filtros + `Badge`. Relevando el código existente, ese patrón **no está consolidado hoy** — conviven tres implementaciones distintas para listar datos, y ninguna pagina:
@@ -113,44 +115,51 @@ De los 9 módulos, solo `orders` combina tabla + barra de filtros completa (más
 
 Ver `DECISIONES_TECNICAS.md` (`[28/08/2026] — Inconsistencias Encontradas Entre Módulos`) para el registro consolidado de estos hallazgos.
 
-## [28/08/2026] — Primera Tabla Paginada Real
+## [28/08/2026] — Primera Tabla Paginada Real (definición actualizada el 01/09/2026: paginación server-side)
 
 ### 1. Contexto
 `logistics` reemplaza su tablero Kanban por "Entregas del Día": una tabla paginada, filtrable por estado (`pending` / `in_transit` / `delivered`). Es la primera vez que se implementa de punta a punta el patrón definido en `[28/08/2026] — Patrón Estándar para Listas de Datos` (más arriba en este archivo), así que esta entrada documenta la implementación como referencia oficial para el resto de los módulos (`cash`, `inventory`, `orders`, `settings`, `suppliers`, `dashboard`, `analytics`, `clients` — todos siguen sin paginar, ver relevamiento arriba).
 
-### 2. Componente nuevo: `shared/components/ui/Pagination.tsx`
-Control de paginación genérico, sin estado propio (lo maneja quien lo usa).
+**Actualización 01/09/2026 — el patrón cambió de fondo, no solo de detalle:** los puntos 2-7 de esta entrada describían paginación **en memoria** (`usePagination` cortaba un array ya cargado completo con `.slice()`). Una tarea posterior migró el contrato a paginación **server-side** (el origen de datos filtra/ordena/cuenta/corta, nunca se carga el dataset completo) — ver `DECISIONES_TECNICAS.md`, `[01/09/2026] — Contrato de datos paginado server-side`. Los puntos de abajo quedan reescritos con la definición vigente; no se agregó una entrada nueva aparte para no dejar dos definiciones del mismo patrón contradiciéndose en este archivo.
+
+### 2. Componente `shared/components/ui/Pagination.tsx`
+Control de paginación genérico, sin estado propio salvo el del input de salto de página (se resincroniza solo, ver punto 4).
 
 | Prop | Tipo | Rol |
 |---|---|---|
 | `currentPage` | `number` | Página actual (1-indexed) |
 | `totalPages` | `number` | Total de páginas |
-| `totalItems` | `number` | Total de items sin paginar, para el resumen "Mostrando X-Y de Z" |
+| `totalItems` | `number` | Total de items que matchea la consulta (no el dataset entero), para el resumen "Mostrando X-Y de Z" |
 | `pageSize` | `number` | Items por página, para calcular el resumen |
-| `onPageChange` | `(page: number) => void` | Callback al navegar |
+| `onPageChange` | `(page: number) => void` | Callback al navegar (anterior/siguiente/salto directo) |
+| `onPageSizeChange?` | `(size: number) => void` | Callback al cambiar el tamaño de página — si no se pasa, no se renderiza el selector |
+| `pageSizeOptions?` | `readonly number[]` | Default `PAGE_SIZE_OPTIONS` (`shared/components/ui/paginationDefaults.ts`) = `[10, 25, 50, 100]` |
 
-Usa `ChevronLeft`/`ChevronRight` de `lucide-react` (primer uso real de esa librería en el proyecto — ver `DECISIONES_TECNICAS.md`). No pagina por sí solo: es solo la UI de navegación.
+Usa `ChevronLeft`/`ChevronRight` de `lucide-react`. No pagina por sí solo: es solo la UI de navegación — quien la usa decide qué hacer con `onPageChange`/`onPageSizeChange`.
 
-### 3. Hook nuevo: `shared/hooks/usePagination.ts` (primer archivo real en `shared/hooks/`, antes solo tenía `.gitkeep`)
-`usePagination<T>(items: T[], pageSize: number, resetKey?: unknown)` corta en memoria el array ya filtrado/ordenado que le pasan y devuelve `{ pageItems, currentPage, totalPages, totalItems, setPage }`. El parámetro `resetKey` es opcional: si se pasa (por ejemplo, el filtro de estado activo), el hook vuelve a la página 1 cuando ese valor cambia, para no quedar en una página vacía después de filtrar.
+### 3. Hook `shared/hooks/usePagedQuery.ts` (reemplaza a `usePagination.ts`, eliminado)
+`usePagedQuery<TItem, TFilters, TSort, TAggregates>(fetchPage, filters, options?)` no corta ningún array en memoria: recibe la función del servicio que pide la página (`fetchPage`, debe ser una referencia estable — no un arrow function nuevo en cada render) y los `filters` tipados por el consumidor, y devuelve `{ items, aggregates, page, pageSize, totalItems, totalPages, sort, isLoading, isFetching, error, setPage, setPageSize, setSort, refetch }`.
 
-Es paginación en memoria porque hoy los datos son mock. El día que haya una API paginada real, `items` puede pasar a ser la página ya traída del backend y `onPageChange`/`setPage` puede disparar el fetch de la página siguiente — ni `Pagination` ni el componente de tabla que lo usa necesitan cambiar.
+Nombre distinto a propósito, no un alias: "paginación" ya no describe lo que hace el hook (maneja el estado completo de una consulta — página, tamaño, orden, filtros — y dispara el fetch), así que mantener el nombre viejo habría sido mantener un nombre que miente. Ver `DECISIONES_TECNICAS.md`, `[01/09/2026]`, para el detalle completo (incluidos cómo se resuelven las respuestas fuera de orden y el estado de carga por página).
 
-### 4. Cómo se compone el patrón completo en `logistics` (referencia para copiar)
-`LogisticsPage.tsx` arma el patrón así — este es el orden/composición de referencia para el resto de los módulos:
-1. Filtrar los datos ya cargados según los criterios del módulo (en este caso, `getDeliveriesForDate` + el filtro de estado activo).
-2. Pasar el resultado filtrado a `usePagination(filtrados, PAGE_SIZE, filtroActivo)`.
-3. Renderizar `Table` (o el componente de tabla del módulo que lo envuelve, acá `DeliveriesTable`) con `pageItems`, no con el array completo.
-4. Renderizar `Pagination` debajo, pasándole `currentPage`/`totalPages`/`totalItems`/`pageSize`/`onPageChange={setPage}`.
+### 4. Cómo se compone el patrón completo (referencia para copiar)
+`LogisticsPage.tsx`/`TabLowStock.tsx` arman el patrón así — este es el orden/composición de referencia para el resto de los módulos:
+1. Armar `filters` (tipado, memoizado con `useMemo`) con los criterios del módulo — `branchId` va adentro si el listado es por sucursal.
+2. Pasar `fetchPage` (la función del servicio, ej. `getDeliveriesPage`) y `filters` a `usePagedQuery`.
+3. Renderizar la tabla (envuelta en `FetchingOverlay` con `isFetching`, ver `DECISIONES_TECNICAS.md`) con `items`, no con ningún array completo — mientras `isLoading` (todavía no llegó la primera respuesta), un `SkeletonTable` en su lugar.
+4. Si el módulo muestra KPIs/contadores derivados del listado, deben salir de `aggregates`, nunca de contar/sumar sobre `items` (P3).
+5. Renderizar `Pagination` debajo, pasándole `page`/`totalPages`/`totalItems`/`pageSize`/`onPageChange={setPage}`/`onPageSizeChange={setPageSize}`.
+
+El input de salto de página de `Pagination` se resincroniza con `currentPage` cuando cambia desde afuera comparando durante el render (mismo patrón que el resto del proyecto usa para "ajustar estado cuando cambia una prop"), sin agregar un efecto nuevo.
 
 ### 5. Norma de aplicación
-Cuando otro módulo migre su listado a este patrón, debe reusar `Pagination` y `usePagination` tal cual existen — no crear una copia local. Si algo de esta API no alcanza para un caso nuevo, se extiende acá (o se registra la excepción), no se duplica.
+Cuando otro módulo migre su listado a este patrón, debe reusar `Pagination` y `usePagedQuery` tal cual existen — no crear una copia local. Si algo de esta API no alcanza para un caso nuevo, se extiende acá (o se registra la excepción), no se duplica.
 
 ### 6. Segundo caso real: `inventory` (tab "Bajo Stock Mínimo")
-`TabLowStock.tsx` sigue exactamente los mismos 4 pasos del punto 4, sin necesitar tocar `Pagination` ni `usePagination`: recibe la lista ya filtrada (bajo mínimo, por sucursal) desde `products.service#getLowStockForBranch` — el filtro dejó de vivir en el componente, ver `DECISIONES_TECNICAS.md` `[01/09/2026]` —, pasa el resultado a `usePagination`, renderiza `Table` con `pageItems`, y `Pagination` debajo. Confirma que el patrón (y la API de `Pagination`/`usePagination`) ya es reutilizable tal cual entre módulos distintos, no solo dentro de `logistics`. Ver `DECISIONES_TECNICAS.md` `[28/08/2026] — Productos Bajo Stock Mínimo` y `[01/09/2026] — Inventario multi-depósito...`.
+`TabLowStock.tsx` se autoconsulta (ya no recibe `data` por prop desde `InventoryPage`): arma sus propios `filters` (`{ branchId }`) y llama a `usePagedQuery(getLowStockPage, filters)`. El conteo del header sale de `totalItems`, nunca de `data.length` — con paginación server-side esa distinción es la diferencia entre mostrar el total real o solo el tamaño de la página actual. Confirma que el patrón (y la API de `Pagination`/`usePagedQuery`) es reutilizable tal cual entre módulos distintos. Ver `DECISIONES_TECNICAS.md`, `[28/08/2026] — Productos Bajo Stock Mínimo` y `[01/09/2026] — Contrato de datos paginado server-side`.
 
-### 7. Tercer caso real: `resetKey` compuesto (sucursal + filtro) en `LogisticsPage`
-`[01/09/2026]` (ver `DECISIONES_TECNICAS.md` y `ESTRUCTURA_Y_ARQUITECTURA.md`) agrega el cambio de sucursal activa como segundo criterio que debe volver la paginación a la página 1, junto al filtro de estado ya existente. `usePagination` no cambió: su `resetKey` acepta cualquier valor comparable con `!==`, así que `LogisticsPage` le pasa un string compuesto (`` `${activeBranchId}:${statusFilter}` ``) en vez de agregar un segundo parámetro al hook. Se descartó pasar un objeto/tupla nueva en cada render porque `usePagination` compara el `resetKey` por referencia (`!==`) — un objeto literal nuevo en cada render dispararía el reset todo el tiempo, no solo cuando cambia el valor real.
+### 7. Reset a página 1: filtros como identidad, no un `resetKey` aparte
+La versión en memoria de este patrón (ver punto 2 de la actualización arriba) pasaba un `resetKey` (string compuesto) aparte de los datos para decidir cuándo volver a página 1. `usePagedQuery` no tiene un parámetro `resetKey`: compara `filters` por referencia durante el render (el consumidor debe memoizarlo con `useMemo`) y vuelve a página 1 cuando cambia — como `branchId` viaja dentro de `filters`, un cambio de sucursal entra por la misma vía que un cambio de filtro de estado, sin un segundo mecanismo. `setPageSize`/`setSort` también vuelven a página 1 por su cuenta, desde el propio hook.
 
 ## [01/09/2026] — `BranchSelector`: selector de sucursal activa en `Header`
 

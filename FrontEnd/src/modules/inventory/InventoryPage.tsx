@@ -25,7 +25,6 @@ import {
   updateProduct,
   deleteProduct,
   getStockedProductsForBranch,
-  getLowStockForBranch,
 } from '@/services/mock/products.service';
 import { fetchSuppliers } from '@/services/mock/suppliers.service';
 import type { ProductFormValues } from './components/ProductFormModal.schema';
@@ -39,12 +38,11 @@ import './InventoryPage.css';
 //
 // Stock multi-sucursal (E1, DECISIONES_TECNICAS.md): el catalogo
 // (`products`) se carga una sola vez, independiente de la sucursal. El
-// stock (`stockedProducts`/`lowStockProducts`) se vuelve a pedir cada vez
-// que cambia `activeBranchId` — no hace falta un store de zustand para
-// esto (ver 3.4 de la tarea): no hay ninguna mutacion de stock en esta
-// tarea (movimientos/ajustes quedan fuera de alcance), asi que no hay
-// nada que "resetear" al cambiar de sucursal — el refetch keyed por
-// activeBranchId ya trae los datos correctos de la nueva sucursal.
+// stock (`stockedProducts`, para TabStockCurrent) se vuelve a pedir cada
+// vez que cambia `activeBranchId` — no hace falta un store de zustand
+// para esto (ver 3.4 de esa tarea). TabLowStock ya no recibe datos de
+// aca: se autoconsulta, paginado server-side (ver DECISIONES_TECNICAS.md,
+// tarea de paginacion).
 // ============================================================
 
 const USER_ROLE: 'ADMIN' | 'EMPLOYEE' = 'ADMIN';
@@ -56,7 +54,6 @@ export const InventoryPage: FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   const [stockedProducts, setStockedProducts] = useState<StockedInventoryItem[]>([]);
-  const [lowStockProducts, setLowStockProducts] = useState<StockedInventoryItem[]>([]);
   // "Cargando stock" se deriva comparando la sucursal ya cargada contra
   // la activa, en vez de un setState(true) sincronico al arrancar el
   // efecto (evita la regla react-hooks/set-state-in-effect: el efecto
@@ -96,21 +93,18 @@ export const InventoryPage: FC = () => {
     };
   }, []);
 
-  // Stock de la sucursal activa: se vuelve a pedir cuando cambia la
-  // sucursal (BranchSelector) o cuando cambia el catalogo (alta/edicion/
-  // baja de un producto), para que el join catalogo+stock quede al dia.
+  // Stock de la sucursal activa (catalogo + stock para TabStockCurrent):
+  // se vuelve a pedir cuando cambia la sucursal (BranchSelector) o
+  // cuando cambia el catalogo (alta/edicion/baja de un producto), para
+  // que el join catalogo+stock quede al dia. El bajo stock minimo ya no
+  // se pide aca: TabLowStock se autoconsulta, paginado (ver ese
+  // componente y DECISIONES_TECNICAS.md, tarea de paginacion server-side).
   useEffect(() => {
     if (!activeBranchId) return;
     let cancelled = false;
-    Promise.all([
-      getStockedProductsForBranch(activeBranchId),
-      getLowStockForBranch(activeBranchId),
-    ])
-      .then(([stocked, lowStock]) => {
-        if (!cancelled) {
-          setStockedProducts(stocked);
-          setLowStockProducts(lowStock);
-        }
+    getStockedProductsForBranch(activeBranchId)
+      .then((stocked) => {
+        if (!cancelled) setStockedProducts(stocked);
       })
       .catch(() => {
         if (!cancelled) toast.error('No se pudo cargar el stock de la sucursal.');
@@ -197,10 +191,13 @@ export const InventoryPage: FC = () => {
     {
       id: 'low-stock',
       label: 'Bajo Stock Minimo',
-      content: (!activeBranchId || isLoadingStock) ? (
+      // TabLowStock se autoconsulta (paginado): solo hace falta el gate
+      // de "todavia no hay sucursal activa" (sesion cargando), no
+      // isLoadingStock — ese estado es interno del propio componente.
+      content: !activeBranchId ? (
         <SkeletonTable rows={5} cols={6} />
       ) : (
-        <TabLowStock data={lowStockProducts} branchId={activeBranchId} branchName={activeBranchName} />
+        <TabLowStock branchId={activeBranchId} branchName={activeBranchName} />
       )
     },
     {

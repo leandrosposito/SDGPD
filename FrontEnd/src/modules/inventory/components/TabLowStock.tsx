@@ -1,4 +1,4 @@
-import type { FC } from 'react';
+import { useEffect, useMemo, type FC } from 'react';
 import { toast } from 'sonner';
 import { AlertTriangle, PackagePlus, CheckCircle2 } from 'lucide-react';
 import type { ReplenishmentStatus, StockedInventoryItem } from '@/shared/types/inventory.types';
@@ -7,20 +7,22 @@ import { Table } from '@/shared/components/ui/Table';
 import { Badge, type BadgeVariant } from '@/shared/components/ui/Badge';
 import { Pagination } from '@/shared/components/ui/Pagination';
 import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary';
-import { usePagination } from '@/shared/hooks/usePagination';
+import { SkeletonTable } from '@/shared/components/ui/SkeletonLoader';
+import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay';
+import { usePagedQuery } from '@/shared/hooks/usePagedQuery';
+import { getLowStockPage, type LowStockQueryFilters } from '@/services/mock/products.service';
 import { useReplenishmentStore } from '../state/useReplenishmentStore';
 import './TabLowStock.css';
 
 // ============================================================
-// TabLowStock — Productos bajo stock minimo EN LA SUCURSAL ACTIVA
-// `data` ya viene filtrada por sucursal + "bajo minimo" desde
-// products.service#getLowStockForBranch (E4: el componente no recorre
-// stock a mano). Esa misma funcion excluye los productos sin registro
-// de stock en la sucursal (E5) — no aparecen aca "en 0", simplemente no
-// estan cargados en esta sucursal.
+// TabLowStock — Productos bajo stock minimo EN LA SUCURSAL ACTIVA,
+// paginado server-side (P1-P10, DECISIONES_TECNICAS.md). Se autoconsulta
+// via usePagedQuery + products.service#getLowStockPage: ya no recibe
+// `data` por prop, porque quien pagina (pagina/tamaño/orden) es este
+// componente, no InventoryPage. getLowStockPage excluye los productos
+// sin registro de stock en la sucursal (E5) — no aparecen aca "en 0",
+// simplemente no estan cargados en esta sucursal.
 // ============================================================
-
-const PAGE_SIZE = 8;
 
 const REPLENISHMENT_STATUS_LABEL: Record<ReplenishmentStatus, string> = {
   not_requested: 'Sin solicitar',
@@ -33,23 +35,32 @@ const REPLENISHMENT_STATUS_VARIANT: Record<ReplenishmentStatus, BadgeVariant> = 
 };
 
 interface TabLowStockProps {
-  data: StockedInventoryItem[];
-  branchId: Branch['id'] | null;
+  branchId: Branch['id'];
   branchName: string;
 }
 
-export const TabLowStock: FC<TabLowStockProps> = ({ data, branchId, branchName }) => {
+export const TabLowStock: FC<TabLowStockProps> = ({ branchId, branchName }) => {
   const statusByProductId = useReplenishmentStore((s) => s.statusByProductId);
   const requestReplenishment = useReplenishmentStore((s) => s.requestReplenishment);
 
-  // resetKey = branchId: al cambiar de sucursal, `data` cambia (nuevo
-  // fetch en InventoryPage) y la paginacion vuelve a la pagina 1 en vez
-  // de quedar en una pagina vacia de la sucursal anterior.
-  const { pageItems, currentPage, totalPages, totalItems, setPage } = usePagination(
-    data,
-    PAGE_SIZE,
-    branchId ?? ''
-  );
+  const filters: LowStockQueryFilters = useMemo(() => ({ branchId }), [branchId]);
+
+  const {
+    items: data,
+    page,
+    pageSize,
+    totalItems,
+    totalPages,
+    isLoading,
+    isFetching,
+    error,
+    setPage,
+    setPageSize,
+  } = usePagedQuery(getLowStockPage, filters);
+
+  useEffect(() => {
+    if (error) toast.error('No se pudo cargar el listado de bajo stock.');
+  }, [error]);
 
   const handleRequestReplenishment = (product: StockedInventoryItem) => {
     const result = requestReplenishment(product.id);
@@ -74,8 +85,11 @@ export const TabLowStock: FC<TabLowStockProps> = ({ data, branchId, branchName }
             </p>
           </div>
         </div>
+        {/* 3.6: el conteo viene del total de la respuesta paginada
+            (totalItems), nunca de data.length (esa solo tendria las
+            filas de la pagina actual). */}
         <span className="tab-low-stock__count" aria-live="polite">
-          {data.length} {data.length === 1 ? 'producto' : 'productos'}
+          {totalItems} {totalItems === 1 ? 'producto' : 'productos'}
         </span>
       </header>
 
@@ -88,80 +102,87 @@ export const TabLowStock: FC<TabLowStockProps> = ({ data, branchId, branchName }
         fallbackMessage="Recarga la pagina para intentar de nuevo."
       >
         <div className="tab-low-stock__table-container">
-          <Table
-            data={pageItems}
-            keyExtractor={(item) => item.id}
-            emptyMessage="No hay productos por debajo del stock minimo."
-            columns={[
-              {
-                header: 'Codigo',
-                accessor: (row) => <span className="tab-low-stock__code">{row.sku}</span>,
-              },
-              { header: 'Nombre', accessor: 'name' },
-              {
-                header: 'Stock Actual',
-                align: 'right',
-                accessor: (row) => <span className="tab-low-stock__stock--current">{row.stock}</span>,
-              },
-              {
-                header: 'Stock Minimo',
-                align: 'right',
-                accessor: (row) => <span>{row.minStock}</span>,
-              },
-              {
-                header: 'Deficit',
-                align: 'right',
-                accessor: (row) => (
-                  <span className="tab-low-stock__deficit">-{row.minStock - row.stock}</span>
-                ),
-              },
-              {
-                header: 'Estado',
-                align: 'center',
-                accessor: (row) => {
-                  const status = statusByProductId[row.id] ?? 'not_requested';
-                  return (
-                    <Badge
-                      label={REPLENISHMENT_STATUS_LABEL[status]}
-                      variant={REPLENISHMENT_STATUS_VARIANT[status]}
-                    />
-                  );
-                },
-              },
-              {
-                header: 'Acciones',
-                align: 'right',
-                accessor: (row) => {
-                  const status = statusByProductId[row.id] ?? 'not_requested';
-                  if (status === 'requested') {
-                    return (
-                      <span className="tab-low-stock__requested-tag">
-                        <CheckCircle2 size={14} aria-hidden="true" />
-                        Solicitada
-                      </span>
-                    );
-                  }
-                  return (
-                    <button
-                      type="button"
-                      className="tab-low-stock__action-btn"
-                      onClick={() => handleRequestReplenishment(row)}
-                      aria-label={`Solicitar reposicion de ${row.name}`}
-                    >
-                      <PackagePlus size={14} aria-hidden="true" />
-                      Solicitar reposicion
-                    </button>
-                  );
-                },
-              },
-            ]}
-          />
+          {isLoading ? (
+            <SkeletonTable rows={8} cols={7} />
+          ) : (
+            <FetchingOverlay isFetching={isFetching}>
+              <Table
+                data={data}
+                keyExtractor={(item) => item.id}
+                emptyMessage="No hay productos por debajo del stock minimo."
+                columns={[
+                  {
+                    header: 'Codigo',
+                    accessor: (row) => <span className="tab-low-stock__code">{row.sku}</span>,
+                  },
+                  { header: 'Nombre', accessor: 'name' },
+                  {
+                    header: 'Stock Actual',
+                    align: 'right',
+                    accessor: (row) => <span className="tab-low-stock__stock--current">{row.stock}</span>,
+                  },
+                  {
+                    header: 'Stock Minimo',
+                    align: 'right',
+                    accessor: (row) => <span>{row.minStock}</span>,
+                  },
+                  {
+                    header: 'Deficit',
+                    align: 'right',
+                    accessor: (row) => (
+                      <span className="tab-low-stock__deficit">-{row.minStock - row.stock}</span>
+                    ),
+                  },
+                  {
+                    header: 'Estado',
+                    align: 'center',
+                    accessor: (row) => {
+                      const status = statusByProductId[row.id] ?? 'not_requested';
+                      return (
+                        <Badge
+                          label={REPLENISHMENT_STATUS_LABEL[status]}
+                          variant={REPLENISHMENT_STATUS_VARIANT[status]}
+                        />
+                      );
+                    },
+                  },
+                  {
+                    header: 'Acciones',
+                    align: 'right',
+                    accessor: (row) => {
+                      const status = statusByProductId[row.id] ?? 'not_requested';
+                      if (status === 'requested') {
+                        return (
+                          <span className="tab-low-stock__requested-tag">
+                            <CheckCircle2 size={14} aria-hidden="true" />
+                            Solicitada
+                          </span>
+                        );
+                      }
+                      return (
+                        <button
+                          type="button"
+                          className="tab-low-stock__action-btn"
+                          onClick={() => handleRequestReplenishment(row)}
+                          aria-label={`Solicitar reposicion de ${row.name}`}
+                        >
+                          <PackagePlus size={14} aria-hidden="true" />
+                          Solicitar reposicion
+                        </button>
+                      );
+                    },
+                  },
+                ]}
+              />
+            </FetchingOverlay>
+          )}
           <Pagination
-            currentPage={currentPage}
+            currentPage={page}
             totalPages={totalPages}
             totalItems={totalItems}
-            pageSize={PAGE_SIZE}
+            pageSize={pageSize}
             onPageChange={setPage}
+            onPageSizeChange={setPageSize}
           />
         </div>
       </ErrorBoundary>
