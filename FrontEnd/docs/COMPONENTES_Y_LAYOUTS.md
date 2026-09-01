@@ -148,3 +148,24 @@ Cuando otro módulo migre su listado a este patrón, debe reusar `Pagination` y 
 
 ### 6. Segundo caso real: `inventory` (tab "Bajo Stock Mínimo")
 `TabLowStock.tsx` sigue exactamente los mismos 4 pasos del punto 4, sin necesitar tocar `Pagination` ni `usePagination`: filtra `InventoryItem[]` con `useMemo` (`stock < minStock`), pasa el resultado a `usePagination`, renderiza `Table` con `pageItems`, y `Pagination` debajo. Confirma que el patrón (y la API de `Pagination`/`usePagination`) ya es reutilizable tal cual entre módulos distintos, no solo dentro de `logistics`. Ver `DECISIONES_TECNICAS.md` `[28/08/2026] — Productos Bajo Stock Mínimo`.
+
+## [01/09/2026] — `BranchSelector`: selector de sucursal activa en `Header`
+
+### 1. Contexto
+Parte de la infraestructura de sesión/sucursal (ver `DECISIONES_TECNICAS.md`, sección "Contexto de sesión y sucursal activa"). Necesitaba un componente nuevo de layout que muestre la empresa (solo lectura) y la sucursal activa (elegible), en formato dropdown.
+
+### 2. Ubicación: `Header`, no `Sidebar`
+Se evaluaron ambos layouts antes de elegir. `Sidebar.__brand` ya muestra una marca fija ("DistGestion / Panel de Control") pero es el nombre del **producto**, no de la empresa/inquilino — mezclar ambos conceptos en el mismo bloque visual habría sido confuso (dos identidades distintas: la del software y la del cliente que lo usa). `Header` ya aloja el otro elemento de identidad de sesión existente (el enlace de usuario "Admin / Configuración" a la derecha), así que `BranchSelector` se agrega en `header__actions`, como primer ítem de ese grupo, antes de refresco/tema/notificaciones/usuario — mismo criterio de "cluster de sesión" a la derecha del header.
+
+### 3. Componente nuevo, no una variante de `Tabs`
+Se evaluó reusar algo existente antes de escribir código nuevo (`Tabs`, `Modal`) — ninguno encaja: `Tabs` es navegación con `role="tablist"`, no un selector de una opción entre varias con menú desplegable; `Modal`/`SidePanel` son overlays de pantalla completa/lateral, demasiado pesados para elegir una sucursal. Se construyó `BranchSelector.tsx` (+ `.css`) en `shared/layouts/`, junto a `Header`/`Sidebar`/`AppShell` (no en `shared/components/ui/`, porque no es un átomo genérico reutilizable fuera de este layout — consume `useSessionStore` directamente).
+
+### 4. Accesibilidad del dropdown propio
+- Trigger: `<button>` nativo (foco y activación por teclado gratis) con `aria-haspopup="listbox"`, `aria-expanded` (refleja el estado real de apertura) y `aria-label` describiendo la sucursal activa y la acción ("Sucursal activa: X. Abrir selector de sucursal.") — un solo atributo, sin duplicar con un `<label>` separado, ya que el trigger no es un campo de formulario.
+- Menú: `role="listbox"` con opciones `role="option"` + `aria-selected` en la sucursal activa; una sucursal `status: 'inactive'` se deshabilita (`disabled`) en vez de ocultarse, para que el usuario vea que existe pero no se puede elegir.
+- Cierre: click afuera (listener en `mousedown` sobre `document`, comparando contra el contenedor) y tecla `Escape`, que además devuelve el foco al botón trigger (sin esto, al cerrar con teclado el foco quedaría "perdido" en un elemento ya desmontado).
+- Foco visible: no se define ningún estilo de focus propio — se apoya en el anillo global `:focus-visible` de `src/styles/global.css`, igual que el resto de los controles interactivos del proyecto.
+- Contraste: toda la paleta del componente sale de `src/styles/variables.css` (`--color-bg-*`, `--color-border*`, `--color-text-*`, `--color-accent*`), sin ningún color hardcodeado — funciona en ambos temas (claro/oscuro) sin CSS adicional por tema.
+
+### 5. Estado de carga inicial de la sesión
+Mientras `useSessionStore` está cargando (o todavía no cargó), `BranchSelector` renderiza un `SkeletonLoader` del mismo tamaño aproximado que el trigger real, en vez de dejar un hueco vacío o un layout que salta cuando la sesión llega. `LogisticsPage` sigue el mismo criterio para su tabla: si `activeBranchId` todavía es `null`, muestra `SkeletonTable` en vez de `DeliveriesTable`/`Pagination` (ver `DECISIONES_TECNICAS.md` para la limitación conocida: KPIs y filtros de esa misma pantalla no tienen su propio skeleton y pueden mostrar "0" un instante antes de que la sesión cargue).

@@ -1,5 +1,6 @@
 import { useState, useEffect, type FC } from 'react';
 import { Link } from 'react-router-dom';
+import { BranchSelector } from './BranchSelector';
 import './Header.css';
 
 // ============================================================
@@ -126,6 +127,8 @@ export const Header: FC<HeaderProps> = ({ onRefresh }) => {
 
       {/* Right: Actions */}
       <div className="header__actions" role="toolbar" aria-label="Acciones rapidas">
+        <BranchSelector />
+
         {onRefresh && (
           <button
             id="header-refresh-btn"
