@@ -270,3 +270,128 @@
   background: rgba(239, 68, 68, 0.1);
   color: var(--color-danger);
 }
+
+/* Contenedor de tabla + paginacion (tablas paginadas server-side:
+   Cuentas Corrientes y Clientes Morosos) */
+.client-table-wrapper-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* Clientes Morosos */
+.client-overdue {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.client-overdue__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.client-overdue__title-group {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.client-overdue__icon {
+  flex-shrink: 0;
+  color: var(--color-warning);
+  margin-top: var(--space-1);
+}
+
+.client-overdue__title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+}
+
+.client-overdue__subtitle {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-top: var(--space-1);
+}
+
+.client-overdue__count {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+/* Resumen de aging: tarjetas clickeables que ademas filtran por tramo */
+.client-aging-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--space-3);
+}
+
+.client-aging-summary__card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  padding: var(--space-4);
+  background: var(--color-bg-elevated);
+  border: 0.0625rem solid var(--color-border);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color var(--transition-fast) ease, background var(--transition-fast) ease;
+}
+
+.client-aging-summary__card:hover {
+  border-color: var(--color-border-strong);
+  background: var(--color-bg-hover);
+}
+
+.client-aging-summary__card--active {
+  border-color: var(--color-accent);
+  background: var(--color-accent-muted);
+}
+
+.client-aging-summary__label {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wide);
+  color: var(--color-text-secondary);
+}
+
+.client-aging-summary__value {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+}
+
+.client-aging-summary__sublabel {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+/* Un tramo con deuda en mas de una moneda (C1) muestra una linea por
+   moneda en vez de sumarlas — ver ClientOverdueTable.tsx */
+.client-aging-summary__amounts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.client-aging-summary__amount-line {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+/* Columna "Deuda Vencida" de la tabla: idem, una linea por moneda */
+.client-overdue-amounts {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-1);
+}

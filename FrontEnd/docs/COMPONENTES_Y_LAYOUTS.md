@@ -161,6 +161,38 @@ Cuando otro módulo migre su listado a este patrón, debe reusar `Pagination` y 
 ### 7. Reset a página 1: filtros como identidad, no un `resetKey` aparte
 La versión en memoria de este patrón (ver punto 2 de la actualización arriba) pasaba un `resetKey` (string compuesto) aparte de los datos para decidir cuándo volver a página 1. `usePagedQuery` no tiene un parámetro `resetKey`: compara `filters` por referencia durante el render (el consumidor debe memoizarlo con `useMemo`) y vuelve a página 1 cuando cambia — como `branchId` viaja dentro de `filters`, un cambio de sucursal entra por la misma vía que un cambio de filtro de estado, sin un segundo mecanismo. `setPageSize`/`setSort` también vuelven a página 1 por su cuenta, desde el propio hook.
 
+### 8. Tercer y cuarto caso real: `clients` (Cuentas Corrientes y Clientes Morosos)
+`ClientAccountsTable.tsx` (migrada) y `ClientOverdueTable.tsx` (nueva) confirman el patrón con dos variantes nuevas:
+- **Agregados con filtro-faceta:** `ClientOverdueTable` es el primer caso, después de `LogisticsKPIs`/`DeliveryFilters`, donde `aggregates` alimenta tanto un resumen visual (tarjetas de aging) como los filtros mismos (las tarjetas son a la vez el resumen Y el control de filtro por tramo) — ver `DECISIONES_TECNICAS.md`, `[01/09/2026] — Clientes morosos`, M4.
+- **Búsqueda compartida entre dos tabs paginadas:** a diferencia de `TabLowStock` (que arma sus propios `filters` sin depender de nada externo), `ClientAccountsTable`/`ClientOverdueTable` reciben `search` ya debounced por prop desde `ClientsPage` — un solo input de búsqueda arriba alimenta a las dos tabs paginadas (más el Directorio, sin debounce, ver punto siguiente). El patrón de armado de `filters` (paso 1 de la lista de arriba) sigue igual: cada tab arma su propio objeto `useMemo`, solo que una de sus piezas (`search`) llega ya resuelta desde el padre en vez de ser estado local del propio componente.
+
+## [01/09/2026] — Búsqueda server-side con debounce: patrón nuevo
+
+### 1. Contexto
+Primer caso del proyecto donde un input de texto dispara una consulta server-side por cada cambio (M6, `DECISIONES_TECNICAS.md`). Sin frenar la frecuencia de fetches, cada tecla dispara un pedido — inservible contra un dataset de decenas de miles de registros. Se fija acá como patrón oficial, no como detalle de la pantalla de Clientes Morosos que lo estrenó.
+
+### 2. Hook: `shared/hooks/useDebouncedValue.ts`
+```ts
+function useDebouncedValue<T>(value: T, delayMs: number): T
+```
+Genérico (`<T>`), sin conocimiento de dominio: devuelve `value` recién después de `delayMs` sin que cambie. No sabe qué es una búsqueda, un cliente ni un fetch — el consumidor decide qué hacer con el valor ya frenado.
+
+### 3. Cómo se compone el patrón (referencia para copiar)
+1. El `<input>` de búsqueda queda controlado por el estado **crudo** (`useState`), sin pasar por el hook — así la tipeada se siente instantánea, nunca se frena el input en sí.
+2. `const debounced = useDebouncedValue(raw, 300)` — 300ms es el valor usado hoy (ni tan corto que no frene nada, ni tan largo que se sienta lento).
+3. El valor **debounced** (no el crudo) entra al objeto `filters` (memoizado con `useMemo`) que se le pasa a `usePagedQuery`/`fetchPage`.
+4. Si el filtrado es client-side (un array ya cargado en memoria, sin fetch de por medio — ej. `ClientDirectoryTable`), se usa el valor **crudo** directamente, sin pasar por el hook: no hay ningún fetch que debounce tenga sentido de frenar, y frenarlo igual solo metería una demora artificial a algo que ya es instantáneo.
+5. Si dos o más consumidores paginados comparten el mismo input (ver punto 8 de la entrada de más arriba), el debounce se calcula **una sola vez**, en el ancestro común que renderiza el input — no una vez por consumidor.
+
+### 4. Por qué no vive dentro de cada componente que busca
+Un `setTimeout` local repetido en cada input de búsqueda del proyecto habría sido la "solución local" que M6 pedía evitar explícitamente. `useDebouncedValue` vive en `shared/hooks/`, junto a `usePagedQuery`, para que el próximo buscador (cualquier otro módulo que migre a paginación server-side) lo reuse tal cual.
+
+### 5. Cómo se verificó que realmente frena los fetches
+Se instrumentó temporalmente el hook con dos `console.log` (uno por cambio del valor crudo, otro al aplicar el valor debounced), se tipeó una palabra de 9 letras de una sola vez en el navegador real, y se contaron los logs: 9 cambios de valor crudo contra 1 sola aplicación del valor debounced. La instrumentación se retiró antes de terminar la tarea — ver `DECISIONES_TECNICAS.md`, `[01/09/2026] — Clientes morosos`, M6, para el detalle completo.
+
+### 6. Norma de aplicación
+Todo input de búsqueda nuevo que dispare un fetch server-side (paginado o no) debe usar `useDebouncedValue`, con el input controlado por el valor crudo y el fetch/filtro alimentado por el valor debounced — no reimplementar un `setTimeout` propio.
+
 ## [01/09/2026] — `BranchSelector`: selector de sucursal activa en `Header`
 
 ### 1. Contexto
