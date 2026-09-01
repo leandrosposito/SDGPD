@@ -87,16 +87,45 @@ export const INVENTORY_MOCK_DATA: InventoryData = {
       notes: 'Pedido PED-00384',
     },
   ],
+  // Sugerencias por sucursal (E1/3.5): una por cada sucursal activa,
+  // con los mismos numeros que su registro real en productStock.data.ts
+  // para esa sucursal (branch-001/inv-002, branch-002/inv-001,
+  // branch-003/inv-006). No se derivan automaticamente del stock bajo
+  // minimo (ver DECISIONES_TECNICAS.md): son un concepto curado aparte,
+  // igual que antes de esta tarea.
   suggestions: [
     {
       id: 'sug-001',
       sku: 'YER-MAT-1K',
       productName: 'Yerba Mate 1kg Paquete',
-      supplierName: 'Molinos Rio de la Plata',
+      supplierName: 'Las Marias S.A.C.I.',
+      branchId: 'branch-001',
       currentStock: 50,
       minStock: 150,
       suggestedQuantity: 300,
       estimatedCost: 840000,
+    },
+    {
+      id: 'sug-002',
+      sku: 'ACE-GIR-15',
+      productName: 'Aceite de Girasol 1.5L',
+      supplierName: 'Molinos Canuelas S.A.',
+      branchId: 'branch-002',
+      currentStock: 0,
+      minStock: 180,
+      suggestedQuantity: 400,
+      estimatedCost: 600000,
+    },
+    {
+      id: 'sug-003',
+      sku: 'ACE-OLI-05',
+      productName: 'Aceite de Oliva 500ml',
+      supplierName: 'Molinos Canuelas S.A.',
+      branchId: 'branch-003',
+      currentStock: 6,
+      minStock: 55,
+      suggestedQuantity: 100,
+      estimatedCost: 420000,
     },
   ],
   history: [

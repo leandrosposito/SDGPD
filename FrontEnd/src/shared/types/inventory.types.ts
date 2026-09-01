@@ -2,12 +2,34 @@
 // SHARED TYPE DEFINITIONS — Inventory domain
 // ============================================================
 
+import type { Branch } from '@/shared/types/session.types';
+
 export interface ProductLot {
   id: string;
   lotNumber: string;
   quantity: number;
   expirationDate: string;
 }
+
+// RF-INV-002 (Inventario multi-sucursal): el stock es una entidad aparte
+// de InventoryItem, no un array embebido en el producto. Ver
+// DECISIONES_TECNICAS.md, E1, para el razonamiento completo (catalogo vs.
+// stock tienen ciclos de vida y volumenes distintos; con 50.000 productos
+// x 40 sucursales embeber el stock en el producto arrastraria 2.000.000
+// de filas solo para pedir el catalogo).
+export interface ProductStock {
+  productId: InventoryItem['id'];
+  branchId: Branch['id'];
+  stock: number;
+  minStock: number;
+}
+
+// Vista compuesta para pantallas que muestran un producto junto con su
+// stock en la sucursal activa (ver products.service#getStockedProductsForBranch/
+// getLowStockForBranch). No es un tipo nuevo de dominio, es la forma que
+// consumen las tabs de inventory que hoy leian stock/minStock directo de
+// InventoryItem.
+export type StockedInventoryItem = InventoryItem & ProductStock;
 
 // NOTA: InventoryItem mezcla datos de mas de un RF del Doc 04 porque el codigo
 // unifico visualmente "Productos" e "Inventario" en un unico modulo. No se
@@ -64,6 +86,11 @@ export interface PurchaseSuggestion {
   sku: string;
   productName: string;
   supplierName: string;
+  // La sugerencia de compra ahora es por sucursal (E1: el stock que la
+  // origina es de sucursal, no del producto). No conecta "Generar OC"
+  // todavia (tarea 5 en README de la tarea) — el dato queda disponible
+  // para cuando se implemente.
+  branchId: Branch['id'];
   currentStock: number;
   minStock: number;
   suggestedQuantity: number;
