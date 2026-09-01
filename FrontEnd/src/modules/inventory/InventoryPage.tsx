@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState, type FC } from 'react';
 import { toast } from 'sonner';
 import { INVENTORY_MOCK_DATA } from '@/data/mock/inventory.data';
-import type { InventoryItem } from '@/shared/types/inventory.types';
+import type { InventoryItem, StockedInventoryItem } from '@/shared/types/inventory.types';
+import type { Supplier } from '@/shared/types/supplier.types';
+import { useSessionStore } from '@/shared/state/useSessionStore';
 import { Tabs, type TabItem } from '@/shared/components/ui/Tabs';
 import { Badge } from '@/shared/components/ui/Badge';
 import { SkeletonTable } from '@/shared/components/ui/SkeletonLoader';
@@ -22,7 +24,10 @@ import {
   createProduct,
   updateProduct,
   deleteProduct,
+  getStockedProductsForBranch,
+  getLowStockForBranch,
 } from '@/services/mock/products.service';
+import { fetchSuppliers } from '@/services/mock/suppliers.service';
 import type { ProductFormValues } from './components/ProductFormModal.schema';
 import './InventoryPage.css';
 
@@ -31,14 +36,33 @@ import './InventoryPage.css';
 // El maestro de Productos (RF-PRD-001) vive en la pestaña "Stock Actual"
 // (TabStockCurrent + ProductFormModal); el resto de las pestañas
 // corresponde a RF-INV-001/RF-CAT-001/RF-PRI-001 y no se modifica aca.
+//
+// Stock multi-sucursal (E1, DECISIONES_TECNICAS.md): el catalogo
+// (`products`) se carga una sola vez, independiente de la sucursal. El
+// stock (`stockedProducts`/`lowStockProducts`) se vuelve a pedir cada vez
+// que cambia `activeBranchId` — no hace falta un store de zustand para
+// esto (ver 3.4 de la tarea): no hay ninguna mutacion de stock en esta
+// tarea (movimientos/ajustes quedan fuera de alcance), asi que no hay
+// nada que "resetear" al cambiar de sucursal — el refetch keyed por
+// activeBranchId ya trae los datos correctos de la nueva sucursal.
 // ============================================================
 
 const USER_ROLE: 'ADMIN' | 'EMPLOYEE' = 'ADMIN';
 
 export const InventoryPage: FC = () => {
   const [products, setProducts] = useState<InventoryItem[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+
+  const [stockedProducts, setStockedProducts] = useState<StockedInventoryItem[]>([]);
+  const [lowStockProducts, setLowStockProducts] = useState<StockedInventoryItem[]>([]);
+  // "Cargando stock" se deriva comparando la sucursal ya cargada contra
+  // la activa, en vez de un setState(true) sincronico al arrancar el
+  // efecto (evita la regla react-hooks/set-state-in-effect: el efecto
+  // solo hace setState dentro de sus callbacks async, igual que el
+  // efecto de fetchProducts de arriba).
+  const [loadedStockBranchId, setLoadedStockBranchId] = useState<string | null>(null);
 
   const [activeTab, setActiveTab] = useState<string>('stock');
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
@@ -46,11 +70,20 @@ export const InventoryPage: FC = () => {
   const [isLotsPanelOpen, setIsLotsPanelOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<InventoryItem | null>(null);
 
+  const session = useSessionStore((s) => s.session);
+  const activeBranchId = useSessionStore((s) => s.activeBranchId);
+  const activeBranchName = session?.branches.find((b) => b.id === activeBranchId)?.name ?? '';
+
+  // Catalogo de productos y proveedores: independientes de la sucursal,
+  // se cargan una sola vez.
   useEffect(() => {
     let cancelled = false;
-    fetchProducts()
-      .then((data) => {
-        if (!cancelled) setProducts(data);
+    Promise.all([fetchProducts(), fetchSuppliers()])
+      .then(([productsData, suppliersData]) => {
+        if (!cancelled) {
+          setProducts(productsData);
+          setSuppliers(suppliersData);
+        }
       })
       .catch(() => {
         if (!cancelled) toast.error('No se pudo cargar el listado de productos.');
@@ -63,16 +96,54 @@ export const InventoryPage: FC = () => {
     };
   }, []);
 
-  const filteredProducts = useMemo(() => {
-    if (!searchQuery.trim()) return products;
+  // Stock de la sucursal activa: se vuelve a pedir cuando cambia la
+  // sucursal (BranchSelector) o cuando cambia el catalogo (alta/edicion/
+  // baja de un producto), para que el join catalogo+stock quede al dia.
+  useEffect(() => {
+    if (!activeBranchId) return;
+    let cancelled = false;
+    Promise.all([
+      getStockedProductsForBranch(activeBranchId),
+      getLowStockForBranch(activeBranchId),
+    ])
+      .then(([stocked, lowStock]) => {
+        if (!cancelled) {
+          setStockedProducts(stocked);
+          setLowStockProducts(lowStock);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) toast.error('No se pudo cargar el stock de la sucursal.');
+      })
+      .finally(() => {
+        if (!cancelled) setLoadedStockBranchId(activeBranchId);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeBranchId, products]);
+
+  const isLoadingStock = loadedStockBranchId !== activeBranchId;
+
+  const filteredStockedProducts = useMemo(() => {
+    if (!searchQuery.trim()) return stockedProducts;
     const q = searchQuery.toLowerCase();
-    return products.filter(p =>
+    return stockedProducts.filter(p =>
       p.sku.toLowerCase().includes(q) ||
       p.barcode.toLowerCase().includes(q) ||
       p.name.toLowerCase().includes(q) ||
       (p.description && p.description.toLowerCase().includes(q))
     );
-  }, [products, searchQuery]);
+  }, [stockedProducts, searchQuery]);
+
+  // TabPurchases (3.5): sugerencias filtradas por sucursal activa. Es un
+  // filtro simple sobre una lista ya en memoria (mismo criterio que
+  // DeliveryFilters sobre `deliveries`), no un acceso a stock — no pasa
+  // por products.service.
+  const purchaseSuggestions = useMemo(
+    () => INVENTORY_MOCK_DATA.suggestions.filter((s) => s.branchId === activeBranchId),
+    [activeBranchId]
+  );
 
   const handleOpenLotsPanel = (product: InventoryItem) => {
     setSelectedProduct(product);
@@ -103,15 +174,18 @@ export const InventoryPage: FC = () => {
     setProducts(prev => prev.filter(p => p.id !== productId));
   };
 
+  const stockTabsLoading = !activeBranchId || isLoadingProducts || isLoadingStock;
+
   const tabs: TabItem[] = [
     {
       id: 'stock',
       label: 'Stock Actual',
-      content: isLoadingProducts ? (
+      content: stockTabsLoading ? (
         <SkeletonTable rows={5} cols={9} />
       ) : (
         <TabStockCurrent
-          data={filteredProducts}
+          data={filteredStockedProducts}
+          branchName={activeBranchName}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           onOpenLots={handleOpenLotsPanel}
@@ -123,10 +197,10 @@ export const InventoryPage: FC = () => {
     {
       id: 'low-stock',
       label: 'Bajo Stock Minimo',
-      content: isLoadingProducts ? (
+      content: (!activeBranchId || isLoadingStock) ? (
         <SkeletonTable rows={5} cols={6} />
       ) : (
-        <TabLowStock data={products} />
+        <TabLowStock data={lowStockProducts} branchId={activeBranchId} branchName={activeBranchName} />
       )
     },
     {
@@ -137,7 +211,11 @@ export const InventoryPage: FC = () => {
     {
       id: 'purchases',
       label: 'Reposicion',
-      content: <TabPurchases data={INVENTORY_MOCK_DATA.suggestions} />
+      content: !activeBranchId ? (
+        <SkeletonTable rows={3} cols={6} />
+      ) : (
+        <TabPurchases data={purchaseSuggestions} branchName={activeBranchName} />
+      )
     },
     {
       id: 'adjustments',
@@ -205,6 +283,7 @@ export const InventoryPage: FC = () => {
         onClose={() => setIsProductModalOpen(false)}
         product={selectedProduct}
         existingProducts={products}
+        suppliers={suppliers}
         onSave={handleSaveProduct}
         onDelete={handleDeleteProduct}
       />

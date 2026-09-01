@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 import { Modal } from '@/shared/components/ui/Modal';
 import type { InventoryItem } from '@/shared/types/inventory.types';
+import type { Supplier } from '@/shared/types/supplier.types';
 import {
   createProductFormSchema,
   productFormDefaultValues,
@@ -24,6 +25,9 @@ interface ProductFormModalProps {
   onClose: () => void;
   product?: InventoryItem | null;
   existingProducts?: InventoryItem[];
+  // Lista de proveedores reales para el select (E3, R2): se resuelve por
+  // id contra suppliers.service, nunca por coincidencia de nombre.
+  suppliers?: Supplier[];
   onSave?: (values: ProductFormValues, productId?: string) => Promise<InventoryItem>;
   onDelete?: (productId: string) => Promise<void>;
 }
@@ -33,6 +37,7 @@ export const ProductFormModal: FC<ProductFormModalProps> = ({
   onClose,
   product,
   existingProducts = [],
+  suppliers = [],
   onSave,
   onDelete,
 }) => {
@@ -45,8 +50,8 @@ export const ProductFormModal: FC<ProductFormModalProps> = ({
     [existingProducts, product?.id]
   );
 
-  // useForm con 3 generics (input, context, output): cost/price/stock/minStock
-  // usan z.coerce.number(), cuyo input (pre-coercion) es distinto del output
+  // useForm con 3 generics (input, context, output): cost/price usan
+  // z.coerce.number(), cuyo input (pre-coercion) es distinto del output
   // (number). register/errors operan sobre ProductFormInput; el callback de
   // handleSubmit recibe el ProductFormValues ya coercido/validado.
   const {
@@ -255,16 +260,16 @@ export const ProductFormModal: FC<ProductFormModalProps> = ({
 
         <div className="form-row">
           <div className="form-group">
-            <label htmlFor="supplier" className="form-label">
+            <label htmlFor="supplierId" className="form-label">
               Proveedor
             </label>
-            <select id="supplier" className="form-input" {...register('supplier')}>
+            <select id="supplierId" className="form-input" {...register('supplierId')}>
               <option value="">(Ninguno)</option>
-              <option value="Molinos Cañuelas">Molinos Cañuelas</option>
-              <option value="Las Marias">Las Marias</option>
-              <option value="Coca-Cola Femsa">Coca-Cola Femsa</option>
-              <option value="Arcor">Arcor</option>
-              <option value="Mastellone Hnos">Mastellone Hnos</option>
+              {suppliers.map((supplier) => (
+                <option key={supplier.id} value={supplier.id}>
+                  {supplier.name}
+                </option>
+              ))}
             </select>
           </div>
           <div className="form-group">
@@ -302,33 +307,6 @@ export const ProductFormModal: FC<ProductFormModalProps> = ({
               {...register('price')}
             />
             {errors.price && <span className="text-danger text-xs">{errors.price.message}</span>}
-          </div>
-        </div>
-
-        <div className="form-row">
-          <div className="form-group">
-            <label htmlFor="stock" className="form-label">
-              Stock Inicial
-            </label>
-            <input
-              id="stock"
-              type="number"
-              className="form-input"
-              disabled={!!product}
-              {...register('stock')}
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="minStock" className="form-label">
-              Stock Minimo
-            </label>
-            <input
-              id="minStock"
-              type="number"
-              className={`form-input ${errors.minStock ? 'client-form-input--error' : ''}`}
-              {...register('minStock')}
-            />
-            {errors.minStock && <span className="text-danger text-xs">{errors.minStock.message}</span>}
           </div>
         </div>
       </form>

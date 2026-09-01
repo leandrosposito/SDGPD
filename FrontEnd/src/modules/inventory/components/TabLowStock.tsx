@@ -1,7 +1,8 @@
-import { useMemo, type FC } from 'react';
+import type { FC } from 'react';
 import { toast } from 'sonner';
 import { AlertTriangle, PackagePlus, CheckCircle2 } from 'lucide-react';
-import type { InventoryItem, ReplenishmentStatus } from '@/shared/types/inventory.types';
+import type { ReplenishmentStatus, StockedInventoryItem } from '@/shared/types/inventory.types';
+import type { Branch } from '@/shared/types/session.types';
 import { Table } from '@/shared/components/ui/Table';
 import { Badge, type BadgeVariant } from '@/shared/components/ui/Badge';
 import { Pagination } from '@/shared/components/ui/Pagination';
@@ -11,9 +12,12 @@ import { useReplenishmentStore } from '../state/useReplenishmentStore';
 import './TabLowStock.css';
 
 // ============================================================
-// TabLowStock — Productos bajo stock minimo
-// Filtra en memoria (useMemo) sobre el mismo InventoryItem[] que
-// usa el resto del modulo; no crea una entidad de producto paralela.
+// TabLowStock — Productos bajo stock minimo EN LA SUCURSAL ACTIVA
+// `data` ya viene filtrada por sucursal + "bajo minimo" desde
+// products.service#getLowStockForBranch (E4: el componente no recorre
+// stock a mano). Esa misma funcion excluye los productos sin registro
+// de stock en la sucursal (E5) — no aparecen aca "en 0", simplemente no
+// estan cargados en esta sucursal.
 // ============================================================
 
 const PAGE_SIZE = 8;
@@ -29,26 +33,25 @@ const REPLENISHMENT_STATUS_VARIANT: Record<ReplenishmentStatus, BadgeVariant> = 
 };
 
 interface TabLowStockProps {
-  data: InventoryItem[];
+  data: StockedInventoryItem[];
+  branchId: Branch['id'] | null;
+  branchName: string;
 }
 
-export const TabLowStock: FC<TabLowStockProps> = ({ data }) => {
+export const TabLowStock: FC<TabLowStockProps> = ({ data, branchId, branchName }) => {
   const statusByProductId = useReplenishmentStore((s) => s.statusByProductId);
   const requestReplenishment = useReplenishmentStore((s) => s.requestReplenishment);
 
-  // Filtro de "bajo stock minimo": estrictamente por debajo, no en el
-  // limite (coincide con el criterio ya usado en TabStockCurrent).
-  const lowStockItems = useMemo(
-    () => data.filter((item) => item.stock < item.minStock),
-    [data]
-  );
-
+  // resetKey = branchId: al cambiar de sucursal, `data` cambia (nuevo
+  // fetch en InventoryPage) y la paginacion vuelve a la pagina 1 en vez
+  // de quedar en una pagina vacia de la sucursal anterior.
   const { pageItems, currentPage, totalPages, totalItems, setPage } = usePagination(
-    lowStockItems,
-    PAGE_SIZE
+    data,
+    PAGE_SIZE,
+    branchId ?? ''
   );
 
-  const handleRequestReplenishment = (product: InventoryItem) => {
+  const handleRequestReplenishment = (product: StockedInventoryItem) => {
     const result = requestReplenishment(product.id);
 
     if (result.success) {
@@ -72,9 +75,13 @@ export const TabLowStock: FC<TabLowStockProps> = ({ data }) => {
           </div>
         </div>
         <span className="tab-low-stock__count" aria-live="polite">
-          {lowStockItems.length} {lowStockItems.length === 1 ? 'producto' : 'productos'}
+          {data.length} {data.length === 1 ? 'producto' : 'productos'}
         </span>
       </header>
+
+      <p className="tab-low-stock__branch-note">
+        Mostrando bajo stock de <strong>{branchName}</strong>.
+      </p>
 
       <ErrorBoundary
         fallbackTitle="No se pudo mostrar el listado de bajo stock."

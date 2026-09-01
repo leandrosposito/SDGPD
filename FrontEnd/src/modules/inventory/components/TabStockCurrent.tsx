@@ -2,15 +2,20 @@ import type { FC } from 'react';
 import { Table } from '@/shared/components/ui/Table';
 import { Badge } from '@/shared/components/ui/Badge';
 import { ProductSearchBar } from './ProductSearchBar';
-import type { InventoryItem } from '@/shared/types/inventory.types';
+import type { InventoryItem, StockedInventoryItem } from '@/shared/types/inventory.types';
 import './TabStockCurrent.css';
 
 // ============================================================
 // TabStockCurrent — Vista principal de stock con KPIs
+// Muestra el catalogo completo con su stock EN LA SUCURSAL ACTIVA
+// (E1/E5): un producto sin registro de stock ahi se ve en 0, no se
+// excluye — esta tab es "el catalogo con su stock aca", no "lo que esta
+// cargado en esta sucursal" (esa segunda vista es TabLowStock).
 // ============================================================
 
 interface TabStockCurrentProps {
-  data: InventoryItem[];
+  data: StockedInventoryItem[];
+  branchName: string;
   searchQuery: string;
   onSearchChange: (query: string) => void;
   onOpenLots: (product: InventoryItem) => void;
@@ -25,17 +30,21 @@ function formatCurrency(value: number): string {
   }).format(value);
 }
 
-export const TabStockCurrent: FC<TabStockCurrentProps> = ({ data, searchQuery, onSearchChange, onOpenLots, onEditProduct, userRole }) => {
-  // Calcular KPIs
+export const TabStockCurrent: FC<TabStockCurrentProps> = ({ data, branchName, searchQuery, onSearchChange, onOpenLots, onEditProduct, userRole }) => {
+  // Calcular KPIs (E6: bajo minimo es stock <= minStock, no < estricto)
   const totalProducts = data.length;
-  const lowStock = data.filter((item) => item.stock > 0 && item.stock < item.minStock).length;
+  const lowStock = data.filter((item) => item.stock > 0 && item.stock <= item.minStock).length;
   const outOfStock = data.filter((item) => item.stock === 0).length;
   const totalValue = data.reduce((acc, item) => acc + (item.stock * item.cost), 0);
 
   return (
     <div className="tab-stock">
       <ProductSearchBar searchQuery={searchQuery} onSearchChange={onSearchChange} />
-      
+
+      <p className="tab-stock__branch-note">
+        Mostrando stock de <strong>{branchName}</strong>. El stock de otras sucursales no se ve aca.
+      </p>
+
       <div className="tab-stock__kpis">
         <div className="tab-stock__kpi-card">
           <p className="tab-stock__kpi-label">Total Productos</p>
@@ -66,7 +75,7 @@ export const TabStockCurrent: FC<TabStockCurrentProps> = ({ data, searchQuery, o
             { header: 'Categoria', accessor: (row) => <span className="text-tertiary">{row.category}</span> },
             { header: 'U.M.', accessor: (row) => <span className="text-tertiary">{row.unitOfMeasure}</span> },
             { header: 'Stock Actual', align: 'right', accessor: (row) => (
-              <span className={row.stock === 0 ? 'text-danger font-bold' : row.stock < row.minStock ? 'text-warning font-bold' : 'font-medium'}>
+              <span className={row.stock === 0 ? 'text-danger font-bold' : row.stock <= row.minStock ? 'text-warning font-bold' : 'font-medium'}>
                 {row.stock}
               </span>
             )},

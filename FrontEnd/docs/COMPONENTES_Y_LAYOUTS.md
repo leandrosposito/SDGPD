@@ -147,7 +147,7 @@ Es paginación en memoria porque hoy los datos son mock. El día que haya una AP
 Cuando otro módulo migre su listado a este patrón, debe reusar `Pagination` y `usePagination` tal cual existen — no crear una copia local. Si algo de esta API no alcanza para un caso nuevo, se extiende acá (o se registra la excepción), no se duplica.
 
 ### 6. Segundo caso real: `inventory` (tab "Bajo Stock Mínimo")
-`TabLowStock.tsx` sigue exactamente los mismos 4 pasos del punto 4, sin necesitar tocar `Pagination` ni `usePagination`: filtra `InventoryItem[]` con `useMemo` (`stock < minStock`), pasa el resultado a `usePagination`, renderiza `Table` con `pageItems`, y `Pagination` debajo. Confirma que el patrón (y la API de `Pagination`/`usePagination`) ya es reutilizable tal cual entre módulos distintos, no solo dentro de `logistics`. Ver `DECISIONES_TECNICAS.md` `[28/08/2026] — Productos Bajo Stock Mínimo`.
+`TabLowStock.tsx` sigue exactamente los mismos 4 pasos del punto 4, sin necesitar tocar `Pagination` ni `usePagination`: recibe la lista ya filtrada (bajo mínimo, por sucursal) desde `products.service#getLowStockForBranch` — el filtro dejó de vivir en el componente, ver `DECISIONES_TECNICAS.md` `[01/09/2026]` —, pasa el resultado a `usePagination`, renderiza `Table` con `pageItems`, y `Pagination` debajo. Confirma que el patrón (y la API de `Pagination`/`usePagination`) ya es reutilizable tal cual entre módulos distintos, no solo dentro de `logistics`. Ver `DECISIONES_TECNICAS.md` `[28/08/2026] — Productos Bajo Stock Mínimo` y `[01/09/2026] — Inventario multi-depósito...`.
 
 ### 7. Tercer caso real: `resetKey` compuesto (sucursal + filtro) en `LogisticsPage`
 `[01/09/2026]` (ver `DECISIONES_TECNICAS.md` y `ESTRUCTURA_Y_ARQUITECTURA.md`) agrega el cambio de sucursal activa como segundo criterio que debe volver la paginación a la página 1, junto al filtro de estado ya existente. `usePagination` no cambió: su `resetKey` acepta cualquier valor comparable con `!==`, así que `LogisticsPage` le pasa un string compuesto (`` `${activeBranchId}:${statusFilter}` ``) en vez de agregar un segundo parámetro al hook. Se descartó pasar un objeto/tupla nueva en cada render porque `usePagination` compara el `resetKey` por referencia (`!==`) — un objeto literal nuevo en cada render dispararía el reset todo el tiempo, no solo cuando cambia el valor real.
@@ -172,3 +172,14 @@ Se evaluó reusar algo existente antes de escribir código nuevo (`Tabs`, `Modal
 
 ### 5. Estado de carga inicial de la sesión
 Mientras `useSessionStore` está cargando (o todavía no cargó), `BranchSelector` renderiza un `SkeletonLoader` del mismo tamaño aproximado que el trigger real, en vez de dejar un hueco vacío o un layout que salta cuando la sesión llega. `LogisticsPage` sigue el mismo criterio para su tabla: si `activeBranchId` todavía es `null`, muestra `SkeletonTable` en vez de `DeliveriesTable`/`Pagination` (ver `DECISIONES_TECNICAS.md` para la limitación conocida: KPIs y filtros de esa misma pantalla no tienen su propio skeleton y pueden mostrar "0" un instante antes de que la sesión cargue).
+
+## [01/09/2026] — Indicador de sucursal en pantallas de stock (`inventory`) + segundo `resetKey` de sucursal
+
+### 1. Contexto
+`inventory` pasa a mostrar stock por sucursal activa (ver `DECISIONES_TECNICAS.md`, `[01/09/2026] — Inventario multi-depósito...`). Dos ajustes de UI puntuales, no un componente compartido nuevo.
+
+### 2. Indicador "mostrando stock de X" — párrafo local, no un componente
+`TabStockCurrent`, `TabLowStock` y `TabPurchases` agregan cada una un párrafo corto (fondo `--color-info-muted`, borde `--color-border`, mismo tratamiento visual en las tres) con el nombre de la sucursal activa, además del `BranchSelector` ya visible y global en `Header`. Se evaluó armar un componente compartido (`BranchScopeNote` o similar) en `shared/components/ui/`, pero solo tiene 3 usos, los tres dentro del mismo módulo y la misma tarea, y es un párrafo de una línea sin lógica — no cruza el umbral de "2+ módulos distintos" que ya fija la norma de este archivo (`[25/08/2026]`, punto 3) para promover algo a `shared/`. Si un cuarto módulo necesita el mismo indicador, ahí corresponde extraerlo.
+
+### 3. Cuarto caso de `resetKey`: `TabLowStock` por sucursal
+Sumado al `resetKey` compuesto ya documentado en `LogisticsPage` (punto 7 de la entrada `[28/08/2026] — Primera Tabla Paginada Real`), `TabLowStock` ahora pasa `branchId` como `resetKey` a `usePagination` — al cambiar de sucursal, la lista completa cambia (nuevo fetch en `InventoryPage`) y la paginación vuelve a página 1 en vez de quedar en una página vacía de la sucursal anterior. No fue necesario tocar `usePagination` (acepta cualquier valor comparable con `!==`, ya lo hacía desde que existe).

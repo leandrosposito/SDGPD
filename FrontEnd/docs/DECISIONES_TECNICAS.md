@@ -252,3 +252,82 @@ Verificado manualmente (ver sección de verificación funcional): se solicitó r
 ### 9. Limitaciones conocidas, no corregidas en esta tarea
 - Mientras `useSessionStore` carga por primera vez, `LogisticsPage` muestra un `SkeletonTable` en la tabla (activeBranchId es `null` hasta que la sesión resuelve), pero `LogisticsKPIs` y `DeliveryFilters` de esa misma pantalla reciben un array vacío en ese instante y pueden mostrar "0" brevemente antes de que la sesión cargue (delay mock de 500 ms). Se registra como deuda menor en vez de agregar un skeleton a cada subcomponente, para no ampliar el alcance de esta tarea (única integración pedida: la tabla de entregas).
 - **El filtrado por sucursal en `logistics` hoy es client-side.** `useDeliveriesStore` sigue cargando el dataset mock completo (todas las sucursales) y `getDeliveriesForDate` filtra en memoria por `date`+`branchId`; la sucursal activa nunca reduce lo que hay en el store, solo lo que `LogisticsPage` muestra. Es correcto para esta etapa (no hay backend, y la firma del servicio — recibir `branchId` como parámetro — ya es la costura pensada para no cambiar cuando exista uno), pero **no es el diseño final**: cuando llegue paginación server-side, el store pasará a contener solo la página/sucursal activa (un fetch por sucursal, no el dataset entero), y `reset()` cambiará de significado — de "volver al array mock completo" a "vaciar el estado y volver a pedir a la API". Se deja anotado para que ese cambio no se lea como una regresión de diseño cuando llegue.
+
+## [01/09/2026] — Inventario multi-depósito (stock y mínimo por sucursal) + `supplierId` tipado
+
+### 1. Contexto
+Extiende la infraestructura de sesión/sucursal activa (entrada anterior de este mismo archivo) al módulo `inventory`, que hasta ahora trataba el stock como un número global del producto (`InventoryItem.stock`/`minStock`). Es prerrequisito de dos features futuras ("stock crítico" y "generar orden de compra"). Se investigaron antes de tocar nada: `shared/types/inventory.types.ts`, `shared/types/supplier.types.ts`, `services/mock/products.service.ts`, `services/mock/suppliers.service.ts`, las 9 tabs de `InventoryPage.tsx` y sus componentes, `data/mock/inventory.data.ts`/`suppliers.data.ts`, y el patrón de referencia ya establecido en `logistics` (`useDeliveriesStore`, `deliveries.service.ts`, D4/D5 de la entrada anterior).
+
+### 2. E1 — El stock es una entidad aparte, no un array embebido en el producto
+```ts
+interface ProductStock {
+  productId: InventoryItem['id'];
+  branchId: Branch['id'];
+  stock: number;
+  minStock: number;
+}
+```
+**Por qué (la parte que importa):** el catálogo de productos es de la empresa; el stock es de la sucursal. Son dos cosas con ciclos de vida y volúmenes distintos — el catálogo cambia cuando se da de alta/edita un producto (RF-PRD-001), el stock cambia con cada movimiento en cada sucursal. Con 50.000 productos y 40 sucursales hay 2.000.000 de filas de stock; embeberlas en el producto (`InventoryItem { stockByBranch: {...}[] }`) significa que pedir el catálogo (para el ABM, para un buscador, para cualquier pantalla que no necesita stock) arrastra los 2.000.000 de filas igual. Separadas, una pantalla de stock pide el catálogo (una vez) + el stock de UNA sucursal (un fetch acotado). Además, el día que haya backend esto va a ser dos tablas relacionales distintas — el frontend debe tener la misma forma que la fuente de datos real, no una conveniencia local que después hay que deshacer.
+
+### 3. E2 — `InventoryItem` pierde `stock`/`minStock` — inventario real de consumidores rotos
+No quedaron como campos deprecados ni duplicados: se borraron del tipo y se dejó que el compilador (`npx tsc -b --noEmit`) marcara cada consumidor, para medir el alcance real del cambio antes de arreglarlo. Lista completa que devolvió el compilador (7 archivos):
+- `src/data/mock/inventory.data.ts` — literales de los 18 productos (`supplier`/`stock`/`minStock`) + `PurchaseSuggestion` sin `branchId`.
+- `src/modules/inventory/components/ProductFormModal.schema.ts` — schema y `productFormDefaultValues`.
+- `src/modules/inventory/components/StockAdjustmentModal.tsx` — leía `product.stock` directo.
+- `src/modules/inventory/components/TabLowStock.tsx` — filtro y columnas.
+- `src/modules/inventory/components/TabStockCurrent.tsx` — KPIs y columnas.
+- `src/modules/inventory/InventoryPage.tsx` — `handleSaveProduct` (faltaba `supplierId` en el objeto pasado a `createProduct`/`updateProduct`).
+- `src/modules/orders/components/create-order/OrderProductsSection.tsx` — **el único fuera de `inventory`**: copiaba `match.stock` de un `InventoryItem` al agregar un producto al pedido.
+
+El último caso tensiona con el alcance declarado (E7, "solo `inventory` y `dashboard`"): `orders` no se tocó por elección, se tocó porque E2 lo rompió. Se resolvió con el cambio mínimo posible — `OrderProductsSection` ahora lee `useSessionStore().activeBranchId` y llama a `getStockForBranch(match.id, activeBranchId)` en vez de leer un campo que ya no existe — sin agregar ninguna feature nueva a `orders` (selector de sucursal propio, edición de stock, etc.). Es la misma clase de fix que ya se le hizo a `StockAdjustmentModal.tsx` (ver punto 6).
+
+### 4. E3 — `supplier: string` (nombre libre) pasa a `supplierId: Supplier['id']`
+Import de solo tipo desde `shared/types/supplier.types.ts`, sin import en tiempo de ejecución entre `modules/inventory` y `modules/suppliers` — mismo patrón que `Delivery.orderId: Order['id']` (`[28/08/2026] — Primer Uso Real de zustand...`, punto 7) y que la Opción A ya recomendada (sin implementar) en `[28/08/2026] — Productos Bajo Stock Mínimo`, punto 6, de este mismo archivo. Los 18 productos del mock ahora apuntan a IDs reales de los 3 proveedores de `suppliers.data.ts` (`sup-001` Molinos Cañuelas, `sup-002` Las Marias, `sup-003` Arcor) — antes tenían 13 nombres distintos, la mayoría (Ledesma, Bagley, Clorox, Kimberly-Clark, Unilever, Danone, Bodegas Trapiche, Molinos Rio de la Plata, Coca-Cola Femsa, Quilmes) sin ningún proveedor real detrás.
+
+`ProductFormModal` ya no tiene un `<select>` de proveedor hardcodeado con nombres — `InventoryPage` hace `fetchSuppliers()` (mismo `services/mock/` que ya usa `orders` para leer productos de `inventory`, no es una excepción nueva al patrón) y pasa la lista real como prop; el `<option>` se resuelve por `supplier.id`/`supplier.name`, nunca por coincidencia de string.
+
+### 5. E4 — Acceso al stock por funciones, no por array a mano
+`services/mock/products.service.ts` suma, con el mismo patrón `delay` + `structuredClone` que el resto del archivo:
+- `getStockForBranch(productId, branchId): Promise<ProductStock | undefined>` — lectura puntual.
+- `getStockedProductsForBranch(branchId): Promise<StockedInventoryItem[]>` — catálogo completo (LEFT JOIN) con stock/minStock en 0 para lo no cargado en esa sucursal (E5). Usada por `TabStockCurrent`.
+- `getLowStockForBranch(branchId): Promise<StockedInventoryItem[]>` — **tercera función, no pedida explícitamente pero agregada para no reproducir el criterio E5+E6 dentro de un componente**: filtra `stockStore` (no el catálogo completo) por `branchId` + `stock <= minStock`, así que excluye de raíz los productos sin registro en esa sucursal (INNER JOIN, a diferencia de la anterior). Usada por `TabLowStock`. Alternativa descartada: que `TabLowStock` reciba la lista completa de `getStockedProductsForBranch` y filtre `stock > 0 || minStock > 0` a mano — se descartó porque el criterio de exclusión (E5) quedaría como una heurística implícita en un componente en vez de una regla documentada en un solo lugar.
+
+`branchId` viaja como parámetro explícito en las tres, igual que `deliveries.service.ts` (D4 de la entrada anterior): ninguna lee `useSessionStore`.
+
+### 6. E5 — Producto sin registro de stock en una sucursal: criterio por tab
+- **`TabStockCurrent` ("catálogo con su stock acá"):** lo muestra en 0 (vía `getStockedProductsForBranch`). Es la vista del maestro de productos (RF-PRD-001) con una columna de stock, no "lo cargado en esta sucursal" — un producto del catálogo sin stock cargado todavía es información real, no un error.
+- **`TabLowStock` ("bajo mínimo en esta sucursal"):** lo excluye (vía `getLowStockForBranch`). Un producto sin registro no tiene mínimo definido en esa sucursal, así que no puede estar "bajo su mínimo" ahí — mostrarlo con `minStock: 0` haría parecer que su política es "mínimo cero" en vez de "no cargado todavía".
+- **`TabPurchases` (sugerencias por sucursal):** ídem por construcción — `PurchaseSuggestion` es un dato curado aparte (ver punto 8), no derivado del stock, así que un producto sin registro simplemente no tiene sugerencia.
+
+Ningún caso muestra `undefined` ni rompe: verificado en el navegador con `VIN-TIN-750` (sin registro en Sucursal Sur) — aparece en 0 en "Stock Actual" y no aparece en "Bajo Stock Mínimo" de esa sucursal.
+
+### 7. E6 — Bug de "bajo stock" corregido: `stock <= minStock`, no `< estricto`
+Era un bug, no una decisión — un producto exactamente en su mínimo debería figurar como "hay que reponer ya", no quedar afuera. Corregido en `getLowStockForBranch` (servicio) y en los indicadores visuales de `TabStockCurrent` (KPI "Stock Bajo" y el color de la celda de stock). Verificado en el navegador: `FID-GUI-500` (60/60) y `ARR-LAR-1K` (90/90) en Sucursal Centro aparecen en "Bajo Stock Mínimo" con déficit `-0`.
+
+### 8. Mock de stock (`data/mock/productStock.data.ts`) y sugerencias por sucursal
+Archivo nuevo, separado de `inventory.data.ts` (coherente con E1: son dos entidades). Cubre las 3 sucursales activas (`branch-001`/`002`/`003`); `branch-004` (inactiva) no tiene stock, mismo criterio que ya usa `logistics.data.ts` para entregas. Casos de borde a propósito, verificados los cuatro en el navegador:
+- `inv-001` (Aceite Girasol): sano en Centro (450/200) y en 0 en Norte (0/180) — "sin stock acá" vs. sano en otra sucursal.
+- `inv-008`/`inv-009` en Centro: `stock === minStock` exacto (60/60, 90/90) — prueba E6.
+- `inv-018` (Vino Tinto): sin registro en Sucursal Sur — prueba E5.
+- `inv-002` (Yerba Mate): `minStock` distinto en las 3 sucursales (150/100/200).
+
+`PurchaseSuggestion` suma `branchId: Branch['id']` y pasó de 1 a 3 sugerencias (una por sucursal activa, con los mismos números que su registro real en `productStock.data.ts` para esa sucursal). Siguen siendo un dato curado aparte, no derivado automáticamente de `getLowStockForBranch` — mismo criterio que ya regía antes de esta tarea (ver `[28/08/2026] — Productos Bajo Stock Mínimo`, punto 3: `PurchaseSuggestion` es un concepto más específico que "bajo mínimo", con proveedor/cantidad/costo curados). El botón "Generar OC" sigue sin conectar (tarea aparte); `branchId` ya viaja en cada sugerencia para cuando se conecte.
+
+### 9. Sin store de zustand nuevo — justificación (pedida explícitamente en el alcance de esta tarea)
+`InventoryPage` no usa un store para el stock: lo pide de nuevo (`getStockedProductsForBranch`/`getLowStockForBranch`) en un `useEffect` con `activeBranchId` (y `products`) como dependencias. Motivo: esta tarea no agrega **ninguna** mutación de stock (movimientos/ajustes de stock quedan fuera de alcance — `TabAdjustments`/`StockAdjustmentModal` siguen sin conectar a ningún servicio real). Un store de zustand con `reset()` + auto-registro en `resettableStores.ts` (patrón de `useDeliveriesStore`/`useReplenishmentStore`) resuelve "no arrastrar estado mutado de la sucursal anterior" — pero acá no hay estado mutado que arrastrar: el refetch disparado por el cambio de `activeBranchId` ya trae los datos correctos de la sucursal nueva, así que un `reset()` sería redundante con el refetch. `useReplenishmentStore` (que si tiene estado mutable — las solicitudes de reposición) no cambió y se sigue reseteando por el mecanismo ya existente.
+
+`isLoadingStock` se calcula comparando "la sucursal que ya se cargó" (`loadedStockBranchId`, seteado dentro del `.finally()` del fetch) contra `activeBranchId`, en vez de un `setState(true)` sincrónico al principio del efecto — la regla de lint `react-hooks/set-state-in-effect` (nueva en este proyecto, no existía cuando se escribió `useDeliveriesStore`) lo marca como error; el mismo criterio ya lo usaba sin saberlo el efecto de `fetchProducts` original (solo hace `setState` dentro de `.then()`/`.finally()`, nunca al inicio del efecto).
+
+### 10. `TabPurchases`/`TabStockCurrent`/`TabLowStock` — indicador visible de sucursal
+Cada una de las 3 tabs que muestran stock agrega una línea (`"Mostrando stock de <sucursal>"` / `"Mostrando bajo stock de <sucursal>"` / `"Mostrando sugerencias de <sucursal>"`) además del selector de sucursal ya visible en el header (global, `BranchSelector`). Se decidió no depender solo del header: la consigna explícita era que "un usuario no puede confundir 'sin stock acá' con 'sin stock en la empresa'", y esa ambigüedad ocurre específicamente donde se muestran números de stock, no en toda la pantalla.
+
+### 11. Dashboard — revisado, sin cambios
+`dashboard.data.ts`/`dashboard.service.ts`/los componentes de `modules/dashboard/` no importan `InventoryItem` ni ningún tipo de `inventory.types.ts` (verificado por grep antes de decidir) — sus KPIs y gráficos son datos mock propios, independientes del catálogo/stock real. No había ninguna métrica de stock que revisar ni "total global cruzando sucursales" que decidir: no se tocó ningún archivo de `dashboard`.
+
+### 12. `ProductFormModal` — se le sacaron los campos de Stock Inicial/Stock Mínimo
+Antes el alta de producto pedía "Stock Inicial" (deshabilitado al editar) y "Stock Mínimo". Como `InventoryItem` ya no tiene esos campos (E2), y cargar el stock inicial de un producto nuevo en una sucursal es un movimiento de stock (fuera de alcance de esta tarea), se sacaron del formulario en vez de dejarlos escribiendo a ningún lado. Un producto recién creado arranca sin registro de stock en ninguna sucursal — se ve en 0 en todos lados (E5), hasta que se cargue por la vía que corresponda (movimientos/ajustes, tarea futura).
+
+### 13. Verificación funcional realizada en el navegador
+`npm run dev` + Chrome real sobre `/inventario` y `/pedidos`, con `C:\proyectos\SDGPD` (no la copia de OneDrive). Confirmado visualmente: cambio de sucursal (Norte → Sur → Centro) actualiza los números y el texto de "mostrando stock/bajo stock/sugerencias de X"; la paginación de "Bajo Stock Mínimo" vuelve a página 1 al cambiar de sucursal (se dejó en página 2 de Sur antes de cambiar); una solicitud de reposición hecha en Sucursal Sur se resetea a "Sin solicitar" al pasar a Centro (mecanismo D5 de la entrada anterior, sin cambios); `VIN-TIN-750` en Sucursal Sur en 0 sin romper nada; `FID-GUI-500`/`ARR-LAR-1K` (exactos en su mínimo) aparecen en "Bajo Stock Mínimo" de Centro; el selector de proveedor en "Nuevo Producto"/"Editar Producto" muestra los 3 proveedores reales y preselecciona el correcto por ID al editar `ACE-GIR-15`; agregar un producto en "Nuevo Pedido" (`orders`) toma el stock de la sucursal activa (450 en Centro, coincide con `productStock.data.ts`); Dashboard renderiza sin errores; consola sin errores nuevos en ninguna de las dos pantallas.
+
+**No verificado en el navegador:** el skeleton de "sin sucursal activa todavía" (la carga de sesión mock tarda ~500ms, ventana muy corta para capturarla de forma confiable con las herramientas de automatización disponibles) — se verificó por lectura de código que sigue el mismo patrón ya probado en `LogisticsPage` (`activeBranchId ? <contenido> : <SkeletonTable>`).

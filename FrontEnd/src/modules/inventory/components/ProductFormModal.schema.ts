@@ -42,18 +42,23 @@ const baseProductFormSchema = z.object({
   description: z.string().trim().optional(),
   category: z.string().trim().min(1, 'La categoria es obligatoria.'),
   unitOfMeasure: z.string().trim().min(1, 'La unidad de medida es obligatoria.'),
-  // Requerido (no ".optional()"): InventoryItem.supplier es string obligatorio;
-  // el campo puede quedar vacio ('') pero no undefined, para no romper a los
-  // consumidores de InventoryItem (Table, filtros, etc.) fuera de RF-PRD-001.
-  supplier: z.string().trim(),
+  // Requerido (no ".optional()"): InventoryItem.supplierId es string
+  // obligatorio; el campo puede quedar vacio ('') pero no undefined, para
+  // no romper a los consumidores de InventoryItem (Table, filtros, etc.)
+  // fuera de RF-PRD-001. Ya no es el nombre del proveedor (E3): es su id
+  // real, elegido de una lista poblada contra suppliers.service — ver
+  // ProductFormModal.tsx.
+  supplierId: z.string().trim(),
   status: z.enum(['active', 'inactive']),
   // z.coerce.number(): los inputs numericos llegan como string desde el DOM
   // (input type="number"); coercer aca evita depender de "valueAsNumber" en
   // react-hook-form y mantiene el comportamiento previo (vacio => 0).
   cost: z.coerce.number().min(0, 'El costo no puede ser negativo.'),
   price: z.coerce.number().min(0, 'El precio no puede ser negativo.'),
-  stock: z.coerce.number().min(0, 'El stock no puede ser negativo.'),
-  minStock: z.coerce.number().min(0, 'El stock minimo no puede ser negativo.'),
+  // stock/minStock ya no se cargan aca (E1/E2): son de la sucursal, no
+  // del catalogo. Un producto nuevo arranca sin stock en ninguna
+  // sucursal (E5, "sin registro = 0") hasta que se cargue por otra via
+  // (movimientos/ajustes de stock — fuera de alcance de esta tarea).
 });
 
 // zod v4 + @hookform/resolvers: z.coerce.number() tiene un tipo de entrada
@@ -106,12 +111,10 @@ export function productFormDefaultValues(product?: InventoryItem | null): Produc
       description: '',
       category: '',
       unitOfMeasure: 'Unidad',
-      supplier: '',
+      supplierId: '',
       status: 'active',
       cost: 0,
       price: 0,
-      stock: 0,
-      minStock: 0,
     };
   }
   return {
@@ -121,11 +124,9 @@ export function productFormDefaultValues(product?: InventoryItem | null): Produc
     description: product.description || '',
     category: product.category,
     unitOfMeasure: product.unitOfMeasure || 'Unidad',
-    supplier: product.supplier || '',
+    supplierId: product.supplierId || '',
     status: product.status || 'active',
     cost: product.cost,
     price: product.price,
-    stock: product.stock,
-    minStock: product.minStock,
   };
 }

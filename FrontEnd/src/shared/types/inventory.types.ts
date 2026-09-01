@@ -3,6 +3,7 @@
 // ============================================================
 
 import type { Branch } from '@/shared/types/session.types';
+import type { Supplier } from '@/shared/types/supplier.types';
 
 export interface ProductLot {
   id: string;
@@ -46,10 +47,12 @@ export interface InventoryItem {
   unitOfMeasure: string; // Unidad de Medida Base (RF-PRD-004 definira conversiones UM)
   status: 'active' | 'inactive';
 
-  // --- RF-INV-001 (Inventario): stock y reposicion — fuera de alcance de RF-PRD-001 ---
-  supplier: string;
-  stock: number;
-  minStock: number;
+  // --- RF-INV-001 (Inventario): reposicion — fuera de alcance de RF-PRD-001 ---
+  // supplierId: referencia tipada (import de solo tipo, sin import runtime
+  // entre modulos), mismo patron que Delivery.orderId: Order['id']. Antes
+  // era `supplier: string` con el NOMBRE del proveedor — anti-patron ya
+  // senalado en DECISIONES_TECNICAS.md, Opcion A ahora implementada (E3).
+  supplierId: Supplier['id'];
   lots?: ProductLot[];
 
   // --- RF-PRI-001 (Precios): costo y margenes — fuera de alcance de RF-PRD-001 ---

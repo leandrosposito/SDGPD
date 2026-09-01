@@ -3,11 +3,15 @@ import { Table } from '@/shared/components/ui/Table';
 import type { PurchaseSuggestion } from '@/shared/types/inventory.types';
 
 // ============================================================
-// TabPurchases — Filtro de productos bajo stock y generacion de OC
+// TabPurchases — Sugerencias de compra POR SUCURSAL (E1/3.5)
+// `data` ya viene filtrada por sucursal activa desde InventoryPage.
+// El boton "Generar OC" sigue sin conectar (tarea aparte); branchId ya
+// viaja en cada PurchaseSuggestion para cuando se conecte.
 // ============================================================
 
 interface TabPurchasesProps {
   data: PurchaseSuggestion[];
+  branchName: string;
 }
 
 function formatCurrency(value: number): string {
@@ -17,7 +21,7 @@ function formatCurrency(value: number): string {
   }).format(value);
 }
 
-export const TabPurchases: FC<TabPurchasesProps> = ({ data }) => {
+export const TabPurchases: FC<TabPurchasesProps> = ({ data, branchName }) => {
   return (
     <div className="tab-purchases" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
       <header className="tab-purchases__header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
@@ -31,10 +35,15 @@ export const TabPurchases: FC<TabPurchasesProps> = ({ data }) => {
         </div>
       </header>
 
+      <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)', background: 'var(--color-info-muted)', border: '0.0625rem solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: 'var(--space-2) var(--space-3)', margin: 0 }}>
+        Mostrando sugerencias de <strong>{branchName}</strong>.
+      </p>
+
       <div style={{ borderRadius: 'var(--radius-lg)', overflow: 'hidden', border: '0.0625rem solid var(--color-border)', background: 'var(--color-bg-elevated)' }}>
         <Table
           data={data}
           keyExtractor={(sug) => sug.id}
+          emptyMessage="No hay sugerencias de reposicion para esta sucursal."
           columns={[
             { header: 'SKU', accessor: (row) => <span className="font-mono text-xs">{row.sku}</span> },
             { header: 'Producto', accessor: 'productName' },

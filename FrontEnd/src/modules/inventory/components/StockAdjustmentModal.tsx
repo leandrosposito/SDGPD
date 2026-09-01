@@ -1,10 +1,18 @@
-import { type FC } from 'react';
+import { useEffect, useState, type FC } from 'react';
 import { Modal } from '@/shared/components/ui/Modal';
 import type { InventoryItem } from '@/shared/types/inventory.types';
+import { useSessionStore } from '@/shared/state/useSessionStore';
+import { getStockForBranch } from '@/services/mock/products.service';
 import './InventoryModals.css';
 
 // ============================================================
 // StockAdjustmentModal — Adjust stock levels
+// No tiene ningun punto de montaje en el arbol de componentes hoy (no lo
+// importa InventoryPage ni ninguna tab) — es codigo huerfano preexistente
+// a esta tarea (ver DECISIONES_TECNICAS.md, R10: se deja como esta, solo
+// se adapta al nuevo shape de InventoryItem para que compile). El stock
+// que muestra ahora es el de la sucursal activa (E1), no un campo propio
+// del producto.
 // ============================================================
 
 interface StockAdjustmentModalProps {
@@ -14,6 +22,20 @@ interface StockAdjustmentModalProps {
 }
 
 export const StockAdjustmentModal: FC<StockAdjustmentModalProps> = ({ isOpen, onClose, product }) => {
+  const activeBranchId = useSessionStore((s) => s.activeBranchId);
+  const [currentStock, setCurrentStock] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!isOpen || !product || !activeBranchId) return;
+    let cancelled = false;
+    getStockForBranch(product.id, activeBranchId).then((record) => {
+      if (!cancelled) setCurrentStock(record?.stock ?? 0);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, product, activeBranchId]);
+
   if (!product) return null;
 
   return (
@@ -32,7 +54,7 @@ export const StockAdjustmentModal: FC<StockAdjustmentModalProps> = ({ isOpen, on
         <p className="stock-adjustment-product">{product.name} <span className="text-tertiary">({product.sku})</span></p>
         <div className="stock-adjustment-current">
           <span className="stock-adjustment-label">Stock Actual:</span>
-          <span className="stock-adjustment-value">{product.stock}</span>
+          <span className="stock-adjustment-value">{currentStock ?? '...'}</span>
         </div>
       </div>
 
