@@ -7,6 +7,10 @@ import type { Delivery } from '@/shared/types/logistics.types';
 // sin importar cuando se ejecute la app.
 // orderId hace referencia a IDs reales de ORDERS_MOCK_DATA (orders.data.ts):
 // se reutilizan ord-001..ord-006 porque ese mock solo tiene 6 pedidos.
+// branchId hace referencia a IDs reales de SESSION_MOCK_DATA.branches
+// (session.mock.ts): repartido de forma pareja pero no uniforme entre
+// las 3 sucursales para que el cambio de sucursal activa se note en
+// pantalla (branch-001: 8, branch-002: 6, branch-003: 4 del total).
 // ============================================================
 
 function toISODate(date: Date): string {
@@ -32,6 +36,7 @@ export const LOGISTICS_MOCK_DATA: Delivery[] = [
   {
     id: 'del-001',
     orderId: 'ord-001',
+    branchId: 'branch-001',
     clientName: 'Almacen La Esquina',
     address: 'Av. Belgrano 1234',
     date: TODAY_ISO,
@@ -44,6 +49,7 @@ export const LOGISTICS_MOCK_DATA: Delivery[] = [
   {
     id: 'del-002',
     orderId: 'ord-002',
+    branchId: 'branch-002',
     clientName: 'Supermercado Lider',
     address: 'San Martin 567',
     date: TODAY_ISO,
@@ -56,6 +62,7 @@ export const LOGISTICS_MOCK_DATA: Delivery[] = [
   {
     id: 'del-003',
     orderId: 'ord-003',
+    branchId: 'branch-003',
     clientName: 'Kiosco El Paso',
     address: 'Rivadavia 890',
     date: TODAY_ISO,
@@ -68,6 +75,7 @@ export const LOGISTICS_MOCK_DATA: Delivery[] = [
   {
     id: 'del-004',
     orderId: 'ord-004',
+    branchId: 'branch-001',
     clientName: 'Despensa Los Pinos',
     address: 'Sarmiento 111',
     date: TODAY_ISO,
@@ -80,6 +88,7 @@ export const LOGISTICS_MOCK_DATA: Delivery[] = [
   {
     id: 'del-005',
     orderId: 'ord-005',
+    branchId: 'branch-002',
     clientName: 'Maxikiosco Norte',
     address: 'Mitre 432',
     date: TODAY_ISO,
@@ -94,6 +103,7 @@ export const LOGISTICS_MOCK_DATA: Delivery[] = [
   {
     id: 'del-006',
     orderId: 'ord-006',
+    branchId: 'branch-001',
     clientName: 'Almacen La Esquina',
     address: 'Av. Belgrano 1234',
     date: TODAY_ISO,
@@ -106,6 +116,7 @@ export const LOGISTICS_MOCK_DATA: Delivery[] = [
   {
     id: 'del-007',
     orderId: 'ord-001',
+    branchId: 'branch-003',
     clientName: 'Minimarket Don Pedro',
     address: 'Av. Colon 220',
     date: TODAY_ISO,
@@ -118,6 +129,7 @@ export const LOGISTICS_MOCK_DATA: Delivery[] = [
   {
     id: 'del-008',
     orderId: 'ord-002',
+    branchId: 'branch-001',
     clientName: 'Kiosco Central',
     address: '25 de Mayo 45',
     date: TODAY_ISO,
@@ -130,6 +142,7 @@ export const LOGISTICS_MOCK_DATA: Delivery[] = [
   {
     id: 'del-009',
     orderId: 'ord-003',
+    branchId: 'branch-002',
     clientName: 'Almacen San Martin',
     address: 'Alem 300',
     date: TODAY_ISO,
@@ -142,6 +155,7 @@ export const LOGISTICS_MOCK_DATA: Delivery[] = [
   {
     id: 'del-010',
     orderId: 'ord-004',
+    branchId: 'branch-001',
     clientName: 'Supermercado El Sol',
     address: 'Peron 998',
     date: TODAY_ISO,
@@ -156,6 +170,7 @@ export const LOGISTICS_MOCK_DATA: Delivery[] = [
   {
     id: 'del-011',
     orderId: 'ord-005',
+    branchId: 'branch-003',
     clientName: 'Rotiseria La Pampa',
     address: 'Urquiza 77',
     date: TODAY_ISO,
@@ -168,6 +183,7 @@ export const LOGISTICS_MOCK_DATA: Delivery[] = [
   {
     id: 'del-012',
     orderId: 'ord-006',
+    branchId: 'branch-001',
     clientName: 'Almacen La Esquina',
     address: 'Av. Belgrano 1234',
     date: TODAY_ISO,
@@ -180,6 +196,7 @@ export const LOGISTICS_MOCK_DATA: Delivery[] = [
   {
     id: 'del-013',
     orderId: 'ord-001',
+    branchId: 'branch-002',
     clientName: 'Despensa Los Pinos',
     address: 'Sarmiento 111',
     date: TODAY_ISO,
@@ -192,6 +209,7 @@ export const LOGISTICS_MOCK_DATA: Delivery[] = [
   {
     id: 'del-014',
     orderId: 'ord-002',
+    branchId: 'branch-001',
     clientName: 'Kiosco El Paso',
     address: 'Rivadavia 890',
     date: TODAY_ISO,
@@ -206,6 +224,7 @@ export const LOGISTICS_MOCK_DATA: Delivery[] = [
   {
     id: 'del-015',
     orderId: 'ord-003',
+    branchId: 'branch-002',
     clientName: 'Maxikiosco Norte',
     address: 'Mitre 432',
     date: YESTERDAY_ISO,
@@ -218,6 +237,7 @@ export const LOGISTICS_MOCK_DATA: Delivery[] = [
   {
     id: 'del-016',
     orderId: 'ord-004',
+    branchId: 'branch-003',
     clientName: 'Supermercado Lider',
     address: 'San Martin 567',
     date: YESTERDAY_ISO,
@@ -232,6 +252,7 @@ export const LOGISTICS_MOCK_DATA: Delivery[] = [
   {
     id: 'del-017',
     orderId: 'ord-005',
+    branchId: 'branch-001',
     clientName: 'Almacen San Martin',
     address: 'Alem 300',
     date: TOMORROW_ISO,
@@ -244,6 +265,7 @@ export const LOGISTICS_MOCK_DATA: Delivery[] = [
   {
     id: 'del-018',
     orderId: 'ord-006',
+    branchId: 'branch-002',
     clientName: 'Kiosco Central',
     address: '25 de Mayo 45',
     date: TOMORROW_ISO,

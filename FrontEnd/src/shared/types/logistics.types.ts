@@ -3,12 +3,14 @@
 // ============================================================
 
 import type { Order } from './order.types';
+import type { Branch } from './session.types';
 
 export type DeliveryStatus = 'pending' | 'in_transit' | 'delivered';
 
 export interface Delivery {
   id: string;
   orderId: Order['id'];
+  branchId: Branch['id'];
   clientName: string;
   address: string;
   date: string; // ISO date (yyyy-MM-dd) — dia de la entrega

@@ -4,6 +4,8 @@ import type { DeliveryStatus } from '@/shared/types/logistics.types';
 import { usePagination } from '@/shared/hooks/usePagination';
 import { Pagination } from '@/shared/components/ui/Pagination';
 import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary';
+import { SkeletonTable } from '@/shared/components/ui/SkeletonLoader';
+import { useSessionStore } from '@/shared/state/useSessionStore';
 import { useDeliveriesStore } from './state/useDeliveriesStore';
 import { getDeliveriesForDate } from './services/deliveries.service';
 import { LogisticsKPIs } from './components/LogisticsKPIs';
@@ -28,12 +30,16 @@ export const LogisticsPage: FC = () => {
 
   const deliveries = useDeliveriesStore((s) => s.deliveries);
   const advanceDeliveryStatus = useDeliveriesStore((s) => s.advanceDeliveryStatus);
+  const activeBranchId = useSessionStore((s) => s.activeBranchId);
 
   const [statusFilter, setStatusFilter] = useState<DeliveryStatusFilter>('all');
 
+  // activeBranchId es null mientras la sesion todavia no cargo (ver
+  // BranchSelector/AppShell): sin sucursal activa no hay nada que
+  // filtrar todavia, se muestra un skeleton en vez de una lista vacia.
   const todayDeliveries = useMemo(
-    () => getDeliveriesForDate(deliveries, today),
-    [deliveries, today]
+    () => (activeBranchId ? getDeliveriesForDate(deliveries, today, activeBranchId) : []),
+    [deliveries, today, activeBranchId]
   );
 
   const filteredDeliveries = useMemo(
@@ -44,10 +50,13 @@ export const LogisticsPage: FC = () => {
     [todayDeliveries, statusFilter]
   );
 
+  // resetKey combina sucursal + filtro de estado: al cambiar cualquiera
+  // de los dos, la paginacion vuelve a la pagina 1 (evita quedar en una
+  // pagina vacia de la sucursal/filtro anterior).
   const { pageItems, currentPage, totalPages, totalItems, setPage } = usePagination(
     filteredDeliveries,
     PAGE_SIZE,
-    statusFilter
+    `${activeBranchId ?? ''}:${statusFilter}`
   );
 
   const handlePrintRoute = () => {
@@ -93,21 +102,27 @@ export const LogisticsPage: FC = () => {
         onStatusChange={setStatusFilter}
       />
 
-      <ErrorBoundary
-        fallbackTitle="No se pudo mostrar la lista de entregas."
-        fallbackMessage="Recarga la pagina para intentar de nuevo."
-      >
+      {activeBranchId ? (
+        <ErrorBoundary
+          fallbackTitle="No se pudo mostrar la lista de entregas."
+          fallbackMessage="Recarga la pagina para intentar de nuevo."
+        >
+          <div className="logistics-page__table-container">
+            <DeliveriesTable deliveries={pageItems} onAdvanceStatus={handleAdvanceStatus} />
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              pageSize={PAGE_SIZE}
+              onPageChange={setPage}
+            />
+          </div>
+        </ErrorBoundary>
+      ) : (
         <div className="logistics-page__table-container">
-          <DeliveriesTable deliveries={pageItems} onAdvanceStatus={handleAdvanceStatus} />
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={totalItems}
-            pageSize={PAGE_SIZE}
-            onPageChange={setPage}
-          />
+          <SkeletonTable rows={PAGE_SIZE} cols={6} />
         </div>
-      </ErrorBoundary>
+      )}
     </div>
   );
 };

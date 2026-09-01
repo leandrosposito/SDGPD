@@ -149,6 +149,9 @@ Cuando otro módulo migre su listado a este patrón, debe reusar `Pagination` y 
 ### 6. Segundo caso real: `inventory` (tab "Bajo Stock Mínimo")
 `TabLowStock.tsx` sigue exactamente los mismos 4 pasos del punto 4, sin necesitar tocar `Pagination` ni `usePagination`: filtra `InventoryItem[]` con `useMemo` (`stock < minStock`), pasa el resultado a `usePagination`, renderiza `Table` con `pageItems`, y `Pagination` debajo. Confirma que el patrón (y la API de `Pagination`/`usePagination`) ya es reutilizable tal cual entre módulos distintos, no solo dentro de `logistics`. Ver `DECISIONES_TECNICAS.md` `[28/08/2026] — Productos Bajo Stock Mínimo`.
 
+### 7. Tercer caso real: `resetKey` compuesto (sucursal + filtro) en `LogisticsPage`
+`[01/09/2026]` (ver `DECISIONES_TECNICAS.md` y `ESTRUCTURA_Y_ARQUITECTURA.md`) agrega el cambio de sucursal activa como segundo criterio que debe volver la paginación a la página 1, junto al filtro de estado ya existente. `usePagination` no cambió: su `resetKey` acepta cualquier valor comparable con `!==`, así que `LogisticsPage` le pasa un string compuesto (`` `${activeBranchId}:${statusFilter}` ``) en vez de agregar un segundo parámetro al hook. Se descartó pasar un objeto/tupla nueva en cada render porque `usePagination` compara el `resetKey` por referencia (`!==`) — un objeto literal nuevo en cada render dispararía el reset todo el tiempo, no solo cuando cambia el valor real.
+
 ## [01/09/2026] — `BranchSelector`: selector de sucursal activa en `Header`
 
 ### 1. Contexto
