@@ -1,0 +1,221 @@
+/* ============================================================
+   Compras Module Centralized Styles (mismo criterio que
+   ClientsPage.css/logistics: un solo archivo de estilos por modulo,
+   no uno por componente)
+   ============================================================ */
+
+.compras-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding-bottom: var(--space-8);
+}
+
+.compras-page__table-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.compras-row-btn {
+  height: 2rem;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  background: var(--color-bg-hover);
+  border: 0.0625rem solid var(--color-border);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: all var(--transition-fast) ease;
+}
+
+.compras-row-btn:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+/* Filtros */
+.compras-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-4);
+  background: var(--color-bg-elevated);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  border: 0.0625rem solid var(--color-border);
+}
+
+.compras-filters__search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 14rem;
+}
+
+.compras-filters__search-icon {
+  position: absolute;
+  left: var(--space-3);
+  color: var(--color-text-tertiary);
+}
+
+.compras-filters__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 12rem;
+}
+
+.compras-filters__label {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+}
+
+.compras-filters__input {
+  width: 100%;
+  height: 2.5rem;
+  background: var(--color-bg-base);
+  border: 0.0625rem solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  padding: 0 var(--space-3);
+  outline: none;
+  transition: border-color var(--transition-fast) ease;
+}
+
+.compras-filters__input--search {
+  padding-left: var(--space-10);
+}
+
+.compras-filters__input:focus {
+  border-color: var(--color-accent);
+}
+
+/* Resumen por estado */
+.compras-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--space-3);
+}
+
+.compras-summary__card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  padding: var(--space-4);
+  background: var(--color-bg-elevated);
+  border: 0.0625rem solid var(--color-border);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color var(--transition-fast) ease, background var(--transition-fast) ease;
+}
+
+.compras-summary__card:hover {
+  border-color: var(--color-border-strong);
+  background: var(--color-bg-hover);
+}
+
+.compras-summary__card--active {
+  border-color: var(--color-accent);
+  background: var(--color-accent-muted);
+}
+
+.compras-summary__label {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wide);
+  color: var(--color-text-secondary);
+}
+
+.compras-summary__value {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+}
+
+.compras-summary__sublabel {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+.compras-summary__amount-line {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+/* Detalle de una orden (SidePanel) */
+.compras-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.compras-detail__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.compras-detail__section-title {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  border-bottom: 0.0625rem solid var(--color-border);
+  padding-bottom: var(--space-2);
+}
+
+.compras-detail__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: var(--space-4);
+}
+
+.compras-detail__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.compras-detail__label {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wide);
+}
+
+.compras-detail__value {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+.compras-detail__total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  margin-top: var(--space-2);
+  background: var(--color-bg-elevated);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+}
+
+.compras-detail__total-value {
+  color: var(--color-accent);
+}
+
+.compras-detail__actions {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}

@@ -6,6 +6,7 @@ import { InventoryPage } from '@/modules/inventory/InventoryPage';
 import { LogisticsPage } from '@/modules/logistics/LogisticsPage';
 import { CashPage } from '@/modules/cash/CashPage';
 import { SuppliersPage } from '@/modules/suppliers/SuppliersPage';
+import { ComprasPage } from '@/modules/compras/ComprasPage';
 import { OrdersPage } from '@/modules/orders/OrdersPage';
 import { AnalyticsPage } from '@/modules/analytics/AnalyticsPage';
 import { SettingsPage } from '@/modules/settings/SettingsPage';
@@ -47,6 +48,12 @@ export function AppRoutes() {
           <Route
             path="proveedores"
             element={<SuppliersPage />}
+          />
+
+          {/* Compras */}
+          <Route
+            path="compras"
+            element={<ComprasPage />}
           />
 
           {/* Logistica */}

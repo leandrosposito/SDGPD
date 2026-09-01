@@ -52,6 +52,14 @@ const IconSuppliers: FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
+const IconPurchases: FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <circle cx="9" cy="21" r="1" stroke="currentColor" strokeWidth="1.75"/>
+    <circle cx="18" cy="21" r="1" stroke="currentColor" strokeWidth="1.75"/>
+    <path d="M2.5 3h2l2.6 12.3a2 2 0 002 1.7h7.8a2 2 0 002-1.7L21 7H6" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
 const IconLogistics: FC<{ className?: string }> = ({ className }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
     <path d="M1 3h15v13H1zM16 8h4l3 3v5h-7V8z" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
@@ -86,6 +94,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'nav-inventory',  label: 'Inventario',    path: '/inventario', icon: IconInventory },
   { id: 'nav-clients',    label: 'Clientes',      path: '/clientes',   icon: IconClients },
   { id: 'nav-suppliers',  label: 'Proveedores',   path: '/proveedores',icon: IconSuppliers },
+  { id: 'nav-purchases',  label: 'Compras',       path: '/compras',    icon: IconPurchases },
   { id: 'nav-logistics',  label: 'Logistica',     path: '/logistica',  icon: IconLogistics },
   { id: 'nav-cash',       label: 'Caja',          path: '/caja',       icon: IconCash },
   { id: 'nav-analytics',  label: 'Analitica',     path: '/analitica',  icon: IconAnalytics },
