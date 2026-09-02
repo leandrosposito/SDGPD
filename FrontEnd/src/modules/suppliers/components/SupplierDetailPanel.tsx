@@ -59,9 +59,9 @@ const PURCHASE_ORDER_STATUS_VARIANT: Record<PurchaseOrder['status'], 'neutral' |
   cancelled: 'danger',
 };
 
-// Referencia estable (mismo motivo que ComprasPage.tsx): evita que el
-// selector de zustand devuelva un array nuevo en cada render mientras
-// la sesion todavia esta cargando ("getSnapshot should be cached").
+// Referencia estable para `branches` de mas abajo (ver regla de
+// selectores en DECISIONES_TECNICAS.md), para no invalidar el useMemo
+// de branchesById en cada render mientras la sesion todavia esta cargando.
 const EMPTY_BRANCHES: Branch[] = [];
 
 export const SupplierDetailPanel: FC<SupplierDetailPanelProps> = ({
@@ -77,7 +77,8 @@ export const SupplierDetailPanel: FC<SupplierDetailPanelProps> = ({
   // efecto (mismo patron que loadedStockBranchId en InventoryPage.tsx —
   // evita react-hooks/set-state-in-effect).
   const [ordersLoadedForSupplierId, setOrdersLoadedForSupplierId] = useState<string | null>(null);
-  const branches = useSessionStore((s) => s.session?.branches ?? EMPTY_BRANCHES);
+  const session = useSessionStore((s) => s.session);
+  const branches = session?.branches ?? EMPTY_BRANCHES;
   const branchesById = useMemo(() => new Map(branches.map((b) => [b.id, b])), [branches]);
 
   const supplierId = supplier?.id ?? null;

@@ -38,16 +38,16 @@ import './ComprasPage.css';
 // directamente (R2 — ver DECISIONES_TECNICAS.md, O4, para el porque).
 // ============================================================
 
-// Referencia estable para el selector de zustand de mas abajo: `s.session?.branches ?? []`
-// crearia un array NUEVO en cada render mientras `session` es null (la
-// sesion todavia esta cargando), y useSyncExternalStore (zustand)
-// entra en loop si el snapshot "cambia" en cada llamada aunque el
-// contenido sea el mismo — "getSnapshot should be cached".
+// Referencia estable para `branches` de mas abajo (ver regla de
+// selectores en DECISIONES_TECNICAS.md): un `?? []` inline en cada
+// render alimentaria el useMemo de branchesById con una dependencia
+// distinta cada vez y lo invalidaria siempre.
 const EMPTY_BRANCHES: Branch[] = [];
 
 export const ComprasPage: FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeBranchId = useSessionStore((s) => s.activeBranchId);
+  const session = useSessionStore((s) => s.session);
 
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [products, setProducts] = useState<InventoryItem[]>([]);
@@ -114,7 +114,7 @@ export const ComprasPage: FC = () => {
 
   const suppliersById = useMemo(() => new Map(suppliers.map((s) => [s.id, s])), [suppliers]);
   const productsById = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
-  const branches = useSessionStore((s) => s.session?.branches ?? EMPTY_BRANCHES);
+  const branches = session?.branches ?? EMPTY_BRANCHES;
   const branchesById = useMemo(() => new Map(branches.map((b) => [b.id, b])), [branches]);
 
   const filters: PurchaseOrdersQueryFilters = useMemo(
