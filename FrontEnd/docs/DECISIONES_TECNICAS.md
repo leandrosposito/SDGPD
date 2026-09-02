@@ -636,3 +636,63 @@ Verificado en el navegador con el máximo nivel de detalle posible: "Generar OC"
 
 ### 13. O11 — Alcance: qué se rozó y no se tocó
 Los filtros que perdió Cuentas Corrientes (zona/vendedor/estado, tarea de Clientes Morosos), el `await` del escaneo de código de barras en `OrderProductsSection`, y la migración de otros módulos al contrato paginado: no se tocó ninguno. `Supplier.pendingOrdersCount`/`daysUntilExpiration`/`currentBalance`/`hasOverdueDebt` (campos legacy de cuentas por pagar, no derivados de `purchaseOrders` en código) tampoco se tocaron — siguen siendo valores curados a mano en el mock, deuda técnica ya conocida y separada de esta tarea.
+
+## [02/09/2026] — Regla de selectores estables en zustand (corrección de raíz)
+
+### 1. Contexto
+Durante la tarea de Compras (`[01/09/2026] — Módulo Compras`) aparecieron dos selectores escritos así: `useSessionStore((s) => s.session?.branches ?? [])`. El `?? []` crea un array **nuevo** en cada render mientras `session` es `null` (la sesión carga async). `zustand` usa `useSyncExternalStore` por debajo, que compara el snapshot devuelto por el selector **por referencia**: si "cambia" en cada llamada aunque el contenido sea equivalente, entra en loop de renders. Síntoma exacto en consola: `"The result of getSnapshot should be cached to avoid an infinite loop"` seguido de `"Maximum update depth exceeded"`, con la pantalla rota. Se corrigió puntualmente en su momento con una constante `EMPTY_BRANCHES` a nivel de módulo en `ComprasPage.tsx` y `SupplierDetailPanel.tsx`. `InventoryPage.tsx` no tenía el bug, pero por otro camino distinto (seleccionaba `session` entero y derivaba `branches` afuera del selector). Tres formas distintas de tratar el mismo problema, dos correctas por accidente, ninguna escrita como norma. Esta tarea convierte el fix puntual en regla, auditando **todos** los selectores de zustand del proyecto (no solo los tres conocidos), no agrega features.
+
+### 2. Auditoría completa — todos los stores y todos los selectores del proyecto
+El proyecto tiene exactamente **dos** stores reales de `zustand`: `useSessionStore` (`shared/state/`) y `useReplenishmentStore` (`modules/inventory/state/`). `useDeliveriesStore`, mencionado en comentarios como "el primer store real", ya no existe como archivo — logistics hoy solo lee `activeBranchId` de `useSessionStore`. Se relevaron los 15 call-sites de selector en 9 componentes (`grep` de `useSessionStore(`/`useReplenishmentStore(` en todo `src/`):
+
+| Archivo | Selector | Clasificación |
+|---|---|---|
+| `AppShell.tsx` | `(s) => s.loadSession` | Seguro — función del store, referencia estable |
+| `BranchSelector.tsx` | `(s) => s.session` | Seguro — referencia del store tal cual |
+| `BranchSelector.tsx` | `(s) => s.activeBranchId` | Seguro — primitivo |
+| `BranchSelector.tsx` | `(s) => s.isLoading` | Seguro — primitivo |
+| `BranchSelector.tsx` | `(s) => s.setActiveBranch` | Seguro — función del store |
+| `InventoryPage.tsx` | `(s) => s.session` | Seguro — referencia del store tal cual; `branches` se deriva **afuera** del selector (`session?.branches.find(...)`) |
+| `InventoryPage.tsx` | `(s) => s.activeBranchId` | Seguro — primitivo |
+| `StockAdjustmentModal.tsx` | `(s) => s.activeBranchId` | Seguro — primitivo |
+| `LogisticsPage.tsx` | `(s) => s.activeBranchId` | Seguro — primitivo |
+| `OrderProductsSection.tsx` | `(s) => s.activeBranchId` | Seguro — primitivo |
+| `TabLowStock.tsx` | `(s) => s.statusByProductId` | Seguro — `Record` que vive en el store, reemplazado solo cuando cambia de verdad (`requestReplenishment`), no reconstruido en cada lectura |
+| `TabLowStock.tsx` | `(s) => s.requestReplenishment` | Seguro — función del store |
+| `ComprasPage.tsx` | `(s) => s.session?.branches ?? EMPTY_BRANCHES` | **Roto, corregido en esta tarea** — construcción condicional dentro del selector (dependía de recordar la constante) |
+| `SupplierDetailPanel.tsx` | `(s) => s.session?.branches ?? EMPTY_BRANCHES` | **Roto, corregido en esta tarea** — mismo caso |
+
+No se encontró ningún selector con `.map`/`.filter`/spread/objeto-literal dentro del callback (los dos únicos casos problemáticos eran el `?? []`/`?? EMPTY_BRANCHES`). No se encontraron otros stores ni otros hooks `use*Store` en el proyecto.
+
+### 3. La regla (Z2) — selectores solo leen, la derivación va afuera
+**Regla única para todo el proyecto:** un selector de `zustand` (`use*Store((s) => ...)`) solo puede devolver una referencia que **ya vive en el store** — el store completo, un slice/objeto tal cual, un primitivo, o una función de acción — nunca puede construir un valor nuevo (`?? []`, `?? {}`, `.map`/`.filter`/`.slice`/spread, objeto/array literal). Toda derivación (defaults para "todavía no cargó", listas mapeadas, objetos armados) se hace **después** del hook, en el cuerpo del componente, memoizada con `useMemo` si alimenta a otro `useMemo`/dependencia de efecto.
+
+Ejemplo, el patrón a seguir en cualquier selector nuevo:
+```ts
+const session = useSessionStore((s) => s.session); // selector: solo lee
+const branches = session?.branches ?? EMPTY_BRANCHES; // derivación: afuera del selector
+```
+
+**Por qué esta y no la constante `EMPTY_BRANCHES` dentro del selector** (la otra opción que ya existía en el código, en los dos archivos que tenían el bug): el criterio de decisión pedido es cuál es más difícil de olvidar para alguien que escribe un selector nuevo dentro de seis meses, no cuál es más elegante.
+- Con `EMPTY_BRANCHES` **dentro** del selector, cada desarrollador tiene que acordarse de dos cosas a la vez: que necesita un default, y que ese default tiene que ser una constante a nivel de módulo (no un literal inline) — exactamente el paso que se olvidó la primera vez, dos veces, en dos archivos distintos. El error solo se manifiesta cuando `session` es `null`, es decir en la ventana de carga inicial async — intermitente, fácil de no notar en desarrollo si no se recarga la página en el momento exacto.
+- Con la regla "el selector solo lee, la derivación va afuera", un `?? []` inline en el cuerpo del componente (fuera del selector) **no rompe nada**: es una variable de render común, no el valor devuelto a `useSyncExternalStore`, así que una referencia nueva en cada render ahí es inofensiva en términos de loop. El único costo de olvidarse de memoizar es que un `useMemo` río abajo (como `branchesById` en `ComprasPage`/`SupplierDetailPanel`) se recalcula de más — una degradación de performance menor, nunca una pantalla rota. Se mantuvo `EMPTY_BRANCHES` en esos dos archivos, pero movida afuera del selector, específicamente para que ese `useMemo` no se invalide en cada render — no para evitar el loop (que ya no puede pasar ahí).
+- Esta regla también es la única de las dos que cubre **todos** los casos del enunciado (arrays, objetos, y el resultado de un `.map`/`.filter`), no solo el de "necesito un array vacío por default". Una constante nueva por cada caso no escala; "derivar afuera del selector" es una sola idea, válida siempre.
+- No hubo ningún caso en la auditoría (punto 2) que necesitara un tratamiento distinto — los 15 selectores existentes ya encajan en la regla sin excepciones.
+
+`InventoryPage.tsx` ya seguía este patrón antes de esta tarea (sin saberlo formalmente); ahora es la referencia documentada, y `ComprasPage.tsx`/`SupplierDetailPanel.tsx` se alinearon a él.
+
+### 4. Salvaguarda de ESLint (Z4)
+El proyecto no tiene (ni tenía) ningún plugin de ESLint específico de `zustand`, y no se instaló ninguno (fuera de alcance — regla explícita de la tarea). Sí existe, ya disponible sin dependencias nuevas porque es una regla **core** de ESLint (`eslint.config.js` ya carga `js.configs.recommended`), `no-restricted-syntax`, que permite matchear patrones de AST arbitrarios con selectores estilo CSS/esquery. Se agregaron tres entradas a `no-restricted-syntax` en `eslint.config.js`, en warning (mismo nivel que el resto de las reglas custom del archivo — `no-restricted-imports`, `naming-convention`), que detectan dentro de cualquier `use*Store((s) => ...)`:
+- un `ArrayExpression` (`[...]` o el lado derecho de un `?? []`),
+- un `ObjectExpression` (`{...}` o el lado derecho de un `?? {}`),
+- una llamada a `.map`/`.filter`/`.slice`/`.concat`/`.sort`/`.reduce`/`.flatMap`.
+
+Se probó manualmente con un archivo temporal (borrado después de verificar, no forma parte del proyecto) reproduciendo los tres patrones — los tres se detectaron correctamente y con el `line:column` exacto. No cubre el caso de un `??` con default primitivo (`s.count ?? 0`), que es intencional: ese caso es seguro (los primitivos no rompen la comparación por referencia) y no debía marcarse. Distinguir "default de array/objeto" de "default de primitivo" con precisión total requeriría lint con información de tipos (`typescript-eslint` en modo `recommendedTypeChecked`, con `parserOptions.project`), que hoy no está habilitado y agregarlo excede el alcance de esta tarea (no es una dependencia nueva, pero sí un cambio de configuración más invasivo que el pedido). Quedó en warning, no en error, porque el matcheo es heurístico por AST (nombre de función terminado en `Store`) y podría marcar algún falso positivo si en el futuro se agrega un `use*Store` que no sea de `zustand`.
+
+### 5. Cambios
+- `src/modules/compras/ComprasPage.tsx` y `src/modules/suppliers/components/SupplierDetailPanel.tsx`: selector `(s) => s.session?.branches ?? EMPTY_BRANCHES` reemplazado por `(s) => s.session` + `const branches = session?.branches ?? EMPTY_BRANCHES;` afuera del selector. `EMPTY_BRANCHES` se mantiene (sigue siendo necesaria para no invalidar el `useMemo` de `branchesById`), pero ya no participa del valor devuelto al selector.
+- `eslint.config.js`: tres entradas nuevas en `no-restricted-syntax` (punto 4).
+- Ningún otro selector de los 15 relevados necesitó cambios — ya cumplían la regla.
+
+### 6. Alcance — qué no se tocó
+No se tocaron los pendientes abiertos de otras tareas (filtros de Cuentas Corrientes, escaneo de código de barras, módulos sin paginar, nombre de la carpeta `compras`) ni se agregó ninguna feature. Solo selectores de `zustand` y la norma que los rige.

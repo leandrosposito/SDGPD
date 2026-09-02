@@ -202,3 +202,10 @@ Sin `state/` (sin store de zustand — no hace falta, mismo patrón que `clients
 
 ### 7. `shared/types/inventory.types.ts` / `data/mock/inventory.data.ts` — `PurchaseSuggestion.productId`
 Campo nuevo, tipado (`InventoryItem['id']`), agregado a las 3 sugerencias existentes del mock más una cuarta (`sug-004`, caso de borde de O9 — producto sin proveedor válido) y un producto nuevo (`inv-019`) para poder probarla. Ver `DECISIONES_TECNICAS.md`, punto 11 de la entrada de esta tarea.
+
+## [02/09/2026] — Norma de arquitectura: selectores de zustand solo leen
+
+### 1. Regla
+Un selector de `zustand` (`use*Store((s) => ...)`) devuelve **solo** una referencia que ya vive en el store — el store completo, un campo tal cual, o un primitivo — nunca construye un valor nuevo (`?? []`/`?? {}`, `.map`/`.filter`/spread, objeto/array literal). Motivo: `zustand` usa `useSyncExternalStore` por debajo, que compara el snapshot por referencia; una referencia nueva en cada render entra en loop (`"getSnapshot should be cached"` + `"Maximum update depth exceeded"`). Toda derivación (defaults, `.map`, objetos armados) va **afuera** del selector, en el cuerpo del componente. Aplica a los dos stores del proyecto (`useSessionStore`, `useReplenishmentStore`) y a cualquier store nuevo.
+
+Detalle completo — la auditoría de los 15 selectores existentes, por qué esta regla y no la de una constante-default dentro del selector, y la salvaguarda de ESLint (`no-restricted-syntax` en `eslint.config.js`) — en `DECISIONES_TECNICAS.md`, `[02/09/2026] — Regla de selectores estables en zustand`.
