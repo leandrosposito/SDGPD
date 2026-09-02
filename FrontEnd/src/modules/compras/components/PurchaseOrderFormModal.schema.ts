@@ -33,12 +33,13 @@ export type PurchaseOrderFormValues = z.output<typeof purchaseOrderFormSchema>;
 
 export function purchaseOrderFormDefaultValues(
   defaultSupplierId?: string,
-  defaultBranchId?: string
+  defaultBranchId?: string,
+  defaultLines?: PurchaseOrderFormInput['lines']
 ): PurchaseOrderFormInput {
   return {
     supplierId: defaultSupplierId ?? '',
     branchId: defaultBranchId ?? '',
     currency: 'ARS',
-    lines: [],
+    lines: defaultLines ?? [],
   };
 }

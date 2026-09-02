@@ -48,6 +48,10 @@ interface PurchaseOrderFormModalProps {
   products: InventoryItem[];
   defaultSupplierId?: string;
   defaultBranchId?: string;
+  // Linea precargada (ej. deep-link "Generar OC" desde stock critico de
+  // Inventario, ver docs/DECISIONES_TECNICAS.md, O4) — editable por el
+  // usuario como cualquier otra linea, no un valor fijo.
+  defaultLines?: PurchaseOrderFormInput['lines'];
   onCreated: (order: PurchaseOrder) => void;
 }
 
@@ -59,6 +63,7 @@ export const PurchaseOrderFormModal: FC<PurchaseOrderFormModalProps> = ({
   products,
   defaultSupplierId,
   defaultBranchId,
+  defaultLines,
   onCreated,
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -101,10 +106,10 @@ export const PurchaseOrderFormModal: FC<PurchaseOrderFormModalProps> = ({
     if (appliedDefaultsRef.current) return;
     if (defaultSupplierId && !suppliers.some((s) => s.id === defaultSupplierId)) return;
 
-    reset(purchaseOrderFormDefaultValues(defaultSupplierId, defaultBranchId));
+    reset(purchaseOrderFormDefaultValues(defaultSupplierId, defaultBranchId, defaultLines));
     setProductQuery('');
     appliedDefaultsRef.current = true;
-  }, [isOpen, defaultSupplierId, defaultBranchId, suppliers, reset]);
+  }, [isOpen, defaultSupplierId, defaultBranchId, defaultLines, suppliers, reset]);
 
   const productMatches = useMemo(() => {
     const q = productQuery.trim().toLowerCase();
