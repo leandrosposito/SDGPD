@@ -22,6 +22,8 @@ import { PurchaseOrderStatusSummary } from './components/PurchaseOrderStatusSumm
 import { PurchaseOrdersTable } from './components/PurchaseOrdersTable';
 import { PurchaseOrderDetailPanel } from './components/PurchaseOrderDetailPanel';
 import { PurchaseOrderFormModal } from './components/PurchaseOrderFormModal';
+import { TabPendingReceipt } from './components/TabPendingReceipt';
+import { Tabs, type TabItem } from '@/shared/components/ui/Tabs';
 import './ComprasPage.css';
 
 // ============================================================
@@ -42,6 +44,11 @@ import './ComprasPage.css';
 // linea completa (producto+cantidad+proveedor), resuelta aca porque
 // Compras ya carga el catalogo (fetchProducts) — Inventario nunca
 // importa PurchaseOrderFormModal.
+//
+// Tabs (Task B): "Listado General" (contenido de siempre, filtro de
+// sucursal manual) y "Pendientes de Recepcion" (TabPendingReceipt,
+// auto-filtrado por sucursal activa, patron LogisticsPage — ver
+// DECISIONES_TECNICAS.md para por que difieren a proposito).
 // ============================================================
 
 // Referencia estable para `branches` de mas abajo (ver regla de
@@ -81,6 +88,7 @@ export const ComprasPage: FC = () => {
   const [defaultLinesFromUrl, setDefaultLinesFromUrl] = useState<PurchaseOrderFormInput['lines'] | undefined>(
     undefined
   );
+  const [activeTab, setActiveTab] = useState('listado');
 
   useEffect(() => {
     let cancelled = false;
@@ -282,53 +290,84 @@ export const ComprasPage: FC = () => {
         </button>
       </header>
 
-      <PurchaseOrderStatusSummary
-        aggregates={aggregates}
-        totalItems={totalItems}
-        activeStatus={statusFilter}
-        onStatusChange={setStatusFilter}
-      />
+      <Tabs
+        tabs={
+          [
+            {
+              id: 'listado',
+              label: 'Listado General',
+              content: (
+                <div className="compras-page__tab-content">
+                  <PurchaseOrderStatusSummary
+                    aggregates={aggregates}
+                    totalItems={totalItems}
+                    activeStatus={statusFilter}
+                    onStatusChange={setStatusFilter}
+                  />
 
-      <PurchaseOrderFilters
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        supplierId={supplierFilter}
-        onSupplierChange={setSupplierFilter}
-        status={statusFilter}
-        onStatusChange={setStatusFilter}
-        branchId={branchFilter}
-        onBranchChange={setBranchFilter}
-        suppliers={suppliers}
-        branches={branches}
-      />
+                  <PurchaseOrderFilters
+                    searchQuery={searchQuery}
+                    onSearchChange={setSearchQuery}
+                    supplierId={supplierFilter}
+                    onSupplierChange={setSupplierFilter}
+                    status={statusFilter}
+                    onStatusChange={setStatusFilter}
+                    branchId={branchFilter}
+                    onBranchChange={setBranchFilter}
+                    suppliers={suppliers}
+                    branches={branches}
+                  />
 
-      <ErrorBoundary
-        fallbackTitle="No se pudo mostrar el listado de ordenes de compra."
-        fallbackMessage="Recarga la pagina para intentar de nuevo."
-      >
-        <div className="compras-page__table-container">
-          {isLoading ? (
-            <SkeletonTable rows={8} cols={7} />
-          ) : (
-            <FetchingOverlay isFetching={isFetching}>
-              <PurchaseOrdersTable
-                orders={orders}
-                suppliersById={suppliersById}
-                branchesById={branchesById}
-                onViewDetail={handleViewDetail}
-              />
-            </FetchingOverlay>
-          )}
-          <Pagination
-            currentPage={page}
-            totalPages={totalPages}
-            totalItems={totalItems}
-            pageSize={pageSize}
-            onPageChange={setPage}
-            onPageSizeChange={setPageSize}
-          />
-        </div>
-      </ErrorBoundary>
+                  <ErrorBoundary
+                    fallbackTitle="No se pudo mostrar el listado de ordenes de compra."
+                    fallbackMessage="Recarga la pagina para intentar de nuevo."
+                  >
+                    <div className="compras-page__table-container">
+                      {isLoading ? (
+                        <SkeletonTable rows={8} cols={7} />
+                      ) : (
+                        <FetchingOverlay isFetching={isFetching}>
+                          <PurchaseOrdersTable
+                            orders={orders}
+                            suppliersById={suppliersById}
+                            branchesById={branchesById}
+                            onViewDetail={handleViewDetail}
+                          />
+                        </FetchingOverlay>
+                      )}
+                      <Pagination
+                        currentPage={page}
+                        totalPages={totalPages}
+                        totalItems={totalItems}
+                        pageSize={pageSize}
+                        onPageChange={setPage}
+                        onPageSizeChange={setPageSize}
+                      />
+                    </div>
+                  </ErrorBoundary>
+                </div>
+              ),
+            },
+            {
+              id: 'pending-receipt',
+              label: 'Pendientes de Recepcion',
+              content: !activeBranchId ? (
+                <SkeletonTable rows={5} cols={6} />
+              ) : (
+                <TabPendingReceipt
+                  branchId={activeBranchId}
+                  branchName={branches.find((b) => b.id === activeBranchId)?.name ?? ''}
+                  suppliersById={suppliersById}
+                  branchesById={branchesById}
+                  productsById={productsById}
+                />
+              ),
+            },
+          ] satisfies TabItem[]
+        }
+        activeTabId={activeTab}
+        onChange={setActiveTab}
+      />
 
       <PurchaseOrderDetailPanel
         order={selectedOrder}

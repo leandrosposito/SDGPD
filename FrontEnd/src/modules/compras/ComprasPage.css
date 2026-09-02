@@ -17,6 +17,68 @@
   gap: var(--space-4);
 }
 
+.compras-page__tab-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding-top: var(--space-4);
+}
+
+/* TabPendingReceipt — mismo criterio visual que TabLowStock.css
+   (inventory), pero autocontenido aca (un archivo de estilos por
+   modulo, no se importa CSS de otro modulo). */
+.compras-page__tab-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.compras-page__tab-title-group {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.compras-page__tab-icon {
+  flex-shrink: 0;
+  color: var(--color-warning);
+  margin-top: var(--space-1);
+}
+
+.compras-page__tab-title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+}
+
+.compras-page__tab-subtitle {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-top: var(--space-1);
+}
+
+.compras-page__tab-branch-note {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  background: var(--color-info-muted);
+  border: 0.0625rem solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  margin: 0;
+}
+
+.compras-page__tab-count {
+  flex-shrink: 0;
+  padding: var(--space-1) var(--space-3);
+  background: var(--color-warning-muted);
+  color: var(--color-warning);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+}
+
 .compras-row-btn {
   height: 2rem;
   padding: 0 var(--space-3);
