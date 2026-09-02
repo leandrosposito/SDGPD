@@ -97,6 +97,20 @@
   background: var(--color-accent-hover);
 }
 
+.tab-low-stock__action-btn:disabled {
+  background: var(--color-bg-hover);
+  color: var(--color-text-tertiary);
+  cursor: not-allowed;
+}
+
+.tab-low-stock__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
 .tab-low-stock__requested-tag {
   display: inline-flex;
   align-items: center;

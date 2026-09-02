@@ -1,6 +1,7 @@
 import { useEffect, useMemo, type FC } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { AlertTriangle, PackagePlus, CheckCircle2 } from 'lucide-react';
+import { AlertTriangle, PackagePlus, CheckCircle2, ShoppingCart } from 'lucide-react';
 import type { ReplenishmentStatus, StockedInventoryItem } from '@/shared/types/inventory.types';
 import type { Branch } from '@/shared/types/session.types';
 import { Table } from '@/shared/components/ui/Table';
@@ -40,6 +41,7 @@ interface TabLowStockProps {
 }
 
 export const TabLowStock: FC<TabLowStockProps> = ({ branchId, branchName }) => {
+  const navigate = useNavigate();
   const statusByProductId = useReplenishmentStore((s) => s.statusByProductId);
   const requestReplenishment = useReplenishmentStore((s) => s.requestReplenishment);
 
@@ -71,6 +73,15 @@ export const TabLowStock: FC<TabLowStockProps> = ({ branchId, branchName }) => {
     }
 
     toast.error(`"${product.name}" ya tiene una reposicion solicitada.`);
+  };
+
+  // "Generar OC" (deep-link, no importa PurchaseOrderFormModal de
+  // compras/ directo — R2, ver DECISIONES_TECNICAS.md, O4): navega a
+  // Compras con el producto y la sucursal como query params; Compras
+  // resuelve ahi el proveedor y la cantidad sugerida y abre su propio
+  // modal de alta con esa linea precargada y editable.
+  const handleGenerateOrder = (product: StockedInventoryItem) => {
+    navigate(`/compras?producto=${encodeURIComponent(product.id)}&sucursal=${encodeURIComponent(branchId)}`);
   };
 
   return (
@@ -151,24 +162,49 @@ export const TabLowStock: FC<TabLowStockProps> = ({ branchId, branchName }) => {
                     align: 'right',
                     accessor: (row) => {
                       const status = statusByProductId[row.id] ?? 'not_requested';
-                      if (status === 'requested') {
-                        return (
-                          <span className="tab-low-stock__requested-tag">
-                            <CheckCircle2 size={14} aria-hidden="true" />
-                            Solicitada
-                          </span>
-                        );
-                      }
+                      // Cantidad sugerida (deficit): minStock - stock,
+                      // nunca negativa. En este tab siempre es >= 0
+                      // (E6: el filtro ya es stock <= minStock), pero
+                      // puede ser exactamente 0 si stock === minStock —
+                      // ahi no hay deficit real que comprar, se
+                      // deshabilita "Generar OC" en vez de ocultarlo
+                      // (misma fila sigue mostrando ambas acciones, sin
+                      // saltos de layout entre filas).
+                      const deficit = Math.max(row.minStock - row.stock, 0);
                       return (
-                        <button
-                          type="button"
-                          className="tab-low-stock__action-btn"
-                          onClick={() => handleRequestReplenishment(row)}
-                          aria-label={`Solicitar reposicion de ${row.name}`}
-                        >
-                          <PackagePlus size={14} aria-hidden="true" />
-                          Solicitar reposicion
-                        </button>
+                        <div className="tab-low-stock__actions">
+                          {status === 'requested' ? (
+                            <span className="tab-low-stock__requested-tag">
+                              <CheckCircle2 size={14} aria-hidden="true" />
+                              Solicitada
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              className="tab-low-stock__action-btn"
+                              onClick={() => handleRequestReplenishment(row)}
+                              aria-label={`Solicitar reposicion de ${row.name}`}
+                            >
+                              <PackagePlus size={14} aria-hidden="true" />
+                              Solicitar reposicion
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            className="tab-low-stock__action-btn tab-low-stock__action-btn--oc"
+                            onClick={() => handleGenerateOrder(row)}
+                            disabled={deficit <= 0}
+                            aria-label={
+                              deficit > 0
+                                ? `Generar orden de compra para ${row.name}`
+                                : `Generar orden de compra no disponible para ${row.name}: sin deficit de stock`
+                            }
+                            title={deficit > 0 ? undefined : 'El stock ya alcanza el minimo, no hay deficit para sugerir.'}
+                          >
+                            <ShoppingCart size={14} aria-hidden="true" />
+                            Generar OC
+                          </button>
+                        </div>
                       );
                     },
                   },

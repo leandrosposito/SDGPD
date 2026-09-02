@@ -14,8 +14,9 @@ import type { Supplier } from '@/shared/types/supplier.types';
 import type { InventoryItem } from '@/shared/types/inventory.types';
 import type { PurchaseOrder, PurchaseOrderStatus, PurchaseOrdersQueryFilters } from '@/shared/types/purchaseOrder.types';
 import { fetchSuppliers } from '@/services/mock/suppliers.service';
-import { fetchProducts } from '@/services/mock/products.service';
+import { fetchProducts, getStockForBranch } from '@/services/mock/products.service';
 import { getPurchaseOrdersPage, updatePurchaseOrderStatus } from '@/services/mock/purchaseOrders.service';
+import type { PurchaseOrderFormInput } from './components/PurchaseOrderFormModal.schema';
 import { PurchaseOrderFilters } from './components/PurchaseOrderFilters';
 import { PurchaseOrderStatusSummary } from './components/PurchaseOrderStatusSummary';
 import { PurchaseOrdersTable } from './components/PurchaseOrdersTable';
@@ -36,6 +37,11 @@ import './ComprasPage.css';
 // Abre el modal de alta automaticamente si llega `?proveedor=<id>` en
 // la URL (O4): Proveedores navega aca en vez de importar el modal
 // directamente (R2 — ver DECISIONES_TECNICAS.md, O4, para el porque).
+// Segundo caso del mismo patron: `?producto=<id>&sucursal=<id>` (desde
+// TabLowStock/Inventario, boton "Generar OC") precarga ademas una
+// linea completa (producto+cantidad+proveedor), resuelta aca porque
+// Compras ya carga el catalogo (fetchProducts) — Inventario nunca
+// importa PurchaseOrderFormModal.
 // ============================================================
 
 // Referencia estable para `branches` de mas abajo (ver regla de
@@ -69,6 +75,12 @@ export const ComprasPage: FC = () => {
   // abre (isCreateModalOpen y el query param cambian en el mismo ciclo
   // de efectos) — el proveedor preseleccionado se perderia.
   const [supplierIdFromUrl, setSupplierIdFromUrl] = useState<string | undefined>(undefined);
+  // Linea precargada por deep-link `?producto=` (Task A). Mismo criterio
+  // que supplierIdFromUrl: se copia a estado propio antes de limpiar la
+  // URL, y es lo que se le pasa como prop al modal.
+  const [defaultLinesFromUrl, setDefaultLinesFromUrl] = useState<PurchaseOrderFormInput['lines'] | undefined>(
+    undefined
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -99,6 +111,7 @@ export const ComprasPage: FC = () => {
     if (supplierId) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- reaccion a un query param de entrada, no un derivado sincronico del render
       setSupplierIdFromUrl(supplierId);
+      setDefaultLinesFromUrl(undefined);
       setIsCreateModalOpen(true);
       setSearchParams(
         (prev) => {
@@ -108,9 +121,78 @@ export const ComprasPage: FC = () => {
         },
         { replace: true }
       );
+      return;
     }
+
+    // Segundo caso del mismo patron de deep-link (Task A): TabLowStock
+    // (Inventario) navega con `?producto=<id>&sucursal=<id>`. Precarga
+    // una LINEA completa (no solo el proveedor), asi que a diferencia
+    // del caso de arriba necesita resolver el producto real primero —
+    // por eso espera a que `products` este cargado (mismo criterio de
+    // "reintentar hasta que exista" que ya usa el modal con `suppliers`,
+    // ver PurchaseOrderFormModal.tsx).
+    const productoId = searchParams.get('producto');
+    if (!productoId) return;
+    if (products.length === 0) return;
+
+    const product = products.find((p) => p.id === productoId);
+    if (!product) {
+      toast.error('No se encontro el producto indicado para generar la orden de compra.');
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.delete('producto');
+          next.delete('sucursal');
+          return next;
+        },
+        { replace: true }
+      );
+      return;
+    }
+
+    const branchIdParam = searchParams.get('sucursal') ?? activeBranchId ?? undefined;
+    let cancelled = false;
+
+    (async () => {
+      // Cantidad recalculada aca (autoridad del servicio), no confiada
+      // a un query param: el stock pudo cambiar entre que se listo el
+      // bajo stock en Inventario y el click en "Generar OC".
+      const stock = branchIdParam ? await getStockForBranch(product.id, branchIdParam) : undefined;
+      const suggestedQuantity = stock ? Math.max(stock.minStock - stock.stock, 0) : 0;
+      if (cancelled) return;
+
+      setDefaultLinesFromUrl([
+        {
+          productId: product.id,
+          productSku: product.sku,
+          productName: product.name,
+          // Salvaguarda: TabLowStock ya deshabilita "Generar OC" cuando
+          // el deficit es 0, pero si igual llega asi (stock cambio
+          // entre el listado y el click) no se arranca el formulario
+          // con una cantidad invalida (el schema exige minimo 1).
+          quantity: suggestedQuantity > 0 ? suggestedQuantity : 1,
+          unitPrice: product.cost,
+        },
+      ]);
+      setSupplierIdFromUrl(product.supplierId);
+      setIsCreateModalOpen(true);
+    })();
+
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete('producto');
+        next.delete('sucursal');
+        return next;
+      },
+      { replace: true }
+    );
+
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- setSearchParams no es estable entre renders (react-router), no debe disparar el efecto de nuevo
-  }, [searchParams]);
+  }, [searchParams, products, activeBranchId]);
 
   const suppliersById = useMemo(() => new Map(suppliers.map((s) => [s.id, s])), [suppliers]);
   const productsById = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
@@ -192,6 +274,7 @@ export const ComprasPage: FC = () => {
           className="client-modal-btn client-modal-btn--primary"
           onClick={() => {
             setSupplierIdFromUrl(undefined);
+            setDefaultLinesFromUrl(undefined);
             setIsCreateModalOpen(true);
           }}
         >
@@ -266,6 +349,7 @@ export const ComprasPage: FC = () => {
         products={products}
         defaultSupplierId={supplierIdFromUrl}
         defaultBranchId={activeBranchId ?? undefined}
+        defaultLines={defaultLinesFromUrl}
         onCreated={handleOrderCreated}
       />
     </div>
