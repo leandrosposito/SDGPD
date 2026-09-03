@@ -1,6 +1,7 @@
 import type { Delivery, DeliveryStatus } from '@/shared/types/logistics.types';
 import type { Branch } from '@/shared/types/session.types';
-import type { PageQuery, PageResult } from '@/shared/types/pagination.types';
+import type { PageQuery, PageResult, DateRangeQueryFilters, ExportResult } from '@/shared/types/pagination.types';
+import { MAX_EXPORT_ROWS } from '@/shared/types/pagination.types';
 import { LOGISTICS_MOCK_DATA } from '@/data/mock/logistics.data';
 
 // ============================================================
@@ -38,9 +39,12 @@ export function toISODate(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-export interface DeliveryQueryFilters {
+// date (un solo dia, exact-match) paso a ser dateFrom/dateTo (rango,
+// DateRangeFilter — tarea transversal): LogisticsPage sigue usando
+// "Hoy" como default (dateFrom=dateTo=hoy es equivalente al viejo
+// comportamiento fijo), pero ahora el usuario puede elegir otro rango.
+export interface DeliveryQueryFilters extends DateRangeQueryFilters {
   branchId: Branch['id'];
-  date: string; // ISO yyyy-MM-dd
   // undefined = todos los estados (filtro "Todas" en DeliveryFilters).
   status?: DeliveryStatus;
 }
@@ -61,8 +65,21 @@ export interface DeliveryAggregates {
   pendingCollectionAmount: number;
 }
 
+// dateFrom/dateTo son ISO date puro (yyyy-MM-dd), igual que
+// `delivery.date` — comparacion directa de strings, sin necesidad de
+// normalizar a solo la porcion de dia (a diferencia de purchaseOrders,
+// que compara contra un ISO datetime completo).
+function isWithinDateRange(dateISO: string, dateFrom: string | undefined, dateTo: string | undefined): boolean {
+  if (dateFrom && dateISO < dateFrom) return false;
+  if (dateTo && dateISO > dateTo) return false;
+  return true;
+}
+
 function matchesScope(delivery: Delivery, filters: DeliveryQueryFilters): boolean {
-  return delivery.date === filters.date && delivery.branchId === filters.branchId;
+  return (
+    delivery.branchId === filters.branchId &&
+    isWithinDateRange(delivery.date, filters.dateFrom, filters.dateTo)
+  );
 }
 
 function compareDeliveries(a: Delivery, b: Delivery, field: DeliverySortField): number {
@@ -77,13 +94,34 @@ function compareDeliveries(a: Delivery, b: Delivery, field: DeliverySortField): 
   }
 }
 
+// Compartido entre getDeliveriesPage y exportDeliveries (no se duplica
+// la logica de filtrado/orden entre paginado y export).
+function filterDeliveriesInScope(filters: DeliveryQueryFilters): Delivery[] {
+  return deliveriesStore.filter((d) => matchesScope(d, filters));
+}
+
+function sortDeliveries(
+  deliveries: Delivery[],
+  sort: { field: DeliverySortField; direction: 'asc' | 'desc' } | undefined
+): Delivery[] {
+  const sortField = sort?.field ?? 'estimatedTime';
+  const direction = sort?.direction ?? 'asc';
+  return [...deliveries].sort((a, b) => {
+    const cmp = compareDeliveries(a, b, sortField);
+    const primary = direction === 'asc' ? cmp : -cmp;
+    // Desempate estable por id (3.4): un orden ambiguo hace que la
+    // misma entrega aparezca en dos paginas o en ninguna al paginar.
+    return primary !== 0 ? primary : a.id.localeCompare(b.id);
+  });
+}
+
 export async function getDeliveriesPage(
   query: PageQuery<DeliveryQueryFilters, DeliverySortField>
 ): Promise<PageResult<Delivery, DeliveryAggregates>> {
   await delay(SIMULATED_DELAY_MS);
 
   const { filters, sort, page, pageSize } = query;
-  const inScope = deliveriesStore.filter((d) => matchesScope(d, filters));
+  const inScope = filterDeliveriesInScope(filters);
 
   const countByStatus: Record<DeliveryStatus, number> = { pending: 0, in_transit: 0, delivered: 0 };
   let pendingCollectionAmount = 0;
@@ -97,15 +135,7 @@ export async function getDeliveriesPage(
 
   const filtered = filters.status ? inScope.filter((d) => d.status === filters.status) : inScope;
 
-  const sortField = sort?.field ?? 'estimatedTime';
-  const direction = sort?.direction ?? 'asc';
-  const sorted = [...filtered].sort((a, b) => {
-    const cmp = compareDeliveries(a, b, sortField);
-    const primary = direction === 'asc' ? cmp : -cmp;
-    // Desempate estable por id (3.4): un orden ambiguo hace que la
-    // misma entrega aparezca en dos paginas o en ninguna al paginar.
-    return primary !== 0 ? primary : a.id.localeCompare(b.id);
-  });
+  const sorted = sortDeliveries(filtered, sort);
 
   const total = sorted.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -123,6 +153,26 @@ export async function getDeliveriesPage(
     pageSize,
     aggregates: { countByStatus, totalForScope, pendingCollectionAmount },
   };
+}
+
+// Exportar (tarea transversal, DECISIONES_TECNICAS.md): TODO lo que
+// matchea filtros+estado, sin paginar, hasta MAX_EXPORT_ROWS. Reusa
+// filterDeliveriesInScope/sortDeliveries (misma logica que
+// getDeliveriesPage, no duplicada).
+export async function exportDeliveries(
+  filters: DeliveryQueryFilters,
+  sort?: { field: DeliverySortField; direction: 'asc' | 'desc' }
+): Promise<ExportResult<Delivery>> {
+  await delay(SIMULATED_DELAY_MS);
+
+  const inScope = filterDeliveriesInScope(filters);
+  const filtered = filters.status ? inScope.filter((d) => d.status === filters.status) : inScope;
+  const sorted = sortDeliveries(filtered, sort);
+
+  const truncated = sorted.length > MAX_EXPORT_ROWS;
+  const items = sorted.slice(0, MAX_EXPORT_ROWS);
+
+  return { items: structuredClone(items), truncated };
 }
 
 // ============================================================

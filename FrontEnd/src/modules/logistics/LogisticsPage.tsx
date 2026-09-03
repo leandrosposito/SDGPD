@@ -6,11 +6,15 @@ import { Pagination } from '@/shared/components/ui/Pagination';
 import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary';
 import { SkeletonTable } from '@/shared/components/ui/SkeletonLoader';
 import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay';
+import { DateRangeFilter } from '@/shared/components/ui/DateRangeFilter';
+import { defaultDateRangeValue, type DateRangeValue } from '@/shared/components/ui/dateRangePresets';
+import { ExportButton, type ExportColumn } from '@/shared/components/ui/ExportButton';
 import { useSessionStore } from '@/shared/state/useSessionStore';
+import type { Delivery } from '@/shared/types/logistics.types';
 import {
   getDeliveriesPage,
+  exportDeliveries,
   advanceDeliveryStatus,
-  toISODate,
   type DeliveryQueryFilters,
 } from './services/deliveries.service';
 import { LogisticsKPIs } from './components/LogisticsKPIs';
@@ -25,26 +29,37 @@ import './LogisticsPage.css';
 // filtrable por estado (pendiente / en ruta / completada). Los KPIs y los
 // contadores del filtro salen de agregados calculados por el servicio,
 // no del array de la pagina actual (P3).
+//
+// Rango de fecha (tarea transversal): antes fijo a "hoy" (todayISO
+// hardcodeado); ahora DateRangeFilter con preset "Hoy" como default —
+// mismo comportamiento inicial, ahora seleccionable.
 // ============================================================
 
-export const LogisticsPage: FC = () => {
-  // Fecha "hoy" tomada una sola vez del sistema, como ISO string (asi
-  // viaja tal cual en los filtros de la consulta).
-  const [todayISO] = useState(() => toISODate(new Date()));
+const PRIORITY_LABEL: Record<Delivery['priority'], string> = {
+  high: 'Alta',
+  medium: 'Media',
+  low: 'Baja',
+};
 
+export const LogisticsPage: FC = () => {
   const activeBranchId = useSessionStore((s) => s.activeBranchId);
+  const session = useSessionStore((s) => s.session);
   const [statusFilter, setStatusFilter] = useState<DeliveryStatusFilter>('all');
+  const [dateRange, setDateRange] = useState<DateRangeValue>(() => defaultDateRangeValue('today'));
+
+  const activeBranchName = session?.branches.find((b) => b.id === activeBranchId)?.name ?? '';
 
   // Memoizado: usePagedQuery compara `filters` por referencia para
   // decidir si hay que volver a pagina 1 (P9) — solo debe cambiar de
-  // referencia cuando de verdad cambia sucursal o estado.
+  // referencia cuando de verdad cambia sucursal, rango o estado.
   const filters: DeliveryQueryFilters = useMemo(
     () => ({
       branchId: activeBranchId ?? '',
-      date: todayISO,
+      dateFrom: dateRange.dateFrom,
+      dateTo: dateRange.dateTo,
       status: statusFilter === 'all' ? undefined : statusFilter,
     }),
-    [activeBranchId, todayISO, statusFilter]
+    [activeBranchId, dateRange, statusFilter]
   );
 
   const {
@@ -92,6 +107,23 @@ export const LogisticsPage: FC = () => {
     toast.error(message);
   };
 
+  // Exportar (tarea transversal): mismos filtros vigentes en pantalla
+  // (branchId/rango/estado) via exportDeliveries, que reusa el mismo
+  // filtro+orden que getDeliveriesPage (no duplicado).
+  const exportColumns: ExportColumn<Delivery>[] = [
+    { header: 'Codigo', accessor: (d) => d.id },
+    { header: 'Pedido', accessor: (d) => d.orderId },
+    { header: 'Cliente', accessor: (d) => d.clientName },
+    { header: 'Direccion', accessor: (d) => d.address },
+    { header: 'Sucursal', accessor: () => activeBranchName },
+    { header: 'Fecha', accessor: (d) => d.date },
+    { header: 'Horario Estimado', accessor: (d) => d.estimatedTime },
+    { header: 'Zona', accessor: (d) => d.zone },
+    { header: 'Prioridad', accessor: (d) => PRIORITY_LABEL[d.priority] },
+    { header: 'Estado', accessor: (d) => DELIVERY_STATUS_LABEL[d.status] },
+    { header: 'Monto a Cobrar', accessor: (d) => d.collectionAmount },
+  ];
+
   return (
     <div className="logistics-page page-enter">
       <header className="page-header">
@@ -100,6 +132,7 @@ export const LogisticsPage: FC = () => {
           <p className="page-header__subtitle">Entregas del dia, agrupadas por estado</p>
         </div>
         <div className="page-header__actions">
+          <ExportButton fileNamePrefix="entregas" columns={exportColumns} fetchRows={() => exportDeliveries(filters)} />
           <button className="logistics-header-btn" onClick={handlePrintRoute}>
             Imprimir Hoja de Ruta
           </button>
@@ -107,6 +140,8 @@ export const LogisticsPage: FC = () => {
       </header>
 
       <LogisticsKPIs aggregates={aggregates} />
+
+      <DateRangeFilter idPrefix="logistics" value={dateRange} onChange={setDateRange} />
 
       <DeliveryFilters
         aggregates={aggregates}
