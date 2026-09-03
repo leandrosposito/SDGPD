@@ -11,7 +11,8 @@ import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary';
 import { SkeletonTable } from '@/shared/components/ui/SkeletonLoader';
 import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay';
 import { usePagedQuery } from '@/shared/hooks/usePagedQuery';
-import { getLowStockPage, type LowStockQueryFilters } from '@/services/mock/products.service';
+import { ExportButton, type ExportColumn } from '@/shared/components/ui/ExportButton';
+import { getLowStockPage, exportLowStock, type LowStockQueryFilters } from '@/services/mock/products.service';
 import { useReplenishmentStore } from '../state/useReplenishmentStore';
 import './TabLowStock.css';
 
@@ -84,6 +85,20 @@ export const TabLowStock: FC<TabLowStockProps> = ({ branchId, branchName }) => {
     navigate(`/compras?producto=${encodeURIComponent(product.id)}&sucursal=${encodeURIComponent(branchId)}`);
   };
 
+  // Exportar (tarea transversal): mismos filtros vigentes (branchId)
+  // via exportLowStock, que reusa el mismo filtro+orden que
+  // getLowStockPage. Sin rango de fecha (Tarea A no aplica aca — ver
+  // DECISIONES_TECNICAS.md: StockedInventoryItem no tiene campo de
+  // fecha, es una foto del stock actual, no un registro historico).
+  const exportColumns: ExportColumn<StockedInventoryItem>[] = [
+    { header: 'Codigo', accessor: (row) => row.sku },
+    { header: 'Nombre', accessor: (row) => row.name },
+    { header: 'Stock Actual', accessor: (row) => row.stock },
+    { header: 'Stock Minimo', accessor: (row) => row.minStock },
+    { header: 'Deficit', accessor: (row) => Math.max(row.minStock - row.stock, 0) },
+    { header: 'Estado', accessor: (row) => REPLENISHMENT_STATUS_LABEL[statusByProductId[row.id] ?? 'not_requested'] },
+  ];
+
   return (
     <div className="tab-low-stock">
       <header className="tab-low-stock__header">
@@ -104,9 +119,12 @@ export const TabLowStock: FC<TabLowStockProps> = ({ branchId, branchName }) => {
         </span>
       </header>
 
-      <p className="tab-low-stock__branch-note">
-        Mostrando bajo stock de <strong>{branchName}</strong>.
-      </p>
+      <div className="tab-low-stock__toolbar">
+        <p className="tab-low-stock__branch-note">
+          Mostrando bajo stock de <strong>{branchName}</strong>.
+        </p>
+        <ExportButton fileNamePrefix="bajo-stock-minimo" columns={exportColumns} fetchRows={() => exportLowStock(filters)} />
+      </div>
 
       <ErrorBoundary
         fallbackTitle="No se pudo mostrar el listado de bajo stock."

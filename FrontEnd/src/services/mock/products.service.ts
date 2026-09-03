@@ -1,6 +1,7 @@
 import type { InventoryItem, ProductStock, StockedInventoryItem } from '@/shared/types/inventory.types';
 import type { Branch } from '@/shared/types/session.types';
-import type { PageQuery, PageResult } from '@/shared/types/pagination.types';
+import type { PageQuery, PageResult, ExportResult } from '@/shared/types/pagination.types';
+import { MAX_EXPORT_ROWS } from '@/shared/types/pagination.types';
 import { INVENTORY_MOCK_DATA } from '@/data/mock/inventory.data';
 import { PRODUCT_STOCK_MOCK_DATA } from '@/data/mock/productStock.data';
 
@@ -164,12 +165,16 @@ function compareLowStock(a: StockedInventoryItem, b: StockedInventoryItem, field
 // los productos sin registro de stock en la sucursal (E5): un producto
 // no dado de alta ahi no tiene minimo definido, asi que no puede estar
 // "bajo minimo" — se excluye en vez de aparecer con minStock 0.
-export async function getLowStockPage(
-  query: PageQuery<LowStockQueryFilters, LowStockSortField>
-): Promise<PageResult<StockedInventoryItem>> {
-  await delay(SIMULATED_DELAY_MS);
-
-  const { filters, sort, page, pageSize } = query;
+// Compartido entre getLowStockPage y exportLowStock (no se duplica la
+// logica de filtrado/orden entre paginado y export). Sin dateFrom/
+// dateTo a proposito (tarea transversal, DECISIONES_TECNICAS.md):
+// StockedInventoryItem no tiene ningun campo de fecha — es una foto del
+// stock actual, no un registro con fecha propia — asi que este listado
+// queda afuera del selector de rango de fecha.
+function filterAndSortLowStock(
+  filters: LowStockQueryFilters,
+  sort: { field: LowStockSortField; direction: 'asc' | 'desc' } | undefined
+): StockedInventoryItem[] {
   const productById = new Map(productsStore.map((p) => [p.id, p]));
 
   const matches: StockedInventoryItem[] = [];
@@ -181,13 +186,27 @@ export async function getLowStockPage(
 
   const sortField = sort?.field ?? 'sku';
   const direction = sort?.direction ?? 'asc';
-  const sorted = matches.sort((a, b) => {
+  return matches.sort((a, b) => {
     const cmp = compareLowStock(a, b, sortField);
     const primary = direction === 'asc' ? cmp : -cmp;
     // Desempate estable por id (3.4): un orden ambiguo hace que el
     // mismo producto aparezca en dos paginas o en ninguna al paginar.
     return primary !== 0 ? primary : a.id.localeCompare(b.id);
   });
+}
+
+// Productos bajo stock minimo (E6: stock <= minStock, ya no < estricto)
+// en una sucursal. Igual que la version anterior, NO completa con ceros
+// los productos sin registro de stock en la sucursal (E5): un producto
+// no dado de alta ahi no tiene minimo definido, asi que no puede estar
+// "bajo minimo" — se excluye en vez de aparecer con minStock 0.
+export async function getLowStockPage(
+  query: PageQuery<LowStockQueryFilters, LowStockSortField>
+): Promise<PageResult<StockedInventoryItem>> {
+  await delay(SIMULATED_DELAY_MS);
+
+  const { filters, sort, page, pageSize } = query;
+  const sorted = filterAndSortLowStock(filters, sort);
 
   const total = sorted.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -196,4 +215,19 @@ export async function getLowStockPage(
   const items = sorted.slice(start, start + pageSize);
 
   return { items: structuredClone(items), total, page: safePage, pageSize };
+}
+
+// Exportar (tarea transversal, DECISIONES_TECNICAS.md): TODO lo que
+// matchea filtros, sin paginar, hasta MAX_EXPORT_ROWS.
+export async function exportLowStock(
+  filters: LowStockQueryFilters,
+  sort?: { field: LowStockSortField; direction: 'asc' | 'desc' }
+): Promise<ExportResult<StockedInventoryItem>> {
+  await delay(SIMULATED_DELAY_MS);
+
+  const sorted = filterAndSortLowStock(filters, sort);
+  const truncated = sorted.length > MAX_EXPORT_ROWS;
+  const items = sorted.slice(0, MAX_EXPORT_ROWS);
+
+  return { items: structuredClone(items), truncated };
 }
