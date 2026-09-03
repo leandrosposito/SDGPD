@@ -93,14 +93,14 @@ export const BranchSelector: FC = () => {
         className="branch-selector__trigger"
         aria-haspopup="listbox"
         aria-expanded={isOpen}
-        aria-label={`Sucursal activa: ${activeBranch?.name ?? 'sin definir'}. Abrir selector de sucursal.`}
+        aria-label={`Sucursal / Deposito activo: ${activeBranch?.name ?? 'sin definir'}. Abrir selector de sucursal.`}
         onClick={() => setIsOpen((prev) => !prev)}
         onKeyDown={handleTriggerKeyDown}
       >
         <Building2 size={16} aria-hidden="true" className="branch-selector__icon" />
         <span className="branch-selector__text">
           <span className="branch-selector__company">{session.company.name}</span>
-          <span className="branch-selector__branch">{activeBranch?.name ?? 'Sucursal'}</span>
+          <span className="branch-selector__branch">{activeBranch?.name ?? 'Sucursal / Deposito'}</span>
         </span>
         <ChevronDown
           size={16}
@@ -110,7 +110,7 @@ export const BranchSelector: FC = () => {
       </button>
 
       {isOpen && (
-        <ul className="branch-selector__menu" role="listbox" aria-label="Elegir sucursal activa">
+        <ul className="branch-selector__menu" role="listbox" aria-label="Elegir sucursal / deposito activo">
           {session.branches.map((branch) => {
             const isActive = branch.id === activeBranchId;
             const isDisabled = branch.status !== 'active';
