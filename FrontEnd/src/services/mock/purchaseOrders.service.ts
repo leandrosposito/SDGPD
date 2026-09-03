@@ -1,5 +1,6 @@
 import type { Supplier } from '@/shared/types/supplier.types';
-import type { PageQuery, PageResult } from '@/shared/types/pagination.types';
+import type { PageQuery, PageResult, ExportResult } from '@/shared/types/pagination.types';
+import { MAX_EXPORT_ROWS } from '@/shared/types/pagination.types';
 import type {
   Currency,
   CreatePurchaseOrderInput,
@@ -57,6 +58,48 @@ function matchesSearch(orderId: string, search: string | undefined): boolean {
   return orderId.toLowerCase().includes(search.trim().toLowerCase());
 }
 
+// dateFrom/dateTo (DateRangeFilter, tarea transversal): comparan solo
+// la porcion yyyy-MM-dd de `createdAt` (ISO datetime completo) contra
+// los dos limites (ISO date puro) — asi una orden creada HOY a
+// cualquier hora cae dentro de un rango cuyo `dateTo` es hoy, en vez de
+// quedar afuera por la parte de hora del datetime.
+function isWithinDateRange(dateISO: string, dateFrom: string | undefined, dateTo: string | undefined): boolean {
+  const day = dateISO.slice(0, 10);
+  if (dateFrom && day < dateFrom) return false;
+  if (dateTo && day > dateTo) return false;
+  return true;
+}
+
+// Filtro compartido entre getPurchaseOrdersPage y exportPurchaseOrders
+// (no se duplica la logica de filtrado entre paginado y export, ver
+// DECISIONES_TECNICAS.md). Incluye TODOS los filtros salvo `status`
+// (que se aplica aparte, ver O8: los agregados por estado necesitan el
+// scope SIN ese filtro).
+function filterOrdersInScope(filters: PurchaseOrdersQueryFilters): PurchaseOrder[] {
+  return purchaseOrdersStore.filter(
+    (o) =>
+      matchesSearch(o.id, filters.search) &&
+      (!filters.supplierId || o.supplierId === filters.supplierId) &&
+      (!filters.branchId || o.branchId === filters.branchId) &&
+      isWithinDateRange(o.createdAt, filters.dateFrom, filters.dateTo)
+  );
+}
+
+function sortOrders(
+  orders: PurchaseOrder[],
+  sort: { field: PurchaseOrdersSortField; direction: 'asc' | 'desc' } | undefined
+): PurchaseOrder[] {
+  const sortField = sort?.field ?? 'createdAt';
+  const direction = sort?.direction ?? 'desc';
+  return [...orders].sort((a, b) => {
+    const cmp = compareOrders(a, b, sortField);
+    const primary = direction === 'asc' ? cmp : -cmp;
+    // Desempate estable por id (3.3): un orden ambiguo hace que la
+    // misma OC aparezca en dos paginas o en ninguna al paginar.
+    return primary !== 0 ? primary : a.id.localeCompare(b.id);
+  });
+}
+
 function compareOrders(a: PurchaseOrder, b: PurchaseOrder, field: PurchaseOrdersSortField): number {
   switch (field) {
     case 'total':
@@ -105,26 +148,13 @@ export async function getPurchaseOrdersPage(
 
   const { filters, sort, page, pageSize } = query;
 
-  const inScope = purchaseOrdersStore.filter(
-    (o) =>
-      matchesSearch(o.id, filters.search) &&
-      (!filters.supplierId || o.supplierId === filters.supplierId) &&
-      (!filters.branchId || o.branchId === filters.branchId)
-  );
+  const inScope = filterOrdersInScope(filters);
 
   const aggregates = computeAggregates(inScope);
 
   const filtered = filters.status ? inScope.filter((o) => o.status === filters.status) : inScope;
 
-  const sortField = sort?.field ?? 'createdAt';
-  const direction = sort?.direction ?? 'desc';
-  const sorted = [...filtered].sort((a, b) => {
-    const cmp = compareOrders(a, b, sortField);
-    const primary = direction === 'asc' ? cmp : -cmp;
-    // Desempate estable por id (3.3): un orden ambiguo hace que la
-    // misma OC aparezca en dos paginas o en ninguna al paginar.
-    return primary !== 0 ? primary : a.id.localeCompare(b.id);
-  });
+  const sorted = sortOrders(filtered, sort);
 
   const total = sorted.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -133,6 +163,27 @@ export async function getPurchaseOrdersPage(
   const items = sorted.slice(start, start + pageSize);
 
   return { items: structuredClone(items), total, page: safePage, pageSize, aggregates };
+}
+
+// Exportar (tarea transversal, DECISIONES_TECNICAS.md): TODO lo que
+// matchea filtros+estado, sin paginar, hasta MAX_EXPORT_ROWS. Reusa
+// filterOrdersInScope/sortOrders (misma logica que getPurchaseOrdersPage,
+// no duplicada) — la unica diferencia es que no corta por pagina/pageSize,
+// corta por el tope de export.
+export async function exportPurchaseOrders(
+  filters: PurchaseOrdersQueryFilters,
+  sort?: { field: PurchaseOrdersSortField; direction: 'asc' | 'desc' }
+): Promise<ExportResult<PurchaseOrder>> {
+  await delay(SIMULATED_DELAY_MS);
+
+  const inScope = filterOrdersInScope(filters);
+  const filtered = filters.status ? inScope.filter((o) => o.status === filters.status) : inScope;
+  const sorted = sortOrders(filtered, sort);
+
+  const truncated = sorted.length > MAX_EXPORT_ROWS;
+  const items = sorted.slice(0, MAX_EXPORT_ROWS);
+
+  return { items: structuredClone(items), truncated };
 }
 
 // O3: consulta publica por supplierId — reemplaza a la lectura directa

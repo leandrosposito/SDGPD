@@ -82,7 +82,7 @@ export const PurchaseOrderFilters: FC<PurchaseOrderFiltersProps> = ({
       </div>
 
       <div className="compras-filters__group">
-        <label className="compras-filters__label" htmlFor="compras-filter-branch">Sucursal</label>
+        <label className="compras-filters__label" htmlFor="compras-filter-branch">Sucursal / Deposito</label>
         <select
           id="compras-filter-branch"
           className="compras-filters__input"

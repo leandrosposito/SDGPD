@@ -15,7 +15,7 @@ import type { InventoryItem } from '@/shared/types/inventory.types';
 import type { PurchaseOrder, PurchaseOrderStatus, PurchaseOrdersQueryFilters } from '@/shared/types/purchaseOrder.types';
 import { fetchSuppliers } from '@/services/mock/suppliers.service';
 import { fetchProducts, getStockForBranch } from '@/services/mock/products.service';
-import { getPurchaseOrdersPage, updatePurchaseOrderStatus } from '@/services/mock/purchaseOrders.service';
+import { getPurchaseOrdersPage, exportPurchaseOrders, updatePurchaseOrderStatus, computePurchaseOrderTotal } from '@/services/mock/purchaseOrders.service';
 import type { PurchaseOrderFormInput } from './components/PurchaseOrderFormModal.schema';
 import { PurchaseOrderFilters } from './components/PurchaseOrderFilters';
 import { PurchaseOrderStatusSummary } from './components/PurchaseOrderStatusSummary';
@@ -23,7 +23,11 @@ import { PurchaseOrdersTable } from './components/PurchaseOrdersTable';
 import { PurchaseOrderDetailPanel } from './components/PurchaseOrderDetailPanel';
 import { PurchaseOrderFormModal } from './components/PurchaseOrderFormModal';
 import { TabPendingReceipt } from './components/TabPendingReceipt';
+import { PURCHASE_ORDER_STATUS_LABEL } from './purchaseOrderLabels';
 import { Tabs, type TabItem } from '@/shared/components/ui/Tabs';
+import { DateRangeFilter } from '@/shared/components/ui/DateRangeFilter';
+import { defaultDateRangeValue, type DateRangeValue } from '@/shared/components/ui/dateRangePresets';
+import { ExportButton, type ExportColumn } from '@/shared/components/ui/ExportButton';
 import './ComprasPage.css';
 
 // ============================================================
@@ -89,6 +93,11 @@ export const ComprasPage: FC = () => {
     undefined
   );
   const [activeTab, setActiveTab] = useState('listado');
+  // Rango de fecha (tarea transversal): default 'all' (sin filtro) —
+  // este listado hoy no filtraba por fecha, "Hoy" como default
+  // ocultaria de entrada todo el historico existente sin que el
+  // usuario haya tocado nada (ver DECISIONES_TECNICAS.md).
+  const [dateRange, setDateRange] = useState<DateRangeValue>(() => defaultDateRangeValue('all'));
 
   useEffect(() => {
     let cancelled = false;
@@ -213,8 +222,10 @@ export const ComprasPage: FC = () => {
       supplierId: supplierFilter || undefined,
       status: statusFilter || undefined,
       branchId: branchFilter || undefined,
+      dateFrom: dateRange.dateFrom,
+      dateTo: dateRange.dateTo,
     }),
-    [debouncedSearchQuery, supplierFilter, statusFilter, branchFilter]
+    [debouncedSearchQuery, supplierFilter, statusFilter, branchFilter, dateRange]
   );
 
   const {
@@ -267,6 +278,19 @@ export const ComprasPage: FC = () => {
     setIsDetailOpen(true);
   };
 
+  // Exportar (tarea transversal): mismos filtros vigentes del Listado
+  // General (incluido el rango de fecha) via exportPurchaseOrders, que
+  // reusa el mismo filtro+orden que getPurchaseOrdersPage.
+  const exportColumns: ExportColumn<PurchaseOrder>[] = [
+    { header: 'OC', accessor: (o) => o.id },
+    { header: 'Proveedor', accessor: (o) => suppliersById.get(o.supplierId)?.name ?? 'Proveedor no disponible' },
+    { header: 'Sucursal', accessor: (o) => branchesById.get(o.branchId)?.name ?? 'Sucursal no disponible' },
+    { header: 'Fecha de Creacion', accessor: (o) => o.createdAt.slice(0, 10) },
+    { header: 'Estado', accessor: (o) => PURCHASE_ORDER_STATUS_LABEL[o.status] },
+    { header: 'Moneda', accessor: (o) => o.currency },
+    { header: 'Total', accessor: (o) => computePurchaseOrderTotal(o.lines) },
+  ];
+
   return (
     <div className="compras-page page-enter">
       <header className="page-header">
@@ -317,6 +341,15 @@ export const ComprasPage: FC = () => {
                     suppliers={suppliers}
                     branches={branches}
                   />
+
+                  <div className="compras-page__tab-toolbar">
+                    <DateRangeFilter idPrefix="compras-listado" value={dateRange} onChange={setDateRange} />
+                    <ExportButton
+                      fileNamePrefix="ordenes-compra"
+                      columns={exportColumns}
+                      fetchRows={() => exportPurchaseOrders(filters)}
+                    />
+                  </div>
 
                   <ErrorBoundary
                     fallbackTitle="No se pudo mostrar el listado de ordenes de compra."

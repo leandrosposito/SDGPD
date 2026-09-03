@@ -8,6 +8,7 @@
 import type { Branch } from '@/shared/types/session.types';
 import type { Supplier } from '@/shared/types/supplier.types';
 import type { InventoryItem } from '@/shared/types/inventory.types';
+import type { DateRangeQueryFilters } from '@/shared/types/pagination.types';
 // Currency no se duplica aca: se reusa desde client.types.ts, mismo
 // patron que Branch/Supplier ya importados en inventory.types.ts (un
 // tipo compartido en shared/types/ puede ser consumido por otro
@@ -67,7 +68,10 @@ export interface PurchaseOrder {
 // y buscarlo por nombre implicaria importar internals de otro modulo
 // (R2) — la vista arma el selector de proveedores con fetchSuppliers()
 // (el punto de entrada publico de Suppliers) y pasa el id elegido aca.
-export interface PurchaseOrdersQueryFilters {
+// dateFrom/dateTo (DateRangeFilter, tarea transversal) filtran por
+// `createdAt` — el unico campo de fecha propio de la orden (O2: no hay
+// fecha de "vencimiento" ni "entrega" en este dominio).
+export interface PurchaseOrdersQueryFilters extends DateRangeQueryFilters {
   search?: string;
   supplierId?: Supplier['id'];
   status?: PurchaseOrderStatus;

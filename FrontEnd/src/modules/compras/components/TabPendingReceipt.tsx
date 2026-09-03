@@ -13,10 +13,14 @@ import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary';
 import { SkeletonTable } from '@/shared/components/ui/SkeletonLoader';
 import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay';
 import { Pagination } from '@/shared/components/ui/Pagination';
+import { DateRangeFilter } from '@/shared/components/ui/DateRangeFilter';
+import { defaultDateRangeValue, type DateRangeValue } from '@/shared/components/ui/dateRangePresets';
+import { ExportButton, type ExportColumn } from '@/shared/components/ui/ExportButton';
 import { usePagedQuery } from '@/shared/hooks/usePagedQuery';
-import { getPurchaseOrdersPage, updatePurchaseOrderStatus } from '@/services/mock/purchaseOrders.service';
+import { getPurchaseOrdersPage, exportPurchaseOrders, updatePurchaseOrderStatus, computePurchaseOrderTotal } from '@/services/mock/purchaseOrders.service';
 import { PurchaseOrdersTable } from './PurchaseOrdersTable';
 import { PurchaseOrderDetailPanel } from './PurchaseOrderDetailPanel';
+import { PURCHASE_ORDER_STATUS_LABEL } from '../purchaseOrderLabels';
 
 // ============================================================
 // TabPendingReceipt — OrdenesDeCompra en estado 'sent' EN LA SUCURSAL
@@ -57,8 +61,17 @@ export const TabPendingReceipt: FC<TabPendingReceiptProps> = ({
   const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  // Rango de fecha propio (tarea transversal), independiente del que
+  // pueda tener el tab "Listado General" de la misma pagina — cada
+  // usePagedQuery de este archivo tiene su propio estado, mismo
+  // criterio que branchId/status. Default 'all': este tab hoy no
+  // filtraba por fecha.
+  const [dateRange, setDateRange] = useState<DateRangeValue>(() => defaultDateRangeValue('all'));
 
-  const filters: PurchaseOrdersQueryFilters = useMemo(() => ({ status: 'sent', branchId }), [branchId]);
+  const filters: PurchaseOrdersQueryFilters = useMemo(
+    () => ({ status: 'sent', branchId, dateFrom: dateRange.dateFrom, dateTo: dateRange.dateTo }),
+    [branchId, dateRange]
+  );
 
   const {
     items: orders,
@@ -106,6 +119,20 @@ export const TabPendingReceipt: FC<TabPendingReceiptProps> = ({
     }
   };
 
+  // Exportar (tarea transversal): mismos filtros vigentes de este tab
+  // (branchId fijo por sucursal activa, status:'sent', rango de fecha
+  // propio) via exportPurchaseOrders, que reusa el mismo filtro+orden
+  // que getPurchaseOrdersPage.
+  const exportColumns: ExportColumn<PurchaseOrder>[] = [
+    { header: 'OC', accessor: (o) => o.id },
+    { header: 'Proveedor', accessor: (o) => suppliersById.get(o.supplierId)?.name ?? 'Proveedor no disponible' },
+    { header: 'Sucursal', accessor: (o) => branchesById.get(o.branchId)?.name ?? 'Sucursal no disponible' },
+    { header: 'Fecha de Creacion', accessor: (o) => o.createdAt.slice(0, 10) },
+    { header: 'Estado', accessor: (o) => PURCHASE_ORDER_STATUS_LABEL[o.status] },
+    { header: 'Moneda', accessor: (o) => o.currency },
+    { header: 'Total', accessor: (o) => computePurchaseOrderTotal(o.lines) },
+  ];
+
   return (
     <div className="compras-page__tab-content">
       <header className="compras-page__tab-header">
@@ -126,6 +153,15 @@ export const TabPendingReceipt: FC<TabPendingReceiptProps> = ({
       <p className="compras-page__tab-branch-note">
         Mostrando pendientes de recepcion de <strong>{branchName}</strong>.
       </p>
+
+      <div className="compras-page__tab-toolbar">
+        <DateRangeFilter idPrefix="compras-pending" value={dateRange} onChange={setDateRange} />
+        <ExportButton
+          fileNamePrefix="pendientes-recepcion"
+          columns={exportColumns}
+          fetchRows={() => exportPurchaseOrders(filters)}
+        />
+      </div>
 
       <ErrorBoundary
         fallbackTitle="No se pudo mostrar el listado de pendientes de recepcion."

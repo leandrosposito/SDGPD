@@ -24,6 +24,17 @@
   padding-top: var(--space-4);
 }
 
+/* Fila de DateRangeFilter + ExportButton (tarea transversal) — mismo
+   criterio en los 3 tabs que la usan (Listado General, Pendientes de
+   Recepcion, y equivalentes en clients/logistics). */
+.compras-page__tab-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
 /* TabPendingReceipt — mismo criterio visual que TabLowStock.css
    (inventory), pero autocontenido aca (un archivo de estilos por
    modulo, no se importa CSS de otro modulo). */
