@@ -2,6 +2,8 @@
 // SHARED TYPE DEFINITIONS — Client domain
 // ============================================================
 
+import type { DateRangeQueryFilters } from '@/shared/types/pagination.types';
+
 // Moneda de un importe (ISO 4217). El mock incluye ARS y USD (C1,
 // DECISIONES_TECNICAS.md) para poder probar que los importes se
 // agrupan por moneda en vez de sumarse (M5): sumar pesos con dolares
@@ -87,7 +89,13 @@ export interface OpenInvoice {
   bucket: AgingBucket | null; // null si no vencio (M3): no entra en ningun tramo
 }
 
-export interface OverdueClientsQueryFilters {
+// dateFrom/dateTo (DateRangeFilter, tarea transversal) filtran por
+// `dueDate` de las facturas VENCIDAS — es una dimension ADICIONAL e
+// independiente del tramo de aging (`bucket`), que sigue siendo un
+// calculo relativo a HOY sin tocar: los dos conviven (ej. "tramo 31-60
+// dias" + "vencimiento entre el 1 y el 15 de agosto" son dos filtros
+// simultaneos sobre el mismo conjunto de facturas abiertas).
+export interface OverdueClientsQueryFilters extends DateRangeQueryFilters {
   search?: string; // nombre o CUIT (M6)
   bucket?: AgingBucket; // filtro por tramo de mayor antiguedad del cliente
 }

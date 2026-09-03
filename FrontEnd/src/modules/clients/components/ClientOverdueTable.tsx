@@ -8,8 +8,17 @@ import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary';
 import { SkeletonTable } from '@/shared/components/ui/SkeletonLoader';
 import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay';
 import { usePagedQuery } from '@/shared/hooks/usePagedQuery';
-import { getOverdueClientsPage } from '@/services/mock/clients.service';
-import type { AgingBucket, AgingBucketAggregate, Currency, OverdueClientsQueryFilters } from '@/shared/types/client.types';
+import { DateRangeFilter } from '@/shared/components/ui/DateRangeFilter';
+import { defaultDateRangeValue, type DateRangeValue } from '@/shared/components/ui/dateRangePresets';
+import { ExportButton, type ExportColumn } from '@/shared/components/ui/ExportButton';
+import { getOverdueClientsPage, exportOverdueClients } from '@/services/mock/clients.service';
+import type {
+  AgingBucket,
+  AgingBucketAggregate,
+  Currency,
+  OverdueClientRow,
+  OverdueClientsQueryFilters,
+} from '@/shared/types/client.types';
 import { AGING_BUCKET_LABEL, AGING_BUCKET_VARIANT, AGING_BUCKET_ORDER } from '../agingLabels';
 
 // ============================================================
@@ -19,6 +28,12 @@ import { AGING_BUCKET_LABEL, AGING_BUCKET_VARIANT, AGING_BUCKET_ORDER } from '..
 // con usePagedQuery + clients.service#getOverdueClientsPage — el
 // resumen de aging y los contadores por tramo salen de `aggregates`
 // (M4/P3), nunca se calculan sobre `items` (la pagina actual).
+//
+// Rango de fecha (tarea transversal, DECISIONES_TECNICAS.md): filtra
+// por `dueDate` de las facturas vencidas — dimension ADICIONAL e
+// independiente del tramo de aging (bucketFilter), que sigue siendo un
+// calculo relativo a HOY sin tocar. Default 'all': este listado hoy no
+// filtraba por fecha.
 // ============================================================
 
 type BucketFilter = AgingBucket | 'all';
@@ -37,10 +52,16 @@ interface ClientOverdueTableProps {
 
 export const ClientOverdueTable: FC<ClientOverdueTableProps> = ({ search }) => {
   const [bucketFilter, setBucketFilter] = useState<BucketFilter>('all');
+  const [dateRange, setDateRange] = useState<DateRangeValue>(() => defaultDateRangeValue('all'));
 
   const filters: OverdueClientsQueryFilters = useMemo(
-    () => ({ search, bucket: bucketFilter === 'all' ? undefined : bucketFilter }),
-    [search, bucketFilter]
+    () => ({
+      search,
+      bucket: bucketFilter === 'all' ? undefined : bucketFilter,
+      dateFrom: dateRange.dateFrom,
+      dateTo: dateRange.dateTo,
+    }),
+    [search, bucketFilter, dateRange]
   );
 
   const {
@@ -79,6 +100,22 @@ export const ClientOverdueTable: FC<ClientOverdueTableProps> = ({ search }) => {
     }
     return map;
   }, [aggregates]);
+
+  // Exportar (tarea transversal): mismos filtros vigentes (busqueda +
+  // tramo + rango de fecha) via exportOverdueClients, que reusa el
+  // mismo filtro+orden que getOverdueClientsPage.
+  const exportColumns: ExportColumn<OverdueClientRow>[] = [
+    { header: 'Cliente', accessor: (row) => row.clientName },
+    { header: 'CUIT', accessor: (row) => row.cuit },
+    {
+      header: 'Deuda Vencida',
+      accessor: (row) => row.overdueByCurrency.map((e) => formatCurrency(e.amount, e.currency)).join(' / '),
+    },
+    { header: 'Dias (mas antiguo)', accessor: (row) => row.oldestOverdueDays },
+    { header: 'Tramo mas antiguo', accessor: (row) => AGING_BUCKET_LABEL[row.oldestBucket] },
+    { header: 'Limite de Credito', accessor: (row) => row.creditLimit },
+    { header: 'Saldo Actual', accessor: (row) => row.currentBalance },
+  ];
 
   return (
     <div className="client-overdue">
@@ -136,6 +173,15 @@ export const ClientOverdueTable: FC<ClientOverdueTableProps> = ({ search }) => {
             </button>
           );
         })}
+      </div>
+
+      <div className="client-list-toolbar">
+        <DateRangeFilter idPrefix="client-overdue" value={dateRange} onChange={setDateRange} label="Vencimiento" />
+        <ExportButton
+          fileNamePrefix="clientes-morosos"
+          columns={exportColumns}
+          fetchRows={() => exportOverdueClients(filters)}
+        />
       </div>
 
       <ErrorBoundary

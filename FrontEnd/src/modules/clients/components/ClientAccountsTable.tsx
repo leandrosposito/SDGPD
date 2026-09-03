@@ -1,12 +1,20 @@
-import { useEffect, useMemo, type FC } from 'react';
+import { useEffect, useMemo, useState, type FC } from 'react';
 import { toast } from 'sonner';
 import { Table } from '@/shared/components/ui/Table';
 import { Pagination } from '@/shared/components/ui/Pagination';
 import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary';
 import { SkeletonTable } from '@/shared/components/ui/SkeletonLoader';
 import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay';
+import { DateRangeFilter } from '@/shared/components/ui/DateRangeFilter';
+import { defaultDateRangeValue, type DateRangeValue } from '@/shared/components/ui/dateRangePresets';
+import { ExportButton, type ExportColumn } from '@/shared/components/ui/ExportButton';
 import { usePagedQuery } from '@/shared/hooks/usePagedQuery';
-import { getClientAccountsPage, type ClientAccountsQueryFilters } from '@/services/mock/clients.service';
+import type { ClientAccount } from '@/shared/types/client.types';
+import {
+  getClientAccountsPage,
+  exportClientAccounts,
+  type ClientAccountsQueryFilters,
+} from '@/services/mock/clients.service';
 
 // ============================================================
 // ClientAccountsTable — Cuentas Corrientes, paginada server-side
@@ -17,6 +25,11 @@ import { getClientAccountsPage, type ClientAccountsQueryFilters } from '@/servic
 // vendedor/estado del filtro superior siguen aplicando solo al
 // Directorio (fuera de alcance de esta tarea): no se agregaron al
 // contrato paginado.
+//
+// Rango de fecha (tarea transversal) — Opcion A (DECISIONES_TECNICAS.md):
+// filtro de EXISTENCIA (clientes con al menos una transaccion en el
+// rango), nunca recalcula totalDebit/totalCredit/currentBalance de la
+// fila. Default 'all': este listado hoy no filtraba por fecha.
 // ============================================================
 
 function formatCurrency(value: number): string {
@@ -28,7 +41,11 @@ interface ClientAccountsTableProps {
 }
 
 export const ClientAccountsTable: FC<ClientAccountsTableProps> = ({ search }) => {
-  const filters: ClientAccountsQueryFilters = useMemo(() => ({ search }), [search]);
+  const [dateRange, setDateRange] = useState<DateRangeValue>(() => defaultDateRangeValue('all'));
+  const filters: ClientAccountsQueryFilters = useMemo(
+    () => ({ search, dateFrom: dateRange.dateFrom, dateTo: dateRange.dateTo }),
+    [search, dateRange]
+  );
 
   const {
     items: clients,
@@ -47,15 +64,49 @@ export const ClientAccountsTable: FC<ClientAccountsTableProps> = ({ search }) =>
     if (error) toast.error('No se pudo cargar el listado de cuentas corrientes.');
   }, [error]);
 
+  // Exportar (tarea transversal): mismos filtros vigentes (busqueda +
+  // rango de fecha) via exportClientAccounts, que reusa el mismo
+  // filtro+orden que getClientAccountsPage.
+  const exportColumns: ExportColumn<ClientAccount>[] = [
+    { header: 'Cliente', accessor: (c) => c.clientName },
+    { header: 'CUIT', accessor: (c) => c.cuit },
+    { header: 'Zona', accessor: (c) => c.zone },
+    { header: 'Vendedor', accessor: (c) => c.sellerName },
+    { header: 'Limite de Credito', accessor: (c) => c.creditLimit },
+    { header: 'Debe', accessor: (c) => c.totalDebit },
+    { header: 'Haber', accessor: (c) => c.totalCredit },
+    { header: 'Saldo', accessor: (c) => c.currentBalance },
+    { header: 'Dias de Mora', accessor: (c) => c.daysOverdue },
+    { header: 'Estado', accessor: (c) => (c.currentBalance > 0 ? 'Con Deuda' : 'Al dia') },
+  ];
+
+  const toolbar = (
+    <div className="client-list-toolbar">
+      <DateRangeFilter idPrefix="client-accounts" value={dateRange} onChange={setDateRange} />
+      <ExportButton
+        fileNamePrefix="cuentas-corrientes"
+        columns={exportColumns}
+        fetchRows={() => exportClientAccounts(filters)}
+      />
+    </div>
+  );
+
   if (isLoading) {
-    return <SkeletonTable rows={8} cols={7} />;
+    return (
+      <>
+        {toolbar}
+        <SkeletonTable rows={8} cols={7} />
+      </>
+    );
   }
 
   return (
-    <ErrorBoundary
-      fallbackTitle="No se pudo mostrar las cuentas corrientes."
-      fallbackMessage="Recarga la pagina para intentar de nuevo."
-    >
+    <>
+      {toolbar}
+      <ErrorBoundary
+        fallbackTitle="No se pudo mostrar las cuentas corrientes."
+        fallbackMessage="Recarga la pagina para intentar de nuevo."
+      >
       <div className="client-table-wrapper-container">
         <FetchingOverlay isFetching={isFetching}>
           <div className="client-table-wrapper">
@@ -159,6 +210,7 @@ export const ClientAccountsTable: FC<ClientAccountsTableProps> = ({ search }) =>
           onPageSizeChange={setPageSize}
         />
       </div>
-    </ErrorBoundary>
+      </ErrorBoundary>
+    </>
   );
 };

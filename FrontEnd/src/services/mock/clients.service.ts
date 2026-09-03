@@ -11,7 +11,8 @@ import type {
   OverdueClientsQueryFilters,
   OverdueClientsSortField,
 } from '@/shared/types/client.types';
-import type { PageQuery, PageResult } from '@/shared/types/pagination.types';
+import type { PageQuery, PageResult, DateRangeQueryFilters, ExportResult } from '@/shared/types/pagination.types';
+import { MAX_EXPORT_ROWS } from '@/shared/types/pagination.types';
 import { CLIENTS_MOCK_DATA } from '@/data/mock/clients.data';
 
 // ============================================================
@@ -82,7 +83,15 @@ export async function updateClient(id: string, input: ClientFormInput): Promise<
 // pedido y hubiera sido diseñar filtros que nadie definio.
 // ============================================================
 
-export interface ClientAccountsQueryFilters {
+// dateFrom/dateTo (DateRangeFilter, tarea transversal) — Opcion A
+// (decidida explicitamente, ver DECISIONES_TECNICAS.md): filtro de
+// EXISTENCIA. Solo acota QUE clientes aparecen (los que tengan al
+// menos una transaccion en el rango); totalDebit/totalCredit/
+// currentBalance de la fila siguen siendo los saldos reales de la
+// cuenta completa, nunca recalculados sobre el rango — la Opcion B
+// (recalcular saldos sobre el rango) es una feature de reporteria
+// distinta, fuera de alcance de esta tarea.
+export interface ClientAccountsQueryFilters extends DateRangeQueryFilters {
   search?: string;
 }
 
@@ -92,6 +101,22 @@ function matchesSearch(text: string, cuit: string, search: string | undefined): 
   if (!search || !search.trim()) return true;
   const q = search.trim().toLowerCase();
   return text.toLowerCase().includes(q) || cuit.includes(q);
+}
+
+// Compartida por accounts (existencia sobre transactions[].date) y por
+// morosos (dueDate de facturas) — compara solo la porcion yyyy-MM-dd,
+// funciona igual para un ISO date puro que para un ISO datetime
+// completo.
+function isWithinDateRange(dateISO: string, dateFrom: string | undefined, dateTo: string | undefined): boolean {
+  const day = dateISO.slice(0, 10);
+  if (dateFrom && day < dateFrom) return false;
+  if (dateTo && day > dateTo) return false;
+  return true;
+}
+
+function hasTransactionInRange(client: ClientAccount, dateFrom: string | undefined, dateTo: string | undefined): boolean {
+  if (!dateFrom && !dateTo) return true;
+  return client.transactions.some((t) => isWithinDateRange(t.date, dateFrom, dateTo));
 }
 
 function compareClientAccounts(a: ClientAccount, b: ClientAccount, field: ClientAccountsSortField): number {
@@ -106,23 +131,36 @@ function compareClientAccounts(a: ClientAccount, b: ClientAccount, field: Client
   }
 }
 
-export async function getClientAccountsPage(
-  query: PageQuery<ClientAccountsQueryFilters, ClientAccountsSortField>
-): Promise<PageResult<ClientAccount>> {
-  await delay(SIMULATED_DELAY_MS);
+// Compartido entre getClientAccountsPage y exportClientAccounts (no se
+// duplica la logica de filtrado entre paginado y export).
+function filterClientAccountsInScope(filters: ClientAccountsQueryFilters): ClientAccount[] {
+  return clientsStore.filter(
+    (c) => matchesSearch(c.clientName, c.cuit, filters.search) && hasTransactionInRange(c, filters.dateFrom, filters.dateTo)
+  );
+}
 
-  const { filters, sort, page, pageSize } = query;
-  const filtered = clientsStore.filter((c) => matchesSearch(c.clientName, c.cuit, filters.search));
-
+function sortClientAccounts(
+  clients: ClientAccount[],
+  sort: { field: ClientAccountsSortField; direction: 'asc' | 'desc' } | undefined
+): ClientAccount[] {
   const sortField = sort?.field ?? 'clientName';
   const direction = sort?.direction ?? 'asc';
-  const sorted = [...filtered].sort((a, b) => {
+  return [...clients].sort((a, b) => {
     const cmp = compareClientAccounts(a, b, sortField);
     const primary = direction === 'asc' ? cmp : -cmp;
     // Desempate estable por id (3.3): un orden ambiguo hace que el
     // mismo cliente aparezca en dos paginas o en ninguna al paginar.
     return primary !== 0 ? primary : a.id.localeCompare(b.id);
   });
+}
+
+export async function getClientAccountsPage(
+  query: PageQuery<ClientAccountsQueryFilters, ClientAccountsSortField>
+): Promise<PageResult<ClientAccount>> {
+  await delay(SIMULATED_DELAY_MS);
+
+  const { filters, sort, page, pageSize } = query;
+  const sorted = sortClientAccounts(filterClientAccountsInScope(filters), sort);
 
   const total = sorted.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -131,6 +169,21 @@ export async function getClientAccountsPage(
   const items = sorted.slice(start, start + pageSize);
 
   return { items: structuredClone(items), total, page: safePage, pageSize };
+}
+
+// Exportar (tarea transversal, DECISIONES_TECNICAS.md): TODO lo que
+// matchea filtros, sin paginar, hasta MAX_EXPORT_ROWS.
+export async function exportClientAccounts(
+  filters: ClientAccountsQueryFilters,
+  sort?: { field: ClientAccountsSortField; direction: 'asc' | 'desc' }
+): Promise<ExportResult<ClientAccount>> {
+  await delay(SIMULATED_DELAY_MS);
+
+  const sorted = sortClientAccounts(filterClientAccountsInScope(filters), sort);
+  const truncated = sorted.length > MAX_EXPORT_ROWS;
+  const items = sorted.slice(0, MAX_EXPORT_ROWS);
+
+  return { items: structuredClone(items), truncated };
 }
 
 // ============================================================
@@ -240,6 +293,54 @@ let overdueSnapshotCache: {
   snapshot: OverdueSnapshotEntry[];
 } | null = null;
 
+// Extraido de computeOverdueSnapshot para poder reusarlo (tarea
+// transversal, dateFrom/dateTo) recomputando SOLO oldest/overdueByCurrency
+// sobre un subconjunto de facturas ya vencidas (nunca sobre facturas al
+// dia: bucket !== null sigue siendo responsabilidad de quien llama).
+// clientName/cuit/creditLimit/currentBalance son campos de la CUENTA,
+// no de las facturas — no cambian entre el snapshot completo y un
+// recorte por rango de fecha, asi que este helper los recibe ya
+// resueltos en vez de necesitar el ClientAccount completo.
+function buildOverdueRow(
+  identity: Pick<OverdueClientRow, 'clientId' | 'clientName' | 'cuit' | 'creditLimit' | 'currentBalance'>,
+  overdueInvoices: OpenInvoice[]
+): OverdueClientRow | null {
+  if (overdueInvoices.length === 0) return null; // al dia, o sin facturas vencidas en el recorte pedido (M8/M3)
+
+  // El tramo/antiguedad mas critico es del CLIENTE, no de una moneda en
+  // particular (C1): los dias de mora no se suman ni se mezclan, solo
+  // se compara "cual es mayor", asi que da igual que las facturas
+  // comparadas esten en distinta moneda.
+  const oldest = overdueInvoices.reduce((older, inv) => (inv.daysOverdue > older.daysOverdue ? inv : older));
+
+  // Total vencido POR MONEDA (C1): nunca un numero suelto que suma
+  // monedas distintas. La moneda de la factura mas antigua queda
+  // primera en el array (la mas relevante para cobranza), el resto en
+  // orden alfabetico para que el orden sea deterministico.
+  const totalsByCurrency = new Map<Currency, number>();
+  for (const inv of overdueInvoices) {
+    totalsByCurrency.set(inv.currency, (totalsByCurrency.get(inv.currency) ?? 0) + inv.openBalance);
+  }
+  const overdueByCurrency: OverdueAmountByCurrency[] = [...totalsByCurrency.entries()]
+    .sort(([currencyA], [currencyB]) => {
+      if (currencyA === oldest.currency) return -1;
+      if (currencyB === oldest.currency) return 1;
+      return currencyA.localeCompare(currencyB);
+    })
+    .map(([currency, amount]) => ({ currency, amount }));
+
+  return {
+    clientId: identity.clientId,
+    clientName: identity.clientName,
+    cuit: identity.cuit,
+    overdueByCurrency,
+    oldestOverdueDays: oldest.daysOverdue,
+    oldestBucket: oldest.bucket as AgingBucket,
+    creditLimit: identity.creditLimit,
+    currentBalance: identity.currentBalance,
+  };
+}
+
 function computeOverdueSnapshot(clients: ClientAccount[]): OverdueSnapshotEntry[] {
   const today = new Date();
   const entries: OverdueSnapshotEntry[] = [];
@@ -247,45 +348,18 @@ function computeOverdueSnapshot(clients: ClientAccount[]): OverdueSnapshotEntry[
   for (const client of clients) {
     const openInvoices = imputeOpenInvoices(client.transactions, today);
     const overdueInvoices = openInvoices.filter((inv) => inv.bucket !== null);
-    if (overdueInvoices.length === 0) continue; // al dia o solo con facturas no vencidas (M8/M3)
-
-    // El tramo/antiguedad mas critico es del CLIENTE, no de una moneda
-    // en particular (C1): los dias de mora no se suman ni se mezclan,
-    // solo se compara "cual es mayor", asi que da igual que las
-    // facturas comparadas esten en distinta moneda.
-    const oldest = overdueInvoices.reduce((older, inv) =>
-      inv.daysOverdue > older.daysOverdue ? inv : older
-    );
-
-    // Total vencido POR MONEDA (C1): nunca un numero suelto que suma
-    // monedas distintas. La moneda de la factura mas antigua queda
-    // primera en el array (la mas relevante para cobranza), el resto
-    // en orden alfabetico para que el orden sea deterministico.
-    const totalsByCurrency = new Map<Currency, number>();
-    for (const inv of overdueInvoices) {
-      totalsByCurrency.set(inv.currency, (totalsByCurrency.get(inv.currency) ?? 0) + inv.openBalance);
-    }
-    const overdueByCurrency: OverdueAmountByCurrency[] = [...totalsByCurrency.entries()]
-      .sort(([currencyA], [currencyB]) => {
-        if (currencyA === oldest.currency) return -1;
-        if (currencyB === oldest.currency) return 1;
-        return currencyA.localeCompare(currencyB);
-      })
-      .map(([currency, amount]) => ({ currency, amount }));
-
-    entries.push({
-      row: {
+    const row = buildOverdueRow(
+      {
         clientId: client.id,
         clientName: client.clientName,
         cuit: client.cuit,
-        overdueByCurrency,
-        oldestOverdueDays: oldest.daysOverdue,
-        oldestBucket: oldest.bucket as AgingBucket,
         creditLimit: client.creditLimit,
         currentBalance: client.currentBalance,
       },
-      openInvoices: overdueInvoices,
-    });
+      overdueInvoices
+    );
+    if (!row) continue;
+    entries.push({ row, openInvoices: overdueInvoices });
   }
   return entries;
 }
@@ -315,6 +389,34 @@ function getOverdueSnapshot(): OverdueSnapshotEntry[] {
   return snapshot;
 }
 
+// dateFrom/dateTo (DateRangeFilter, tarea transversal) filtran por
+// `dueDate` de las facturas VENCIDAS — dimension ADICIONAL e
+// independiente del tramo de aging, que sigue calculandose igual que
+// antes (relativo a HOY, ver bucketForDays/imputeOpenInvoices, sin
+// tocar). Se aplica DESPUES de leer el cache del dia (nunca invalida
+// ni reconstruye overdueSnapshotCache: ese sigue siendo invariante
+// respecto de la consulta, ver el comentario de mas arriba) — recorta
+// `openInvoices` de cada entrada cacheada al rango pedido y recomputa
+// oldest/overdueByCurrency SOLO sobre ese subconjunto via
+// buildOverdueRow. Un cliente sin ninguna factura vencida dentro del
+// rango desaparece de este scope, igual que "al dia" en M8.
+function applyDateRangeToSnapshot(
+  snapshot: OverdueSnapshotEntry[],
+  dateFrom: string | undefined,
+  dateTo: string | undefined
+): OverdueSnapshotEntry[] {
+  if (!dateFrom && !dateTo) return snapshot;
+
+  const result: OverdueSnapshotEntry[] = [];
+  for (const entry of snapshot) {
+    const openInvoices = entry.openInvoices.filter((inv) => isWithinDateRange(inv.dueDate, dateFrom, dateTo));
+    const row = buildOverdueRow(entry.row, openInvoices);
+    if (!row) continue;
+    result.push({ row, openInvoices });
+  }
+  return result;
+}
+
 // Suma nominal entre monedas SOLO para ordenar (nunca se muestra este
 // numero en la UI, y no hay orden clickeable expuesto todavia — ver
 // M4/3.4). No es el mismo error que C1: ahi se mostraba un total
@@ -337,6 +439,22 @@ function compareOverdueRows(a: OverdueClientRow, b: OverdueClientRow, field: Ove
     default:
       return a.clientName.localeCompare(b.clientName);
   }
+}
+
+// Compartido entre getOverdueClientsPage y exportOverdueClients (no se
+// duplica la logica de orden entre paginado y export).
+function sortOverdueEntries(
+  entries: OverdueSnapshotEntry[],
+  sort: { field: OverdueClientsSortField; direction: 'asc' | 'desc' } | undefined
+): OverdueSnapshotEntry[] {
+  const sortField = sort?.field ?? 'oldestDueDate';
+  const direction = sort?.direction ?? 'desc'; // mas vencido primero por default, tiene mas sentido para cobranzas
+  return [...entries].sort((a, b) => {
+    const cmp = compareOverdueRows(a.row, b.row, sortField);
+    const primary = direction === 'asc' ? cmp : -cmp;
+    // Desempate estable por id (3.3).
+    return primary !== 0 ? primary : a.row.clientId.localeCompare(b.row.clientId);
+  });
 }
 
 // Agregados por tramo (M4): sobre TODAS las facturas vencidas de los
@@ -388,7 +506,7 @@ export async function getOverdueClientsPage(
   await delay(SIMULATED_DELAY_MS);
 
   const { filters, sort, page, pageSize } = query;
-  const snapshot = getOverdueSnapshot();
+  const snapshot = applyDateRangeToSnapshot(getOverdueSnapshot(), filters.dateFrom, filters.dateTo);
 
   const inScope = snapshot.filter((entry) =>
     matchesSearch(entry.row.clientName, entry.row.cuit, filters.search)
@@ -400,14 +518,7 @@ export async function getOverdueClientsPage(
     ? inScope.filter((entry) => entry.row.oldestBucket === filters.bucket)
     : inScope;
 
-  const sortField = sort?.field ?? 'oldestDueDate';
-  const direction = sort?.direction ?? 'desc'; // mas vencido primero por default, tiene mas sentido para cobranzas
-  const sorted = [...filtered].sort((a, b) => {
-    const cmp = compareOverdueRows(a.row, b.row, sortField);
-    const primary = direction === 'asc' ? cmp : -cmp;
-    // Desempate estable por id (3.3).
-    return primary !== 0 ? primary : a.row.clientId.localeCompare(b.row.clientId);
-  });
+  const sorted = sortOverdueEntries(filtered, sort);
 
   const total = sorted.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -422,4 +533,25 @@ export async function getOverdueClientsPage(
     pageSize,
     aggregates,
   };
+}
+
+// Exportar (tarea transversal, DECISIONES_TECNICAS.md): TODO lo que
+// matchea filtros+tramo, sin paginar, hasta MAX_EXPORT_ROWS. Reusa
+// applyDateRangeToSnapshot/sortOverdueEntries (misma logica que
+// getOverdueClientsPage, no duplicada).
+export async function exportOverdueClients(
+  filters: OverdueClientsQueryFilters,
+  sort?: { field: OverdueClientsSortField; direction: 'asc' | 'desc' }
+): Promise<ExportResult<OverdueClientRow>> {
+  await delay(SIMULATED_DELAY_MS);
+
+  const snapshot = applyDateRangeToSnapshot(getOverdueSnapshot(), filters.dateFrom, filters.dateTo);
+  const inScope = snapshot.filter((entry) => matchesSearch(entry.row.clientName, entry.row.cuit, filters.search));
+  const filtered = filters.bucket ? inScope.filter((entry) => entry.row.oldestBucket === filters.bucket) : inScope;
+  const sorted = sortOverdueEntries(filtered, sort);
+
+  const truncated = sorted.length > MAX_EXPORT_ROWS;
+  const items = sorted.slice(0, MAX_EXPORT_ROWS).map((entry) => entry.row);
+
+  return { items: structuredClone(items), truncated };
 }
