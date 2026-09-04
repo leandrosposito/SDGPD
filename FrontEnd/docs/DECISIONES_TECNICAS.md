@@ -785,3 +785,32 @@ Si el total filtrado excede `MAX_EXPORT_ROWS`, `exportX` corta ahí y devuelve `
 
 ### 9. No se tocó `TabImportExport.tsx`
 Sus dos botones "Exportar Inventario (CSV)"/"Exportar Lista de Precios" siguen decorativos (sin `onClick`), tal como se pidió explícitamente — pertenecen a otro alcance (import/export masivo de todo el catálogo, no un listado paginado filtrado) y no se activaron ni se borraron.
+
+## [03/09/2026] — Contención de errores en dos niveles (Tanda 0 de escalabilidad)
+
+### 1. Contexto
+Primera tanda de un plan de escalabilidad derivado de `docs/AUDITORIA_ESCALABILIDAD.md`: red de seguridad ante errores, deliberadamente ANTES de tocar la capa de datos (Tanda 1), porque cualquier refactor posterior necesita poder fallar sin tirar abajo toda la aplicación. Ataca el hallazgo D4 de la auditoría ("sin `ErrorBoundary` global — un error de render no capturado en cualquier punto fuera de los 6 boundaries locales rompe toda la aplicación a pantalla en blanco").
+
+### 2. Dos niveles de contención, no uno
+- **Global** (`shared/routes/AppRoutes.tsx`): envuelve `<Routes>` (adentro de `<BrowserRouter>`, no afuera — el fallback usa `<Link to="/">` para "Volver al inicio", que necesita contexto de Router). Es la red de última instancia: si algo rompe fuera de una ruta puntual (el propio `AppShell`, `Sidebar`, `Header`), este boundary lo atrapa.
+- **Por ruta** (`shared/layouts/AppShell.tsx`): envuelve solo `<Outlet />`, con `resetKey={location.pathname}`. Si el módulo que se está viendo rompe, el resto de la app (Sidebar, Header, selector de sucursal) sigue vivo — el usuario puede navegar a otra sección sin recargar la página. `resetKey` atado al pathname hace que cambiar de ruta limpie el estado de error automáticamente: sin esto, el usuario podía quedar "atrapado" viendo el fallback de una pantalla que ya abandonó.
+
+### 3. Se extendió el `ErrorBoundary` existente, no se creó uno nuevo
+Antes de escribir código se encontró que `src/shared/components/ui/ErrorBoundary.tsx` ya existía (51 líneas, class component, usado en 6 puntos: `ClientAccountsTable`, `ClientOverdueTable`, `TabPendingReceipt`, `ComprasPage`, `TabLowStock`, `LogisticsPage`, todos con las props `fallbackTitle`/`fallbackMessage`). Se extendió ese mismo archivo — agregando `fallback` (render prop), `onReset`, `resetKey` con auto-reset en `componentDidUpdate`, y los botones "Reintentar"/"Volver al inicio" al fallback por default — en vez de crear un componente paralelo. Retrocompatible: los 6 usos existentes siguen funcionando sin tocarlos, heredan el fallback nuevo (con los dos botones) automáticamente porque ninguno pasa `fallback` custom.
+
+**Por qué class component, no hook:** React no tiene equivalente en hooks para `getDerivedStateFromError`/`componentDidCatch` — un error boundary tiene que ser una clase, sin excepción, con cualquier versión de React actual (incluida la 19 de este proyecto).
+
+**Por qué sin librería externa (`react-error-boundary` u otra):** decisión explícita de la tarea, coherente con la norma de no-duplicación ya vigente en el proyecto (`[25/08/2026] — Utilidades Esenciales del Frontend`) — el boundary a mano ya cubre lo que se necesita (dos niveles, reset manual y automático, fallback custom opcional) sin sumar una dependencia nueva para ~80 líneas de lógica.
+
+### 4. `logError` — punto único de logging, enganche para telemetría futura
+`shared/utils/logError.ts`: `logError(error: unknown, context?: Record<string, unknown>): void`, hoy hace `console.error('[SDGPD]', { message, stack, context, timestamp })`. Se llama desde `ErrorBoundary#componentDidCatch` (pasando `{ componentStack: errorInfo.componentStack }` como contexto). El punto de la función es ser el único lugar que un día cambie para mandar errores a un servicio real (Sentry, un endpoint propio) — ese día cambia la implementación de `logError`, no cada uno de los lugares que la llaman. No se integró ningún servicio externo ahora (fuera de alcance explícito).
+
+### 5. Por qué se recreó `shared/utils/`
+La carpeta se había eliminado explícitamente en la limpieza del 28/08 (`FrontEnd/CLAUDE.md`, sección "Removed placeholder folders") por estar vacía/sin uso real, con la nota explícita de "no recrear sin decisión nueva que lo justifique explícitamente". Esta es esa decisión: `logError.ts` no es un placeholder — tiene un consumidor real e inmediato (`ErrorBoundary`) desde el momento en que se creó, y es exactamente el tipo de utilidad genérica (sin conocimiento de dominio, sin componente) para la que esa carpeta existe en cualquier proyecto React convencional. No se recreó ninguna otra de las carpetas eliminadas en esa limpieza (`core/`, `infrastructure/`, `shared/services/`, `modules/_template/`).
+
+### 6. `ErrorState`/`LoadingState` — creados, sin cablear todavía
+`shared/components/ui/{ErrorState,LoadingState}.tsx`: componentes genéricos para estados async (a diferencia de `ErrorBoundary`, que atrapa errores de *render*, estos son para cuando un fetch ya resolvió con error, o todavía no resolvió). Se crearon en esta tanda pero **no se cablearon en ningún listado todavía** — eso quedó para la tanda siguiente (Tanda 1, piloto `suppliers`), a propósito: esta tanda es solo infraestructura de contención, no una pasada de UI sobre los 22 listados de la auditoría.
+
+### 7. Verificación funcional
+**Verificación funcional en navegador: PARCIAL (04/09/2026)** — se confirmó el escenario normal en Proveedores (carga contra la capa `api/`, paginación y orden server-side, alta de proveedor), sin regresiones visuales ni errores. Los escenarios de Tanda 0 (provocar un error de render) y varios de Tanda 1 (latencia alta, fallo forzado, reintentos con debug, deep-link, cancelación por tipeo, cambio de sucursal) todavía no se ejecutaron. Detalle completo, punto por punto, en `docs/VERIFICACION_TANDA_0_1.md`.
+
