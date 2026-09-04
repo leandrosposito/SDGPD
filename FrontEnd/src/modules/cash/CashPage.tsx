@@ -1,42 +1,83 @@
-import { useState, type FC } from 'react';
-import { CASH_MOCK_DATA } from '@/data/mock/cash.data';
-import type { CashTransaction } from '@/shared/types/cash.types';
+import { useEffect, useMemo, useState, type FC } from 'react';
+import { toast } from 'sonner';
+import { Pagination } from '@/shared/components/ui/Pagination';
+import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary';
+import { ErrorState } from '@/shared/components/ui/ErrorState';
+import { LoadingState } from '@/shared/components/ui/LoadingState';
+import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay';
+import { usePagedQuery } from '@/shared/hooks/usePagedQuery';
+import { useSessionStore } from '@/shared/state/useSessionStore';
 import { CashKPIs } from './components/CashKPIs';
 import { CashTransactionsTable } from './components/CashTransactionsTable';
-import { NewTransactionModal, type NewTransactionData } from './components/NewTransactionModal';
+import { NewTransactionModal } from './components/NewTransactionModal';
+import {
+  getCashTransactionsPage,
+  createCashTransaction,
+  type CashMovementsQueryFilters,
+  type CashTransactionFormInput,
+} from './api/cash.service';
 import './CashPage.css';
 
 // ============================================================
-// CashPage — Caja (Flujo de caja diario)
+// CashPage — Caja (Flujo de caja diario), Tanda 3b de escalabilidad.
+// Tercer módulo migrado a la capa api/ (segundo sin service previo,
+// después de orders en Tanda 3a) — antes leía data/mock/cash.data.ts
+// directo en un useState, y las mutaciones se perdían al desmontar
+// (ítem 8 de PENDIENTES.md, ahora cerrado por completo).
+//
+// Sin filtro de sucursal a propósito (confirmado explícitamente antes
+// de implementar, no asumido — la hipótesis inicial de la tarea era
+// que Caja SÍ tenía sucursal): ni `CashTransaction` ni `CashRegister`
+// tienen ningún campo de sucursal, y a diferencia de `orders` (que al
+// menos usaba `activeBranchId` transitoriamente), acá no hay ninguna
+// referencia a sucursal en todo el módulo.
 // ============================================================
 
 export const CashPage: FC = () => {
-  const [cashData, setCashData] = useState(CASH_MOCK_DATA);
+  const empresaId = useSessionStore((s) => s.session?.company.id);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const handleSaveTransaction = (data: NewTransactionData) => {
-    const newTx: CashTransaction = {
-      id: `ctx-new-${Date.now()}`,
-      ...data
-    };
+  const filters: CashMovementsQueryFilters = useMemo(() => ({ empresaId: empresaId ?? '' }), [empresaId]);
 
-    setCashData(prev => {
-      // Recalculate balances
-      const isIncome = newTx.type === 'income';
-      const newTotalIncome = prev.totalIncome + (isIncome ? newTx.amount : 0);
-      const newTotalExpense = prev.totalExpense + (!isIncome ? newTx.amount : 0);
-      const newCurrentBalance = prev.initialBalance + newTotalIncome - newTotalExpense;
+  const {
+    items: transactions,
+    aggregates,
+    page,
+    pageSize,
+    totalItems,
+    totalPages,
+    isLoading,
+    isFetching,
+    error,
+    setPage,
+    setPageSize,
+    refetch,
+  } = usePagedQuery(getCashTransactionsPage, filters, { enabled: Boolean(empresaId) });
 
-      return {
-        ...prev,
-        totalIncome: newTotalIncome,
-        totalExpense: newTotalExpense,
-        currentBalance: newCurrentBalance,
-        transactions: [newTx, ...prev.transactions]
-      };
-    });
+  useEffect(() => {
+    if (error) toast.error('No se pudo cargar el movimiento de caja.');
+  }, [error]);
 
-    setIsModalOpen(false);
+  // P10 (DECISIONES_TECNICAS.md): tras crear un movimiento se vuelve a
+  // pedir la página vigente al service (refetch), en vez de actualizar
+  // `transactions`/saldos a mano en el cliente — antes de esta tanda,
+  // CashPage.tsx recalculaba totalIncome/totalExpense/currentBalance
+  // sumando incrementalmente sobre el estado anterior; ahora esos
+  // agregados los recalcula el service sobre TODAS las transacciones
+  // reales (P3), sin riesgo de desincronizarse.
+  const handleSaveTransaction = async (data: CashTransactionFormInput) => {
+    if (!empresaId) {
+      toast.error('Todavia no hay una sesion activa.');
+      return;
+    }
+    try {
+      await createCashTransaction(empresaId, data);
+      toast.success('Movimiento guardado con exito!');
+      refetch();
+      setIsModalOpen(false);
+    } catch {
+      toast.error('No se pudo guardar el movimiento.');
+    }
   };
 
   return (
@@ -56,12 +97,35 @@ export const CashPage: FC = () => {
         </div>
       </header>
 
-      <CashKPIs cashData={cashData} />
+      {!empresaId || isLoading ? (
+        <LoadingState message="Cargando caja..." />
+      ) : error ? (
+        <ErrorState message="No se pudo cargar la caja." onRetry={refetch} />
+      ) : (
+        <>
+          <CashKPIs aggregates={aggregates} />
 
-      <div className="cash-page__table-container">
-        <h3 className="cash-page__table-title">Libro Diario (Movimientos Unificados)</h3>
-        <CashTransactionsTable transactions={cashData.transactions} />
-      </div>
+          <div className="cash-page__table-container">
+            <h3 className="cash-page__table-title">Libro Diario (Movimientos Unificados)</h3>
+            <ErrorBoundary
+              fallbackTitle="No se pudo mostrar el libro diario."
+              fallbackMessage="Intenta de nuevo o volve al inicio."
+            >
+              <FetchingOverlay isFetching={isFetching}>
+                <CashTransactionsTable transactions={transactions} />
+              </FetchingOverlay>
+              <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                pageSize={pageSize}
+                onPageChange={setPage}
+                onPageSizeChange={setPageSize}
+              />
+            </ErrorBoundary>
+          </div>
+        </>
+      )}
 
       <NewTransactionModal
         isOpen={isModalOpen}

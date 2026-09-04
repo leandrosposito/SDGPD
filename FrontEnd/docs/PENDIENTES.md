@@ -106,26 +106,27 @@ Tanda 3 si conviene migrarlos a `usePagedQuery` (paginación server-side real) e
 de mantenerlos como catálogo cacheado sin límite. Pregunta abierta ya registrada en
 `RELEVAMIENTO_CACHE.md` (#5), repetida acá para que no se pierda entre documentos.
 
-### 8. Caja sin capa de servicio — Severidad: Media (Pedidos ya resuelto)
+### 8. Pedidos y Caja sin capa de servicio — Severidad: Media — CERRADO A NIVEL DE CÓDIGO (04/09/2026), sin verificación funcional confirmada
 
-`CashPage.tsx` (`useState(CASH_MOCK_DATA)`) inicializa su estado directo desde el mock
-importado, sin ningún `cash.service.ts` de por medio (a diferencia de
-`products.service.ts`, que sí mantiene un store en memoria entre lecturas) — cualquier
-alta/edición hecha con `setCashData` durante la sesión se pierde apenas el componente
-se desmonta (navegar a otra pantalla y volver). Mismo problema de arquitectura ya
-descripto en Tanda 2.5, no de cache.
+`OrdersPage.tsx` y `CashPage.tsx` inicializaban su estado directo desde el mock
+importado (`useState<Order[]>(ORDERS_MOCK_DATA)` / `useState(CASH_MOCK_DATA)`), sin
+ningún service de por medio — cualquier alta/edición se perdía apenas el componente
+se desmontaba (navegar a otra pantalla y volver).
 
-**Pedidos (`orders`) resuelto a nivel de código en Tanda 3a (04/09/2026), sin
-verificación funcional confirmada todavía.** `OrdersPage.tsx` migró a la capa `api/`
-completa (`modules/orders/api/{dto,mapper,orders.service}.ts`), con un store en
-memoria en el service (mismo patrón que `products.service.ts`) — por diseño, las
-mutaciones (crear pedido, cambiar estado, cancelar) ya deberían sobrevivir a navegar
-afuera y volver, pero esto **no se probó en el navegador**: el commit de esa tanda se
-autorizó en base a `tsc -b`/`lint`/`build` limpios, no en base a este checklist. El
-punto 4 de `docs/VERIFICACION_TANDA_3A.md` (exactamente este comportamiento) sigue
-"No ejecutado" — hasta que se confirme, este ítem se considera resuelto por código,
-no verificado en los hechos.
-`Caja` sigue con el problema original, sin resolver.
+**Los dos migraron a la capa `api/` completa, con store en memoria en el service
+(mismo patrón que `products.service.ts`):**
+- **Pedidos (`orders`)** — Tanda 3a (04/09/2026), `modules/orders/api/{dto,mapper,orders.service}.ts`.
+- **Caja (`cash`)** — Tanda 3b (04/09/2026), `modules/cash/api/{dto,mapper,cash.service}.ts`.
+
+Por diseño, las mutaciones de ambos módulos (crear, cambiar estado/movimiento) ya
+deberían sobrevivir a navegar afuera y volver — **pero esto no se probó en el
+navegador para ninguno de los dos**: los commits de las dos tandas se autorizaron en
+base a `tsc -b`/`lint`/`build` limpios y análisis de código, no en base a estos
+checklists. El punto 4 de `docs/VERIFICACION_TANDA_3A.md` (Pedidos) y el punto 4 de
+`docs/VERIFICACION_TANDA_3B.md` (Caja) — exactamente este comportamiento en cada
+módulo — siguen "No ejecutado". Hasta que se confirmen, este ítem se considera
+**resuelto por código, no verificado en los hechos** — se deja este matiz explícito
+en vez de marcarlo simplemente "cerrado".
 
 ---
 
@@ -180,6 +181,6 @@ escáner físico normalmente no dispara dos `Enter` en un intervalo tan corto.
 | 5 | Verificación funcional Tandas 0/1 (puntos 1-5, 7-10, 12-13) | Vigente | Media-Alta |
 | 6 | `useSessionStore` mezcla server state (session) y UI state (activeBranchId) | Vigente | Baja |
 | 7 | Catálogo de Productos/Proveedores sin paginar, solo cacheado | Vigente — evaluar Tanda 3 | Baja (hoy) |
-| 8 | Caja sin capa de servicio (mutaciones se pierden al desmontar) | Vigente (Pedidos resuelto por código en Tanda 3a, sin verificar) | Media |
+| 8 | Pedidos y Caja sin capa de servicio (mutaciones se pierden al desmontar) | Resuelto por código (Tanda 3a/3b), sin verificar en navegador | Media |
 | — | `NewTransactionModal` formato de hora | No reproduce | — |
 | — | `OrderProductsSection` `await` faltante | No reproduce (resuelto o nunca existió así) | — |

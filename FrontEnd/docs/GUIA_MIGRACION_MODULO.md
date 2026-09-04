@@ -139,6 +139,12 @@ Si el módulo tenía su propio contador de "N de M resultados" (fuera del `<Pagi
 ### 4. El service nuevo tiene que generar los campos que antes generaba el componente en el alta
 Sin service previo, el componente de alta (`CreateOrderModal.tsx` en este caso) probablemente arma el objeto completo a mano — incluido el `id` falso (`Date.now()`), la fecha, el estado inicial y el primer evento de historial. Al mover esto al service (`createOrder`), esa generación se muda ahí — el componente pasa a mandar solo el `FormInput` (los campos que el usuario realmente completó) y recibe de vuelta la entidad ya completa con `id`/fecha/estado reales. Es el mismo criterio que ya usaba `createSupplier`, pero acá había que migrarlo desde cero en vez de solo repuntear un import.
 
+### 5. El dominio puede ser un objeto único con agregados adentro, no una lista de entidades (Tanda 3b, `cash`)
+`orders`/`suppliers` son arrays de entidades independientes — pero no todos los módulos sin service previo van a tener esa forma. `cash` era un único `CashRegister { initialBalance, totalIncome, totalExpense, currentBalance, expenseAnalysis, transactions[] }`: "la caja de hoy", con los saldos/totales ya calculados adentro del mismo objeto y un array anidado (`transactions`) que es lo único que en verdad se pagina. Antes de escribir el DTO, identificá cuál es la ENTIDAD que se pagina (acá, `CashTransaction`, no `CashRegister`) — el resto de los campos del objeto envolvente (saldos, análisis) son candidatos directos a `TAggregates` (aprendizaje 2), no a la forma de un ítem de la página.
+
+### 6. Preguntate explícitamente si la mutación invalida algo de OTRO módulo — y documentá "no" con el motivo si la respuesta es esa
+El ejemplo ya conocido (Inventario→Compras, Tanda 2.5) tiene un vínculo real: `generatePurchaseOrderFromSuggestion` crea una `PurchaseOrder` de verdad. No asumas que todo módulo nuevo tiene un caso análogo — en `cash`, los campos que a simple vista "suenan" a vínculo con otro módulo (`entity`, categorías como `'collection'`/`'cobro'` o `'supplier'`/`'pago_proveedor'`) resultaron ser texto libre sin ninguna referencia real (`ClientAccount.id`/`Supplier.id`) en el código. Revisalo igual, y si la respuesta es "no hay invalidación cruzada", dejalo escrito en la tabla de `DECISIONES_TECNICAS.md` con el motivo — no lo omitas en silencio, para que quede claro que se evaluó y no que se pasó por alto.
+
 ---
 
 ## Checklist de cierre por módulo
@@ -160,7 +166,7 @@ Antes de dar un módulo por migrado:
 
 - [ ] `src/modules/clients/ClientsPage.tsx` (+ `components/ClientDirectoryTable.tsx`) — Directorio de Clientes. **Sin `branchId`** (mismo dominio que `ClientAccount`, ya confirmado M9).
 - [x] ~~`src/modules/orders/OrdersPage.tsx` — Pedidos.~~ **Migrado en Tanda 3a** (04/09/2026). Sin `branchId` — confirmado contra el código (no tenía ningún campo de sucursal), contradecía la decisión inicial que asumía `branchId`, se paró y se confirmó antes de implementar. Primer módulo migrado sin service previo — ver la sección "Migrar un módulo SIN service previo" más arriba.
-- [ ] `src/modules/cash/CashPage.tsx` — Caja. Probablemente **con `branchId`** (una caja es de una sucursal física) — confirmar igual, no asumir.
+- [x] ~~`src/modules/cash/CashPage.tsx` — Caja.~~ **Migrado en Tanda 3b** (04/09/2026). Sin `branchId` — la hipótesis "probablemente con branchId" de esta misma lista NO se sostuvo: `grep` contra el código no encontró ninguna referencia a sucursal en todo el módulo, ni siquiera transitoria (más contundente que `orders`). Confirmado con el usuario antes de implementar. Segundo módulo migrado sin service previo, y primero con el dominio como objeto único (no lista) — ver aprendizajes 5 y 6 en la sección de arriba.
 - [ ] `src/modules/analytics/AnalyticsPage.tsx` — Analítica. Mayormente gráficos/KPIs, no una tabla paginable clásica — evaluar si aplica el mismo patrón o si necesita uno propio (agregados, no filas).
 - [ ] `src/modules/settings/components/tabs/TabUsersRoles.tsx` — Configuración, Usuarios y Roles. **Sin `branchId`** (es de la empresa).
 - [ ] `src/modules/settings/components/tabs/TabSubscription.tsx` — Configuración, Suscripción/Facturas. **Sin `branchId`**.
@@ -177,4 +183,4 @@ Antes de dar un módulo por migrado:
 
 ---
 
-**Verificación funcional en navegador PENDIENTE (del propio piloto `suppliers` que esta guía usa como plantilla) — ver `docs/VERIFICACION_TANDA_0_1.md`.** El cambio de Tanda 2 (cache/dedupe/invalidación vía TanStack Query, transparente para esta guía) tiene su propio checklist, también pendiente — ver `docs/VERIFICACION_TANDA_2.md`. Lo mismo para Tanda 2.5 (`useCachedQuery`, httpClient unificado) — ver `docs/VERIFICACION_TANDA_2_5.md`. Y para Tanda 3a (`orders`, primer módulo sin service previo) — ver `docs/VERIFICACION_TANDA_3A.md`.
+**Verificación funcional en navegador PENDIENTE (del propio piloto `suppliers` que esta guía usa como plantilla) — ver `docs/VERIFICACION_TANDA_0_1.md`.** El cambio de Tanda 2 (cache/dedupe/invalidación vía TanStack Query, transparente para esta guía) tiene su propio checklist, también pendiente — ver `docs/VERIFICACION_TANDA_2.md`. Lo mismo para Tanda 2.5 (`useCachedQuery`, httpClient unificado) — ver `docs/VERIFICACION_TANDA_2_5.md`. Y para Tanda 3a (`orders`, primer módulo sin service previo) — ver `docs/VERIFICACION_TANDA_3A.md`. Y para Tanda 3b (`cash`, segundo módulo sin service previo) — ver `docs/VERIFICACION_TANDA_3B.md`.

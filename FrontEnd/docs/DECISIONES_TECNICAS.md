@@ -958,6 +958,7 @@ Quirúrgica por prefijo de key (punto 5), nunca un barrido total — el barrido 
 | Crear pedido | `CreateOrderModal.tsx#handleConfirm` (crea) + `OrdersPage.tsx#handleCreateOrder` (refresca) | Ninguna key de `useCachedQuery`/invalidación cruzada — `orders` no comparte cache con ningún otro módulo. Se resuelve con el `refetch()` de `usePagedQuery` (`getOrdersPage`, Tanda 2) sobre el propio listado, mismo mecanismo que "Cambiar estado de OC" sobre Compras. |
 | Avanzar estado de pedido | `OrdersPage.tsx#handleAdvanceStatus` | Igual que arriba — `refetch()` sobre `getOrdersPage`. |
 | Cancelar pedido | `OrdersPage.tsx#handleCancel` | Igual que arriba — `refetch()` sobre `getOrdersPage`. |
+| Crear movimiento de caja | `CashPage.tsx#handleSaveTransaction` | Ninguna invalidación cruzada — se resuelve con `refetch()` sobre `getCashTransactionsPage` (Tanda 2). `entity`/`linkedVoucher` de `CashTransaction` son texto libre en el código actual (no una referencia real a `ClientAccount.id`/`Supplier.id`), así que un movimiento de caja no toca ningún dato de otro módulo — a diferencia del caso Inventario→Compras, acá no hay ningún vínculo real que invalidar. |
 
 ### 9. Decisiones cerradas de esta tanda (no quedan como preguntas abiertas)
 - **Catálogo de productos: alcance EMPRESA, no sucursal.** El producto existe independientemente de dónde haya stock — mismo criterio que ya se había confirmado para `Supplier`/`ClientAccount`, ahora extendido explícitamente a `InventoryItem`. El STOCK de un producto sí es de sucursal (sin cambios, ya lo era).
@@ -1001,3 +1002,35 @@ Las 3 mutaciones de `orders` (crear, avanzar estado, cancelar) se resuelven con 
 
 ### 10. Verificación funcional
 **Verificación funcional en navegador: NO EJECUTADA (04/09/2026)** — el commit de esta tanda se autorizó en base a `tsc -b`/`npm run lint`/`npm run build` limpios y análisis de código, sin correr el checklist en el navegador. En particular, el punto 4 de `docs/VERIFICACION_TANDA_3A.md` (que un pedido creado sobreviva a navegar afuera y volver — el objetivo central de esta tanda) queda sin confirmar. El cierre del ítem 8 de `docs/PENDIENTES.md` es por código (el store en memoria de `orders.service.ts`), no por verificación funcional. Detalle completo en `docs/VERIFICACION_TANDA_3A.md`.
+
+## [04/09/2026] — Migración de `cash` (Caja), Tanda 3b de escalabilidad
+
+### 1. Contexto
+Cierra el ítem 8 de `docs/PENDIENTES.md` por completo (la parte de Caja — Pedidos ya se había resuelto en Tanda 3a) y ataca los hallazgos #3 y #6 de `docs/AUDITORIA_ESCALABILIDAD.md`. Tercer módulo migrado a la capa `api/`, segundo sin service previo — sigue al pie la sección "Migrar un módulo SIN service previo" de `docs/GUIA_MIGRACION_MODULO.md`, escrita específicamente a partir de lo aprendido en Tanda 3a para este caso.
+
+### 2. Hipótesis de scope contradicha — de forma más contundente que en `orders`
+La tarea partía de una hipótesis explícita ("una caja es un objeto físico de un local, con `branchId`"), marcada como hipótesis a verificar, no como decisión cerrada. `grep -rn "branch|Branch|sucursal|activeBranchId" src/modules/cash/` devolvió **vacío** — ni `CashTransaction` ni `CashRegister` tienen ningún campo de sucursal, y a diferencia de `orders` (que al menos usaba `activeBranchId` de forma transitoria para consultar stock), en `cash` no hay **ninguna** referencia a sucursal en todo el módulo. Se paró la implementación y se confirmó con el usuario: `cash` migra **sin `branchId`**, mismo criterio que `orders`/`Supplier`/`ClientAccount`.
+
+### 3. `CashRegister` es un objeto único, no una lista — `CashTransaction` es lo que se pagina
+A diferencia de `orders`/`suppliers` (arrays de entidades independientes), el dominio de Caja es "la caja de hoy": un único `CashRegister { date, initialBalance, totalIncome, totalExpense, currentBalance, expenseAnalysis, transactions[] }`. Lo que se pagina es `transactions: CashTransaction[]` — los saldos/totales del `CashRegister` pasan a ser `CashAggregates` (P3), no un registro de la página. `PENDING_VOUCHERS_MOCK` (comprobantes pendientes por cliente, en `data/mock/cash.data.ts`) se confirmó sin ningún consumidor en todo el proyecto (`grep` vacío) — no se migró, queda como código muerto preexistente, fuera de alcance de esta tanda.
+
+### 4. Agregados server-side reemplazan un cálculo incremental frágil (aprendizaje 2 de la guía)
+Antes de esta tanda, `CashPage.tsx#handleSaveTransaction` mantenía `totalIncome`/`totalExpense`/`currentBalance` sumando incrementalmente sobre el estado anterior en cada alta — cualquier fuente de verdad distinta de "recorrer las transacciones reales" puede desincronizarse con el tiempo. Ahora `CashAggregates` (`cash.service.ts`) se recalcula sobre **todo** el store en cada consulta: `totalIncome`/`totalExpense` sumando por tipo, `currentBalance = initialBalance + totalIncome - totalExpense`. `expenseAnalysis.topCategories` también pasó de ser un array fijo de 3 categorías del mock (nunca recalculado, ni antes ni después de una mutación) a agruparse de verdad sobre los egresos reales por categoría. `expenseAnalysis.trendLabel/trendPercentage/isNegativeTrend` ("vs mes anterior") siguen siendo un valor fijo — no hay datos de un período anterior en el mock para calcular una tendencia real, mismo criterio que `FAKE_TODAY` en `orders.service.ts` (Tanda 3a): un hack preexistente que esta tanda no corrige.
+
+### 5. Sin invalidación cruzada — a diferencia de Inventario→Compras, acá no hay ningún vínculo real
+`CashTransaction.entity`/`linkedVoucher` son campos de **texto libre** (`<input type="text">`), no una referencia real a `ClientAccount.id`/`Supplier.id`. Se evaluó explícitamente (pedido de la tarea) si crear un movimiento de caja debía invalidar algo de `clients`/`suppliers` — no hay ningún vínculo estructural en el código actual que invalidar. Documentado en la tabla de invalidación como "ninguna", con la razón explícita, en vez de omitirlo silenciosamente.
+
+### 6. Store en memoria — resuelve el ítem 8 de `PENDIENTES.md` para Caja
+`cashTransactionsDTOStore` (reasignado, nunca mutado in-place) sobrevive al desmontaje de `CashPage` — mismo patrón que `orders`/`products`/`suppliers`. Con esto, el ítem 8 de `PENDIENTES.md` queda resuelto por código para los dos módulos que lo tenían (Pedidos en Tanda 3a, Caja acá).
+
+### 7. Sin filtros/búsqueda que migrar — la UI original no tenía ninguno
+`CashPage.tsx` nunca tuvo buscador, filtro ni selector de rango de fecha (a diferencia de `orders`) — la única "operación" era un `.sort()` por hora descendente dentro de `CashTransactionsTable.tsx`, ahora resuelto server-side (`CashSortField = 'time'`, único valor posible, sin selector de columna en la UI porque tampoco existía antes). No se inventó ningún filtro nuevo que la UI original no pedía.
+
+### 8. Bug de formato de hora — reconfirmado que NO reproduce, segunda vez
+`NewTransactionModal.tsx:39` sigue con `hour12: false` explícito — genera `HH:mm` (24h), compatible con el `<input type="time">`. Confirmado por segunda vez (primera vez: sesión de `PENDIENTES.md`; esta vez: reconocimiento de Tanda 3b) — no se tocó nada de esa lógica.
+
+### 9. Tabla de invalidación por mutación — fila agregada
+Ver la fila "Crear movimiento de caja" en la tabla de la entrada de Tanda 2.5 (arriba) — sin invalidación cruzada, solo `refetch()` local sobre `getCashTransactionsPage`.
+
+### 10. Verificación funcional
+**Verificación funcional en navegador: NO EJECUTADA (04/09/2026)** — el commit de esta tanda se autorizó en base a `tsc -b`/`npm run lint`/`npm run build` limpios y análisis de código, sin correr el checklist en el navegador. En particular, el punto 4 de `docs/VERIFICACION_TANDA_3B.md` (que un movimiento creado sobreviva a navegar afuera y volver — el objetivo central de esta tanda) queda sin confirmar. El cierre del ítem 8 de `docs/PENDIENTES.md` (parte Caja) es por código (el store en memoria de `cash.service.ts`), no por verificación funcional. Detalle completo en `docs/VERIFICACION_TANDA_3B.md`.

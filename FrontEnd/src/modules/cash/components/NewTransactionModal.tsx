@@ -2,15 +2,18 @@ import { useState, useEffect, type FC } from 'react';
 import { Modal } from '@/shared/components/ui/Modal';
 import { TransactionTypeSelector } from './TransactionTypeSelector';
 import { TransactionDropzone } from './TransactionDropzone';
-import type { CashTransaction, TransactionCategory, TransactionType } from '@/shared/types/cash.types';
+import type { TransactionCategory, TransactionType } from '@/shared/types/cash.types';
+import type { CashTransactionFormInput } from '@/modules/cash/api/cash.service';
 import './CashTransactionModal.css';
 
-export type NewTransactionData = Omit<CashTransaction, 'id'>;
-
+// Tanda 3b: el tipo del payload de alta vive en el service
+// (`CashTransactionFormInput`, re-exportado desde `mapper.ts` — mismo
+// criterio que `OrderFormInput` en orders), no un tipo local propio
+// del modal.
 interface NewTransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: NewTransactionData) => void;
+  onSave: (data: CashTransactionFormInput) => void;
 }
 
 export const NewTransactionModal: FC<NewTransactionModalProps> = ({ isOpen, onClose, onSave }) => {

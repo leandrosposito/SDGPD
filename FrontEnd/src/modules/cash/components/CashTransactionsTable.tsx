@@ -15,14 +15,14 @@ function formatCurrency(value: number): string {
   }).format(value);
 }
 
+// Tanda 3b: ya no ordena en memoria — cash.service.ts#getCashTransactionsPage
+// devuelve las transacciones ordenadas por hora descendente (mismo
+// orden que antes), server-side.
 export const CashTransactionsTable: FC<CashTransactionsTableProps> = ({ transactions }) => {
-  // Ordenar por hora (descendente para ver los mas recientes primero)
-  const sortedTransactions = [...transactions].sort((a, b) => b.time.localeCompare(a.time));
-
   return (
     <div className="cash-transactions-table-wrapper">
       <Table
-        data={sortedTransactions}
+        data={transactions}
         keyExtractor={(t) => t.id}
         columns={[
           { 
