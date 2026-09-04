@@ -161,11 +161,12 @@ export async function exportSuppliers(
 // propio panel de detalle/formulario. Sin filtros/paginacion — trae
 // todo lo de la empresa, mismo alcance que el fetchSuppliers() previo
 // a esta tanda.
-export async function fetchSuppliers(empresaId: string): Promise<Supplier[]> {
+export async function fetchSuppliers(empresaId: string, signal?: AbortSignal): Promise<Supplier[]> {
   const dtos = await httpClient.request<SupplierDTO[]>({
     method: 'GET',
     path: '/suppliers',
     params: { empresaId },
+    signal,
     mock: () => suppliersDTOStore,
   });
   return dtos.map(supplierFromDTO);

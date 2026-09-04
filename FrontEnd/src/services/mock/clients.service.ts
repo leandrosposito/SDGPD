@@ -14,63 +14,73 @@ import type {
 import type { PageQuery, PageResult, DateRangeQueryFilters, ExportResult } from '@/shared/types/pagination.types';
 import { MAX_EXPORT_ROWS } from '@/shared/types/pagination.types';
 import { CLIENTS_MOCK_DATA } from '@/data/mock/clients.data';
+import { httpClient } from '@/shared/api/httpClient';
+import { ApiError } from '@/shared/api/ApiError';
 
 // ============================================================
 // CLIENTS SERVICE — RF-CLI-001 (corrige C4: "Guardar" no persistia nada)
 // + deuda vencida / aging (M1-M10, DECISIONES_TECNICAS.md).
-// Simula llamadas asincronicas a una API de Clientes. Sigue el mismo
-// patron que products.service.ts/deliveries.service.ts (delay +
-// structuredClone; el servicio filtra/ordena/cuenta/corta, nunca
-// devuelve el dataset completo para que la vista lo procese — P1).
-// Reemplazar por llamadas HTTP reales cuando exista Backend.
+// Pasa por httpClient (Tanda 2.5 de escalabilidad): timeout,
+// reintentos, cancelacion real y VITE_MOCK_LATENCY_MS/
+// VITE_MOCK_FAILURE_RATE/VITE_API_DEBUG ya no son exclusivos de
+// suppliers.service.ts. El servicio sigue filtrando/ordenando/
+// contando/cortando el (P1) — no devuelve el dataset completo para
+// que la vista lo procese. Reemplazar por llamadas HTTP reales cuando
+// exista Backend (VITE_API_MODE=http, sin tocar ningun call-site).
 // ============================================================
 
-const SIMULATED_DELAY_MS = 400;
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 let clientsStore: ClientAccount[] = structuredClone(CLIENTS_MOCK_DATA);
-
-export class ClientServiceError extends Error {}
 
 export type ClientFormInput = Pick<
   ClientAccount,
   'clientName' | 'cuit' | 'address' | 'phone' | 'zone' | 'sellerName' | 'creditLimit'
 >;
 
-export async function fetchClients(): Promise<ClientAccount[]> {
-  await delay(SIMULATED_DELAY_MS);
-  return structuredClone(clientsStore);
+export async function fetchClients(signal?: AbortSignal): Promise<ClientAccount[]> {
+  return httpClient.request<ClientAccount[]>({
+    method: 'GET',
+    path: '/clients',
+    signal,
+    mock: () => structuredClone(clientsStore),
+  });
 }
 
 export async function createClient(input: ClientFormInput): Promise<ClientAccount> {
-  await delay(SIMULATED_DELAY_MS);
-
-  const newClient: ClientAccount = {
-    ...input,
-    id: `cli-${Date.now()}`,
-    totalDebit: 0,
-    totalCredit: 0,
-    currentBalance: 0,
-    daysOverdue: 0,
-    status: 'Al dia',
-    transactions: [],
-  };
-  clientsStore = [...clientsStore, newClient];
-  return structuredClone(newClient);
+  return httpClient.request<ClientAccount>({
+    method: 'POST',
+    path: '/clients',
+    body: input,
+    mock: () => {
+      const newClient: ClientAccount = {
+        ...input,
+        id: `cli-${Date.now()}`,
+        totalDebit: 0,
+        totalCredit: 0,
+        currentBalance: 0,
+        daysOverdue: 0,
+        status: 'Al dia',
+        transactions: [],
+      };
+      clientsStore = [...clientsStore, newClient];
+      return structuredClone(newClient);
+    },
+  });
 }
 
 export async function updateClient(id: string, input: ClientFormInput): Promise<ClientAccount> {
-  await delay(SIMULATED_DELAY_MS);
+  return httpClient.request<ClientAccount>({
+    method: 'PUT',
+    path: `/clients/${id}`,
+    body: input,
+    mock: () => {
+      const existing = clientsStore.find((c) => c.id === id);
+      if (!existing) throw new ApiError(404, 'CLIENT_ERROR', 'El cliente que intenta editar ya no existe.');
 
-  const existing = clientsStore.find((c) => c.id === id);
-  if (!existing) throw new ClientServiceError('El cliente que intenta editar ya no existe.');
-
-  const updated: ClientAccount = { ...existing, ...input };
-  clientsStore = clientsStore.map((c) => (c.id === id ? updated : c));
-  return structuredClone(updated);
+      const updated: ClientAccount = { ...existing, ...input };
+      clientsStore = clientsStore.map((c) => (c.id === id ? updated : c));
+      return structuredClone(updated);
+    },
+  });
 }
 
 // ============================================================
@@ -155,20 +165,35 @@ function sortClientAccounts(
 }
 
 export async function getClientAccountsPage(
-  query: PageQuery<ClientAccountsQueryFilters, ClientAccountsSortField>
+  query: PageQuery<ClientAccountsQueryFilters, ClientAccountsSortField>,
+  signal?: AbortSignal
 ): Promise<PageResult<ClientAccount>> {
-  await delay(SIMULATED_DELAY_MS);
+  return httpClient.request<PageResult<ClientAccount>>({
+    method: 'GET',
+    path: '/clients/accounts',
+    params: {
+      search: query.filters.search,
+      dateFrom: query.filters.dateFrom,
+      dateTo: query.filters.dateTo,
+      page: query.page,
+      pageSize: query.pageSize,
+      sortField: query.sort?.field,
+      sortDirection: query.sort?.direction,
+    },
+    signal,
+    mock: () => {
+      const { filters, sort, page, pageSize } = query;
+      const sorted = sortClientAccounts(filterClientAccountsInScope(filters), sort);
 
-  const { filters, sort, page, pageSize } = query;
-  const sorted = sortClientAccounts(filterClientAccountsInScope(filters), sort);
+      const total = sorted.length;
+      const totalPages = Math.max(1, Math.ceil(total / pageSize));
+      const safePage = Math.min(Math.max(1, page), totalPages);
+      const start = (safePage - 1) * pageSize;
+      const items = sorted.slice(start, start + pageSize);
 
-  const total = sorted.length;
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const safePage = Math.min(Math.max(1, page), totalPages);
-  const start = (safePage - 1) * pageSize;
-  const items = sorted.slice(start, start + pageSize);
-
-  return { items: structuredClone(items), total, page: safePage, pageSize };
+      return { items: structuredClone(items), total, page: safePage, pageSize };
+    },
+  });
 }
 
 // Exportar (tarea transversal, DECISIONES_TECNICAS.md): TODO lo que
@@ -177,13 +202,18 @@ export async function exportClientAccounts(
   filters: ClientAccountsQueryFilters,
   sort?: { field: ClientAccountsSortField; direction: 'asc' | 'desc' }
 ): Promise<ExportResult<ClientAccount>> {
-  await delay(SIMULATED_DELAY_MS);
+  return httpClient.request<ExportResult<ClientAccount>>({
+    method: 'GET',
+    path: '/clients/accounts/export',
+    params: { search: filters.search, dateFrom: filters.dateFrom, dateTo: filters.dateTo },
+    mock: () => {
+      const sorted = sortClientAccounts(filterClientAccountsInScope(filters), sort);
+      const truncated = sorted.length > MAX_EXPORT_ROWS;
+      const items = sorted.slice(0, MAX_EXPORT_ROWS);
 
-  const sorted = sortClientAccounts(filterClientAccountsInScope(filters), sort);
-  const truncated = sorted.length > MAX_EXPORT_ROWS;
-  const items = sorted.slice(0, MAX_EXPORT_ROWS);
-
-  return { items: structuredClone(items), truncated };
+      return { items: structuredClone(items), truncated };
+    },
+  });
 }
 
 // ============================================================
@@ -501,38 +531,54 @@ function computeAggregates(entries: OverdueSnapshotEntry[]): OverdueClientsAggre
 }
 
 export async function getOverdueClientsPage(
-  query: PageQuery<OverdueClientsQueryFilters, OverdueClientsSortField>
+  query: PageQuery<OverdueClientsQueryFilters, OverdueClientsSortField>,
+  signal?: AbortSignal
 ): Promise<PageResult<OverdueClientRow, OverdueClientsAggregates>> {
-  await delay(SIMULATED_DELAY_MS);
+  return httpClient.request<PageResult<OverdueClientRow, OverdueClientsAggregates>>({
+    method: 'GET',
+    path: '/clients/overdue',
+    params: {
+      search: query.filters.search,
+      bucket: query.filters.bucket,
+      dateFrom: query.filters.dateFrom,
+      dateTo: query.filters.dateTo,
+      page: query.page,
+      pageSize: query.pageSize,
+      sortField: query.sort?.field,
+      sortDirection: query.sort?.direction,
+    },
+    signal,
+    mock: () => {
+      const { filters, sort, page, pageSize } = query;
+      const snapshot = applyDateRangeToSnapshot(getOverdueSnapshot(), filters.dateFrom, filters.dateTo);
 
-  const { filters, sort, page, pageSize } = query;
-  const snapshot = applyDateRangeToSnapshot(getOverdueSnapshot(), filters.dateFrom, filters.dateTo);
+      const inScope = snapshot.filter((entry) =>
+        matchesSearch(entry.row.clientName, entry.row.cuit, filters.search)
+      );
 
-  const inScope = snapshot.filter((entry) =>
-    matchesSearch(entry.row.clientName, entry.row.cuit, filters.search)
-  );
+      const aggregates = computeAggregates(inScope);
 
-  const aggregates = computeAggregates(inScope);
+      const filtered = filters.bucket
+        ? inScope.filter((entry) => entry.row.oldestBucket === filters.bucket)
+        : inScope;
 
-  const filtered = filters.bucket
-    ? inScope.filter((entry) => entry.row.oldestBucket === filters.bucket)
-    : inScope;
+      const sorted = sortOverdueEntries(filtered, sort);
 
-  const sorted = sortOverdueEntries(filtered, sort);
+      const total = sorted.length;
+      const totalPages = Math.max(1, Math.ceil(total / pageSize));
+      const safePage = Math.min(Math.max(1, page), totalPages);
+      const start = (safePage - 1) * pageSize;
+      const items = sorted.slice(start, start + pageSize).map((entry) => entry.row);
 
-  const total = sorted.length;
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const safePage = Math.min(Math.max(1, page), totalPages);
-  const start = (safePage - 1) * pageSize;
-  const items = sorted.slice(start, start + pageSize).map((entry) => entry.row);
-
-  return {
-    items: structuredClone(items),
-    total,
-    page: safePage,
-    pageSize,
-    aggregates,
-  };
+      return {
+        items: structuredClone(items),
+        total,
+        page: safePage,
+        pageSize,
+        aggregates,
+      };
+    },
+  });
 }
 
 // Exportar (tarea transversal, DECISIONES_TECNICAS.md): TODO lo que
@@ -543,15 +589,20 @@ export async function exportOverdueClients(
   filters: OverdueClientsQueryFilters,
   sort?: { field: OverdueClientsSortField; direction: 'asc' | 'desc' }
 ): Promise<ExportResult<OverdueClientRow>> {
-  await delay(SIMULATED_DELAY_MS);
+  return httpClient.request<ExportResult<OverdueClientRow>>({
+    method: 'GET',
+    path: '/clients/overdue/export',
+    params: { search: filters.search, bucket: filters.bucket, dateFrom: filters.dateFrom, dateTo: filters.dateTo },
+    mock: () => {
+      const snapshot = applyDateRangeToSnapshot(getOverdueSnapshot(), filters.dateFrom, filters.dateTo);
+      const inScope = snapshot.filter((entry) => matchesSearch(entry.row.clientName, entry.row.cuit, filters.search));
+      const filtered = filters.bucket ? inScope.filter((entry) => entry.row.oldestBucket === filters.bucket) : inScope;
+      const sorted = sortOverdueEntries(filtered, sort);
 
-  const snapshot = applyDateRangeToSnapshot(getOverdueSnapshot(), filters.dateFrom, filters.dateTo);
-  const inScope = snapshot.filter((entry) => matchesSearch(entry.row.clientName, entry.row.cuit, filters.search));
-  const filtered = filters.bucket ? inScope.filter((entry) => entry.row.oldestBucket === filters.bucket) : inScope;
-  const sorted = sortOverdueEntries(filtered, sort);
+      const truncated = sorted.length > MAX_EXPORT_ROWS;
+      const items = sorted.slice(0, MAX_EXPORT_ROWS).map((entry) => entry.row);
 
-  const truncated = sorted.length > MAX_EXPORT_ROWS;
-  const items = sorted.slice(0, MAX_EXPORT_ROWS).map((entry) => entry.row);
-
-  return { items: structuredClone(items), truncated };
+      return { items: structuredClone(items), truncated };
+    },
+  });
 }

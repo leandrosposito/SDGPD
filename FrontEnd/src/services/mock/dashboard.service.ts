@@ -1,39 +1,53 @@
 import type { DashboardData } from '@/shared/types/dashboard.types';
 import { DASHBOARD_MOCK_DATA } from '@/data/mock/dashboard.data';
+import { httpClient } from '@/shared/api/httpClient';
 
 // ============================================================
-// DASHBOARD SERVICE — Simulates async API calls
-// Replace these implementations with real fetch/axios calls
-// when the backend API is available.
+// DASHBOARD SERVICE — pasa por httpClient (Tanda 2.5 de
+// escalabilidad, ver DECISIONES_TECNICAS.md): timeout, reintentos,
+// cancelacion real y VITE_MOCK_LATENCY_MS/VITE_MOCK_FAILURE_RATE/
+// VITE_API_DEBUG ya no son exclusivos de suppliers.service.ts. Sigue
+// devolviendo la misma forma de datos que antes (sin DTO/mapper —
+// eso es Tanda 3): solo cambio el mecanismo de transporte.
 // ============================================================
 
-const SIMULATED_DELAY_MS = 800;
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-export async function fetchDashboardData(): Promise<DashboardData> {
-  await delay(SIMULATED_DELAY_MS);
-  return structuredClone(DASHBOARD_MOCK_DATA);
+export async function fetchDashboardData(signal?: AbortSignal): Promise<DashboardData> {
+  return httpClient.request<DashboardData>({
+    method: 'GET',
+    path: '/dashboard',
+    signal,
+    mock: () => structuredClone(DASHBOARD_MOCK_DATA),
+  });
 }
 
 export async function fetchKpis() {
-  await delay(400);
-  return structuredClone(DASHBOARD_MOCK_DATA.kpis);
+  return httpClient.request({
+    method: 'GET',
+    path: '/dashboard/kpis',
+    mock: () => structuredClone(DASHBOARD_MOCK_DATA.kpis),
+  });
 }
 
 export async function fetchSalesSeries() {
-  await delay(600);
-  return structuredClone(DASHBOARD_MOCK_DATA.salesSeries);
+  return httpClient.request({
+    method: 'GET',
+    path: '/dashboard/sales-series',
+    mock: () => structuredClone(DASHBOARD_MOCK_DATA.salesSeries),
+  });
 }
 
 export async function fetchTopProducts() {
-  await delay(700);
-  return structuredClone(DASHBOARD_MOCK_DATA.topProducts);
+  return httpClient.request({
+    method: 'GET',
+    path: '/dashboard/top-products',
+    mock: () => structuredClone(DASHBOARD_MOCK_DATA.topProducts),
+  });
 }
 
 export async function fetchRecentOrders() {
-  await delay(500);
-  return structuredClone(DASHBOARD_MOCK_DATA.recentOrders);
+  return httpClient.request({
+    method: 'GET',
+    path: '/dashboard/recent-orders',
+    mock: () => structuredClone(DASHBOARD_MOCK_DATA.recentOrders),
+  });
 }

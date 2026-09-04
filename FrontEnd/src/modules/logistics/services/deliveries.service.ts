@@ -3,13 +3,16 @@ import type { Branch } from '@/shared/types/session.types';
 import type { PageQuery, PageResult, DateRangeQueryFilters, ExportResult } from '@/shared/types/pagination.types';
 import { MAX_EXPORT_ROWS } from '@/shared/types/pagination.types';
 import { LOGISTICS_MOCK_DATA } from '@/data/mock/logistics.data';
+import { httpClient } from '@/shared/api/httpClient';
 
 // ============================================================
 // deliveries.service — Acceso a datos de entregas (P1,
-// DECISIONES_TECNICAS.md). El servicio hace de backend, no de
-// repositorio: filtra, ordena, cuenta y corta el, con el mismo patron
-// delay + structuredClone que products.service.ts/suppliers.service.ts.
-// No devuelve el dataset completo para que la vista lo procese.
+// DECISIONES_TECNICAS.md). Pasa por httpClient (Tanda 2.5 de
+// escalabilidad): timeout, reintentos, cancelacion real y
+// VITE_MOCK_LATENCY_MS/VITE_MOCK_FAILURE_RATE/VITE_API_DEBUG ya no
+// son exclusivos de suppliers.service.ts. El servicio hace de
+// backend, no de repositorio: filtra, ordena, cuenta y corta el — no
+// devuelve el dataset completo para que la vista lo procese.
 //
 // branchId es un parametro explicito dentro de `filters`, no se lee de
 // ningun store (D4/P9): mantiene la capa de datos sin estado global
@@ -18,12 +21,6 @@ import { LOGISTICS_MOCK_DATA } from '@/data/mock/logistics.data';
 // sucursal pedida pertenezca a la empresa de la sesion antes de
 // responder.
 // ============================================================
-
-const SIMULATED_DELAY_MS = 400;
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 // P10: la fuente de verdad de la lista de entregas es esta variable de
 // modulo (mismo patron que productsStore/stockStore en
@@ -116,43 +113,59 @@ function sortDeliveries(
 }
 
 export async function getDeliveriesPage(
-  query: PageQuery<DeliveryQueryFilters, DeliverySortField>
+  query: PageQuery<DeliveryQueryFilters, DeliverySortField>,
+  signal?: AbortSignal
 ): Promise<PageResult<Delivery, DeliveryAggregates>> {
-  await delay(SIMULATED_DELAY_MS);
+  return httpClient.request<PageResult<Delivery, DeliveryAggregates>>({
+    method: 'GET',
+    path: '/deliveries',
+    params: {
+      branchId: query.filters.branchId,
+      status: query.filters.status,
+      dateFrom: query.filters.dateFrom,
+      dateTo: query.filters.dateTo,
+      page: query.page,
+      pageSize: query.pageSize,
+      sortField: query.sort?.field,
+      sortDirection: query.sort?.direction,
+    },
+    signal,
+    mock: () => {
+      const { filters, sort, page, pageSize } = query;
+      const inScope = filterDeliveriesInScope(filters);
 
-  const { filters, sort, page, pageSize } = query;
-  const inScope = filterDeliveriesInScope(filters);
+      const countByStatus: Record<DeliveryStatus, number> = { pending: 0, in_transit: 0, delivered: 0 };
+      let pendingCollectionAmount = 0;
+      for (const delivery of inScope) {
+        countByStatus[delivery.status] += 1;
+        if (delivery.status === 'pending' || delivery.status === 'in_transit') {
+          pendingCollectionAmount += delivery.collectionAmount;
+        }
+      }
+      const totalForScope = countByStatus.pending + countByStatus.in_transit + countByStatus.delivered;
 
-  const countByStatus: Record<DeliveryStatus, number> = { pending: 0, in_transit: 0, delivered: 0 };
-  let pendingCollectionAmount = 0;
-  for (const delivery of inScope) {
-    countByStatus[delivery.status] += 1;
-    if (delivery.status === 'pending' || delivery.status === 'in_transit') {
-      pendingCollectionAmount += delivery.collectionAmount;
-    }
-  }
-  const totalForScope = countByStatus.pending + countByStatus.in_transit + countByStatus.delivered;
+      const filtered = filters.status ? inScope.filter((d) => d.status === filters.status) : inScope;
 
-  const filtered = filters.status ? inScope.filter((d) => d.status === filters.status) : inScope;
+      const sorted = sortDeliveries(filtered, sort);
 
-  const sorted = sortDeliveries(filtered, sort);
+      const total = sorted.length;
+      const totalPages = Math.max(1, Math.ceil(total / pageSize));
+      // Si la pagina pedida quedo fuera de rango (ej. una mutacion redujo
+      // el total), se devuelve la ultima pagina valida en vez de un array
+      // vacio — quien consume el contrato se realinea con `result.page`.
+      const safePage = Math.min(Math.max(1, page), totalPages);
+      const start = (safePage - 1) * pageSize;
+      const items = sorted.slice(start, start + pageSize);
 
-  const total = sorted.length;
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  // Si la pagina pedida quedo fuera de rango (ej. una mutacion redujo
-  // el total), se devuelve la ultima pagina valida en vez de un array
-  // vacio — quien consume el contrato se realinea con `result.page`.
-  const safePage = Math.min(Math.max(1, page), totalPages);
-  const start = (safePage - 1) * pageSize;
-  const items = sorted.slice(start, start + pageSize);
-
-  return {
-    items: structuredClone(items),
-    total,
-    page: safePage,
-    pageSize,
-    aggregates: { countByStatus, totalForScope, pendingCollectionAmount },
-  };
+      return {
+        items: structuredClone(items),
+        total,
+        page: safePage,
+        pageSize,
+        aggregates: { countByStatus, totalForScope, pendingCollectionAmount },
+      };
+    },
+  });
 }
 
 // Exportar (tarea transversal, DECISIONES_TECNICAS.md): TODO lo que
@@ -163,16 +176,21 @@ export async function exportDeliveries(
   filters: DeliveryQueryFilters,
   sort?: { field: DeliverySortField; direction: 'asc' | 'desc' }
 ): Promise<ExportResult<Delivery>> {
-  await delay(SIMULATED_DELAY_MS);
+  return httpClient.request<ExportResult<Delivery>>({
+    method: 'GET',
+    path: '/deliveries/export',
+    params: { branchId: filters.branchId, status: filters.status, dateFrom: filters.dateFrom, dateTo: filters.dateTo },
+    mock: () => {
+      const inScope = filterDeliveriesInScope(filters);
+      const filtered = filters.status ? inScope.filter((d) => d.status === filters.status) : inScope;
+      const sorted = sortDeliveries(filtered, sort);
 
-  const inScope = filterDeliveriesInScope(filters);
-  const filtered = filters.status ? inScope.filter((d) => d.status === filters.status) : inScope;
-  const sorted = sortDeliveries(filtered, sort);
+      const truncated = sorted.length > MAX_EXPORT_ROWS;
+      const items = sorted.slice(0, MAX_EXPORT_ROWS);
 
-  const truncated = sorted.length > MAX_EXPORT_ROWS;
-  const items = sorted.slice(0, MAX_EXPORT_ROWS);
-
-  return { items: structuredClone(items), truncated };
+      return { items: structuredClone(items), truncated };
+    },
+  });
 }
 
 // ============================================================
@@ -200,19 +218,23 @@ export interface DeliveryStatusTransitionResult {
 }
 
 export async function advanceDeliveryStatus(deliveryId: string): Promise<DeliveryStatusTransitionResult> {
-  await delay(SIMULATED_DELAY_MS);
+  return httpClient.request<DeliveryStatusTransitionResult>({
+    method: 'PUT',
+    path: `/deliveries/${deliveryId}/advance`,
+    mock: () => {
+      const delivery = deliveriesStore.find((d) => d.id === deliveryId);
+      if (!delivery) {
+        return { success: false, deliveryId, reason: 'not-found' };
+      }
 
-  const delivery = deliveriesStore.find((d) => d.id === deliveryId);
-  if (!delivery) {
-    return { success: false, deliveryId, reason: 'not-found' };
-  }
+      const nextStatus = DELIVERY_STATUS_FLOW[delivery.status];
+      if (!nextStatus) {
+        return { success: false, deliveryId, previousStatus: delivery.status, reason: 'terminal-status' };
+      }
 
-  const nextStatus = DELIVERY_STATUS_FLOW[delivery.status];
-  if (!nextStatus) {
-    return { success: false, deliveryId, previousStatus: delivery.status, reason: 'terminal-status' };
-  }
+      deliveriesStore = deliveriesStore.map((d) => (d.id === deliveryId ? { ...d, status: nextStatus } : d));
 
-  deliveriesStore = deliveriesStore.map((d) => (d.id === deliveryId ? { ...d, status: nextStatus } : d));
-
-  return { success: true, deliveryId, previousStatus: delivery.status, newStatus: nextStatus };
+      return { success: true, deliveryId, previousStatus: delivery.status, newStatus: nextStatus };
+    },
+  });
 }

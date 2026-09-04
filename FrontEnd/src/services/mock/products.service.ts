@@ -4,25 +4,23 @@ import type { PageQuery, PageResult, ExportResult } from '@/shared/types/paginat
 import { MAX_EXPORT_ROWS } from '@/shared/types/pagination.types';
 import { INVENTORY_MOCK_DATA } from '@/data/mock/inventory.data';
 import { PRODUCT_STOCK_MOCK_DATA } from '@/data/mock/productStock.data';
+import { httpClient } from '@/shared/api/httpClient';
+import { ApiError } from '@/shared/api/ApiError';
 
 // ============================================================
 // PRODUCTS SERVICE — RF-PRD-001 (ABM Central de Productos)
-// Simula llamadas asincronicas a una API de Productos.
-// Sigue el mismo patron que src/services/mock/dashboard.service.ts
-// (ver CLAUDE.md / docs). Reemplazar por llamadas HTTP reales cuando
-// exista Backend.
+// Pasa por httpClient (Tanda 2.5 de escalabilidad, ver
+// DECISIONES_TECNICAS.md): timeout, reintentos, cancelacion real y
+// VITE_MOCK_LATENCY_MS/VITE_MOCK_FAILURE_RATE/VITE_API_DEBUG ya no
+// son exclusivos de suppliers.service.ts. Sigue devolviendo la misma
+// forma de datos que antes (sin DTO/mapper — eso es Tanda 3): solo
+// cambio el mecanismo de transporte.
 //
 // El "store" en memoria simula persistencia dentro de la sesion del
 // navegador (no sobrevive a un refresh): permite que Alta/Modificacion/Baja
 // se reflejen en sucesivas lecturas sin depender de que el componente
 // mantenga el estado por su cuenta.
 // ============================================================
-
-const SIMULATED_DELAY_MS = 400;
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 let productsStore: InventoryItem[] = structuredClone(INVENTORY_MOCK_DATA.items);
 
@@ -32,53 +30,69 @@ let productsStore: InventoryItem[] = structuredClone(INVENTORY_MOCK_DATA.items);
 // productsStore, por si una tarea futura le agrega escritura.
 const stockStore: ProductStock[] = structuredClone(PRODUCT_STOCK_MOCK_DATA);
 
-export class ProductServiceError extends Error {}
-
-export async function fetchProducts(): Promise<InventoryItem[]> {
-  await delay(SIMULATED_DELAY_MS);
-  return structuredClone(productsStore);
+export async function fetchProducts(signal?: AbortSignal): Promise<InventoryItem[]> {
+  return httpClient.request<InventoryItem[]>({
+    method: 'GET',
+    path: '/products',
+    signal,
+    mock: () => structuredClone(productsStore),
+  });
 }
 
 export async function createProduct(input: Omit<InventoryItem, 'id'>): Promise<InventoryItem> {
-  await delay(SIMULATED_DELAY_MS);
+  return httpClient.request<InventoryItem>({
+    method: 'POST',
+    path: '/products',
+    body: input,
+    mock: () => {
+      const skuTaken = productsStore.some((p) => p.sku.toLowerCase() === input.sku.toLowerCase());
+      if (skuTaken) throw new ApiError(400, 'CLIENT_ERROR', 'Este SKU ya existe.');
 
-  const skuTaken = productsStore.some((p) => p.sku.toLowerCase() === input.sku.toLowerCase());
-  if (skuTaken) throw new ProductServiceError('Este SKU ya existe.');
+      const barcodeTaken = productsStore.some((p) => p.barcode === input.barcode);
+      if (barcodeTaken) throw new ApiError(400, 'CLIENT_ERROR', 'Este codigo de barras ya existe.');
 
-  const barcodeTaken = productsStore.some((p) => p.barcode === input.barcode);
-  if (barcodeTaken) throw new ProductServiceError('Este codigo de barras ya existe.');
-
-  const newProduct: InventoryItem = { ...input, id: `inv-${Date.now()}` };
-  productsStore = [...productsStore, newProduct];
-  return structuredClone(newProduct);
+      const newProduct: InventoryItem = { ...input, id: `inv-${Date.now()}` };
+      productsStore = [...productsStore, newProduct];
+      return structuredClone(newProduct);
+    },
+  });
 }
 
 export async function updateProduct(id: string, input: Omit<InventoryItem, 'id'>): Promise<InventoryItem> {
-  await delay(SIMULATED_DELAY_MS);
+  return httpClient.request<InventoryItem>({
+    method: 'PUT',
+    path: `/products/${id}`,
+    body: input,
+    mock: () => {
+      const exists = productsStore.some((p) => p.id === id);
+      if (!exists) throw new ApiError(404, 'CLIENT_ERROR', 'El producto que intenta editar ya no existe.');
 
-  const exists = productsStore.some((p) => p.id === id);
-  if (!exists) throw new ProductServiceError('El producto que intenta editar ya no existe.');
+      const skuTaken = productsStore.some(
+        (p) => p.sku.toLowerCase() === input.sku.toLowerCase() && p.id !== id
+      );
+      if (skuTaken) throw new ApiError(400, 'CLIENT_ERROR', 'Este SKU ya existe.');
 
-  const skuTaken = productsStore.some(
-    (p) => p.sku.toLowerCase() === input.sku.toLowerCase() && p.id !== id
-  );
-  if (skuTaken) throw new ProductServiceError('Este SKU ya existe.');
+      const barcodeTaken = productsStore.some((p) => p.barcode === input.barcode && p.id !== id);
+      if (barcodeTaken) throw new ApiError(400, 'CLIENT_ERROR', 'Este codigo de barras ya existe.');
 
-  const barcodeTaken = productsStore.some((p) => p.barcode === input.barcode && p.id !== id);
-  if (barcodeTaken) throw new ProductServiceError('Este codigo de barras ya existe.');
-
-  const updatedProduct: InventoryItem = { ...input, id };
-  productsStore = productsStore.map((p) => (p.id === id ? updatedProduct : p));
-  return structuredClone(updatedProduct);
+      const updatedProduct: InventoryItem = { ...input, id };
+      productsStore = productsStore.map((p) => (p.id === id ? updatedProduct : p));
+      return structuredClone(updatedProduct);
+    },
+  });
 }
 
 export async function deleteProduct(id: string): Promise<void> {
-  await delay(SIMULATED_DELAY_MS);
+  return httpClient.request<void>({
+    method: 'DELETE',
+    path: `/products/${id}`,
+    mock: () => {
+      const exists = productsStore.some((p) => p.id === id);
+      if (!exists) throw new ApiError(404, 'CLIENT_ERROR', 'El producto que intenta eliminar ya no existe.');
 
-  const exists = productsStore.some((p) => p.id === id);
-  if (!exists) throw new ProductServiceError('El producto que intenta eliminar ya no existe.');
-
-  productsStore = productsStore.filter((p) => p.id !== id);
+      productsStore = productsStore.filter((p) => p.id !== id);
+    },
+  });
 }
 
 // ============================================================
@@ -94,11 +108,18 @@ export async function deleteProduct(id: string): Promise<void> {
 // mostrarlo (ver getStockedProductsForBranch, que lo completa en 0).
 export async function getStockForBranch(
   productId: InventoryItem['id'],
-  branchId: Branch['id']
+  branchId: Branch['id'],
+  signal?: AbortSignal
 ): Promise<ProductStock | undefined> {
-  await delay(SIMULATED_DELAY_MS);
-  const record = stockStore.find((s) => s.productId === productId && s.branchId === branchId);
-  return record ? structuredClone(record) : undefined;
+  return httpClient.request<ProductStock | undefined>({
+    method: 'GET',
+    path: `/products/${productId}/stock/${branchId}`,
+    signal,
+    mock: () => {
+      const record = stockStore.find((s) => s.productId === productId && s.branchId === branchId);
+      return record ? structuredClone(record) : undefined;
+    },
+  });
 }
 
 // Catalogo completo (RF-PRD-001) unido a su stock en una sucursal. Un
@@ -109,27 +130,34 @@ export async function getStockForBranch(
 // tarea de paginacion server-side): TabStockCurrent no usaba el patron
 // paginado antes de esa tarea y queda fuera de su alcance.
 export async function getStockedProductsForBranch(
-  branchId: Branch['id']
+  branchId: Branch['id'],
+  signal?: AbortSignal
 ): Promise<StockedInventoryItem[]> {
-  await delay(SIMULATED_DELAY_MS);
-  // find() dentro de un map() es O(productos x stock): con 50.000
-  // productos escanea stockStore entero por cada uno. Se arma un Map
-  // indexado por productId (solo del stock de esta sucursal) una sola
-  // vez, y la union pasa a ser una lookup O(1) por producto — O(n+m)
-  // en vez de O(n*m). No cambia el resultado: sigue siendo left join
-  // (falta de registro = stock/minStock en 0, E5).
-  const stockByProductId = new Map(
-    stockStore.filter((s) => s.branchId === branchId).map((s) => [s.productId, s])
-  );
-  return productsStore.map((product) => {
-    const record = stockByProductId.get(product.id);
-    return structuredClone({
-      ...product,
-      productId: product.id,
-      branchId,
-      stock: record?.stock ?? 0,
-      minStock: record?.minStock ?? 0,
-    });
+  return httpClient.request<StockedInventoryItem[]>({
+    method: 'GET',
+    path: `/products/stock-by-branch/${branchId}`,
+    signal,
+    mock: () => {
+      // find() dentro de un map() es O(productos x stock): con 50.000
+      // productos escanea stockStore entero por cada uno. Se arma un Map
+      // indexado por productId (solo del stock de esta sucursal) una sola
+      // vez, y la union pasa a ser una lookup O(1) por producto — O(n+m)
+      // en vez de O(n*m). No cambia el resultado: sigue siendo left join
+      // (falta de registro = stock/minStock en 0, E5).
+      const stockByProductId = new Map(
+        stockStore.filter((s) => s.branchId === branchId).map((s) => [s.productId, s])
+      );
+      return productsStore.map((product) => {
+        const record = stockByProductId.get(product.id);
+        return structuredClone({
+          ...product,
+          productId: product.id,
+          branchId,
+          stock: record?.stock ?? 0,
+          minStock: record?.minStock ?? 0,
+        });
+      });
+    },
   });
 }
 
@@ -201,20 +229,33 @@ function filterAndSortLowStock(
 // no dado de alta ahi no tiene minimo definido, asi que no puede estar
 // "bajo minimo" — se excluye en vez de aparecer con minStock 0.
 export async function getLowStockPage(
-  query: PageQuery<LowStockQueryFilters, LowStockSortField>
+  query: PageQuery<LowStockQueryFilters, LowStockSortField>,
+  signal?: AbortSignal
 ): Promise<PageResult<StockedInventoryItem>> {
-  await delay(SIMULATED_DELAY_MS);
+  return httpClient.request<PageResult<StockedInventoryItem>>({
+    method: 'GET',
+    path: '/products/low-stock',
+    params: {
+      branchId: query.filters.branchId,
+      page: query.page,
+      pageSize: query.pageSize,
+      sortField: query.sort?.field,
+      sortDirection: query.sort?.direction,
+    },
+    signal,
+    mock: () => {
+      const { filters, sort, page, pageSize } = query;
+      const sorted = filterAndSortLowStock(filters, sort);
 
-  const { filters, sort, page, pageSize } = query;
-  const sorted = filterAndSortLowStock(filters, sort);
+      const total = sorted.length;
+      const totalPages = Math.max(1, Math.ceil(total / pageSize));
+      const safePage = Math.min(Math.max(1, page), totalPages);
+      const start = (safePage - 1) * pageSize;
+      const items = sorted.slice(start, start + pageSize);
 
-  const total = sorted.length;
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const safePage = Math.min(Math.max(1, page), totalPages);
-  const start = (safePage - 1) * pageSize;
-  const items = sorted.slice(start, start + pageSize);
-
-  return { items: structuredClone(items), total, page: safePage, pageSize };
+      return { items: structuredClone(items), total, page: safePage, pageSize };
+    },
+  });
 }
 
 // Exportar (tarea transversal, DECISIONES_TECNICAS.md): TODO lo que
@@ -223,11 +264,16 @@ export async function exportLowStock(
   filters: LowStockQueryFilters,
   sort?: { field: LowStockSortField; direction: 'asc' | 'desc' }
 ): Promise<ExportResult<StockedInventoryItem>> {
-  await delay(SIMULATED_DELAY_MS);
+  return httpClient.request<ExportResult<StockedInventoryItem>>({
+    method: 'GET',
+    path: '/products/low-stock/export',
+    params: { branchId: filters.branchId },
+    mock: () => {
+      const sorted = filterAndSortLowStock(filters, sort);
+      const truncated = sorted.length > MAX_EXPORT_ROWS;
+      const items = sorted.slice(0, MAX_EXPORT_ROWS);
 
-  const sorted = filterAndSortLowStock(filters, sort);
-  const truncated = sorted.length > MAX_EXPORT_ROWS;
-  const items = sorted.slice(0, MAX_EXPORT_ROWS);
-
-  return { items: structuredClone(items), truncated };
+      return { items: structuredClone(items), truncated };
+    },
+  });
 }

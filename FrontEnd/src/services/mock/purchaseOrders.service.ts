@@ -17,6 +17,7 @@ import type {
   PurchaseOrdersSortField,
 } from '@/shared/types/purchaseOrder.types';
 import { PURCHASE_ORDERS_MOCK_DATA } from '@/data/mock/purchaseOrders.data';
+import { httpClient } from '@/shared/api/httpClient';
 
 // ============================================================
 // PURCHASE ORDERS SERVICE (Compras) — O1-O10, DECISIONES_TECNICAS.md.
@@ -27,20 +28,15 @@ import { PURCHASE_ORDERS_MOCK_DATA } from '@/data/mock/purchaseOrders.data';
 // reconciliar (fuera de alcance de esta tarea, O11). Se sigue la
 // convencion mayoritaria y mas reciente, no la excepcion.
 //
-// Simula llamadas asincronicas (delay + structuredClone), con
-// clientsStore-style module-level array reasignado (no mutado) en cada
-// escritura — mismo patron que clients.service.ts/products.service.ts.
+// Pasa por httpClient (Tanda 2.5 de escalabilidad): timeout,
+// reintentos, cancelacion real y VITE_MOCK_LATENCY_MS/
+// VITE_MOCK_FAILURE_RATE/VITE_API_DEBUG ya no son exclusivos de
+// suppliers.service.ts. clientsStore-style module-level array
+// reasignado (no mutado) en cada escritura — mismo patron que
+// clients.service.ts/products.service.ts.
 // ============================================================
 
-const SIMULATED_DELAY_MS = 400;
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 let purchaseOrdersStore: PurchaseOrder[] = structuredClone(PURCHASE_ORDERS_MOCK_DATA);
-
-export class PurchaseOrderServiceError extends Error {}
 
 // Total de una orden (O2): SIEMPRE derivado de sus lineas, nunca un
 // campo propio. Se llama tanto para construir agregados (server-side,
@@ -142,27 +138,45 @@ function computeAggregates(orders: PurchaseOrder[]): PurchaseOrdersAggregates {
 }
 
 export async function getPurchaseOrdersPage(
-  query: PageQuery<PurchaseOrdersQueryFilters, PurchaseOrdersSortField>
+  query: PageQuery<PurchaseOrdersQueryFilters, PurchaseOrdersSortField>,
+  signal?: AbortSignal
 ): Promise<PageResult<PurchaseOrder, PurchaseOrdersAggregates>> {
-  await delay(SIMULATED_DELAY_MS);
+  return httpClient.request<PageResult<PurchaseOrder, PurchaseOrdersAggregates>>({
+    method: 'GET',
+    path: '/purchase-orders',
+    params: {
+      search: query.filters.search,
+      supplierId: query.filters.supplierId,
+      branchId: query.filters.branchId,
+      status: query.filters.status,
+      dateFrom: query.filters.dateFrom,
+      dateTo: query.filters.dateTo,
+      page: query.page,
+      pageSize: query.pageSize,
+      sortField: query.sort?.field,
+      sortDirection: query.sort?.direction,
+    },
+    signal,
+    mock: () => {
+      const { filters, sort, page, pageSize } = query;
 
-  const { filters, sort, page, pageSize } = query;
+      const inScope = filterOrdersInScope(filters);
 
-  const inScope = filterOrdersInScope(filters);
+      const aggregates = computeAggregates(inScope);
 
-  const aggregates = computeAggregates(inScope);
+      const filtered = filters.status ? inScope.filter((o) => o.status === filters.status) : inScope;
 
-  const filtered = filters.status ? inScope.filter((o) => o.status === filters.status) : inScope;
+      const sorted = sortOrders(filtered, sort);
 
-  const sorted = sortOrders(filtered, sort);
+      const total = sorted.length;
+      const totalPages = Math.max(1, Math.ceil(total / pageSize));
+      const safePage = Math.min(Math.max(1, page), totalPages);
+      const start = (safePage - 1) * pageSize;
+      const items = sorted.slice(start, start + pageSize);
 
-  const total = sorted.length;
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const safePage = Math.min(Math.max(1, page), totalPages);
-  const start = (safePage - 1) * pageSize;
-  const items = sorted.slice(start, start + pageSize);
-
-  return { items: structuredClone(items), total, page: safePage, pageSize, aggregates };
+      return { items: structuredClone(items), total, page: safePage, pageSize, aggregates };
+    },
+  });
 }
 
 // Exportar (tarea transversal, DECISIONES_TECNICAS.md): TODO lo que
@@ -174,28 +188,49 @@ export async function exportPurchaseOrders(
   filters: PurchaseOrdersQueryFilters,
   sort?: { field: PurchaseOrdersSortField; direction: 'asc' | 'desc' }
 ): Promise<ExportResult<PurchaseOrder>> {
-  await delay(SIMULATED_DELAY_MS);
+  return httpClient.request<ExportResult<PurchaseOrder>>({
+    method: 'GET',
+    path: '/purchase-orders/export',
+    params: {
+      search: filters.search,
+      supplierId: filters.supplierId,
+      branchId: filters.branchId,
+      status: filters.status,
+      dateFrom: filters.dateFrom,
+      dateTo: filters.dateTo,
+    },
+    mock: () => {
+      const inScope = filterOrdersInScope(filters);
+      const filtered = filters.status ? inScope.filter((o) => o.status === filters.status) : inScope;
+      const sorted = sortOrders(filtered, sort);
 
-  const inScope = filterOrdersInScope(filters);
-  const filtered = filters.status ? inScope.filter((o) => o.status === filters.status) : inScope;
-  const sorted = sortOrders(filtered, sort);
+      const truncated = sorted.length > MAX_EXPORT_ROWS;
+      const items = sorted.slice(0, MAX_EXPORT_ROWS);
 
-  const truncated = sorted.length > MAX_EXPORT_ROWS;
-  const items = sorted.slice(0, MAX_EXPORT_ROWS);
-
-  return { items: structuredClone(items), truncated };
+      return { items: structuredClone(items), truncated };
+    },
+  });
 }
 
 // O3: consulta publica por supplierId — reemplaza a la lectura directa
 // de Supplier.purchaseOrders[] (eliminado). No paginada a proposito
 // (mismo criterio que getStockedProductsForBranch en products.service.ts,
 // P8): es un panel de detalle de UN proveedor, no un listado general.
-export async function getPurchaseOrdersBySupplierId(supplierId: Supplier['id']): Promise<PurchaseOrder[]> {
-  await delay(SIMULATED_DELAY_MS);
-  const orders = purchaseOrdersStore
-    .filter((o) => o.supplierId === supplierId)
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  return structuredClone(orders);
+export async function getPurchaseOrdersBySupplierId(
+  supplierId: Supplier['id'],
+  signal?: AbortSignal
+): Promise<PurchaseOrder[]> {
+  return httpClient.request<PurchaseOrder[]>({
+    method: 'GET',
+    path: `/purchase-orders/by-supplier/${supplierId}`,
+    signal,
+    mock: () => {
+      const orders = purchaseOrdersStore
+        .filter((o) => o.supplierId === supplierId)
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      return structuredClone(orders);
+    },
+  });
 }
 
 function nextOrderId(): string {
@@ -211,29 +246,34 @@ function nextLineId(seed: number): string {
 // ("Emitir Orden de Compra" vs "Guardar Borrador"). 'received'/
 // 'cancelled' nunca se crean directo: son resultado de una transicion.
 export async function createPurchaseOrder(input: CreatePurchaseOrderInput): Promise<CreatePurchaseOrderResult> {
-  await delay(SIMULATED_DELAY_MS);
+  return httpClient.request<CreatePurchaseOrderResult>({
+    method: 'POST',
+    path: '/purchase-orders',
+    body: input,
+    mock: () => {
+      if (!input.supplierId) {
+        return { success: false, reason: 'invalid-supplier' };
+      }
+      if (input.lines.length === 0) {
+        return { success: false, reason: 'no-lines' };
+      }
+      if (input.lines.some((l) => l.quantity <= 0 || l.unitPrice < 0)) {
+        return { success: false, reason: 'invalid-line' };
+      }
 
-  if (!input.supplierId) {
-    return { success: false, reason: 'invalid-supplier' };
-  }
-  if (input.lines.length === 0) {
-    return { success: false, reason: 'no-lines' };
-  }
-  if (input.lines.some((l) => l.quantity <= 0 || l.unitPrice < 0)) {
-    return { success: false, reason: 'invalid-line' };
-  }
-
-  const newOrder: PurchaseOrder = {
-    id: nextOrderId(),
-    supplierId: input.supplierId,
-    branchId: input.branchId,
-    currency: input.currency,
-    status: input.status ?? 'draft',
-    createdAt: new Date().toISOString(),
-    lines: input.lines.map((l, i) => ({ ...l, id: nextLineId(i) })),
-  };
-  purchaseOrdersStore = [...purchaseOrdersStore, newOrder];
-  return { success: true, order: structuredClone(newOrder) };
+      const newOrder: PurchaseOrder = {
+        id: nextOrderId(),
+        supplierId: input.supplierId,
+        branchId: input.branchId,
+        currency: input.currency,
+        status: input.status ?? 'draft',
+        createdAt: new Date().toISOString(),
+        lines: input.lines.map((l, i) => ({ ...l, id: nextLineId(i) })),
+      };
+      purchaseOrdersStore = [...purchaseOrdersStore, newOrder];
+      return { success: true, order: structuredClone(newOrder) };
+    },
+  });
 }
 
 // O7: transiciones validas. Unica fuente de verdad — ni la vista ni
@@ -249,19 +289,24 @@ export async function updatePurchaseOrderStatus(
   orderId: PurchaseOrder['id'],
   nextStatus: PurchaseOrderStatus
 ): Promise<PurchaseOrderTransitionResult> {
-  await delay(SIMULATED_DELAY_MS);
+  return httpClient.request<PurchaseOrderTransitionResult>({
+    method: 'PUT',
+    path: `/purchase-orders/${orderId}/status`,
+    body: { status: nextStatus },
+    mock: () => {
+      const existing = purchaseOrdersStore.find((o) => o.id === orderId);
+      if (!existing) {
+        return { success: false, reason: 'order-not-found' };
+      }
+      if (!VALID_TRANSITIONS[existing.status].includes(nextStatus)) {
+        return { success: false, reason: 'invalid-transition' };
+      }
 
-  const existing = purchaseOrdersStore.find((o) => o.id === orderId);
-  if (!existing) {
-    return { success: false, reason: 'order-not-found' };
-  }
-  if (!VALID_TRANSITIONS[existing.status].includes(nextStatus)) {
-    return { success: false, reason: 'invalid-transition' };
-  }
-
-  const updated: PurchaseOrder = { ...existing, status: nextStatus };
-  purchaseOrdersStore = purchaseOrdersStore.map((o) => (o.id === orderId ? updated : o));
-  return { success: true, order: structuredClone(updated) };
+      const updated: PurchaseOrder = { ...existing, status: nextStatus };
+      purchaseOrdersStore = purchaseOrdersStore.map((o) => (o.id === orderId ? updated : o));
+      return { success: true, order: structuredClone(updated) };
+    },
+  });
 }
 
 // O9/O10: generar OC desde una sugerencia de stock critico. El input
@@ -280,40 +325,45 @@ export async function updatePurchaseOrderStatus(
 export async function generatePurchaseOrderFromSuggestion(
   input: GeneratePurchaseOrderFromSuggestionInput
 ): Promise<GeneratePurchaseOrderResult> {
-  await delay(SIMULATED_DELAY_MS);
+  return httpClient.request<GeneratePurchaseOrderResult>({
+    method: 'POST',
+    path: '/purchase-orders/from-suggestion',
+    body: input,
+    mock: () => {
+      if (!input.supplierId) {
+        return { success: false, merged: false, reason: 'invalid-supplier' };
+      }
 
-  if (!input.supplierId) {
-    return { success: false, merged: false, reason: 'invalid-supplier' };
-  }
+      const existingDraft = purchaseOrdersStore.find(
+        (o) => o.supplierId === input.supplierId && o.branchId === input.branchId && o.status === 'draft'
+      );
 
-  const existingDraft = purchaseOrdersStore.find(
-    (o) => o.supplierId === input.supplierId && o.branchId === input.branchId && o.status === 'draft'
-  );
+      if (existingDraft) {
+        const existingLine = existingDraft.lines.find((l) => l.productId === input.productId);
+        const nextLines: PurchaseOrderLine[] = existingLine
+          ? existingDraft.lines.map((l) =>
+              l.productId === input.productId
+                ? { ...l, quantity: l.quantity + input.quantity, unitPrice: input.unitPrice }
+                : l
+            )
+          : [...existingDraft.lines, { id: nextLineId(existingDraft.lines.length), productId: input.productId, quantity: input.quantity, unitPrice: input.unitPrice }];
 
-  if (existingDraft) {
-    const existingLine = existingDraft.lines.find((l) => l.productId === input.productId);
-    const nextLines: PurchaseOrderLine[] = existingLine
-      ? existingDraft.lines.map((l) =>
-          l.productId === input.productId
-            ? { ...l, quantity: l.quantity + input.quantity, unitPrice: input.unitPrice }
-            : l
-        )
-      : [...existingDraft.lines, { id: nextLineId(existingDraft.lines.length), productId: input.productId, quantity: input.quantity, unitPrice: input.unitPrice }];
+        const updated: PurchaseOrder = { ...existingDraft, lines: nextLines };
+        purchaseOrdersStore = purchaseOrdersStore.map((o) => (o.id === existingDraft.id ? updated : o));
+        return { success: true, merged: true, order: structuredClone(updated) };
+      }
 
-    const updated: PurchaseOrder = { ...existingDraft, lines: nextLines };
-    purchaseOrdersStore = purchaseOrdersStore.map((o) => (o.id === existingDraft.id ? updated : o));
-    return { success: true, merged: true, order: structuredClone(updated) };
-  }
-
-  const newOrder: PurchaseOrder = {
-    id: nextOrderId(),
-    supplierId: input.supplierId,
-    branchId: input.branchId,
-    currency: input.currency,
-    status: 'draft',
-    createdAt: new Date().toISOString(),
-    lines: [{ id: nextLineId(0), productId: input.productId, quantity: input.quantity, unitPrice: input.unitPrice }],
-  };
-  purchaseOrdersStore = [...purchaseOrdersStore, newOrder];
-  return { success: true, merged: false, order: structuredClone(newOrder) };
+      const newOrder: PurchaseOrder = {
+        id: nextOrderId(),
+        supplierId: input.supplierId,
+        branchId: input.branchId,
+        currency: input.currency,
+        status: 'draft',
+        createdAt: new Date().toISOString(),
+        lines: [{ id: nextLineId(0), productId: input.productId, quantity: input.quantity, unitPrice: input.unitPrice }],
+      };
+      purchaseOrdersStore = [...purchaseOrdersStore, newOrder];
+      return { success: true, merged: false, order: structuredClone(newOrder) };
+    },
+  });
 }
