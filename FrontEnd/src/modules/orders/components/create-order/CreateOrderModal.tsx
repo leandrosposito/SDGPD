@@ -2,9 +2,11 @@ import { type FC, useState, useMemo, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Modal } from '@/shared/components/ui/Modal';
 import { useCachedQuery, CACHE_STALE_TIME } from '@/shared/hooks/useCachedQuery';
+import { useSessionStore } from '@/shared/state/useSessionStore';
 import type { InventoryItem } from '@/shared/types/inventory.types';
 import type { Order } from '@/shared/types/order.types';
 import { fetchProducts } from '@/services/mock/products.service';
+import { createOrder, type OrderFormInput } from '@/modules/orders/api/orders.service';
 
 // Referencia estable: ver mismo patron en ComprasPage/InventoryPage.
 const EMPTY_PRODUCTS: InventoryItem[] = [];
@@ -26,6 +28,9 @@ interface CreateOrderModalProps {
 }
 
 export const CreateOrderModal: FC<CreateOrderModalProps> = ({ isOpen, onClose, onConfirm }) => {
+  const empresaId = useSessionStore((s) => s.session?.company.id);
+  const [isSaving, setIsSaving] = useState(false);
+
   // Products available to add to the order (RF-PRD-001 master data).
   // Tanda 2.5, useCachedQuery: mismo queryName 'products' que
   // InventoryPage/ComprasPage — 3er consumidor del mismo catalogo,
@@ -89,21 +94,26 @@ export const CreateOrderModal: FC<CreateOrderModalProps> = ({ isOpen, onClose, o
     onClose();
   };
 
-  const handleConfirm = () => {
+  // Tanda 3a: el pedido se crea contra orders.service.ts (httpClient +
+  // store en memoria del service) en vez de armarse a mano acá con un
+  // id/fecha falsos — el service genera esos campos, igual que
+  // suppliers.service.ts#createSupplier. `onConfirm` recibe el Order
+  // real devuelto por el service, no un objeto construido en el
+  // cliente.
+  const handleConfirm = async () => {
+    if (!empresaId) {
+      toast.error('Todavia no hay una sesion activa.');
+      return;
+    }
+
     const tax = (subtotal - discount) * 0.21;
     const totalAmount = subtotal - discount + tax;
-    const now = new Date().toISOString();
 
-    const newOrder: Order = {
-      id: `ord-${Date.now()}`,
-      orderNumber: `PED-${Date.now().toString().slice(-5)}`,
-      date: now,
+    const input: OrderFormInput = {
       clientName: client,
       clientAddress: address,
       clientZone: locality,
       sellerName: seller,
-      status: 'pending',
-      source: 'manual',
       paymentMethod: paymentMethod as Order['paymentMethod'],
       subtotal,
       discount,
@@ -118,14 +128,19 @@ export const CreateOrderModal: FC<CreateOrderModalProps> = ({ isOpen, onClose, o
         unitPrice: item.price,
         subtotal: item.subtotal,
       })),
-      history: [
-        { id: `h-${Date.now()}`, date: now, status: 'pending', description: 'Pedido creado manualmente' },
-      ],
     };
 
-    onConfirm?.(newOrder);
-    toast.success('Pedido guardado con exito!');
-    handleClose();
+    setIsSaving(true);
+    try {
+      const created = await createOrder(empresaId, input);
+      onConfirm?.(created);
+      toast.success('Pedido guardado con exito!');
+      handleClose();
+    } catch {
+      toast.error('No se pudo guardar el pedido.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -187,8 +202,8 @@ export const CreateOrderModal: FC<CreateOrderModalProps> = ({ isOpen, onClose, o
             <button className="co-btn co-btn--outline" onClick={handleClose}>
               Guardar Borrador
             </button>
-            <button className="co-btn co-btn--primary" onClick={handleConfirm} disabled={items.length === 0}>
-              Confirmar Pedido
+            <button className="co-btn co-btn--primary" onClick={handleConfirm} disabled={items.length === 0 || isSaving}>
+              {isSaving ? 'Guardando...' : 'Confirmar Pedido'}
             </button>
           </div>
         </div>

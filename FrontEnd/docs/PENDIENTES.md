@@ -106,20 +106,26 @@ Tanda 3 si conviene migrarlos a `usePagedQuery` (paginación server-side real) e
 de mantenerlos como catálogo cacheado sin límite. Pregunta abierta ya registrada en
 `RELEVAMIENTO_CACHE.md` (#5), repetida acá para que no se pierda entre documentos.
 
-### 8. Pedidos y Caja sin capa de servicio — Severidad: Media
+### 8. Caja sin capa de servicio — Severidad: Media (Pedidos ya resuelto)
 
-`OrdersPage.tsx` (`useState<Order[]>(ORDERS_MOCK_DATA)`) y `CashPage.tsx`
-(`useState(CASH_MOCK_DATA)`) inicializan su estado directo desde el mock importado,
-sin ningún `orders.service.ts`/`cash.service.ts` de por medio (a diferencia de
-`products.service.ts`, que sí mantiene un store en memoria entre lecturas). Esto es
-distinto del problema de cache que resolvió Tanda 2.5: no es que falte cachear estos
-datos, es que **no hay service que cachear** — cualquier alta/edición hecha con
-`setOrders`/`setCashData` durante la sesión se pierde apenas el componente se
-desmonta (navegar a otra pantalla y volver). Confirmado y ya registrado como decisión
-explícita de alcance en Tanda 2.5 ("Pedidos y Caja quedan FUERA: no tienen service,
-es problema de arquitectura, no de cache") y coincide con el ítem de Pedidos ya
-anotado en `RELEVAMIENTO_CACHE.md`/entradas previas de este documento sobre decidir
-el scope empresa/sucursal de Pedidos antes de implementar cualquier cosa ahí.
+`CashPage.tsx` (`useState(CASH_MOCK_DATA)`) inicializa su estado directo desde el mock
+importado, sin ningún `cash.service.ts` de por medio (a diferencia de
+`products.service.ts`, que sí mantiene un store en memoria entre lecturas) — cualquier
+alta/edición hecha con `setCashData` durante la sesión se pierde apenas el componente
+se desmonta (navegar a otra pantalla y volver). Mismo problema de arquitectura ya
+descripto en Tanda 2.5, no de cache.
+
+**Pedidos (`orders`) resuelto a nivel de código en Tanda 3a (04/09/2026), sin
+verificación funcional confirmada todavía.** `OrdersPage.tsx` migró a la capa `api/`
+completa (`modules/orders/api/{dto,mapper,orders.service}.ts`), con un store en
+memoria en el service (mismo patrón que `products.service.ts`) — por diseño, las
+mutaciones (crear pedido, cambiar estado, cancelar) ya deberían sobrevivir a navegar
+afuera y volver, pero esto **no se probó en el navegador**: el commit de esa tanda se
+autorizó en base a `tsc -b`/`lint`/`build` limpios, no en base a este checklist. El
+punto 4 de `docs/VERIFICACION_TANDA_3A.md` (exactamente este comportamiento) sigue
+"No ejecutado" — hasta que se confirme, este ítem se considera resuelto por código,
+no verificado en los hechos.
+`Caja` sigue con el problema original, sin resolver.
 
 ---
 
@@ -174,6 +180,6 @@ escáner físico normalmente no dispara dos `Enter` en un intervalo tan corto.
 | 5 | Verificación funcional Tandas 0/1 (puntos 1-5, 7-10, 12-13) | Vigente | Media-Alta |
 | 6 | `useSessionStore` mezcla server state (session) y UI state (activeBranchId) | Vigente | Baja |
 | 7 | Catálogo de Productos/Proveedores sin paginar, solo cacheado | Vigente — evaluar Tanda 3 | Baja (hoy) |
-| 8 | Pedidos y Caja sin capa de servicio (mutaciones se pierden al desmontar) | Vigente | Media |
+| 8 | Caja sin capa de servicio (mutaciones se pierden al desmontar) | Vigente (Pedidos resuelto por código en Tanda 3a, sin verificar) | Media |
 | — | `NewTransactionModal` formato de hora | No reproduce | — |
 | — | `OrderProductsSection` `await` faltante | No reproduce (resuelto o nunca existió así) | — |

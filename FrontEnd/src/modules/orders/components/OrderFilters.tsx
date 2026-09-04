@@ -34,8 +34,6 @@ interface OrderFiltersProps {
   onSellerChange: (seller: string) => void;
   paymentMethod: string;
   onPaymentMethodChange: (method: string) => void;
-  totalCount: number;
-  filteredCount: number;
 }
 
 const IconSearch: FC<{ className?: string }> = ({ className }) => (
@@ -58,8 +56,6 @@ export const OrderFilters: FC<OrderFiltersProps> = ({
   onSellerChange,
   paymentMethod,
   onPaymentMethodChange,
-  totalCount,
-  filteredCount,
 }) => {
   return (
     <div className="order-filters">
@@ -145,12 +141,6 @@ export const OrderFilters: FC<OrderFiltersProps> = ({
             />
           </div>
         </div>
-      </div>
-
-      <div className="order-filters__footer">
-        <p className="order-filters__count" aria-live="polite">
-          Mostrando {filteredCount} de {totalCount} pedidos
-        </p>
       </div>
     </div>
   );

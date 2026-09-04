@@ -1,13 +1,20 @@
 import type { FC } from 'react';
-import type { Order } from '@/shared/types/order.types';
+import type { OrdersAggregates } from '../api/orders.service';
 import './OrderKpis.css';
 
 // ============================================================
 // OrderKpis — Mini-Dashboard superior para métricas
+//
+// Tanda 3a: recibe `aggregates`, ya calculados server-side (P3,
+// DECISIONES_TECNICAS.md), en vez de recorrer el array de pedidos en
+// memoria — antes de esta tanda calculaba esto sobre `orders`
+// completo, que ahora (paginado) solo trae la página actual. Puede
+// venir `undefined` mientras `usePagedQuery` todavía no resolvió la
+// primera carga.
 // ============================================================
 
 interface OrderKpisProps {
-  orders: Order[];
+  aggregates: OrdersAggregates | undefined;
 }
 
 function formatCurrency(value: number): string {
@@ -17,22 +24,12 @@ function formatCurrency(value: number): string {
   }).format(value);
 }
 
-export const OrderKpis: FC<OrderKpisProps> = ({ orders }) => {
-  // Filtramos por una fecha falsa simulada "hoy" (ejemplo 2026-06-13)
-  // En un sistema real se usa new Date()
-  const today = '2026-06-13';
-  
-  const todayOrders = orders.filter(o => o.date.startsWith(today));
-  
-  const countToday = todayOrders.length;
-  const countPending = orders.filter(o => o.status === 'pending').length;
-  const countPreparing = orders.filter(o => o.status === 'preparing').length;
-  const countDispatched = orders.filter(o => o.status === 'dispatched').length;
-  
-  // Facturación de hoy: Sumamos aquellos facturados, entregados o que sumen caja hoy
-  const billingToday = todayOrders
-    .filter(o => o.status !== 'cancelled')
-    .reduce((acc, o) => acc + o.totalAmount, 0);
+export const OrderKpis: FC<OrderKpisProps> = ({ aggregates }) => {
+  const countToday = aggregates?.todayCount ?? 0;
+  const countPending = aggregates?.pendingCount ?? 0;
+  const countPreparing = aggregates?.preparingCount ?? 0;
+  const countDispatched = aggregates?.dispatchedCount ?? 0;
+  const billingToday = aggregates?.todayBilling ?? 0;
 
   return (
     <div className="order-kpis">

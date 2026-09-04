@@ -123,6 +123,24 @@ Para el listado paginado en sí, `usePagedQuery(fetchXPage, filters, { enabled: 
 
 ---
 
+## Migrar un módulo SIN service previo — lo aprendido en Tanda 3a (`orders`)
+
+Esta guía asumía implícitamente (Tanda 1, `suppliers`) que el módulo ya tenía algún tipo de acceso a datos que reemplazar. `orders` fue el primer módulo migrado que leía `data/mock/X.data.ts` **directo en un `useState`** (`useState<Order[]>(ORDERS_MOCK_DATA)`), sin ningún service de por medio — el mismo caso que tienen hoy `cash`, `analytics` y las 3 vistas de `settings`. Pasos extra que la guía original no contemplaba:
+
+### 1. Verificar la decisión de scope (empresa/sucursal) CONTRA el código, no solo preguntar
+La sección "Cómo decidir si la entidad es de empresa o de sucursal" ya decía "no asumas, preguntá" — pero en Tanda 3a la decisión ya venía tomada de antemano (`orders` con `branchId`) y **el código la contradecía** (`Order` no tenía ningún campo de sucursal). Antes de escribir el DTO, grepeá el tipo de dominio y el flujo de alta buscando evidencia de sucursal (`branchId`, `activeBranchId`, cualquier referencia a `Branch`) — si la decisión previa no coincide con lo que encontrás, PARÁ y confirmá antes de seguir, aunque la decisión ya esté "tomada" de entrada. Ojo con falsos positivos: `orders` sí usaba `activeBranchId`, pero solo para consultar stock disponible al armar el pedido (`OrderProductsSection.tsx`) — nunca se guardaba en el pedido. Un `grep` que encuentre `activeBranchId` en el módulo no confirma por sí solo que la entidad sea de sucursal; hay que ver DÓNDE se usa.
+
+### 2. Los agregados/KPIs que hoy se calculan en memoria sobre el array completo son un requisito oculto
+Si la página tiene algún mini-dashboard/KPI (`OrderKpis.tsx` en el caso de `orders`) que recorre el array de datos completo en memoria, **eso deja de funcionar correctamente en cuanto el listado se pagina** — el array pasa a ser solo la página actual. Buscalo ANTES de escribir el DTO (va a determinar si necesitás `TAggregates` en el `PageResult`, mismo patrón P3 ya usado en `purchaseOrders`/`deliveries`/`clientsOverdue`) — si lo encontrás después de migrar el listado, vas a tener que retocar el contrato del `PageResult` ya escrito.
+
+### 3. Un footer/contador "Mostrando X de Y" calculado en memoria puede quedar mintiendo tras migrar
+Si el módulo tenía su propio contador de "N de M resultados" (fuera del `<Pagination>` que vas a agregar), revisá si `M` era un total SIN filtrar — `usePagedQuery` solo expone el total YA filtrado (`totalItems`), no hay un total general aparte sin una consulta extra. `Pagination` (que vas a agregar si el módulo no la tenía) ya muestra su propio "Mostrando X-Y de Z" con el rango exacto — si el módulo tenía un contador propio, lo más simple suele ser eliminarlo en vez de alimentarlo con un número inventado o repetido.
+
+### 4. El service nuevo tiene que generar los campos que antes generaba el componente en el alta
+Sin service previo, el componente de alta (`CreateOrderModal.tsx` en este caso) probablemente arma el objeto completo a mano — incluido el `id` falso (`Date.now()`), la fecha, el estado inicial y el primer evento de historial. Al mover esto al service (`createOrder`), esa generación se muda ahí — el componente pasa a mandar solo el `FormInput` (los campos que el usuario realmente completó) y recibe de vuelta la entidad ya completa con `id`/fecha/estado reales. Es el mismo criterio que ya usaba `createSupplier`, pero acá había que migrarlo desde cero en vez de solo repuntear un import.
+
+---
+
 ## Checklist de cierre por módulo
 
 Antes de dar un módulo por migrado:
@@ -141,7 +159,7 @@ Antes de dar un módulo por migrado:
 **Nota de reconciliación, para que no se lea como un error de conteo:** `AUDITORIA_ESCALABILIDAD.md` (A2) describe el bucket "sin paginar" con el número **16** en su texto (incluyendo a `suppliers`, ya migrado en esta tanda: 16 − 1 = **15** conceptualmente). La tabla de A2, sin embargo, tiene **15 filas** en ese bucket (incluyendo `suppliers`) porque agrupa las 3 sub-vistas de "Configuración" en una sola fila — a nivel de **archivo** (la granularidad que importa para migrar, porque usuarios/roles, suscripción y auditoría son 3 dominios sin relación entre sí que probablemente necesiten 3 DTOs distintos) son **16 archivos** restantes, no 15. Se deja esta nota en vez de forzar el número a coincidir — la lista de abajo es por archivo, que es la que efectivamente hay que tachar una por una.
 
 - [ ] `src/modules/clients/ClientsPage.tsx` (+ `components/ClientDirectoryTable.tsx`) — Directorio de Clientes. **Sin `branchId`** (mismo dominio que `ClientAccount`, ya confirmado M9).
-- [ ] `src/modules/orders/OrdersPage.tsx` — Pedidos. Decidir scope empresa/sucursal antes de implementar (no es obvio, ver sección de arriba).
+- [x] ~~`src/modules/orders/OrdersPage.tsx` — Pedidos.~~ **Migrado en Tanda 3a** (04/09/2026). Sin `branchId` — confirmado contra el código (no tenía ningún campo de sucursal), contradecía la decisión inicial que asumía `branchId`, se paró y se confirmó antes de implementar. Primer módulo migrado sin service previo — ver la sección "Migrar un módulo SIN service previo" más arriba.
 - [ ] `src/modules/cash/CashPage.tsx` — Caja. Probablemente **con `branchId`** (una caja es de una sucursal física) — confirmar igual, no asumir.
 - [ ] `src/modules/analytics/AnalyticsPage.tsx` — Analítica. Mayormente gráficos/KPIs, no una tabla paginable clásica — evaluar si aplica el mismo patrón o si necesita uno propio (agregados, no filas).
 - [ ] `src/modules/settings/components/tabs/TabUsersRoles.tsx` — Configuración, Usuarios y Roles. **Sin `branchId`** (es de la empresa).
@@ -159,4 +177,4 @@ Antes de dar un módulo por migrado:
 
 ---
 
-**Verificación funcional en navegador PENDIENTE (del propio piloto `suppliers` que esta guía usa como plantilla) — ver `docs/VERIFICACION_TANDA_0_1.md`.** El cambio de Tanda 2 (cache/dedupe/invalidación vía TanStack Query, transparente para esta guía) tiene su propio checklist, también pendiente — ver `docs/VERIFICACION_TANDA_2.md`. Lo mismo para Tanda 2.5 (`useCachedQuery`, httpClient unificado) — ver `docs/VERIFICACION_TANDA_2_5.md`.
+**Verificación funcional en navegador PENDIENTE (del propio piloto `suppliers` que esta guía usa como plantilla) — ver `docs/VERIFICACION_TANDA_0_1.md`.** El cambio de Tanda 2 (cache/dedupe/invalidación vía TanStack Query, transparente para esta guía) tiene su propio checklist, también pendiente — ver `docs/VERIFICACION_TANDA_2.md`. Lo mismo para Tanda 2.5 (`useCachedQuery`, httpClient unificado) — ver `docs/VERIFICACION_TANDA_2_5.md`. Y para Tanda 3a (`orders`, primer módulo sin service previo) — ver `docs/VERIFICACION_TANDA_3A.md`.
