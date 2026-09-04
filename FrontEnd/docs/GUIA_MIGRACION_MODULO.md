@@ -6,6 +6,8 @@
 
 **Verificación funcional en navegador PENDIENTE (de `suppliers`, el propio piloto) — ver `docs/VERIFICACION_TANDA_0_1.md`.** Hasta que esa verificación no esté confirmada, tratá el patrón de `suppliers` como "compila y compila el tipo, pero no probado en navegador todavía" al copiarlo — si el checklist de esa verificación encuentra un problema, corregilo en `suppliers` (la plantilla) ANTES de replicarlo a un módulo nuevo, no lo arrastres.
 
+**Actualización Tanda 2 (04/09/2026):** `usePagedQuery` ahora usa TanStack Query por dentro (cache, dedupe, invalidación cruzada al cambiar de sucursal/empresa) — la firma pública no cambió, así que el paso 4 de abajo (`usePagedQuery(fetchXPage, filters, options)`) sigue siendo literal, sin nada nuevo que aprender para migrar un módulo. Dos cosas sí cambian de verdad para un módulo nuevo, ver el paso 3 y la sección de Tropiezos actualizada: `fetchXPage` tiene que seguir siendo una función con nombre estable (ahora además de servir para las dependencias del efecto, su `.name` identifica la query en el cache — una arrow function anónima ya no solo dispararía un loop, rompería el cache), y ya no hace falta escribir a mano el `if (!session) return` para esperar `empresaId` en el listado paginado en sí (`usePagedQuery` lo resuelve solo) — pero seguí pasando `enabled: Boolean(empresaId)` explícito igual, es inofensivo y hace que la intención quede clara para quien lea el componente. Detalle completo del razonamiento en `docs/DECISIONES_TECNICAS.md`, entrada "Cache, dedupe e invalidación cruzada con TanStack Query".
+
 ---
 
 ## Orden exacto de archivos a crear, y qué copiar de `suppliers` en cada uno
@@ -30,7 +32,7 @@ Copiá la estructura completa de `modules/suppliers/api/suppliers.service.ts`:
 - Un store de módulo en espacio DTO (`let xDTOStore: XDTO[] = X_MOCK_DATA.map(xToDTO)`), sembrado una sola vez desde `data/mock/X.data.ts`.
 - `matchesFilters`/`compareX` operando sobre el DTO (no el dominio) — un backend real filtra/ordena sobre SU storage, no sobre el shape que consume el frontend.
 - `filterAndSortX` compartida entre el resolver paginado y el export (no se duplica).
-- `fetchXPage(query, signal?)` — firma exacta `(query: PageQuery<XQueryFilters, XSortField>, signal?: AbortSignal) => Promise<PageResult<X, TAggregates>>`, llama a `httpClient.request` con `mock: () => resolveMockXPage(query)`.
+- `fetchXPage(query, signal?)` — firma exacta `(query: PageQuery<XQueryFilters, XSortField>, signal?: AbortSignal) => Promise<PageResult<X, TAggregates>>`, llama a `httpClient.request` con `mock: () => resolveMockXPage(query)`. **Desde Tanda 2:** tiene que ser una `function` con nombre o una `const` exportada con nombre estable (nunca una arrow function inline al llamar a `usePagedQuery`) — `usePagedQuery` usa `fetchXPage.name` para identificar el listado dentro del cache de TanStack Query; una función anónima o cuyo nombre cambie entre renders rompe la identidad del cache, no solo dispara un loop como con el `useEffect` anterior.
 - `exportX(filters, sort?)` si el listado tiene botón de exportar (reusa `filterAndSortX`, no duplica).
 - `createX`/`updateX` si el módulo tiene alta/edición, recibiendo `empresaId` como primer parámetro explícito, cada uno vía `httpClient.request` con su propio `mock`.
 
@@ -82,14 +84,19 @@ No hay forma de "acertarle" a la forma exacta que tendrá un backend que todaví
 
 **El fix:** `XFormInput` vive en `mapper.ts` (que no depende de nada del service), y `X.service.ts` lo re-exporta (`export type { XFormInput }`) para que los consumidores externos (el formulario) lo sigan importando desde el service, su punto de entrada público. **Empezá por acá:** definí `XFormInput` en `mapper.ts` desde el primer borrador, no lo muevas después de encontrarte con el ciclo.
 
-### Retrocompatibilidad de `usePagedQuery` con `fetchPage` que no reciben `signal`
-`usePagedQuery.ts` (`shared/hooks/`) ya fue extendido en Tanda 1 para pasar un `AbortController.signal` como segundo argumento a `fetchPage` — **no hace falta tocarlo de nuevo** para un módulo nuevo. Tu `fetchXPage(query, signal?)` puede declarar el segundo parámetro y pasarlo a `httpClient.request({ signal, ... })` para cancelación real, o ignorarlo si por algún motivo tu módulo no lo necesita todavía — TypeScript permite ambas firmas indistintamente en el `fetchPage` que le pasás a `usePagedQuery`.
+### `usePagedQuery` sigue pasando `signal` a `fetchPage` (desde Tanda 2, viene de TanStack Query, no de un `AbortController` manual)
+`usePagedQuery.ts` (`shared/hooks/`) le sigue pasando un `AbortSignal` como segundo argumento a `fetchPage` — **no hace falta tocarlo de nuevo** para un módulo nuevo. Tu `fetchXPage(query, signal?)` puede declarar el segundo parámetro y pasarlo a `httpClient.request({ signal, ... })` para cancelación real, o ignorarlo si por algún motivo tu módulo no lo necesita todavía — TypeScript permite ambas firmas indistintamente. Lo único que cambió por dentro (Tanda 2): antes ese `signal` salía de un `AbortController` creado a mano en un `useEffect`; ahora sale de `useQuery` (TanStack Query), que lo cancela solo cuando corresponde (componente desmontado, o la query queda sin observadores porque cambiaron los filtros/página). Para quien escribe `fetchXPage`, es exactamente el mismo contrato de antes — no hay nada que adaptar.
+
+### `usePagedQuery` ya espera a que `empresaId` exista (Tanda 2) — pero seguí pasando `enabled: Boolean(empresaId)` igual
+Desde Tanda 2, `usePagedQuery` lee `empresaId` de `useSessionStore` internamente (lo necesita para la query key del cache, ver `DECISIONES_TECNICAS.md`) y no dispara ningún fetch hasta que existe — esto ya cubre, para CUALQUIER listado paginado nuevo, la espera a que la sesión cargue, sin que tengas que escribir nada extra para el listado en sí. Igual seguí pasando `enabled: Boolean(empresaId)` explícito en tu página (mismo patrón que `SuppliersPage.tsx`) — es redundante con lo que ya hace el hook por dentro, pero deja la intención explícita para quien lea el componente sin tener que saber cómo funciona `usePagedQuery` por dentro.
+
+Esto NO cubre otras llamadas a servicios fuera de `usePagedQuery` (ej. un `fetchX()` suelto para un dato no paginado, o una mutación como `createX`/`updateX`) — esas siguen necesitando el patrón manual de abajo si requieren `empresaId`.
 
 ### Repunteo de imports en módulos ajenos al que estás migrando
 Antes de borrar un service viejo, `grep -rln "services/mock/X.service" src` (o `data/mock/X.data` si no había service) sobre **todo** `src`, no solo el módulo que estás migrando — en Tanda 1, `ComprasPage.tsx` e `InventoryPage.tsx` (ninguno de los dos es `suppliers`) importaban `fetchSuppliers` del service viejo. Repuntealos al import nuevo (`@/modules/X/api/X.service`) — es un import de servicio entre módulos, no de componente, así que no viola R2 (mismo patrón ya usado antes de esta tanda, ver O4 en `DECISIONES_TECNICAS.md`). Si esos archivos ajenos llaman a una función que ahora requiere `empresaId`, van a necesitar leer `session` de `useSessionStore` y esperar a que esté cargada (ver el punto siguiente) — es un cambio mínimo de esos archivos (agregar el parámetro), no una migración completa de ese módulo ajeno.
 
-### Esperar a que la sesión cargue antes de llamar servicios que requieren `empresaId`
-Cualquier función de `X.service.ts` que ahora recibe `empresaId` obligatorio no se puede llamar con un valor vacío solo porque `session` todavía no cargó (`useSessionStore`, carga async al montar `AppShell`). Patrón a copiar (de `ComprasPage.tsx`/`InventoryPage.tsx`, repunteados en Tanda 1):
+### Esperar a que la sesión cargue antes de llamar servicios que requieren `empresaId` (fuera de `usePagedQuery`)
+Para el listado paginado en sí, esto ya lo resuelve `usePagedQuery` solo (ver arriba, Tanda 2). Este patrón sigue haciendo falta para cualquier OTRA llamada a un service que requiera `empresaId` fuera del hook — una mutación (`createX`/`updateX`) o un fetch suelto no paginado. Cualquier función de `X.service.ts` que ahora recibe `empresaId` obligatorio no se puede llamar con un valor vacío solo porque `session` todavía no cargó (`useSessionStore`, carga async al montar `AppShell`). Patrón a copiar (de `ComprasPage.tsx`/`InventoryPage.tsx`, repunteados en Tanda 1):
 ```ts
 const session = useSessionStore((s) => s.session);
 
@@ -138,4 +145,4 @@ Antes de dar un módulo por migrado:
 
 ---
 
-**Verificación funcional en navegador PENDIENTE (del propio piloto `suppliers` que esta guía usa como plantilla) — ver `docs/VERIFICACION_TANDA_0_1.md`.**
+**Verificación funcional en navegador PENDIENTE (del propio piloto `suppliers` que esta guía usa como plantilla) — ver `docs/VERIFICACION_TANDA_0_1.md`.** El cambio de Tanda 2 (cache/dedupe/invalidación vía TanStack Query, transparente para esta guía) tiene su propio checklist, también pendiente — ver `docs/VERIFICACION_TANDA_2.md`.
