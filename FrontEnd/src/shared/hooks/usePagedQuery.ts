@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { PageQuery, PageResult, PageSort } from '@/shared/types/pagination.types';
+import { ApiError } from '@/shared/api/ApiError';
 
 // ============================================================
 // usePagedQuery — Maneja el estado de una consulta paginada contra un
@@ -58,7 +59,15 @@ export interface UsePagedQueryResult<TItem, TSort extends string, TAggregates> {
 }
 
 export function usePagedQuery<TItem, TFilters, TSort extends string = string, TAggregates = undefined>(
-  fetchPage: (query: PageQuery<TFilters, TSort>) => Promise<PageResult<TItem, TAggregates>>,
+  // El segundo parametro (signal) es opcional para quien lo declara:
+  // los fetchPage ya migrados antes de esta tanda (getDeliveriesPage,
+  // getLowStockPage, getClientAccountsPage, getOverdueClientsPage,
+  // getPurchaseOrdersPage) no lo reciben y siguen funcionando igual
+  // (JS/TS permite ignorar argumentos extra) — solo fetchSuppliersPage
+  // (Tanda 1, suppliers.service.ts) lo usa de verdad, via httpClient,
+  // para cancelacion real con AbortController (mata el hallazgo #9,
+  // AUDITORIA_ESCALABILIDAD.md).
+  fetchPage: (query: PageQuery<TFilters, TSort>, signal: AbortSignal) => Promise<PageResult<TItem, TAggregates>>,
   filters: TFilters,
   options: UsePagedQueryOptions<TSort> = {}
 ): UsePagedQueryResult<TItem, TSort, TAggregates> {
@@ -93,7 +102,12 @@ export function usePagedQuery<TItem, TFilters, TSort extends string = string, TA
   useEffect(() => {
     if (!enabled) return;
     let cancelled = false;
-    fetchPage({ page, pageSize, filters: trackedFilters, sort })
+    // AbortController real (ver comentario en la firma de fetchPage):
+    // el cleanup de este efecto lo aborta, y para un fetchPage que
+    // respeta `signal` (httpClient) eso corta el trabajo en vuelo de
+    // verdad, no solo descarta la respuesta cuando llega tarde.
+    const controller = new AbortController();
+    fetchPage({ page, pageSize, filters: trackedFilters, sort }, controller.signal)
       .then((result) => {
         if (cancelled) return;
         setItems(result.items);
@@ -106,6 +120,12 @@ export function usePagedQuery<TItem, TFilters, TSort extends string = string, TA
       })
       .catch((err: unknown) => {
         if (cancelled) return;
+        // Una cancelacion real (AbortController, ver arriba) no es un
+        // error que mostrar: el efecto ya se va a volver a correr con
+        // los parametros nuevos (o ya esta desmontado). Sin este
+        // chequeo, escribir rapido en un buscador mostraria "no se
+        // pudo cargar" en cada tecla salvo la ultima.
+        if (err instanceof ApiError && err.code === 'CANCELLED') return;
         setError(err instanceof Error ? err.message : 'No se pudo cargar la lista.');
       })
       .finally(() => {
@@ -116,9 +136,12 @@ export function usePagedQuery<TItem, TFilters, TSort extends string = string, TA
     // Descarta respuestas fuera de orden (P5): si cambia algo antes de
     // que este pedido resuelva, el cleanup marca `cancelled` y el
     // resultado tardio no pisa al de un pedido mas nuevo — mismo patron
-    // ya usado en el resto del proyecto (InventoryPage, etc.).
+    // ya usado en el resto del proyecto (InventoryPage, etc.). Se
+    // mantiene ademas de `controller.abort()` porque no todo fetchPage
+    // respeta `signal` todavia (ver arriba).
     return () => {
       cancelled = true;
+      controller.abort();
     };
   }, [fetchPage, trackedFilters, sort, page, pageSize, enabled, refetchToken]);
 
