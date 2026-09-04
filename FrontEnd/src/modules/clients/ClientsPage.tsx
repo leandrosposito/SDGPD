@@ -1,15 +1,21 @@
 import { useEffect, useState, useMemo, type FC } from 'react';
 import { toast } from 'sonner';
-import { useQueryClient } from '@tanstack/react-query';
 import type { ClientAccount } from '@/shared/types/client.types';
-import { fetchClients, createClient, updateClient, type ClientFormInput } from '@/services/mock/clients.service';
-import { useCachedQuery, CACHE_STALE_TIME } from '@/shared/hooks/useCachedQuery';
-import { cachedQueryKey } from '@/shared/api/queryKeys';
+import {
+  getClientsPage,
+  createClient,
+  updateClient,
+  type ClientFormInput,
+  type ClientsQueryFilters,
+} from './api/clients.service';
+import { usePagedQuery } from '@/shared/hooks/usePagedQuery';
 import { useSessionStore } from '@/shared/state/useSessionStore';
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
-
-// Referencia estable: ver mismo patron en ComprasPage/InventoryPage.
-const EMPTY_CLIENTS: ClientAccount[] = [];
+import { Pagination } from '@/shared/components/ui/Pagination';
+import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary';
+import { ErrorState } from '@/shared/components/ui/ErrorState';
+import { LoadingState } from '@/shared/components/ui/LoadingState';
+import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay';
 import { ClientActionBar } from './components/ClientActionBar';
 import { ClientFilters } from './components/ClientFilters';
 import { ClientDirectoryTable } from './components/ClientDirectoryTable';
@@ -19,14 +25,17 @@ import { CreateClientModal } from './components/create-client/CreateClientModal'
 import './ClientsPage.css';
 
 // ============================================================
-// ClientsPage — Main Clients Module Container
-// "Cuentas Corrientes" y "Clientes Morosos" se autoconsultan contra el
-// contrato de paginacion server-side (ver ClientAccountsTable/
+// ClientsPage — Main Clients Module Container (Tanda 3d de
+// escalabilidad: el Directorio de Contacto migró de useCachedQuery +
+// filtrado en memoria a usePagedQuery server-side).
+//
+// Las 3 pestañas se autoconsultan contra el contrato de paginación
+// server-side (ver ClientDirectoryTable/ClientAccountsTable/
 // ClientOverdueTable) — reciben `search` ya debounced (M6), no el
-// array completo. "Directorio de Contacto" sigue filtrando en memoria
-// (fuera de alcance de esta tarea): usa `searchQuery` sin debounce
-// porque filtrar un array ya cargado es instantaneo, no dispara ningun
-// fetch que debounce tenga sentido de frenar.
+// array completo. Zona/vendedor/estado del filtro superior siguen
+// aplicando SOLO al Directorio (decisión ya vigente antes de esta
+// tanda, ver DECISIONES_TECNICAS.md): Cuentas Corrientes/Clientes
+// Morosos no los soportan en su contrato paginado.
 // ============================================================
 
 type ActiveTab = 'directory' | 'accounts' | 'overdue';
@@ -40,7 +49,6 @@ const SEARCH_DEBOUNCE_MS = 300;
 
 export const ClientsPage: FC = () => {
   const empresaId = useSessionStore((s) => s.session?.company.id);
-  const queryClient = useQueryClient();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<ActiveTab>('directory');
 
@@ -51,51 +59,58 @@ export const ClientsPage: FC = () => {
   const [status, setStatus] = useState('');
   const debouncedSearchQuery = useDebouncedValue(searchQuery, SEARCH_DEBOUNCE_MS);
 
-  // Directorio de Clientes (Tanda 2.5, useCachedQuery — ver
-  // RELEVAMIENTO_CACHE.md/DECISIONES_TECNICAS.md). Distinto del
-  // contrato paginado de ClientAccountsTable/ClientOverdueTable
-  // (usePagedQuery, ya cacheado desde Tanda 2): este es el catalogo
-  // completo del Directorio, filtrado en memoria (ver filteredClients).
-  const { data: clientsData, error: clientsError } = useCachedQuery(
-    'clients',
-    undefined,
-    (signal) => fetchClients(signal),
-    { staleTime: CACHE_STALE_TIME.CATALOG }
+  // Directorio de Clientes (Tanda 3d): usePagedQuery server-side,
+  // reemplaza al useCachedQuery + filtrado en memoria de Tanda 2.5.
+  // Los filtros de zona/vendedor/estado, que antes corrian en memoria
+  // acá (filteredClients), pasan al service — igual que la busqueda,
+  // ahora debounced (antes el Directorio no debounceaba: filtrar en
+  // memoria era instantaneo, pero ahora dispara una consulta real).
+  const directoryFilters: ClientsQueryFilters = useMemo(
+    () => ({
+      empresaId: empresaId ?? '',
+      search: debouncedSearchQuery || undefined,
+      zone: zone || undefined,
+      seller: seller || undefined,
+      status: (status || undefined) as ClientAccount['status'] | undefined,
+    }),
+    [empresaId, debouncedSearchQuery, zone, seller, status]
   );
-  const clients = clientsData ?? EMPTY_CLIENTS;
+
+  const {
+    items: clients,
+    page,
+    pageSize,
+    totalItems,
+    totalPages,
+    isLoading,
+    isFetching,
+    error,
+    setPage,
+    setPageSize,
+    refetch,
+  } = usePagedQuery(getClientsPage, directoryFilters, { enabled: Boolean(empresaId) });
 
   useEffect(() => {
-    if (clientsError) toast.error('No se pudo cargar el listado de clientes.');
-  }, [clientsError]);
+    if (error) toast.error('No se pudo cargar el listado de clientes.');
+  }, [error]);
 
-  // RF-CLI-001: Alta / Modificacion de cliente contra el mock service
-  // (persiste en memoria durante la sesion, ver services/mock/clients.service.ts).
-  // Invalidacion por mutacion (Tanda 2.5, tabla completa en
-  // DECISIONES_TECNICAS.md): crear/editar cliente invalida el
-  // directorio — quirurgica por prefijo, nunca toca 'products' ni
-  // 'suppliers-list'.
+  // RF-CLI-001: Alta / Modificacion de cliente contra el service nuevo
+  // (persiste en memoria durante la sesion, ver modules/clients/api/clients.service.ts).
+  // P10 (DECISIONES_TECNICAS.md): tras guardar se vuelve a pedir la
+  // pagina vigente del Directorio (refetch), en vez de la invalidacion
+  // de useCachedQuery que usaba Tanda 2.5 — mismo criterio que el
+  // resto de los listados ya migrados a usePagedQuery.
   const handleSaveClient = async (input: ClientFormInput, clientId?: string) => {
+    if (!empresaId) throw new Error('Todavia no hay una sesion activa.');
     if (clientId) {
-      const updated = await updateClient(clientId, input);
-      if (empresaId) void queryClient.invalidateQueries({ queryKey: cachedQueryKey({ queryName: 'clients', empresaId }) });
+      const updated = await updateClient(empresaId, clientId, input);
+      refetch();
       return updated;
     }
-    const created = await createClient(input);
-    if (empresaId) void queryClient.invalidateQueries({ queryKey: cachedQueryKey({ queryName: 'clients', empresaId }) });
+    const created = await createClient(empresaId, input);
+    refetch();
     return created;
   };
-
-  // Filter Logic
-  const filteredClients = useMemo(() => {
-    return clients.filter(c => {
-      const q = searchQuery.toLowerCase();
-      const matchSearch = c.clientName.toLowerCase().includes(q) || c.cuit.includes(q);
-      const matchZone = zone === '' || c.zone === zone;
-      const matchSeller = seller === '' || c.sellerName === seller;
-      const matchStatus = status === '' || c.status === status;
-      return matchSearch && matchZone && matchSeller && matchStatus;
-    });
-  }, [clients, searchQuery, zone, seller, status]);
 
   return (
     <div className="clients-page page-enter">
@@ -141,7 +156,28 @@ export const ClientsPage: FC = () => {
 
       <div className="clients-page__content mt-4">
         {activeTab === 'directory' && (
-          <ClientDirectoryTable clients={filteredClients} />
+          !empresaId || isLoading ? (
+            <LoadingState message="Cargando directorio de clientes..." />
+          ) : error ? (
+            <ErrorState message="No se pudo cargar el directorio de clientes." onRetry={refetch} />
+          ) : (
+            <ErrorBoundary
+              fallbackTitle="No se pudo mostrar el directorio de clientes."
+              fallbackMessage="Intenta de nuevo o volve al inicio."
+            >
+              <FetchingOverlay isFetching={isFetching}>
+                <ClientDirectoryTable clients={clients} />
+              </FetchingOverlay>
+              <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                pageSize={pageSize}
+                onPageChange={setPage}
+                onPageSizeChange={setPageSize}
+              />
+            </ErrorBoundary>
+          )
         )}
         {activeTab === 'accounts' && (
           <ClientAccountsTable search={debouncedSearchQuery} />

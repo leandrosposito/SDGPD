@@ -14,7 +14,7 @@ import {
   getClientAccountsPage,
   exportClientAccounts,
   type ClientAccountsQueryFilters,
-} from '@/services/mock/clients.service';
+} from '@/modules/clients/api/clients.service';
 
 // ============================================================
 // ClientAccountsTable — Cuentas Corrientes, paginada server-side

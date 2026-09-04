@@ -11,7 +11,7 @@ import { usePagedQuery } from '@/shared/hooks/usePagedQuery';
 import { DateRangeFilter } from '@/shared/components/ui/DateRangeFilter';
 import { defaultDateRangeValue, type DateRangeValue } from '@/shared/components/ui/dateRangePresets';
 import { ExportButton, type ExportColumn } from '@/shared/components/ui/ExportButton';
-import { getOverdueClientsPage, exportOverdueClients } from '@/services/mock/clients.service';
+import { getOverdueClientsPage, exportOverdueClients } from '@/modules/clients/api/clients.service';
 import type {
   AgingBucket,
   AgingBucketAggregate,

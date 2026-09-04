@@ -16,40 +16,127 @@ import { MAX_EXPORT_ROWS } from '@/shared/types/pagination.types';
 import { CLIENTS_MOCK_DATA } from '@/data/mock/clients.data';
 import { httpClient } from '@/shared/api/httpClient';
 import { ApiError } from '@/shared/api/ApiError';
+import type { ClientAccountDTO, ClientsPageDTO } from './dto';
+import { clientFromDTO, clientToDTO, clientFormInputToDTO, type ClientFormInput } from './mapper';
+
+export type { ClientFormInput };
 
 // ============================================================
-// CLIENTS SERVICE — RF-CLI-001 (corrige C4: "Guardar" no persistia nada)
-// + deuda vencida / aging (M1-M10, DECISIONES_TECNICAS.md).
-// Pasa por httpClient (Tanda 2.5 de escalabilidad): timeout,
-// reintentos, cancelacion real y VITE_MOCK_LATENCY_MS/
-// VITE_MOCK_FAILURE_RATE/VITE_API_DEBUG ya no son exclusivos de
-// suppliers.service.ts. El servicio sigue filtrando/ordenando/
-// contando/cortando el (P1) — no devuelve el dataset completo para
-// que la vista lo procese. Reemplazar por llamadas HTTP reales cuando
-// exista Backend (VITE_API_MODE=http, sin tocar ningun call-site).
+// clients.service — Único punto del proyecto que habla con httpClient
+// para Clientes (Tanda 3d de escalabilidad). Absorbe TODO el contenido
+// de services/mock/clients.service.ts (eliminado en esta tanda, ver
+// docs/DECISIONES_TECNICAS.md) — no solo el Directorio.
+//
+// Por qué se absorbió todo el archivo, no solo fetchClients/
+// createClient/updateClient: `clientsStore` es una ÚNICA variable
+// compartida entre el Directorio y getClientAccountsPage/
+// getOverdueClientsPage (Cuentas Corrientes/Clientes Morosos) — al
+// punto de que `overdueSnapshotCache` invalida su cache FIFO por
+// IGUALDAD DE REFERENCIA contra `clientsStore` (ver más abajo).
+// Separar el archivo en dos, cada uno con su propio store, hubiera
+// roto la consistencia entre las 3 pestañas: un cliente creado en el
+// Directorio no aparecería en Cuentas Corrientes ni Clientes Morosos.
+// No fue una preferencia de estructura, fue una restricción técnica.
+//
+// getClientAccountsPage/getOverdueClientsPage y TODA su lógica de
+// soporte (FIFO, aging buckets, cache por referencia) están copiadas
+// LITERAL desde el archivo viejo — cero refactors, cero "mejoras" de
+// paso, tal como pedía la tarea. Siguen operando directo sobre
+// `ClientAccount` (dominio), SIN pasar por DTO — ver el porqué en
+// dto.ts/mapper.ts.
+//
+// Sin branchId (M9, ya confirmado en tandas anteriores, reverificado
+// contra el código en esta): un cliente es de la empresa.
 // ============================================================
 
+// Espacio de DOMINIO, no DTO — a diferencia de suppliers/orders/cash.
+// getClientAccountsPage/getOverdueClientsPage leen esta misma
+// variable directo (sin conversión); la traducción a/desde DTO ocurre
+// solo en el borde de getClientsPage/createClient/updateClient (ver
+// más abajo), no en el storage.
 let clientsStore: ClientAccount[] = structuredClone(CLIENTS_MOCK_DATA);
 
-export type ClientFormInput = Pick<
-  ClientAccount,
-  'clientName' | 'cuit' | 'address' | 'phone' | 'zone' | 'sellerName' | 'creditLimit'
->;
+// ============================================================
+// DIRECTORIO DE CLIENTES — paginado server-side (Tanda 3d). Los
+// filtros de zona/vendedor/estado, que antes corrían en memoria en
+// ClientsPage.tsx#filteredClients, pasan acá.
+// ============================================================
 
-export async function fetchClients(signal?: AbortSignal): Promise<ClientAccount[]> {
-  return httpClient.request<ClientAccount[]>({
-    method: 'GET',
-    path: '/clients',
-    signal,
-    mock: () => structuredClone(clientsStore),
-  });
+export interface ClientsQueryFilters {
+  empresaId: string;
+  search?: string;
+  zone?: string;
+  seller?: string;
+  status?: ClientAccount['status'];
 }
 
-export async function createClient(input: ClientFormInput): Promise<ClientAccount> {
-  return httpClient.request<ClientAccount>({
+// Un solo campo de orden: el Directorio no tenía sort de columna
+// clickeable antes de esta tanda — se ordena por nombre, sin
+// selector en la UI que la vista original tampoco tenía (mismo
+// criterio que UsersSortField en settings, Tanda 3c).
+export type ClientsSortField = 'clientName';
+
+function matchesDirectoryFilters(client: ClientAccount, filters: ClientsQueryFilters): boolean {
+  const search = filters.search?.trim().toLowerCase();
+  const matchesSearch =
+    !search || client.clientName.toLowerCase().includes(search) || client.cuit.includes(search);
+  const matchesZone = !filters.zone || client.zone === filters.zone;
+  const matchesSeller = !filters.seller || client.sellerName === filters.seller;
+  const matchesStatus = !filters.status || client.status === filters.status;
+  return matchesSearch && matchesZone && matchesSeller && matchesStatus;
+}
+
+function resolveMockClientsPage(query: PageQuery<ClientsQueryFilters, ClientsSortField>): ClientsPageDTO {
+  const inScope = clientsStore.filter((c) => matchesDirectoryFilters(c, query.filters));
+  const sorted = [...inScope].sort((a, b) => {
+    const cmp = a.clientName.localeCompare(b.clientName);
+    return query.sort?.direction === 'desc' ? -cmp : cmp;
+  });
+
+  const total = sorted.length;
+  const totalPages = Math.max(1, Math.ceil(total / query.pageSize));
+  const safePage = Math.min(Math.max(1, query.page), totalPages);
+  const start = (safePage - 1) * query.pageSize;
+
+  return {
+    data: sorted.slice(start, start + query.pageSize).map(clientToDTO),
+    meta: { total, page: safePage, page_size: query.pageSize },
+  };
+}
+
+export async function getClientsPage(
+  query: PageQuery<ClientsQueryFilters, ClientsSortField>,
+  signal?: AbortSignal
+): Promise<PageResult<ClientAccount>> {
+  const pageDTO = await httpClient.request<ClientsPageDTO>({
+    method: 'GET',
+    path: '/clients',
+    params: {
+      empresaId: query.filters.empresaId,
+      search: query.filters.search,
+      zone: query.filters.zone,
+      seller: query.filters.seller,
+      status: query.filters.status,
+      page: query.page,
+      pageSize: query.pageSize,
+    },
+    signal,
+    mock: () => resolveMockClientsPage(query),
+  });
+
+  return {
+    items: pageDTO.data.map(clientFromDTO),
+    total: pageDTO.meta.total,
+    page: pageDTO.meta.page,
+    pageSize: pageDTO.meta.page_size,
+  };
+}
+
+export async function createClient(empresaId: string, input: ClientFormInput): Promise<ClientAccount> {
+  const dto = await httpClient.request<ClientAccountDTO>({
     method: 'POST',
     path: '/clients',
-    body: input,
+    body: { empresaId, ...clientFormInputToDTO(input) },
     mock: () => {
       const newClient: ClientAccount = {
         ...input,
@@ -62,25 +149,27 @@ export async function createClient(input: ClientFormInput): Promise<ClientAccoun
         transactions: [],
       };
       clientsStore = [...clientsStore, newClient];
-      return structuredClone(newClient);
+      return clientToDTO(newClient);
     },
   });
+  return clientFromDTO(dto);
 }
 
-export async function updateClient(id: string, input: ClientFormInput): Promise<ClientAccount> {
-  return httpClient.request<ClientAccount>({
+export async function updateClient(empresaId: string, id: string, input: ClientFormInput): Promise<ClientAccount> {
+  const dto = await httpClient.request<ClientAccountDTO>({
     method: 'PUT',
     path: `/clients/${id}`,
-    body: input,
+    body: { empresaId, ...clientFormInputToDTO(input) },
     mock: () => {
       const existing = clientsStore.find((c) => c.id === id);
       if (!existing) throw new ApiError(404, 'CLIENT_ERROR', 'El cliente que intenta editar ya no existe.');
 
       const updated: ClientAccount = { ...existing, ...input };
       clientsStore = clientsStore.map((c) => (c.id === id ? updated : c));
-      return structuredClone(updated);
+      return clientToDTO(updated);
     },
   });
+  return clientFromDTO(dto);
 }
 
 // ============================================================
@@ -91,6 +180,9 @@ export async function updateClient(id: string, input: ClientFormInput): Promise<
 // unicamente al Directorio (fuera de alcance de esta tarea, ver
 // DECISIONES_TECNICAS.md): agregarlos al contrato paginado no fue
 // pedido y hubiera sido diseñar filtros que nadie definio.
+//
+// COPIADO LITERAL desde services/mock/clients.service.ts (Tanda 3d) —
+// sin ningun cambio de logica, prohibido tocarla.
 // ============================================================
 
 // dateFrom/dateTo (DateRangeFilter, tarea transversal) — Opcion A
@@ -222,6 +314,9 @@ export async function exportClientAccounts(
 // DECISIONES_TECNICAS.md, entrada de esta tarea, para el razonamiento
 // completo de la regla de negocio y de por que el computo vive en un
 // cache invalidado por referencia (no se reimputa por pagina — 3.3).
+//
+// COPIADO LITERAL desde services/mock/clients.service.ts (Tanda 3d) —
+// sin ningun cambio de logica, prohibido tocarla.
 // ============================================================
 
 const AGING_BUCKETS: readonly AgingBucket[] = ['1-30', '31-60', '61-90', '90+'];

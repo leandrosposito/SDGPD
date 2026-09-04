@@ -2,7 +2,7 @@ import { useEffect, useState, type FC } from 'react';
 import { toast } from 'sonner';
 import { Modal } from '@/shared/components/ui/Modal';
 import type { ClientAccount } from '@/shared/types/client.types';
-import type { ClientFormInput } from '@/services/mock/clients.service';
+import type { ClientFormInput } from '@/modules/clients/api/clients.service';
 import { ClientGeneralTab } from './ClientGeneralTab';
 import { ClientLogisticsTab } from './ClientLogisticsTab';
 import { ClientCommercialTab } from './ClientCommercialTab';
