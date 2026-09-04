@@ -1,13 +1,23 @@
-import { useEffect, useState, type FC } from 'react';
+import { useMemo, useState, type FC } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
 import type { Supplier } from '@/shared/types/supplier.types';
 import {
-  fetchSuppliers,
+  fetchSuppliersPage,
+  exportSuppliers,
   createSupplier,
   updateSupplier,
+  type SuppliersQueryFilters,
   type SupplierFormInput,
-} from '@/services/mock/suppliers.service';
+} from './api/suppliers.service';
+import { usePagedQuery } from '@/shared/hooks/usePagedQuery';
+import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
+import { useSessionStore } from '@/shared/state/useSessionStore';
+import { Pagination } from '@/shared/components/ui/Pagination';
+import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary';
+import { ErrorState } from '@/shared/components/ui/ErrorState';
+import { LoadingState } from '@/shared/components/ui/LoadingState';
+import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay';
+import { ExportButton, type ExportColumn } from '@/shared/components/ui/ExportButton';
 import { SupplierDetailPanel } from './components/SupplierDetailPanel';
 import { SupplierFormModal } from './components/SupplierFormModal';
 import { SuppliersFilters } from './components/SuppliersFilters';
@@ -15,7 +25,15 @@ import { SuppliersTable } from './components/SuppliersTable';
 import './SuppliersPage.css';
 
 // ============================================================
-// SuppliersPage — Gestion de Proveedores
+// SuppliersPage — Gestion de Proveedores. Modulo piloto de la capa
+// api/ (dto/mapper/service, Tanda 1 de escalabilidad) y primer
+// listado migrado a usePagedQuery fuera de los 6 ya existentes — ver
+// docs/GUIA_MIGRACION_MODULO.md para el paso a paso, y
+// DECISIONES_TECNICAS.md para el porque de cada decision.
+//
+// Sin filtro de sucursal a proposito: un proveedor es de la empresa,
+// no de una sucursal (mismo criterio que ClientAccount, M9) — cambiar
+// de sucursal activa no cambia este listado.
 //
 // "Nueva Orden de Compra"/"Nueva OC" ya no abren un modal local (O4,
 // DECISIONES_TECNICAS.md): navegan a /compras (con ?proveedor=<id>
@@ -26,48 +44,66 @@ import './SuppliersPage.css';
 
 export const SuppliersPage: FC = () => {
   const navigate = useNavigate();
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const session = useSessionStore((s) => s.session);
+  const empresaId = session?.company.id;
+
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebouncedValue(searchTerm, 300);
   const [selectedCategory, setSelectedCategory] = useState('');
 
-  useEffect(() => {
-    let cancelled = false;
-    fetchSuppliers()
-      .then((data) => {
-        if (!cancelled) setSuppliers(data);
-      })
-      .catch(() => {
-        if (!cancelled) toast.error('No se pudo cargar el listado de proveedores.');
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const filters: SuppliersQueryFilters = useMemo(
+    () => ({
+      empresaId: empresaId ?? '',
+      search: debouncedSearchTerm || undefined,
+      category: selectedCategory || undefined,
+    }),
+    [empresaId, debouncedSearchTerm, selectedCategory]
+  );
 
-  // RF-PRO-001: Alta / Modificacion de proveedor contra el mock service
-  // (persiste en memoria durante la sesion, ver services/mock/suppliers.service.ts).
+  const {
+    items: suppliers,
+    page,
+    pageSize,
+    totalItems,
+    totalPages,
+    sort,
+    isLoading,
+    isFetching,
+    error,
+    setPage,
+    setPageSize,
+    setSort,
+    refetch,
+  } = usePagedQuery(fetchSuppliersPage, filters, { enabled: Boolean(empresaId) });
+
+  // RF-PRO-001: Alta / Modificacion de proveedor contra suppliers.service
+  // (persiste en memoria durante la sesion). Tras guardar, se vuelve a
+  // pedir la pagina vigente (P10, DECISIONES_TECNICAS.md) en vez de
+  // actualizar `suppliers` a mano en el cliente — misma razon que el
+  // resto de listados migrados: evita duplicar en el cliente cualquier
+  // logica de filtro/orden que ya vive en el servicio.
   const handleSaveSupplier = async (input: SupplierFormInput, supplierId?: string) => {
-    if (supplierId) {
-      const updated = await updateSupplier(supplierId, input);
-      setSuppliers(prev => prev.map(s => (s.id === updated.id ? updated : s)));
-      setSelectedSupplier(prev => (prev?.id === updated.id ? updated : prev));
-      return updated;
-    }
-    const created = await createSupplier(input);
-    setSuppliers(prev => [...prev, created]);
-    return created;
+    if (!empresaId) throw new Error('Todavia no hay una sesion activa.');
+    const saved = supplierId
+      ? await updateSupplier(empresaId, supplierId, input)
+      : await createSupplier(empresaId, input);
+    refetch();
+    setSelectedSupplier((prev) => (prev?.id === saved.id ? saved : prev));
+    return saved;
   };
 
-  const filteredSuppliers = suppliers.filter(supplier => {
-    const matchesSearch = supplier.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          supplier.cuit.includes(searchTerm);
-    const matchesCategory = selectedCategory ? supplier.category === selectedCategory : true;
-    return matchesSearch && matchesCategory;
-  });
+  const exportColumns: ExportColumn<Supplier>[] = [
+    { header: 'Razon Social', accessor: (s) => s.name },
+    { header: 'CUIT', accessor: (s) => s.cuit },
+    { header: 'Rubro', accessor: (s) => s.category },
+    { header: 'Telefono', accessor: (s) => s.phone },
+    { header: 'Email', accessor: (s) => s.contactEmail },
+    { header: 'Saldo Actual', accessor: (s) => s.currentBalance },
+  ];
 
   const handleRowClick = (supplier: Supplier) => {
     setSelectedSupplier(supplier);
@@ -102,6 +138,11 @@ export const SuppliersPage: FC = () => {
           <p className="page-header__subtitle">Administracion de fabricantes y mayoristas</p>
         </div>
         <div className="suppliers-page__header-actions" style={{ display: 'flex', gap: 'var(--space-3)' }}>
+          <ExportButton
+            fileNamePrefix="proveedores"
+            columns={exportColumns}
+            fetchRows={() => exportSuppliers(filters, sort)}
+          />
           <button className="client-modal-btn client-modal-btn--outline" onClick={handleNewOrder}>
             Nueva Orden de Compra
           </button>
@@ -111,7 +152,7 @@ export const SuppliersPage: FC = () => {
         </div>
       </header>
 
-      <SuppliersFilters 
+      <SuppliersFilters
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
         selectedCategory={selectedCategory}
@@ -119,10 +160,33 @@ export const SuppliersPage: FC = () => {
       />
 
       <div className="suppliers-page__content">
-        <SuppliersTable 
-          suppliers={filteredSuppliers}
-          onRowClick={handleRowClick}
-        />
+        {!empresaId || isLoading ? (
+          <LoadingState message="Cargando proveedores..." />
+        ) : error ? (
+          <ErrorState message="No se pudo cargar el listado de proveedores." onRetry={refetch} />
+        ) : (
+          <ErrorBoundary
+            fallbackTitle="No se pudo mostrar el listado de proveedores."
+            fallbackMessage="Intenta de nuevo o volve al inicio."
+          >
+            <FetchingOverlay isFetching={isFetching}>
+              <SuppliersTable
+                suppliers={suppliers}
+                onRowClick={handleRowClick}
+                sort={sort}
+                onSortChange={setSort}
+              />
+            </FetchingOverlay>
+            <Pagination
+              currentPage={page}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+            />
+          </ErrorBoundary>
+        )}
       </div>
 
       <SupplierDetailPanel

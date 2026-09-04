@@ -1,47 +1,37 @@
-import { useState, type FC } from 'react';
+import type { FC } from 'react';
 import { Table } from '@/shared/components/ui/Table';
 import { Badge } from '@/shared/components/ui/Badge';
 import type { Supplier } from '@/shared/types/supplier.types';
+import type { SuppliersSortField } from '../api/suppliers.service';
+import type { PageSort } from '@/shared/types/pagination.types';
 
 interface SuppliersTableProps {
   suppliers: Supplier[];
   onRowClick: (supplier: Supplier) => void;
+  sort: PageSort<SuppliersSortField> | undefined;
+  onSortChange: (sort: PageSort<SuppliersSortField> | undefined) => void;
 }
-
-type SortField = 'name' | 'cuit' | 'currentBalance' | 'category';
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(value);
 }
 
-export const SuppliersTable: FC<SuppliersTableProps> = ({ suppliers, onRowClick }) => {
-  const [sortField, setSortField] = useState<SortField>('name');
-  const [sortDesc, setSortDesc] = useState<boolean>(false);
+// Orden ahora server-side (Tanda 1, suppliers.service.ts#fetchSuppliersPage
+// via httpClient): esta tabla ya no ordena en memoria, solo pinta el
+// header clickeable y delega en `onSortChange` (usePagedQuery#setSort).
+export const SuppliersTable: FC<SuppliersTableProps> = ({ suppliers, onRowClick, sort, onSortChange }) => {
+  const sortField = sort?.field ?? 'name';
+  const sortDesc = sort?.direction === 'desc';
 
-  const handleSort = (field: SortField) => {
+  const handleSort = (field: SuppliersSortField) => {
     if (sortField === field) {
-      setSortDesc(!sortDesc);
+      onSortChange({ field, direction: sortDesc ? 'asc' : 'desc' });
     } else {
-      setSortField(field);
-      setSortDesc(false);
+      onSortChange({ field, direction: 'asc' });
     }
   };
 
-  const sortedSuppliers = [...suppliers].sort((a, b) => {
-    let comparison = 0;
-    if (sortField === 'name') {
-      comparison = a.name.localeCompare(b.name);
-    } else if (sortField === 'cuit') {
-      comparison = a.cuit.localeCompare(b.cuit);
-    } else if (sortField === 'category') {
-      comparison = a.category.localeCompare(b.category);
-    } else if (sortField === 'currentBalance') {
-      comparison = a.currentBalance - b.currentBalance;
-    }
-    return sortDesc ? -comparison : comparison;
-  });
-
-  const renderSortIcon = (field: SortField) => {
+  const renderSortIcon = (field: SuppliersSortField) => {
     if (sortField !== field) {
       return (
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" className="text-tertiary opacity-50 ml-1">
@@ -60,7 +50,7 @@ export const SuppliersTable: FC<SuppliersTableProps> = ({ suppliers, onRowClick 
     );
   };
 
-  const renderSortableHeader = (label: string, field: SortField) => (
+  const renderSortableHeader = (label: string, field: SuppliersSortField) => (
     <button className="suppliers-table__sort-btn" onClick={() => handleSort(field)}>
       {label}
       {renderSortIcon(field)}
@@ -69,7 +59,7 @@ export const SuppliersTable: FC<SuppliersTableProps> = ({ suppliers, onRowClick 
 
   return (
     <Table
-      data={sortedSuppliers}
+      data={suppliers}
       keyExtractor={(s) => s.id}
       columns={[
         {

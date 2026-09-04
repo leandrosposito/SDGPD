@@ -26,7 +26,7 @@ import {
   deleteProduct,
   getStockedProductsForBranch,
 } from '@/services/mock/products.service';
-import { fetchSuppliers } from '@/services/mock/suppliers.service';
+import { fetchSuppliers } from '@/modules/suppliers/api/suppliers.service';
 import type { ProductFormValues } from './components/ProductFormModal.schema';
 import './InventoryPage.css';
 
@@ -74,8 +74,14 @@ export const InventoryPage: FC = () => {
   // Catalogo de productos y proveedores: independientes de la sucursal,
   // se cargan una sola vez.
   useEffect(() => {
+    // fetchSuppliers ahora requiere empresaId (Tanda 1 de escalabilidad,
+    // suppliers.service.ts) — espera a que la sesion este cargada en vez
+    // de mandar un valor vacio; el efecto se re-corre una sola vez mas
+    // cuando `session` deja de ser null (su referencia no vuelve a
+    // cambiar despues, ver useSessionStore#loadSession).
+    if (!session) return;
     let cancelled = false;
-    Promise.all([fetchProducts(), fetchSuppliers()])
+    Promise.all([fetchProducts(), fetchSuppliers(session.company.id)])
       .then(([productsData, suppliersData]) => {
         if (!cancelled) {
           setProducts(productsData);
@@ -91,7 +97,7 @@ export const InventoryPage: FC = () => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [session]);
 
   // Stock de la sucursal activa (catalogo + stock para TabStockCurrent):
   // se vuelve a pedir cuando cambia la sucursal (BranchSelector) o

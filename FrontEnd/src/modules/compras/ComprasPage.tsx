@@ -13,7 +13,7 @@ import type { Branch } from '@/shared/types/session.types';
 import type { Supplier } from '@/shared/types/supplier.types';
 import type { InventoryItem } from '@/shared/types/inventory.types';
 import type { PurchaseOrder, PurchaseOrderStatus, PurchaseOrdersQueryFilters } from '@/shared/types/purchaseOrder.types';
-import { fetchSuppliers } from '@/services/mock/suppliers.service';
+import { fetchSuppliers } from '@/modules/suppliers/api/suppliers.service';
 import { fetchProducts, getStockForBranch } from '@/services/mock/products.service';
 import { getPurchaseOrdersPage, exportPurchaseOrders, updatePurchaseOrderStatus, computePurchaseOrderTotal } from '@/services/mock/purchaseOrders.service';
 import type { PurchaseOrderFormInput } from './components/PurchaseOrderFormModal.schema';
@@ -101,13 +101,20 @@ export const ComprasPage: FC = () => {
 
   useEffect(() => {
     let cancelled = false;
-    fetchSuppliers()
-      .then((data) => {
-        if (!cancelled) setSuppliers(data);
-      })
-      .catch(() => {
-        if (!cancelled) toast.error('No se pudo cargar el listado de proveedores.');
-      });
+    // fetchSuppliers ahora requiere empresaId (Tanda 1 de escalabilidad,
+    // suppliers.service.ts) — espera a que la sesion este cargada en vez
+    // de mandar un valor vacio; el efecto se re-corre una sola vez mas
+    // cuando `session` deja de ser null (su referencia no vuelve a
+    // cambiar despues, ver useSessionStore#loadSession).
+    if (session) {
+      fetchSuppliers(session.company.id)
+        .then((data) => {
+          if (!cancelled) setSuppliers(data);
+        })
+        .catch(() => {
+          if (!cancelled) toast.error('No se pudo cargar el listado de proveedores.');
+        });
+    }
     fetchProducts()
       .then((data) => {
         if (!cancelled) setProducts(data);
@@ -118,7 +125,7 @@ export const ComprasPage: FC = () => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [session]);
 
   // Deep link desde Proveedores (O4): ?proveedor=<id> abre el modal de
   // alta con ese proveedor preseleccionado. Se limpia el query param al
