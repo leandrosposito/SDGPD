@@ -959,6 +959,7 @@ Quirúrgica por prefijo de key (punto 5), nunca un barrido total — el barrido 
 | Avanzar estado de pedido | `OrdersPage.tsx#handleAdvanceStatus` | Igual que arriba — `refetch()` sobre `getOrdersPage`. |
 | Cancelar pedido | `OrdersPage.tsx#handleCancel` | Igual que arriba — `refetch()` sobre `getOrdersPage`. |
 | Crear movimiento de caja | `CashPage.tsx#handleSaveTransaction` | Ninguna invalidación cruzada — se resuelve con `refetch()` sobre `getCashTransactionsPage` (Tanda 2). `entity`/`linkedVoucher` de `CashTransaction` son texto libre en el código actual (no una referencia real a `ClientAccount.id`/`Supplier.id`), así que un movimiento de caja no toca ningún dato de otro módulo — a diferencia del caso Inventario→Compras, acá no hay ningún vínculo real que invalidar. |
+| Cambiar un permiso (matriz de roles) | `TabUsersRoles.tsx#handleTogglePermission` | Ninguna invalidación cruzada — se resuelve con el `refetch()` propio de `useCachedQuery` (`'settings-permissions-matrix'`). Evaluado explícitamente (la tarea lo pedía como ejemplo hipotético): `grep` confirma que ningún otro módulo lee `PermissionMatrix`/`SystemRole` — no hay ningún gate de acceso real en la app basado en esto (`USER_ROLE` en `InventoryPage.tsx`, por ejemplo, es una constante hardcodeada, no derivada de la matriz) — así que no hay ningún dato de otro módulo que invalidar. |
 
 ### 9. Decisiones cerradas de esta tanda (no quedan como preguntas abiertas)
 - **Catálogo de productos: alcance EMPRESA, no sucursal.** El producto existe independientemente de dónde haya stock — mismo criterio que ya se había confirmado para `Supplier`/`ClientAccount`, ahora extendido explícitamente a `InventoryItem`. El STOCK de un producto sí es de sucursal (sin cambios, ya lo era).
@@ -1034,3 +1035,44 @@ Ver la fila "Crear movimiento de caja" en la tabla de la entrada de Tanda 2.5 (a
 
 ### 10. Verificación funcional
 **Verificación funcional en navegador: NO EJECUTADA (04/09/2026)** — el commit de esta tanda se autorizó en base a `tsc -b`/`npm run lint`/`npm run build` limpios y análisis de código, sin correr el checklist en el navegador. En particular, el punto 4 de `docs/VERIFICACION_TANDA_3B.md` (que un movimiento creado sobreviva a navegar afuera y volver — el objetivo central de esta tanda) queda sin confirmar. El cierre del ítem 8 de `docs/PENDIENTES.md` (parte Caja) es por código (el store en memoria de `cash.service.ts`), no por verificación funcional. Detalle completo en `docs/VERIFICACION_TANDA_3B.md`.
+
+## [04/09/2026] — Migración de 3 vistas de `settings`, Tanda 3c de escalabilidad
+
+### 1. Contexto
+Ataca los hallazgos #3 (16 listados sin paginar) y #6 (módulos sin capa de indirección) de `docs/AUDITORIA_ESCALABILIDAD.md` para las 3 vistas de `settings` que sí tenían datos reales: Usuarios y Roles, Suscripción (Historial de Cobros), y el widget de Auditoría. Primera tanda que migra varias vistas independientes de un mismo módulo a la vez.
+
+### 2. Scope confirmado, tercera vez sin sorpresas
+`grep -rn "branch|Branch|sucursal|activeBranchId" src/modules/settings/` → vacío. Las 3 vistas son de empresa, sin `branchId` — confirmado contra el código, no asumido, mismo procedimiento que `orders`/`cash`. Confirmado también que ningún otro módulo lee datos de `settings` (`grep` vacío) — migración aislada.
+
+### 3. Estructura de la capa `api/`: subcarpetas por dominio, no un `dto.ts` compartido
+```
+modules/settings/api/
+  users-roles/{dto.ts, mapper.ts, users-roles.service.ts}
+  subscription/{dto.ts, mapper.ts, subscription.service.ts}
+  audit/{dto.ts, mapper.ts, audit.service.ts}
+```
+Los 3 dominios (`UserAccount`/`PermissionMatrix`, `InvoiceRecord`, `AuditLogItem`) no comparten ningún campo ni forma — un `dto.ts` único habría sido una bolsa de tipos sin relación entre sí, contra el espíritu de que el DTO documente la forma real de una respuesta HTTP coherente. Subcarpetas (no 3 archivos sueltos con prefijo en un mismo `api/`) para que cada trío quede tan aislado como si fuera su propio módulo. `UserAccount` y `PermissionMatrix` sí comparten `dto.ts`/service dentro de `users-roles/` porque son la misma vista ("Usuarios y Roles") aunque no compartan forma — el criterio de agrupación es la vista, no el shape del dato.
+
+### 4. 3 vistas migradas, 4 componentes explícitamente NO migrados (decorativos)
+`TabCompanyProfile.tsx`, `TabCommercial.tsx`, `TabSystemPreferences.tsx` y `BackupWidget.tsx` se confirmaron sin ningún `onClick` en todo el archivo (`grep` vacío) — sin datos reales que paginar ni mutaciones que conectar. No se migraron y no se les inventó un service vacío solo para tener "algo" — quedan tal cual, documentados acá como decorativos, no como pendientes de una tarea futura.
+
+### 5. Cada vista, la decisión de `usePagedQuery` vs. `useCachedQuery`
+- **Directorio de Usuarios** (`UserAccount[]`, 5 registros): `usePagedQuery`. Es una tabla real (aunque chica) — mismo criterio ya aplicado a `suppliers`/`orders`/`cash`: el patrón se aplica parejo independientemente del tamaño del dataset actual.
+- **Matriz de Permisos** (`PermissionMatrix[]`, 4 roles): `useCachedQuery`, no `usePagedQuery`. Es una matriz que siempre se muestra ENTERA (4 filas × 8 columnas) — no tiene sentido paginar 4 filas, y forzar el contrato de `usePagedQuery` (con `page`/`pageSize`/`sort` que la UI nunca necesitaría) sería un contrato que miente sobre lo que el dato es (mismo criterio ya documentado para por qué `useCachedQuery` existe como hook separado, Tanda 2.5).
+- **Historial de Cobros** (`InvoiceRecord[]`, 3 registros): `usePagedQuery`, mismo criterio que Usuarios.
+- **Registro de Auditoría** (`AuditLogItem[]`, 4 registros): `useCachedQuery`. A diferencia de las otras, es un widget de sidebar chico (25% de ancho), sin ninguna UI de paginación ni tabla completa — un feed de actividad reciente, no un listado. `staleTime: CACHE_STALE_TIME.OPERATIONAL` (no `CATALOG`): es más parecido a un dato operativo que cambia seguido (si algo generara auditoría real) que a un catálogo estable.
+
+### 6. Hallazgo real: la Matriz de Permisos mutaba el mock compartido por accidente
+`TabUsersRoles.tsx#togglePermission` (antes de esta tanda) hacía `useState(SETTINGS_MOCK_PERMISSIONS)` **sin clonar**, y `newPerms[roleIndex].modules[module] = !...` mutaba el objeto anidado in-place — como `newPerms[roleIndex]` es la MISMA referencia que `SETTINGS_MOCK_PERMISSIONS[roleIndex]`, el toggle en los hechos mutaba la constante del módulo. Esto hacía que el cambio "sobreviviera" a un remount, pero por un efecto secundario accidental de compartir una referencia sin clonar — no por diseño, y frágil (cualquier otro código que leyera `SETTINGS_MOCK_PERMISSIONS` fresco vería el estado mutado de una sesión anterior). Se reemplazó por `updateRolePermission` en `users-roles.service.ts`, con persistencia real en el store del service (reasignado, nunca mutado in-place) — mismo patrón que el resto de mutaciones del proyecto.
+
+### 7. Sin invalidación cruzada — evaluado explícitamente para "cambiar un permiso"
+La tarea lo planteaba como ejemplo hipotético ("cambiar un rol de usuario podría afectar permisos en otros lados"). Se evaluó contra el código: `grep` confirma que **ningún otro módulo lee `PermissionMatrix`/`SystemRole`** — no hay ningún gate de acceso real en la app basado en esto (`USER_ROLE` en `InventoryPage.tsx` es una constante hardcodeada `'ADMIN'`, nunca derivada de la matriz). Documentado en la tabla de invalidación como "ninguna", con el motivo explícito, mismo criterio que `cash` (Tanda 3b).
+
+### 8. Sin alta/edición de usuario, ni mutación en Suscripción/Auditoría
+`"Nuevo Usuario"`/`"Password"`/`"2FA"` (Usuarios), `"Actualizar Medio de Pago"` (Suscripción) y `"Guardar Matriz"` (debajo de la matriz de permisos, redundante ahora que el toggle ya persiste al instante) confirmados sin `onClick` — se dejan decorativos, no se les inventa una acción. La card "Plan Actual" de Suscripción es texto hardcodeado en el JSX sin ningún tipo de dominio detrás (ni siquiera un campo `plan`/`monto` en otro lado) — no se migra, no se inventa un DTO para algo que no tiene dato real.
+
+### 9. `InvoiceRecord.date`/`AuditLogItem.timestamp`: formatos no triviales de ordenar
+`InvoiceRecord.date` es `DD/MM/YYYY` (no ISO) — un `localeCompare` de texto ordenaría mal (compara el día antes que el año). `subscription.service.ts` parsea la fecha a un timestamp comparable antes de ordenar, en vez de dejar un bug de orden latente aunque la UI no exponga ningún selector de orden hoy. `AuditLogItem.timestamp` es un string relativo ("Hace 5 min", "Ayer") sin ningún campo ISO alternativo — no hay forma de ordenarlo de verdad, así que `audit.service.ts` no ordena nada, devuelve el store tal cual (ya cronológico por construcción del mock), mismo comportamiento exacto que el `.map()` directo de antes de esta tanda.
+
+### 10. Verificación funcional
+**Verificación funcional en navegador: NO EJECUTADA (04/09/2026)** — el commit de esta tanda se autorizó en base a `tsc -b`/`npm run lint`/`npm run build` limpios y análisis de código, sin correr el checklist en el navegador. Ninguno de los puntos de `docs/VERIFICACION_TANDA_3C.md` fue confirmado todavía, incluido el punto A3 (que un cambio de permiso sobreviva a navegar afuera y volver — el reemplazo del hack de mutación accidental por persistencia real). Detalle completo en `docs/VERIFICACION_TANDA_3C.md`.

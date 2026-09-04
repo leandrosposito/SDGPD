@@ -147,6 +147,24 @@ El ejemplo ya conocido (Inventario→Compras, Tanda 2.5) tiene un vínculo real:
 
 ---
 
+## Migrar varias vistas independientes dentro de un mismo módulo — lo aprendido en Tanda 3c (`settings`)
+
+Hasta Tanda 3b, cada tanda migraba UN módulo con UN dominio. `settings` tiene varias vistas (tabs/widgets) sin relación entre sí — algunas con datos reales, otras puramente decorativas. Esto agrega decisiones que las tandas anteriores no tuvieron que tomar:
+
+### 7. No todas las vistas de un módulo necesitan migrarse — confirmalo antes de tocar cada una
+Antes de escribir ningún DTO, recorré CADA vista candidata y confirmá con `grep` si tiene algún `onClick` real en todo su archivo. En `settings`, 4 de las 7 vistas (`TabCompanyProfile`, `TabCommercial`, `TabSystemPreferences`, `BackupWidget`) no tenían ninguno — cero mutaciones, cero datos que un `usePagedQuery`/`useCachedQuery` pudiera mejorar. No las migres ni les inventes un service vacío "para completar" — documentalas explícitamente como decorativas en `DECISIONES_TECNICAS.md`, con la evidencia (`grep` vacío), para que quede claro que se revisaron y no que se pasaron por alto.
+
+### 8. Agrupá el `api/` por VISTA, no por archivo de mock ni por tipo de dominio
+Si el módulo tiene varios dominios sin relación (`settings`: usuarios, suscripción, auditoría), usá subcarpetas separadas dentro de `api/` (`api/users-roles/`, `api/subscription/`, `api/audit/`), una por vista — no un `dto.ts` único con todos los tipos mezclados (sería una bolsa sin relación real entre sus partes) ni un archivo por cada array del mock (`SETTINGS_MOCK_USERS`/`SETTINGS_MOCK_PERMISSIONS` viven en la MISMA vista, "Usuarios y Roles", así que comparten `dto.ts`/service aunque no compartan forma — el criterio de agrupación es la vista que el usuario ve, no la forma del dato ni el archivo de mock del que salió).
+
+### 9. Un dominio puede necesitar `usePagedQuery` y otro del mismo módulo `useCachedQuery` — decidilo por vista, no por módulo entero
+No asumas que todas las vistas de un módulo usan el mismo hook. En `settings`, el Directorio de Usuarios (una tabla real) usó `usePagedQuery`, pero la Matriz de Permisos (4 filas, siempre visible entera, nunca se pagina) usó `useCachedQuery` — dentro de la MISMA vista. El widget de Auditoría (un feed chico de sidebar, sin ninguna UI de paginación) también usó `useCachedQuery`, no por ser chico sino porque su estructura visual (feed, no tabla) no tiene dónde poner una `<Pagination>`. Aplicá la tabla de decisión de la sección de Tanda 2.5 (arriba) por cada pieza de UI, no una sola vez para todo el módulo.
+
+### 10. Una mutación "accidental" (mutar una referencia compartida del mock) puede parecer que ya persiste — no lo confundas con una arquitectura real
+`TabUsersRoles.tsx#togglePermission` (antes de Tanda 3c) mutaba el array del mock en memoria SIN clonar, así que el cambio "sobrevivía" a un remount por casualidad (la misma referencia compartida quedaba mutada). Si encontrás un caso así al reconocer un módulo, no lo descartes como "ya funciona, no hace falta migrarlo" — es frágil (cualquier código que importe el mock fresco ve el estado ya mutado de una sesión anterior, no el original) y vale la pena reemplazarlo por una mutación real contra un store del service, igual que cualquier otra.
+
+---
+
 ## Checklist de cierre por módulo
 
 Antes de dar un módulo por migrado:
@@ -168,9 +186,9 @@ Antes de dar un módulo por migrado:
 - [x] ~~`src/modules/orders/OrdersPage.tsx` — Pedidos.~~ **Migrado en Tanda 3a** (04/09/2026). Sin `branchId` — confirmado contra el código (no tenía ningún campo de sucursal), contradecía la decisión inicial que asumía `branchId`, se paró y se confirmó antes de implementar. Primer módulo migrado sin service previo — ver la sección "Migrar un módulo SIN service previo" más arriba.
 - [x] ~~`src/modules/cash/CashPage.tsx` — Caja.~~ **Migrado en Tanda 3b** (04/09/2026). Sin `branchId` — la hipótesis "probablemente con branchId" de esta misma lista NO se sostuvo: `grep` contra el código no encontró ninguna referencia a sucursal en todo el módulo, ni siquiera transitoria (más contundente que `orders`). Confirmado con el usuario antes de implementar. Segundo módulo migrado sin service previo, y primero con el dominio como objeto único (no lista) — ver aprendizajes 5 y 6 en la sección de arriba.
 - [ ] `src/modules/analytics/AnalyticsPage.tsx` — Analítica. Mayormente gráficos/KPIs, no una tabla paginable clásica — evaluar si aplica el mismo patrón o si necesita uno propio (agregados, no filas).
-- [ ] `src/modules/settings/components/tabs/TabUsersRoles.tsx` — Configuración, Usuarios y Roles. **Sin `branchId`** (es de la empresa).
-- [ ] `src/modules/settings/components/tabs/TabSubscription.tsx` — Configuración, Suscripción/Facturas. **Sin `branchId`**.
-- [ ] `src/modules/settings/components/widgets/AuditLogWidget.tsx` — Configuración, Auditoría. **Sin `branchId`**.
+- [x] ~~`src/modules/settings/components/tabs/TabUsersRoles.tsx` — Configuración, Usuarios y Roles.~~ **Migrado en Tanda 3c** (04/09/2026). Sin `branchId`, confirmado contra el código. Directorio de Usuarios → `usePagedQuery`; Matriz de Permisos → `useCachedQuery` (4 roles, siempre visible entera, no se pagina). Ver la sección "Migrar varias vistas independientes dentro de un mismo módulo" más arriba.
+- [x] ~~`src/modules/settings/components/tabs/TabSubscription.tsx` — Configuración, Suscripción/Facturas.~~ **Migrado en Tanda 3c** (solo el Historial de Cobros — la card "Plan Actual" es texto hardcodeado sin dato real, no se migró).
+- [x] ~~`src/modules/settings/components/widgets/AuditLogWidget.tsx` — Configuración, Auditoría.~~ **Migrado en Tanda 3c**, vía `useCachedQuery` (feed chico de sidebar, sin paginación).
 - [ ] `src/modules/inventory/components/TabStockCurrent.tsx` — Inventario, Stock Actual. **Con `branchId`** (ya usa `getStockedProductsForBranch`, solo falta paginar).
 - [ ] `src/modules/inventory/InventoryPage.tsx` (tab Reposición / `TabPurchases`) — **Con `branchId`**.
 - [ ] `src/modules/inventory/components/TabCategories.tsx` — Inventario, Categorías. Evaluar si es de empresa (catálogo) o de sucursal (stock por categoría) antes de implementar.
@@ -183,4 +201,4 @@ Antes de dar un módulo por migrado:
 
 ---
 
-**Verificación funcional en navegador PENDIENTE (del propio piloto `suppliers` que esta guía usa como plantilla) — ver `docs/VERIFICACION_TANDA_0_1.md`.** El cambio de Tanda 2 (cache/dedupe/invalidación vía TanStack Query, transparente para esta guía) tiene su propio checklist, también pendiente — ver `docs/VERIFICACION_TANDA_2.md`. Lo mismo para Tanda 2.5 (`useCachedQuery`, httpClient unificado) — ver `docs/VERIFICACION_TANDA_2_5.md`. Y para Tanda 3a (`orders`, primer módulo sin service previo) — ver `docs/VERIFICACION_TANDA_3A.md`. Y para Tanda 3b (`cash`, segundo módulo sin service previo) — ver `docs/VERIFICACION_TANDA_3B.md`.
+**Verificación funcional en navegador PENDIENTE (del propio piloto `suppliers` que esta guía usa como plantilla) — ver `docs/VERIFICACION_TANDA_0_1.md`.** El cambio de Tanda 2 (cache/dedupe/invalidación vía TanStack Query, transparente para esta guía) tiene su propio checklist, también pendiente — ver `docs/VERIFICACION_TANDA_2.md`. Lo mismo para Tanda 2.5 (`useCachedQuery`, httpClient unificado) — ver `docs/VERIFICACION_TANDA_2_5.md`. Y para Tanda 3a (`orders`, primer módulo sin service previo) — ver `docs/VERIFICACION_TANDA_3A.md`. Y para Tanda 3b (`cash`, segundo módulo sin service previo) — ver `docs/VERIFICACION_TANDA_3B.md`. Y para Tanda 3c (3 vistas de `settings`) — ver `docs/VERIFICACION_TANDA_3C.md`.
