@@ -82,6 +82,45 @@ escenarios siguen disponibles tal cual están documentados, con las variables de
 `.env.local.ejemplo-verificacion` — no requieren ningún cambio de código adicional
 para retomarse.
 
+### 6. `useSessionStore` mezcla estado de servidor con estado de UI — Severidad: Baja
+
+`session` (viene de `fetchSession()`, dato de servidor) y `activeBranchId` (elección
+del usuario, estado de UI) conviven en el mismo store (`useSessionStore.ts:40-47`).
+Detectado en `RELEVAMIENTO_CACHE.md` (sección E3) al relevar candidatos a migrar a
+TanStack Query — decisión explícita en Tanda 2.5: separarlos queda fuera de esa
+tarea. No es urgente (`session` es un singleton idempotente, cargado una sola vez,
+no repite fetch como los catálogos que sí se cachearon) pero vale la pena resolverlo
+en algún momento para que `shared/state/` no mezcle las dos categorías de estado que
+el resto del proyecto sí distingue con cuidado (TanStack Query para servidor,
+Zustand para UI).
+
+### 7. Catálogo de Productos y lista de Proveedores sin paginar — evaluar para Tanda 3 — Severidad: Baja (hoy), potencialmente Media a escala
+
+`fetchProducts()` y `fetchSuppliers()` (la versión sin paginar, usada para
+catálogos/dropdowns — no confundir con `fetchSuppliersPage`, que sí pagina) traen
+la lista completa: 28 productos, 3 proveedores hoy. Tanda 2.5 les agregó cache
+(`useCachedQuery`, `staleTime` de 5 minutos) para el problema de duplicación entre
+módulos, pero un cache sin paginar de una lista completa no resuelve el problema de
+fondo a escala — con miles de productos, seguiría trayendo todo de una. Evaluar en
+Tanda 3 si conviene migrarlos a `usePagedQuery` (paginación server-side real) en vez
+de mantenerlos como catálogo cacheado sin límite. Pregunta abierta ya registrada en
+`RELEVAMIENTO_CACHE.md` (#5), repetida acá para que no se pierda entre documentos.
+
+### 8. Pedidos y Caja sin capa de servicio — Severidad: Media
+
+`OrdersPage.tsx` (`useState<Order[]>(ORDERS_MOCK_DATA)`) y `CashPage.tsx`
+(`useState(CASH_MOCK_DATA)`) inicializan su estado directo desde el mock importado,
+sin ningún `orders.service.ts`/`cash.service.ts` de por medio (a diferencia de
+`products.service.ts`, que sí mantiene un store en memoria entre lecturas). Esto es
+distinto del problema de cache que resolvió Tanda 2.5: no es que falte cachear estos
+datos, es que **no hay service que cachear** — cualquier alta/edición hecha con
+`setOrders`/`setCashData` durante la sesión se pierde apenas el componente se
+desmonta (navegar a otra pantalla y volver). Confirmado y ya registrado como decisión
+explícita de alcance en Tanda 2.5 ("Pedidos y Caja quedan FUERA: no tienen service,
+es problema de arquitectura, no de cache") y coincide con el ítem de Pedidos ya
+anotado en `RELEVAMIENTO_CACHE.md`/entradas previas de este documento sobre decidir
+el scope empresa/sucursal de Pedidos antes de implementar cualquier cosa ahí.
+
 ---
 
 ## Reportados pero no reproducidos (verificados y descartados)
@@ -133,5 +172,8 @@ escáner físico normalmente no dispara dos `Enter` en un intervalo tan corto.
 | 3 | `modules/compras` en español | Vigente | Baja |
 | 4 | 4 .docx/.pdf trackeados pese a `.gitignore` | Vigente | Baja |
 | 5 | Verificación funcional Tandas 0/1 (puntos 1-5, 7-10, 12-13) | Vigente | Media-Alta |
+| 6 | `useSessionStore` mezcla server state (session) y UI state (activeBranchId) | Vigente | Baja |
+| 7 | Catálogo de Productos/Proveedores sin paginar, solo cacheado | Vigente — evaluar Tanda 3 | Baja (hoy) |
+| 8 | Pedidos y Caja sin capa de servicio (mutaciones se pierden al desmontar) | Vigente | Media |
 | — | `NewTransactionModal` formato de hora | No reproduce | — |
 | — | `OrderProductsSection` `await` faltante | No reproduce (resuelto o nunca existió así) | — |

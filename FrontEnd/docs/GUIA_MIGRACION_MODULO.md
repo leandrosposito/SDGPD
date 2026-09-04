@@ -8,6 +8,20 @@
 
 **Actualización Tanda 2 (04/09/2026):** `usePagedQuery` ahora usa TanStack Query por dentro (cache, dedupe, invalidación cruzada al cambiar de sucursal/empresa) — la firma pública no cambió, así que el paso 4 de abajo (`usePagedQuery(fetchXPage, filters, options)`) sigue siendo literal, sin nada nuevo que aprender para migrar un módulo. Dos cosas sí cambian de verdad para un módulo nuevo, ver el paso 3 y la sección de Tropiezos actualizada: `fetchXPage` tiene que seguir siendo una función con nombre estable (ahora además de servir para las dependencias del efecto, su `.name` identifica la query en el cache — una arrow function anónima ya no solo dispararía un loop, rompería el cache), y ya no hace falta escribir a mano el `if (!session) return` para esperar `empresaId` en el listado paginado en sí (`usePagedQuery` lo resuelve solo) — pero seguí pasando `enabled: Boolean(empresaId)` explícito igual, es inofensivo y hace que la intención quede clara para quien lea el componente. Detalle completo del razonamiento en `docs/DECISIONES_TECNICAS.md`, entrada "Cache, dedupe e invalidación cruzada con TanStack Query".
 
+**Actualización Tanda 2.5 (04/09/2026) — `useCachedQuery`, el hermano para lo que NO se pagina:** si el dato que estás migrando es un catálogo completo (sin páginas: productos, proveedores, clientes) o un get puntual por id (stock de un producto, historial de algo por id), **no uses `usePagedQuery`** — usá `shared/hooks/useCachedQuery.ts` en su lugar. Ver `docs/DECISIONES_TECNICAS.md`, entrada "httpClient unificado + useCachedQuery", para el razonamiento completo. Regla rápida para decidir cuál hook usar:
+
+| Si el dato... | Usá |
+|---|---|
+| Se pagina server-side (tiene `page`/`pageSize`, un listado grande) | `usePagedQuery` |
+| Es un catálogo completo, chico, sin páginas (hoy: productos, proveedores, clientes — decenas de registros, no miles) | `useCachedQuery` |
+| Es un get puntual por id (stock de un producto, historial de una entidad relacionada) | `useCachedQuery` (con `keyParams` = el id) |
+| Es un agregado/derivado sin filtros de usuario (dashboard) | `useCachedQuery` |
+
+Al migrar algo a `useCachedQuery`:
+- Elegí un `queryName` a propósito, no automático (a diferencia de `fetchPage.name` en `usePagedQuery`) — si otro módulo ya pide el MISMO dato (ej. el catálogo de productos, pedido desde 3 módulos distintos), usá el MISMO `queryName` que ya está en uso en otro lugar, así comparten cache (dedupe entre módulos) en vez de cada uno tener su propia entrada.
+- Elegí el `staleTime` de las 3 constantes ya definidas (`CACHE_STALE_TIME.CATALOG`/`.OPERATIONAL`/`.DERIVED`, `useCachedQuery.ts`) — no un número suelto. Si el dato no encaja claramente en ninguna categoría, preguntá antes de inventar una cuarta.
+- Si el módulo tiene una mutación que debería invalidar este dato en OTRO módulo (ej. crear un producto en Inventario debería invalidar el catálogo que también usa Compras), armá la key de invalidación **literal** (`['cached', queryName, empresaId]`) en vez de importar algo del otro módulo — mismo criterio de R2 que ya rige el resto del proyecto. Ver la tabla de invalidación por mutación en `DECISIONES_TECNICAS.md` para ejemplos reales.
+
 ---
 
 ## Orden exacto de archivos a crear, y qué copiar de `suppliers` en cada uno
@@ -145,4 +159,4 @@ Antes de dar un módulo por migrado:
 
 ---
 
-**Verificación funcional en navegador PENDIENTE (del propio piloto `suppliers` que esta guía usa como plantilla) — ver `docs/VERIFICACION_TANDA_0_1.md`.** El cambio de Tanda 2 (cache/dedupe/invalidación vía TanStack Query, transparente para esta guía) tiene su propio checklist, también pendiente — ver `docs/VERIFICACION_TANDA_2.md`.
+**Verificación funcional en navegador PENDIENTE (del propio piloto `suppliers` que esta guía usa como plantilla) — ver `docs/VERIFICACION_TANDA_0_1.md`.** El cambio de Tanda 2 (cache/dedupe/invalidación vía TanStack Query, transparente para esta guía) tiene su propio checklist, también pendiente — ver `docs/VERIFICACION_TANDA_2.md`. Lo mismo para Tanda 2.5 (`useCachedQuery`, httpClient unificado) — ver `docs/VERIFICACION_TANDA_2_5.md`.

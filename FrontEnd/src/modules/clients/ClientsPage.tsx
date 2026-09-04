@@ -1,8 +1,15 @@
 import { useEffect, useState, useMemo, type FC } from 'react';
 import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 import type { ClientAccount } from '@/shared/types/client.types';
 import { fetchClients, createClient, updateClient, type ClientFormInput } from '@/services/mock/clients.service';
+import { useCachedQuery, CACHE_STALE_TIME } from '@/shared/hooks/useCachedQuery';
+import { cachedQueryKey } from '@/shared/api/queryKeys';
+import { useSessionStore } from '@/shared/state/useSessionStore';
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
+
+// Referencia estable: ver mismo patron en ComprasPage/InventoryPage.
+const EMPTY_CLIENTS: ClientAccount[] = [];
 import { ClientActionBar } from './components/ClientActionBar';
 import { ClientFilters } from './components/ClientFilters';
 import { ClientDirectoryTable } from './components/ClientDirectoryTable';
@@ -32,7 +39,8 @@ type ActiveTab = 'directory' | 'accounts' | 'overdue';
 const SEARCH_DEBOUNCE_MS = 300;
 
 export const ClientsPage: FC = () => {
-  const [clients, setClients] = useState<ClientAccount[]>([]);
+  const empresaId = useSessionStore((s) => s.session?.company.id);
+  const queryClient = useQueryClient();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<ActiveTab>('directory');
 
@@ -43,30 +51,37 @@ export const ClientsPage: FC = () => {
   const [status, setStatus] = useState('');
   const debouncedSearchQuery = useDebouncedValue(searchQuery, SEARCH_DEBOUNCE_MS);
 
+  // Directorio de Clientes (Tanda 2.5, useCachedQuery — ver
+  // RELEVAMIENTO_CACHE.md/DECISIONES_TECNICAS.md). Distinto del
+  // contrato paginado de ClientAccountsTable/ClientOverdueTable
+  // (usePagedQuery, ya cacheado desde Tanda 2): este es el catalogo
+  // completo del Directorio, filtrado en memoria (ver filteredClients).
+  const { data: clientsData, error: clientsError } = useCachedQuery(
+    'clients',
+    undefined,
+    (signal) => fetchClients(signal),
+    { staleTime: CACHE_STALE_TIME.CATALOG }
+  );
+  const clients = clientsData ?? EMPTY_CLIENTS;
+
   useEffect(() => {
-    let cancelled = false;
-    fetchClients()
-      .then((data) => {
-        if (!cancelled) setClients(data);
-      })
-      .catch(() => {
-        if (!cancelled) toast.error('No se pudo cargar el listado de clientes.');
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    if (clientsError) toast.error('No se pudo cargar el listado de clientes.');
+  }, [clientsError]);
 
   // RF-CLI-001: Alta / Modificacion de cliente contra el mock service
   // (persiste en memoria durante la sesion, ver services/mock/clients.service.ts).
+  // Invalidacion por mutacion (Tanda 2.5, tabla completa en
+  // DECISIONES_TECNICAS.md): crear/editar cliente invalida el
+  // directorio — quirurgica por prefijo, nunca toca 'products' ni
+  // 'suppliers-list'.
   const handleSaveClient = async (input: ClientFormInput, clientId?: string) => {
     if (clientId) {
       const updated = await updateClient(clientId, input);
-      setClients(prev => prev.map(c => (c.id === updated.id ? updated : c)));
+      if (empresaId) void queryClient.invalidateQueries({ queryKey: cachedQueryKey({ queryName: 'clients', empresaId }) });
       return updated;
     }
     const created = await createClient(input);
-    setClients(prev => [...prev, created]);
+    if (empresaId) void queryClient.invalidateQueries({ queryKey: cachedQueryKey({ queryName: 'clients', empresaId }) });
     return created;
   };
 

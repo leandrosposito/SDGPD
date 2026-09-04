@@ -1,9 +1,13 @@
 import { type FC, useState, useMemo, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Modal } from '@/shared/components/ui/Modal';
+import { useCachedQuery, CACHE_STALE_TIME } from '@/shared/hooks/useCachedQuery';
 import type { InventoryItem } from '@/shared/types/inventory.types';
 import type { Order } from '@/shared/types/order.types';
 import { fetchProducts } from '@/services/mock/products.service';
+
+// Referencia estable: ver mismo patron en ComprasPage/InventoryPage.
+const EMPTY_PRODUCTS: InventoryItem[] = [];
 import { OrderClientSection } from './OrderClientSection';
 import { OrderDatesSection } from './OrderDatesSection';
 import { OrderProductsSection, type OrderProductItem } from './OrderProductsSection';
@@ -22,14 +26,22 @@ interface CreateOrderModalProps {
 }
 
 export const CreateOrderModal: FC<CreateOrderModalProps> = ({ isOpen, onClose, onConfirm }) => {
-  // Products available to add to the order (RF-PRD-001 master data, en memoria).
-  const [products, setProducts] = useState<InventoryItem[]>([]);
+  // Products available to add to the order (RF-PRD-001 master data).
+  // Tanda 2.5, useCachedQuery: mismo queryName 'products' que
+  // InventoryPage/ComprasPage — 3er consumidor del mismo catalogo,
+  // ahora deduplicado en vez de un 3er fetch independiente (ver
+  // RELEVAMIENTO_CACHE.md, C1).
+  const { data: productsData, error: productsError } = useCachedQuery(
+    'products',
+    undefined,
+    (signal) => fetchProducts(signal),
+    { staleTime: CACHE_STALE_TIME.CATALOG }
+  );
+  const products = productsData ?? EMPTY_PRODUCTS;
 
   useEffect(() => {
-    fetchProducts()
-      .then(setProducts)
-      .catch(() => toast.error('No se pudo cargar el listado de productos.'));
-  }, []);
+    if (productsError) toast.error('No se pudo cargar el listado de productos.');
+  }, [productsError]);
 
   // Client Section State
   const [client, setClient] = useState('');

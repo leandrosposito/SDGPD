@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState, type FC } from 'react';
 import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 import { INVENTORY_MOCK_DATA } from '@/data/mock/inventory.data';
 import type { InventoryItem, StockedInventoryItem } from '@/shared/types/inventory.types';
-import type { Supplier } from '@/shared/types/supplier.types';
 import { useSessionStore } from '@/shared/state/useSessionStore';
+import { useCachedQuery, CACHE_STALE_TIME } from '@/shared/hooks/useCachedQuery';
+import { cachedQueryKey } from '@/shared/api/queryKeys';
 import { Tabs, type TabItem } from '@/shared/components/ui/Tabs';
 import { Badge } from '@/shared/components/ui/Badge';
 import { SkeletonTable } from '@/shared/components/ui/SkeletonLoader';
@@ -37,29 +39,28 @@ import './InventoryPage.css';
 // corresponde a RF-INV-001/RF-CAT-001/RF-PRI-001 y no se modifica aca.
 //
 // Stock multi-sucursal (E1, DECISIONES_TECNICAS.md): el catalogo
-// (`products`) se carga una sola vez, independiente de la sucursal. El
-// stock (`stockedProducts`, para TabStockCurrent) se vuelve a pedir cada
-// vez que cambia `activeBranchId` — no hace falta un store de zustand
-// para esto (ver 3.4 de esa tarea). TabLowStock ya no recibe datos de
-// aca: se autoconsulta, paginado server-side (ver DECISIONES_TECNICAS.md,
-// tarea de paginacion).
+// (`products`) es de EMPRESA, no de sucursal (Tanda 2.5, decision
+// cerrada: el producto existe independientemente de donde haya stock).
+// El stock (para TabStockCurrent) SI es por sucursal. TabLowStock ya no
+// recibe datos de aca: se autoconsulta, paginado server-side.
+//
+// Cache (Tanda 2.5, useCachedQuery — ver RELEVAMIENTO_CACHE.md y
+// DECISIONES_TECNICAS.md): catalogo de productos y lista de proveedores
+// usan queryName 'products'/'suppliers-list' — el MISMO queryName que
+// usan ComprasPage y CreateOrderModal, asi que los 3 comparten una sola
+// entrada de cache (dedupe entre modulos, no 3 fetches independientes).
 // ============================================================
 
 const USER_ROLE: 'ADMIN' | 'EMPLOYEE' = 'ADMIN';
 
-export const InventoryPage: FC = () => {
-  const [products, setProducts] = useState<InventoryItem[]>([]);
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [isLoadingProducts, setIsLoadingProducts] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
+// Referencia estable para el fallback de `data` mientras useCachedQuery
+// no resolvio todavia — un `?? []` nuevo en cada render rompe la
+// memoizacion de todo lo que dependa de esa referencia (ver
+// filteredStockedProducts mas abajo).
+const EMPTY_STOCKED_PRODUCTS: StockedInventoryItem[] = [];
 
-  const [stockedProducts, setStockedProducts] = useState<StockedInventoryItem[]>([]);
-  // "Cargando stock" se deriva comparando la sucursal ya cargada contra
-  // la activa, en vez de un setState(true) sincronico al arrancar el
-  // efecto (evita la regla react-hooks/set-state-in-effect: el efecto
-  // solo hace setState dentro de sus callbacks async, igual que el
-  // efecto de fetchProducts de arriba).
-  const [loadedStockBranchId, setLoadedStockBranchId] = useState<string | null>(null);
+export const InventoryPage: FC = () => {
+  const [searchQuery, setSearchQuery] = useState('');
 
   const [activeTab, setActiveTab] = useState<string>('stock');
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
@@ -70,60 +71,65 @@ export const InventoryPage: FC = () => {
   const session = useSessionStore((s) => s.session);
   const activeBranchId = useSessionStore((s) => s.activeBranchId);
   const activeBranchName = session?.branches.find((b) => b.id === activeBranchId)?.name ?? '';
+  const queryClient = useQueryClient();
+  const empresaId = session?.company.id;
 
-  // Catalogo de productos y proveedores: independientes de la sucursal,
-  // se cargan una sola vez.
+  // Catalogo de productos (empresa, no sucursal) — queryName 'products',
+  // compartido con ComprasPage/CreateOrderModal (dedupe real entre los 3).
+  const {
+    data: productsData,
+    isLoading: isLoadingProducts,
+    error: productsError,
+  } = useCachedQuery('products', undefined, (signal) => fetchProducts(signal), {
+    staleTime: CACHE_STALE_TIME.CATALOG,
+  });
+  const products = productsData ?? [];
+
   useEffect(() => {
-    // fetchSuppliers ahora requiere empresaId (Tanda 1 de escalabilidad,
-    // suppliers.service.ts) — espera a que la sesion este cargada en vez
-    // de mandar un valor vacio; el efecto se re-corre una sola vez mas
-    // cuando `session` deja de ser null (su referencia no vuelve a
-    // cambiar despues, ver useSessionStore#loadSession).
-    if (!session) return;
-    let cancelled = false;
-    Promise.all([fetchProducts(), fetchSuppliers(session.company.id)])
-      .then(([productsData, suppliersData]) => {
-        if (!cancelled) {
-          setProducts(productsData);
-          setSuppliers(suppliersData);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) toast.error('No se pudo cargar el listado de productos.');
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoadingProducts(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [session]);
+    if (productsError) toast.error('No se pudo cargar el listado de productos.');
+  }, [productsError]);
 
-  // Stock de la sucursal activa (catalogo + stock para TabStockCurrent):
-  // se vuelve a pedir cuando cambia la sucursal (BranchSelector) o
-  // cuando cambia el catalogo (alta/edicion/baja de un producto), para
-  // que el join catalogo+stock quede al dia. El bajo stock minimo ya no
-  // se pide aca: TabLowStock se autoconsulta, paginado (ver ese
-  // componente y DECISIONES_TECNICAS.md, tarea de paginacion server-side).
+  // Lista completa de proveedores (empresa) — queryName 'suppliers-list',
+  // compartido con ComprasPage. Distinto de fetchSuppliersPage
+  // (SuppliersPage, paginado, ya cacheado por usePagedQuery/Tanda 2).
+  const {
+    data: suppliersData,
+    error: suppliersError,
+  } = useCachedQuery(
+    'suppliers-list',
+    undefined,
+    (signal) => fetchSuppliers(empresaId ?? '', signal),
+    { staleTime: CACHE_STALE_TIME.CATALOG, enabled: Boolean(empresaId) }
+  );
+  const suppliers = suppliersData ?? [];
+
   useEffect(() => {
-    if (!activeBranchId) return;
-    let cancelled = false;
-    getStockedProductsForBranch(activeBranchId)
-      .then((stocked) => {
-        if (!cancelled) setStockedProducts(stocked);
-      })
-      .catch(() => {
-        if (!cancelled) toast.error('No se pudo cargar el stock de la sucursal.');
-      })
-      .finally(() => {
-        if (!cancelled) setLoadedStockBranchId(activeBranchId);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [activeBranchId, products]);
+    if (suppliersError) toast.error('No se pudo cargar el listado de proveedores.');
+  }, [suppliersError]);
 
-  const isLoadingStock = loadedStockBranchId !== activeBranchId;
+  // Stock de la sucursal activa (catalogo unido a stock, para
+  // TabStockCurrent) — queryName 'stock-by-branch', keyParams=branchId
+  // (una entrada de cache por sucursal). Se vuelve a pedir solo cuando
+  // cambia de verdad: cambio de sucursal (key distinta) o una mutacion
+  // de producto que invalida esta key explicitamente (ver
+  // handleSaveProduct/handleDeleteProduct mas abajo) — ya no depende de
+  // la referencia de `products`, asi que no hay doble disparo por
+  // montaje (RELEVAMIENTO_CACHE.md, D2).
+  const {
+    data: stockedProductsData,
+    isLoading: isLoadingStock,
+    error: stockError,
+  } = useCachedQuery(
+    'stock-by-branch',
+    activeBranchId,
+    (signal) => getStockedProductsForBranch(activeBranchId ?? '', signal),
+    { staleTime: CACHE_STALE_TIME.OPERATIONAL, enabled: Boolean(activeBranchId) }
+  );
+  const stockedProducts = stockedProductsData ?? EMPTY_STOCKED_PRODUCTS;
+
+  useEffect(() => {
+    if (stockError) toast.error('No se pudo cargar el stock de la sucursal.');
+  }, [stockError]);
 
   const filteredStockedProducts = useMemo(() => {
     if (!searchQuery.trim()) return stockedProducts;
@@ -155,23 +161,37 @@ export const InventoryPage: FC = () => {
     setIsProductModalOpen(true);
   };
 
+  // Invalidacion por mutacion (Tanda 2.5, tabla completa en
+  // DECISIONES_TECNICAS.md): crear/editar/borrar un producto invalida
+  // el catalogo de productos Y el stock de sucursal (el join incluye
+  // nombre/sku del producto, que pudo cambiar) — quirurgica por prefijo
+  // de key, nunca toca 'suppliers-list' ni 'clients' ni ningun otro
+  // dato. Sin keyParams en el prefijo: invalida TODAS las sucursales de
+  // 'stock-by-branch' (el producto puede tener stock en mas de una), no
+  // solo la activa.
+  function invalidateProductCaches() {
+    if (!empresaId) return;
+    void queryClient.invalidateQueries({ queryKey: cachedQueryKey({ queryName: 'products', empresaId }) });
+    void queryClient.invalidateQueries({ queryKey: cachedQueryKey({ queryName: 'stock-by-branch', empresaId }) });
+  }
+
   // RF-PRD-001: Alta / Modificacion de producto contra el mock service
   // (persiste en memoria durante la sesion, ver services/mock/products.service.ts).
   const handleSaveProduct = async (values: ProductFormValues, productId?: string) => {
     if (productId) {
       const updated = await updateProduct(productId, values);
-      setProducts(prev => prev.map(p => (p.id === updated.id ? updated : p)));
+      invalidateProductCaches();
       return updated;
     }
     const created = await createProduct(values);
-    setProducts(prev => [...prev, created]);
+    invalidateProductCaches();
     return created;
   };
 
   // RF-PRD-001: Baja de producto (ABM completo — antes el boton "Eliminar" solo cerraba el modal).
   const handleDeleteProduct = async (productId: string) => {
     await deleteProduct(productId);
-    setProducts(prev => prev.filter(p => p.id !== productId));
+    invalidateProductCaches();
   };
 
   const stockTabsLoading = !activeBranchId || isLoadingProducts || isLoadingStock;

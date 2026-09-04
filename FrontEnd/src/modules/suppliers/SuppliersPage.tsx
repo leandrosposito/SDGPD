@@ -1,5 +1,6 @@
 import { useMemo, useState, type FC } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import type { Supplier } from '@/shared/types/supplier.types';
 import {
   fetchSuppliersPage,
@@ -46,6 +47,7 @@ export const SuppliersPage: FC = () => {
   const navigate = useNavigate();
   const session = useSessionStore((s) => s.session);
   const empresaId = session?.company.id;
+  const queryClient = useQueryClient();
 
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
@@ -92,6 +94,13 @@ export const SuppliersPage: FC = () => {
       ? await updateSupplier(empresaId, supplierId, input)
       : await createSupplier(empresaId, input);
     refetch();
+    // Invalidacion por mutacion (Tanda 2.5, tabla completa en
+    // DECISIONES_TECNICAS.md): crear/editar proveedor invalida ademas
+    // la lista completa de proveedores (useCachedQuery, queryName
+    // 'suppliers-list', consumida por InventoryPage/ComprasPage) — el
+    // listado paginado de esta misma pantalla ya se resuelve con
+    // refetch() (Tanda 2), no con esto.
+    void queryClient.invalidateQueries({ queryKey: ['cached', 'suppliers-list', empresaId] });
     setSelectedSupplier((prev) => (prev?.id === saved.id ? saved : prev));
     return saved;
   };

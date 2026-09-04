@@ -5,6 +5,7 @@ import { Tabs, type TabItem } from '@/shared/components/ui/Tabs';
 import { Table } from '@/shared/components/ui/Table';
 import { Badge } from '@/shared/components/ui/Badge';
 import { useSessionStore } from '@/shared/state/useSessionStore';
+import { useCachedQuery, CACHE_STALE_TIME } from '@/shared/hooks/useCachedQuery';
 import type { Branch } from '@/shared/types/session.types';
 import type { Supplier } from '@/shared/types/supplier.types';
 import type { PurchaseOrder } from '@/shared/types/purchaseOrder.types';
@@ -63,6 +64,9 @@ const PURCHASE_ORDER_STATUS_VARIANT: Record<PurchaseOrder['status'], 'neutral' |
 // selectores en DECISIONES_TECNICAS.md), para no invalidar el useMemo
 // de branchesById en cada render mientras la sesion todavia esta cargando.
 const EMPTY_BRANCHES: Branch[] = [];
+// Mismo motivo que EMPTY_BRANCHES: referencia estable para el fallback
+// de useCachedQuery mientras no resolvio.
+const EMPTY_ORDERS: PurchaseOrder[] = [];
 
 export const SupplierDetailPanel: FC<SupplierDetailPanelProps> = ({
   supplier,
@@ -71,36 +75,35 @@ export const SupplierDetailPanel: FC<SupplierDetailPanelProps> = ({
   onNewOrder,
 }) => {
   const [activeTab, setActiveTab] = useState('basics');
-  const [orders, setOrders] = useState<PurchaseOrder[]>([]);
-  // "Cargando" se deriva comparando el proveedor ya cargado contra el
-  // actual, en vez de un setState(true) sincronico al arrancar el
-  // efecto (mismo patron que loadedStockBranchId en InventoryPage.tsx —
-  // evita react-hooks/set-state-in-effect).
-  const [ordersLoadedForSupplierId, setOrdersLoadedForSupplierId] = useState<string | null>(null);
   const session = useSessionStore((s) => s.session);
   const branches = session?.branches ?? EMPTY_BRANCHES;
   const branchesById = useMemo(() => new Map(branches.map((b) => [b.id, b])), [branches]);
 
   const supplierId = supplier?.id ?? null;
-  const isLoadingOrders = isOpen && supplierId !== null && ordersLoadedForSupplierId !== supplierId;
+
+  // Historial de OC por proveedor (Tanda 2.5, useCachedQuery — ver
+  // RELEVAMIENTO_CACHE.md/DECISIONES_TECNICAS.md). keyParams=supplierId:
+  // una entrada de cache por proveedor — reabrir el panel del MISMO
+  // proveedor ya no repite el fetch (RELEVAMIENTO_CACHE.md, C2), y
+  // `updatePurchaseOrderStatus`/`generatePurchaseOrderFromSuggestion`
+  // invalidan esta key explicitamente (ver tabla de invalidacion,
+  // DECISIONES_TECNICAS.md) para que un cambio hecho desde Compras o
+  // Inventario se refleje aca sin depender de cerrar y reabrir.
+  const {
+    data: ordersData,
+    isLoading: isLoadingOrders,
+    error: ordersError,
+  } = useCachedQuery(
+    'purchase-orders-by-supplier',
+    supplierId,
+    (signal) => getPurchaseOrdersBySupplierId(supplierId ?? '', signal),
+    { staleTime: CACHE_STALE_TIME.OPERATIONAL, enabled: isOpen && supplierId !== null }
+  );
+  const orders = ordersData ?? EMPTY_ORDERS;
 
   useEffect(() => {
-    if (!isOpen || !supplierId) return;
-    let cancelled = false;
-    getPurchaseOrdersBySupplierId(supplierId)
-      .then((data) => {
-        if (!cancelled) setOrders(data);
-      })
-      .catch(() => {
-        if (!cancelled) toast.error('No se pudo cargar el historial de ordenes de compra.');
-      })
-      .finally(() => {
-        if (!cancelled) setOrdersLoadedForSupplierId(supplierId);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [isOpen, supplierId]);
+    if (ordersError) toast.error('No se pudo cargar el historial de ordenes de compra.');
+  }, [ordersError]);
 
   if (!supplier) return null;
 

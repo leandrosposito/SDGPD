@@ -2,11 +2,13 @@ import { useEffect, useMemo, useState, type FC } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ShoppingCart } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Pagination } from '@/shared/components/ui/Pagination';
 import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary';
 import { SkeletonTable } from '@/shared/components/ui/SkeletonLoader';
 import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay';
 import { usePagedQuery } from '@/shared/hooks/usePagedQuery';
+import { useCachedQuery, CACHE_STALE_TIME } from '@/shared/hooks/useCachedQuery';
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
 import { useSessionStore } from '@/shared/state/useSessionStore';
 import type { Branch } from '@/shared/types/session.types';
@@ -60,14 +62,15 @@ import './ComprasPage.css';
 // render alimentaria el useMemo de branchesById con una dependencia
 // distinta cada vez y lo invalidaria siempre.
 const EMPTY_BRANCHES: Branch[] = [];
+// Mismo motivo que EMPTY_BRANCHES: referencias estables para el
+// fallback de useCachedQuery mientras no resolvio.
+const EMPTY_SUPPLIERS: Supplier[] = [];
+const EMPTY_PRODUCTS: InventoryItem[] = [];
 
 export const ComprasPage: FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeBranchId = useSessionStore((s) => s.activeBranchId);
   const session = useSessionStore((s) => s.session);
-
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [products, setProducts] = useState<InventoryItem[]>([]);
 
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearchQuery = useDebouncedValue(searchQuery, 300);
@@ -99,33 +102,37 @@ export const ComprasPage: FC = () => {
   // usuario haya tocado nada (ver DECISIONES_TECNICAS.md).
   const [dateRange, setDateRange] = useState<DateRangeValue>(() => defaultDateRangeValue('all'));
 
+  // Catalogo de productos y lista de proveedores (Tanda 2.5,
+  // useCachedQuery — ver RELEVAMIENTO_CACHE.md/DECISIONES_TECNICAS.md):
+  // mismo queryName ('products'/'suppliers-list') que InventoryPage y
+  // CreateOrderModal — los 3 comparten una sola entrada de cache
+  // (dedupe real entre modulos), no 3 fetches independientes.
+  const empresaId = session?.company.id;
+  const queryClient = useQueryClient();
+
+  const { data: suppliersData, error: suppliersError } = useCachedQuery(
+    'suppliers-list',
+    undefined,
+    (signal) => fetchSuppliers(empresaId ?? '', signal),
+    { staleTime: CACHE_STALE_TIME.CATALOG, enabled: Boolean(empresaId) }
+  );
+  const suppliers = suppliersData ?? EMPTY_SUPPLIERS;
+
   useEffect(() => {
-    let cancelled = false;
-    // fetchSuppliers ahora requiere empresaId (Tanda 1 de escalabilidad,
-    // suppliers.service.ts) — espera a que la sesion este cargada en vez
-    // de mandar un valor vacio; el efecto se re-corre una sola vez mas
-    // cuando `session` deja de ser null (su referencia no vuelve a
-    // cambiar despues, ver useSessionStore#loadSession).
-    if (session) {
-      fetchSuppliers(session.company.id)
-        .then((data) => {
-          if (!cancelled) setSuppliers(data);
-        })
-        .catch(() => {
-          if (!cancelled) toast.error('No se pudo cargar el listado de proveedores.');
-        });
-    }
-    fetchProducts()
-      .then((data) => {
-        if (!cancelled) setProducts(data);
-      })
-      .catch(() => {
-        if (!cancelled) toast.error('No se pudo cargar el catalogo de productos.');
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [session]);
+    if (suppliersError) toast.error('No se pudo cargar el listado de proveedores.');
+  }, [suppliersError]);
+
+  const { data: productsData, error: productsError } = useCachedQuery(
+    'products',
+    undefined,
+    (signal) => fetchProducts(signal),
+    { staleTime: CACHE_STALE_TIME.CATALOG }
+  );
+  const products = productsData ?? EMPTY_PRODUCTS;
+
+  useEffect(() => {
+    if (productsError) toast.error('No se pudo cargar el catalogo de productos.');
+  }, [productsError]);
 
   // Deep link desde Proveedores (O4): ?proveedor=<id> abre el modal de
   // alta con ese proveedor preseleccionado. Se limpia el query param al
@@ -267,6 +274,17 @@ export const ComprasPage: FC = () => {
         toast.success(`Orden ${order.id} actualizada.`);
         setSelectedOrder(result.order);
         refetch();
+        // Invalidacion por mutacion (Tanda 2.5, tabla completa en
+        // DECISIONES_TECNICAS.md): cambiar el estado de una OC invalida
+        // ademas su presencia en el historial de OC del proveedor
+        // (Tanda 2.5, useCachedQuery en SupplierDetailPanel) — el
+        // listado paginado de esta misma pantalla ya se resuelve con
+        // refetch() (Tanda 2), no con esto.
+        if (empresaId) {
+          void queryClient.invalidateQueries({
+            queryKey: ['cached', 'purchase-orders-by-supplier', empresaId, result.order.supplierId],
+          });
+        }
         return;
       }
       const message =

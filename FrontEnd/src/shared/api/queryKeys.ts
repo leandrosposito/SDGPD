@@ -41,3 +41,37 @@ export function pagedQueryKey(params: PagedQueryKeyParams) {
   // total, ver queryClient.ts), pero la estructura no cuesta nada hoy.
   return ['paged', queryName, empresaId, filters, sort, page, pageSize] as const;
 }
+
+// ============================================================
+// cachedQueryKey — fabrica hermana para useCachedQuery (Tanda 2.5 de
+// escalabilidad, RELEVAMIENTO_CACHE.md): catalogos, stock y gets
+// puntuales que no pasan por usePagedQuery. Mismo criterio de
+// empresaId obligatorio que pagedQueryKey — mismas razones, ver
+// arriba.
+//
+// Jerarquica para invalidacion QUIRURGICA (decision de Tanda 2.5, no
+// el barrido total de Tanda 2): invalidar
+// queryClient.invalidateQueries({ queryKey: ['cached', 'products', empresaId] })
+// matchea (por prefijo, comportamiento propio de TanStack Query) TODAS
+// las variantes de `keyParams` de 'products' para esa empresa, pero
+// nunca toca ['cached', 'clients', empresaId, ...] — son prefijos
+// distintos. Por eso `queryName` y `empresaId` van SIEMPRE antes que
+// `keyParams` en el array: son el prefijo que se usa para invalidar.
+//
+// `keyParams` es intencionalmente `unknown`, no una forma fija: cubre
+// tanto una lista sin parametros (undefined/null, ej. el catalogo
+// completo de productos) como un get puntual por id (ej. branchId para
+// stock de sucursal, supplierId para historial de OC) — un solo hook,
+// distinta forma de key, sin necesitar una variante separada.
+// ============================================================
+
+export interface CachedQueryKeyParams {
+  queryName: string;
+  empresaId: string;
+  keyParams?: unknown;
+}
+
+export function cachedQueryKey(params: CachedQueryKeyParams) {
+  const { queryName, empresaId, keyParams } = params;
+  return ['cached', queryName, empresaId, keyParams] as const;
+}

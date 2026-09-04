@@ -1,10 +1,13 @@
-import { useState, useEffect } from 'react';
 import type { DashboardData } from '../types/dashboard.types';
 import { fetchDashboardData } from '@/services/mock/dashboard.service';
+import { useCachedQuery, CACHE_STALE_TIME } from './useCachedQuery';
 
 // ============================================================
-// useDashboard — Custom hook for dashboard data fetching
-// Manages loading, error, and data state.
+// useDashboard — Datos del Dashboard, via useCachedQuery (Tanda 2.5,
+// ver RELEVAMIENTO_CACHE.md/DECISIONES_TECNICAS.md). staleTime
+// DERIVED (2 min): es un agregado calculado, sin ninguna mutacion en
+// el proyecto que lo invalide explicitamente todavia (ver la tabla de
+// invalidacion, DECISIONES_TECNICAS.md — nada apunta a esta key hoy).
 // ============================================================
 
 interface UseDashboardReturn {
@@ -15,44 +18,12 @@ interface UseDashboardReturn {
 }
 
 export function useDashboard(): UseDashboardReturn {
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const [refreshKey, setRefreshKey] = useState<number>(0);
+  const { data, isLoading, error, refetch } = useCachedQuery(
+    'dashboard',
+    undefined,
+    (signal) => fetchDashboardData(signal),
+    { staleTime: CACHE_STALE_TIME.DERIVED }
+  );
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const result = await fetchDashboardData();
-        if (!cancelled) {
-          setData(result);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError('No se pudo cargar la informacion del dashboard.');
-          console.error('[useDashboard]', err);
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
-      }
-    }
-
-    load();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [refreshKey]);
-
-  function refetch() {
-    setRefreshKey((k) => k + 1);
-  }
-
-  return { data, isLoading, error, refetch };
+  return { data: data ?? null, isLoading, error, refetch };
 }

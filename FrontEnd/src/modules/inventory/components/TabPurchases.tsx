@@ -1,10 +1,12 @@
 import { useState, type FC } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 import { Table } from '@/shared/components/ui/Table';
 import type { InventoryItem, PurchaseSuggestion } from '@/shared/types/inventory.types';
 import type { Supplier } from '@/shared/types/supplier.types';
 import type { Branch } from '@/shared/types/session.types';
+import { useSessionStore } from '@/shared/state/useSessionStore';
 import { generatePurchaseOrderFromSuggestion } from '@/services/mock/purchaseOrders.service';
 
 // ============================================================
@@ -35,6 +37,8 @@ function formatCurrency(value: number): string {
 export const TabPurchases: FC<TabPurchasesProps> = ({ data, branchName, branchId, products, suppliers }) => {
   const navigate = useNavigate();
   const [generatingId, setGeneratingId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const empresaId = useSessionStore((s) => s.session?.company.id);
 
   const handleGenerateOrder = async (suggestion: PurchaseSuggestion) => {
     const product = products.find((p) => p.id === suggestion.productId);
@@ -72,6 +76,21 @@ export const TabPurchases: FC<TabPurchasesProps> = ({ data, branchName, branchId
       if (!result.success || !result.order) {
         toast.error('No se pudo generar la orden de compra.');
         return;
+      }
+
+      // Invalidacion por mutacion (Tanda 2.5, tabla completa en
+      // DECISIONES_TECNICAS.md): generar una OC desde Inventario
+      // invalida el cache de ordenes de compra de Compras (paginado,
+      // Tanda 2 — no se importa nada de modules/compras/, R2: se
+      // invalida por la MISMA key jerarquica que arma ese modulo, via
+      // shared/api/, no importando su codigo) y el historial de OC del
+      // proveedor (Tanda 2.5, useCachedQuery en SupplierDetailPanel) —
+      // asi ambos quedan al dia sin depender de un refresh manual.
+      if (empresaId) {
+        void queryClient.invalidateQueries({ queryKey: ['paged', 'getPurchaseOrdersPage', empresaId] });
+        void queryClient.invalidateQueries({
+          queryKey: ['cached', 'purchase-orders-by-supplier', empresaId, supplier.id],
+        });
       }
 
       const message = result.merged
