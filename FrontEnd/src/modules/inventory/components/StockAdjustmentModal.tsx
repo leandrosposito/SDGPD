@@ -2,7 +2,7 @@ import { useEffect, useState, type FC } from 'react';
 import { Modal } from '@/shared/components/ui/Modal';
 import type { InventoryItem } from '@/shared/types/inventory.types';
 import { useSessionStore } from '@/shared/state/useSessionStore';
-import { getStockForBranch } from '@/services/mock/products.service';
+import { getStockForBranch } from '@/shared/api/products/products.service';
 import './InventoryModals.css';
 
 // ============================================================
@@ -23,18 +23,19 @@ interface StockAdjustmentModalProps {
 
 export const StockAdjustmentModal: FC<StockAdjustmentModalProps> = ({ isOpen, onClose, product }) => {
   const activeBranchId = useSessionStore((s) => s.activeBranchId);
+  const empresaId = useSessionStore((s) => s.session?.company.id);
   const [currentStock, setCurrentStock] = useState<number | null>(null);
 
   useEffect(() => {
     if (!isOpen || !product || !activeBranchId) return;
     let cancelled = false;
-    getStockForBranch(product.id, activeBranchId).then((record) => {
+    getStockForBranch(empresaId ?? '', product.id, activeBranchId).then((record) => {
       if (!cancelled) setCurrentStock(record?.stock ?? 0);
     });
     return () => {
       cancelled = true;
     };
-  }, [isOpen, product, activeBranchId]);
+  }, [isOpen, product, activeBranchId, empresaId]);
 
   if (!product) return null;
 

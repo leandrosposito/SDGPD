@@ -127,3 +127,32 @@
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
 }
+
+/* Mismo patron que .suppliers-table__sort-btn (SuppliersTable.tsx) —
+   header de columna clickeable, orden server-side. */
+.tab-low-stock__sort-btn {
+  display: inline-flex;
+  align-items: center;
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-weight: inherit;
+  font-size: inherit;
+  padding: 0;
+  cursor: pointer;
+  transition: color var(--transition-fast) ease;
+}
+
+.tab-low-stock__sort-btn:hover {
+  color: var(--color-text-primary);
+}
+
+.tab-low-stock__sort-icon {
+  margin-left: var(--space-1);
+  color: var(--color-accent);
+}
+
+.tab-low-stock__sort-icon--inactive {
+  color: var(--color-text-tertiary);
+  opacity: 0.5;
+}

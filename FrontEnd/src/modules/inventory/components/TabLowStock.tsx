@@ -1,9 +1,10 @@
-import { useEffect, useMemo, type FC } from 'react';
+import { useEffect, useMemo, useState, type FC } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { AlertTriangle, PackagePlus, CheckCircle2, ShoppingCart } from 'lucide-react';
 import type { ReplenishmentStatus, StockedInventoryItem } from '@/shared/types/inventory.types';
 import type { Branch } from '@/shared/types/session.types';
+import type { PageSort } from '@/shared/types/pagination.types';
 import { Table } from '@/shared/components/ui/Table';
 import { Badge, type BadgeVariant } from '@/shared/components/ui/Badge';
 import { Pagination } from '@/shared/components/ui/Pagination';
@@ -11,9 +12,17 @@ import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary';
 import { SkeletonTable } from '@/shared/components/ui/SkeletonLoader';
 import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay';
 import { usePagedQuery } from '@/shared/hooks/usePagedQuery';
+import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
 import { ExportButton, type ExportColumn } from '@/shared/components/ui/ExportButton';
-import { getLowStockPage, exportLowStock, type LowStockQueryFilters } from '@/services/mock/products.service';
+import {
+  getLowStockPage,
+  exportLowStock,
+  type LowStockQueryFilters,
+  type LowStockSortField,
+} from '@/shared/api/products/products.service';
+import { useSessionStore } from '@/shared/state/useSessionStore';
 import { useReplenishmentStore } from '../state/useReplenishmentStore';
+import { ProductSearchBar } from './ProductSearchBar';
 import './TabLowStock.css';
 
 // ============================================================
@@ -24,7 +33,17 @@ import './TabLowStock.css';
 // componente, no InventoryPage. getLowStockPage excluye los productos
 // sin registro de stock en la sucursal (E5) — no aparecen aca "en 0",
 // simplemente no estan cargados en esta sucursal.
+//
+// Busqueda y orden (hallazgo funcional post-Tanda 3e, esta tab no los
+// tenia): mismo `ProductSearchBar` + `useDebouncedValue` que
+// TabStockCurrent (no se inventa un buscador nuevo), y el mismo patron
+// de header clickeable server-side que SuppliersTable. El conteo
+// ("N productos") pasa a reflejar la busqueda vigente en ESTA tab
+// (P3-style: filtra antes de contar) — ver nota mas abajo sobre por que
+// esto no rompe la comparacion con "Stock Bajo" de Stock Actual.
 // ============================================================
+
+const SEARCH_DEBOUNCE_MS = 300;
 
 const REPLENISHMENT_STATUS_LABEL: Record<ReplenishmentStatus, string> = {
   not_requested: 'Sin solicitar',
@@ -43,10 +62,19 @@ interface TabLowStockProps {
 
 export const TabLowStock: FC<TabLowStockProps> = ({ branchId, branchName }) => {
   const navigate = useNavigate();
+  const empresaId = useSessionStore((s) => s.session?.company.id);
   const statusByProductId = useReplenishmentStore((s) => s.statusByProductId);
   const requestReplenishment = useReplenishmentStore((s) => s.requestReplenishment);
 
-  const filters: LowStockQueryFilters = useMemo(() => ({ branchId }), [branchId]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchQuery = useDebouncedValue(searchQuery, SEARCH_DEBOUNCE_MS);
+
+  // empresaId explicito (Tanda 3e): products.service ahora lo exige en
+  // todo metodo, mismo criterio que orders/cash/clients.
+  const filters: LowStockQueryFilters = useMemo(
+    () => ({ empresaId: empresaId ?? '', branchId, search: debouncedSearchQuery || undefined }),
+    [empresaId, branchId, debouncedSearchQuery]
+  );
 
   const {
     items: data,
@@ -57,13 +85,53 @@ export const TabLowStock: FC<TabLowStockProps> = ({ branchId, branchName }) => {
     isLoading,
     isFetching,
     error,
+    sort,
     setPage,
     setPageSize,
+    setSort,
   } = usePagedQuery(getLowStockPage, filters);
 
   useEffect(() => {
     if (error) toast.error('No se pudo cargar el listado de bajo stock.');
   }, [error]);
+
+  // Mismo patron que SuppliersTable (unico listado del proyecto con
+  // orden por columna clickeable hasta ahora): togglea asc/desc si ya
+  // esta ordenando por ese campo, si no arranca en asc.
+  const sortField = sort?.field ?? 'sku';
+  const sortDesc = sort?.direction === 'desc';
+
+  const handleSort = (field: LowStockSortField) => {
+    const next: PageSort<LowStockSortField> =
+      sortField === field ? { field, direction: sortDesc ? 'asc' : 'desc' } : { field, direction: 'asc' };
+    setSort(next);
+  };
+
+  const renderSortIcon = (field: LowStockSortField) => {
+    if (sortField !== field) {
+      return (
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" className="tab-low-stock__sort-icon tab-low-stock__sort-icon--inactive">
+          <path d="M7 15l5 5 5-5M7 9l5-5 5 5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      );
+    }
+    return sortDesc ? (
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" className="tab-low-stock__sort-icon">
+        <path d="M19 9l-7 7-7-7" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ) : (
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" className="tab-low-stock__sort-icon">
+        <path d="M5 15l7-7 7 7" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  };
+
+  const renderSortableHeader = (label: string, field: LowStockSortField) => (
+    <button type="button" className="tab-low-stock__sort-btn" onClick={() => handleSort(field)}>
+      {label}
+      {renderSortIcon(field)}
+    </button>
+  );
 
   const handleRequestReplenishment = (product: StockedInventoryItem) => {
     const result = requestReplenishment(product.id);
@@ -85,8 +153,8 @@ export const TabLowStock: FC<TabLowStockProps> = ({ branchId, branchName }) => {
     navigate(`/compras?producto=${encodeURIComponent(product.id)}&sucursal=${encodeURIComponent(branchId)}`);
   };
 
-  // Exportar (tarea transversal): mismos filtros vigentes (branchId)
-  // via exportLowStock, que reusa el mismo filtro+orden que
+  // Exportar (tarea transversal): mismos filtros vigentes (branchId +
+  // busqueda) via exportLowStock, que reusa el mismo filtro+orden que
   // getLowStockPage. Sin rango de fecha (Tarea A no aplica aca — ver
   // DECISIONES_TECNICAS.md: StockedInventoryItem no tiene campo de
   // fecha, es una foto del stock actual, no un registro historico).
@@ -113,11 +181,22 @@ export const TabLowStock: FC<TabLowStockProps> = ({ branchId, branchName }) => {
         </div>
         {/* 3.6: el conteo viene del total de la respuesta paginada
             (totalItems), nunca de data.length (esa solo tendria las
-            filas de la pagina actual). */}
+            filas de la pagina actual). Con busqueda agregada, este
+            numero ahora refleja SOLO lo que matchea la busqueda vigente
+            en esta tab — comparar contra "Stock Bajo" de Stock Actual
+            (que tiene su propia busqueda independiente) solo es valido
+            cuando NINGUNA de las dos tiene una busqueda activa. */}
         <span className="tab-low-stock__count" aria-live="polite">
           {totalItems} {totalItems === 1 ? 'producto' : 'productos'}
         </span>
       </header>
+
+      {/* Fuera del toolbar (mismo criterio que TabStockCurrent): el
+          buscador es `display:flex` con un input `flex:1` por dentro —
+          necesita ser hijo directo de un contenedor en columna para
+          estirarse a lo ancho, no un item mas de una fila
+          space-between (ahi le tocaria solo su ancho de contenido). */}
+      <ProductSearchBar searchQuery={searchQuery} onSearchChange={setSearchQuery} />
 
       <div className="tab-low-stock__toolbar">
         <p className="tab-low-stock__branch-note">
@@ -144,19 +223,19 @@ export const TabLowStock: FC<TabLowStockProps> = ({ branchId, branchName }) => {
                     header: 'Codigo',
                     accessor: (row) => <span className="tab-low-stock__code">{row.sku}</span>,
                   },
-                  { header: 'Nombre', accessor: 'name' },
+                  { header: renderSortableHeader('Nombre', 'name'), accessor: 'name' },
                   {
-                    header: 'Stock Actual',
+                    header: renderSortableHeader('Stock Actual', 'stock'),
                     align: 'right',
                     accessor: (row) => <span className="tab-low-stock__stock--current">{row.stock}</span>,
                   },
                   {
-                    header: 'Stock Minimo',
+                    header: renderSortableHeader('Stock Minimo', 'minStock'),
                     align: 'right',
                     accessor: (row) => <span>{row.minStock}</span>,
                   },
                   {
-                    header: 'Deficit',
+                    header: renderSortableHeader('Deficit', 'deficit'),
                     align: 'right',
                     accessor: (row) => (
                       <span className="tab-low-stock__deficit">-{row.minStock - row.stock}</span>

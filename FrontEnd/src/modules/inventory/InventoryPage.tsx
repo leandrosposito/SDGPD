@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type FC } from 'react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { INVENTORY_MOCK_DATA } from '@/data/mock/inventory.data';
-import type { InventoryItem, StockedInventoryItem } from '@/shared/types/inventory.types';
+import type { InventoryItem } from '@/shared/types/inventory.types';
 import { useSessionStore } from '@/shared/state/useSessionStore';
 import { useCachedQuery, CACHE_STALE_TIME } from '@/shared/hooks/useCachedQuery';
 import { cachedQueryKey } from '@/shared/api/queryKeys';
@@ -21,13 +21,7 @@ import { TabCategories } from './components/TabCategories';
 import { TabPriceLists } from './components/TabPriceLists';
 import { TabProductHistory } from './components/TabProductHistory';
 import { TabImportExport } from './components/TabImportExport';
-import {
-  fetchProducts,
-  createProduct,
-  updateProduct,
-  deleteProduct,
-  getStockedProductsForBranch,
-} from '@/services/mock/products.service';
+import { fetchProducts, createProduct, updateProduct, deleteProduct } from '@/shared/api/products/products.service';
 import { fetchSuppliers } from '@/modules/suppliers/api/suppliers.service';
 import type { ProductFormValues } from './components/ProductFormModal.schema';
 import './InventoryPage.css';
@@ -41,27 +35,27 @@ import './InventoryPage.css';
 // Stock multi-sucursal (E1, DECISIONES_TECNICAS.md): el catalogo
 // (`products`) es de EMPRESA, no de sucursal (Tanda 2.5, decision
 // cerrada: el producto existe independientemente de donde haya stock).
-// El stock (para TabStockCurrent) SI es por sucursal. TabLowStock ya no
-// recibe datos de aca: se autoconsulta, paginado server-side.
+// El stock (para TabStockCurrent) SI es por sucursal.
+//
+// Tanda 3e: TabStockCurrent ya no recibe `data` por props — se
+// autoconsulta con usePagedQuery + products.service#getStockedProductsPage
+// (mismo patron que TabLowStock, que ya se autoconsultaba desde antes).
+// El padre dejo de cargar/repartir `stockedProducts` y la busqueda de
+// Stock Actual (ambas viven ahora dentro de TabStockCurrent).
 //
 // Cache (Tanda 2.5, useCachedQuery — ver RELEVAMIENTO_CACHE.md y
 // DECISIONES_TECNICAS.md): catalogo de productos y lista de proveedores
 // usan queryName 'products'/'suppliers-list' — el MISMO queryName que
 // usan ComprasPage y CreateOrderModal, asi que los 3 comparten una sola
 // entrada de cache (dedupe entre modulos, no 3 fetches independientes).
+// products.service ahora vive en shared/api/products/ (Tanda 3e, ver
+// DECISIONES_TECNICAS.md): es un dominio transversal, no exclusivo de
+// este modulo.
 // ============================================================
 
 const USER_ROLE: 'ADMIN' | 'EMPLOYEE' = 'ADMIN';
 
-// Referencia estable para el fallback de `data` mientras useCachedQuery
-// no resolvio todavia — un `?? []` nuevo en cada render rompe la
-// memoizacion de todo lo que dependa de esa referencia (ver
-// filteredStockedProducts mas abajo).
-const EMPTY_STOCKED_PRODUCTS: StockedInventoryItem[] = [];
-
 export const InventoryPage: FC = () => {
-  const [searchQuery, setSearchQuery] = useState('');
-
   const [activeTab, setActiveTab] = useState<string>('stock');
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [isPurchaseEntryModalOpen, setIsPurchaseEntryModalOpen] = useState(false);
@@ -78,9 +72,8 @@ export const InventoryPage: FC = () => {
   // compartido con ComprasPage/CreateOrderModal (dedupe real entre los 3).
   const {
     data: productsData,
-    isLoading: isLoadingProducts,
     error: productsError,
-  } = useCachedQuery('products', undefined, (signal) => fetchProducts(signal), {
+  } = useCachedQuery('products', undefined, (signal) => fetchProducts(empresaId ?? '', signal), {
     staleTime: CACHE_STALE_TIME.CATALOG,
   });
   const products = productsData ?? [];
@@ -107,41 +100,6 @@ export const InventoryPage: FC = () => {
     if (suppliersError) toast.error('No se pudo cargar el listado de proveedores.');
   }, [suppliersError]);
 
-  // Stock de la sucursal activa (catalogo unido a stock, para
-  // TabStockCurrent) — queryName 'stock-by-branch', keyParams=branchId
-  // (una entrada de cache por sucursal). Se vuelve a pedir solo cuando
-  // cambia de verdad: cambio de sucursal (key distinta) o una mutacion
-  // de producto que invalida esta key explicitamente (ver
-  // handleSaveProduct/handleDeleteProduct mas abajo) — ya no depende de
-  // la referencia de `products`, asi que no hay doble disparo por
-  // montaje (RELEVAMIENTO_CACHE.md, D2).
-  const {
-    data: stockedProductsData,
-    isLoading: isLoadingStock,
-    error: stockError,
-  } = useCachedQuery(
-    'stock-by-branch',
-    activeBranchId,
-    (signal) => getStockedProductsForBranch(activeBranchId ?? '', signal),
-    { staleTime: CACHE_STALE_TIME.OPERATIONAL, enabled: Boolean(activeBranchId) }
-  );
-  const stockedProducts = stockedProductsData ?? EMPTY_STOCKED_PRODUCTS;
-
-  useEffect(() => {
-    if (stockError) toast.error('No se pudo cargar el stock de la sucursal.');
-  }, [stockError]);
-
-  const filteredStockedProducts = useMemo(() => {
-    if (!searchQuery.trim()) return stockedProducts;
-    const q = searchQuery.toLowerCase();
-    return stockedProducts.filter(p =>
-      p.sku.toLowerCase().includes(q) ||
-      p.barcode.toLowerCase().includes(q) ||
-      p.name.toLowerCase().includes(q) ||
-      (p.description && p.description.toLowerCase().includes(q))
-    );
-  }, [stockedProducts, searchQuery]);
-
   // TabPurchases (3.5): sugerencias filtradas por sucursal activa. Es un
   // filtro simple sobre una lista ya en memoria (mismo criterio que
   // DeliveryFilters sobre `deliveries`), no un acceso a stock — no pasa
@@ -162,52 +120,64 @@ export const InventoryPage: FC = () => {
   };
 
   // Invalidacion por mutacion (Tanda 2.5, tabla completa en
-  // DECISIONES_TECNICAS.md): crear/editar/borrar un producto invalida
-  // el catalogo de productos Y el stock de sucursal (el join incluye
-  // nombre/sku del producto, que pudo cambiar) — quirurgica por prefijo
-  // de key, nunca toca 'suppliers-list' ni 'clients' ni ningun otro
-  // dato. Sin keyParams en el prefijo: invalida TODAS las sucursales de
-  // 'stock-by-branch' (el producto puede tener stock en mas de una), no
-  // solo la activa.
+  // DECISIONES_TECNICAS.md, actualizada en Tanda 3e): crear/editar/
+  // borrar un producto invalida el catalogo de productos (useCachedQuery,
+  // sin cambios de esta tanda) y los DOS listados paginados que dependen
+  // del join catalogo x stock — quirurgica por prefijo de key, nunca
+  // toca 'suppliers-list' ni 'clients' ni ningun otro dato.
   function invalidateProductCaches() {
     if (!empresaId) return;
     void queryClient.invalidateQueries({ queryKey: cachedQueryKey({ queryName: 'products', empresaId }) });
-    void queryClient.invalidateQueries({ queryKey: cachedQueryKey({ queryName: 'stock-by-branch', empresaId }) });
+    // Stock Actual (Tanda 3e: paso de useCachedQuery 'stock-by-branch' a
+    // usePagedQuery#getStockedProductsPage) — se invalida por el mismo
+    // prefijo [queryName, empresaId] que ya usa TabPurchases para
+    // invalidar Compras (ver DECISIONES_TECNICAS.md): alcanza TODAS las
+    // sucursales/paginas/busquedas de este listado, el producto puede
+    // tener stock en mas de una sucursal.
+    void queryClient.invalidateQueries({ queryKey: ['paged', 'getStockedProductsPage', empresaId] });
+    // Bajo Stock Minimo: ya vivia en su propio usePagedQuery desde antes
+    // de esta tanda, pero la invalidacion de 'stock-by-branch' NUNCA lo
+    // alcanzaba (era una key de useCachedQuery distinta) — se agrega
+    // aca explicitamente para que un alta/edicion/baja de producto se
+    // refleje ahi sin depender del staleTime por defecto (30s,
+    // queryClient.ts) si el usuario cambia de tab antes.
+    void queryClient.invalidateQueries({ queryKey: ['paged', 'getLowStockPage', empresaId] });
   }
 
-  // RF-PRD-001: Alta / Modificacion de producto contra el mock service
-  // (persiste en memoria durante la sesion, ver services/mock/products.service.ts).
+  // RF-PRD-001: Alta / Modificacion de producto contra el service
+  // (persiste en memoria durante la sesion, ver shared/api/products/products.service.ts).
   const handleSaveProduct = async (values: ProductFormValues, productId?: string) => {
+    if (!empresaId) throw new Error('Todavia no hay una sesion activa.');
     if (productId) {
-      const updated = await updateProduct(productId, values);
+      const updated = await updateProduct(empresaId, productId, values);
       invalidateProductCaches();
       return updated;
     }
-    const created = await createProduct(values);
+    const created = await createProduct(empresaId, values);
     invalidateProductCaches();
     return created;
   };
 
   // RF-PRD-001: Baja de producto (ABM completo — antes el boton "Eliminar" solo cerraba el modal).
   const handleDeleteProduct = async (productId: string) => {
-    await deleteProduct(productId);
+    if (!empresaId) throw new Error('Todavia no hay una sesion activa.');
+    await deleteProduct(empresaId, productId);
     invalidateProductCaches();
   };
-
-  const stockTabsLoading = !activeBranchId || isLoadingProducts || isLoadingStock;
 
   const tabs: TabItem[] = [
     {
       id: 'stock',
       label: 'Stock Actual',
-      content: stockTabsLoading ? (
+      // TabStockCurrent se autoconsulta (paginado, Tanda 3e): solo hace
+      // falta el gate de "todavia no hay sucursal activa", mismo
+      // criterio que TabLowStock.
+      content: !activeBranchId ? (
         <SkeletonTable rows={5} cols={9} />
       ) : (
         <TabStockCurrent
-          data={filteredStockedProducts}
+          branchId={activeBranchId}
           branchName={activeBranchName}
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
           onOpenLots={handleOpenLotsPanel}
           onEditProduct={handleOpenProductModal}
           userRole={USER_ROLE}

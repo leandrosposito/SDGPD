@@ -5,7 +5,7 @@ import { useCachedQuery, CACHE_STALE_TIME } from '@/shared/hooks/useCachedQuery'
 import { useSessionStore } from '@/shared/state/useSessionStore';
 import type { InventoryItem } from '@/shared/types/inventory.types';
 import type { Order } from '@/shared/types/order.types';
-import { fetchProducts } from '@/services/mock/products.service';
+import { fetchProducts } from '@/shared/api/products/products.service';
 import { createOrder, type OrderFormInput } from '@/modules/orders/api/orders.service';
 
 // Referencia estable: ver mismo patron en ComprasPage/InventoryPage.
@@ -39,7 +39,7 @@ export const CreateOrderModal: FC<CreateOrderModalProps> = ({ isOpen, onClose, o
   const { data: productsData, error: productsError } = useCachedQuery(
     'products',
     undefined,
-    (signal) => fetchProducts(signal),
+    (signal) => fetchProducts(empresaId ?? '', signal),
     { staleTime: CACHE_STALE_TIME.CATALOG }
   );
   const products = productsData ?? EMPTY_PRODUCTS;

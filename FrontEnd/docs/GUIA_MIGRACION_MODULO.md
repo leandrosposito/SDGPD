@@ -186,6 +186,27 @@ El buscador de arriba ya viajaba debounced hacia Cuentas Corrientes/Morosos (mig
 
 ---
 
+## Migrar un dominio transversal, consumido por más de un módulo — lo aprendido en Tanda 3e (`products`)
+
+Todas las tandas anteriores (`suppliers`, `orders`, `cash`, `settings`, `clients`) movieron su service a `modules/<módulo>/api/` sin pensarlo dos veces, porque sus consumidores vivían enteramente dentro del propio módulo. `products.service.ts` (consumido por `inventory`, pero también por `compras` y `orders` desde antes de esta tanda) fue el primer caso donde eso no era cierto. Esto agrega un paso previo que las guías anteriores no contemplaban:
+
+### 16. Antes de decidir dónde vive el `api/` nuevo, grepeá TODOS los consumidores del service viejo, no solo los del módulo que estás migrando
+`grep -rln "from '@/services/mock/<archivo>.service'" src` (o el path que corresponda) — si el resultado tiene archivos fuera de `modules/<módulo-que-estás-migrando>/`, tenés un dominio transversal, no uno exclusivo. No asumas que "el módulo que hoy usa más funciones del service" es su dueño — `inventory` usaba 8 de las funciones de `products.service.ts` contra 2-3 de `compras`/`orders`, y aun así no era su dueño arquitectónico: el criterio es si el dominio tiene sentido fuera de ese módulo, no cuánto lo usa cada uno.
+
+### 17. Si es transversal, el `api/` va en `shared/api/<dominio>/`, no en `modules/<módulo>/api/`
+Mismo patrón interno de siempre (`dto.ts`/`mapper.ts`/`<dominio>.service.ts`, DTO↔dominio vía mapper, store reasignado nunca mutado in-place) — la única diferencia es la carpeta contenedora. Moverlo a `modules/<módulo>/api/` de todas formas fijaría un acoplamiento cross-módulo nuevo (los otros módulos consumidores pasarían a importar directo de las internals de un módulo que no es el suyo) — exactamente lo que R2 viene evitando en cada tanda anterior mediante deep-links (`TabLowStock→Compras`, `Proveedores→Compras`) en vez de imports de código. Ver el razonamiento completo, con las alternativas descartadas, en `DECISIONES_TECNICAS.md`, entrada de Tanda 3e.
+
+### 18. "Todo método recibe `empresaId` explícito" se propaga a los consumidores externos, no solo al módulo que estás migrando
+Si el service transversal no tenía `empresaId` en su firma (caso común en servicios migrados en tandas tempranas, antes de que la convención se fijara), agregarlo obliga a tocar TODOS los archivos que lo llaman — incluidos los de otros módulos. En Tanda 3e esto significó tocar `ComprasPage.tsx`/`CreateOrderModal.tsx` (que ya tenían `empresaId` en scope) y `OrderProductsSection.tsx` (que no lo tenía y necesitó un `useSessionStore((s) => s.session?.company.id)` nuevo). Esto sigue siendo "repuntear/adaptar imports rotos" (permitido por la regla de alcance cerrado de cualquier tanda), no una ampliación de alcance — el criterio es que el cambio es mecánico (agregar un parámetro ya resuelto por un hook existente en el archivo), no una decisión de diseño nueva sobre el módulo externo.
+
+### 19. Si el service viejo tenía una función "sin paginar" usada solo por la tab que estás migrando, evaluá eliminarla en vez de mantener las dos versiones
+`getStockedProductsForBranch` (sin paginar) solo la usaba `InventoryPage.tsx` para alimentar la tab que se estaba paginando en esta misma tanda — `grep` confirmó cero consumidores más. Se eliminó por completo en vez de dejarla "por si otro módulo la necesita algún día": no hay tal necesidad hoy, y mantener dos funciones que devuelven el mismo dato en dos formas (paginada y completa) es superficie extra para que diverjan con el tiempo. Si en el futuro aparece un consumidor real que necesite el catálogo con stock SIN paginar, se vuelve a agregar entonces — no antes.
+
+### 20. Un KPI nuevo que "suena" igual a un listado ya migrado puede estar recalculando la MISMA regla de negocio en dos lugares — compartí la función, no la reimplementes
+Al mover el KPI "Stock Bajo" de Stock Actual a `StockAggregates` (aprendizaje 2, agregados server-side), apareció una tentación real: escribir de nuevo la condición `stock <= minStock` (E6) directo en el cálculo del agregado, en vez de llamar a la misma función que ya usaba `getLowStockPage`. Se optó por extraer un único `isBelowMinStock(stock, minStock)` reusado por ambos — si en el futuro E6 cambiara (por ejemplo, a un umbral distinto), un solo lugar para tocar, y ninguna posibilidad de que dos pantallas del mismo módulo muestren un número distinto para el mismo dato. Este es el mismo espíritu que "no duplicar filtro+orden entre paginado y export" (ya establecido para `suppliers`/`orders`/`clients`), extendido a "no duplicar una regla de negocio entre un listado y un agregado que depende del mismo criterio".
+
+---
+
 ## Checklist de cierre por módulo
 
 Antes de dar un módulo por migrado:
@@ -210,7 +231,7 @@ Antes de dar un módulo por migrado:
 - [x] ~~`src/modules/settings/components/tabs/TabUsersRoles.tsx` — Configuración, Usuarios y Roles.~~ **Migrado en Tanda 3c** (04/09/2026). Sin `branchId`, confirmado contra el código. Directorio de Usuarios → `usePagedQuery`; Matriz de Permisos → `useCachedQuery` (4 roles, siempre visible entera, no se pagina). Ver la sección "Migrar varias vistas independientes dentro de un mismo módulo" más arriba.
 - [x] ~~`src/modules/settings/components/tabs/TabSubscription.tsx` — Configuración, Suscripción/Facturas.~~ **Migrado en Tanda 3c** (solo el Historial de Cobros — la card "Plan Actual" es texto hardcodeado sin dato real, no se migró).
 - [x] ~~`src/modules/settings/components/widgets/AuditLogWidget.tsx` — Configuración, Auditoría.~~ **Migrado en Tanda 3c**, vía `useCachedQuery` (feed chico de sidebar, sin paginación).
-- [ ] `src/modules/inventory/components/TabStockCurrent.tsx` — Inventario, Stock Actual. **Con `branchId`** (ya usa `getStockedProductsForBranch`, solo falta paginar).
+- [x] ~~`src/modules/inventory/components/TabStockCurrent.tsx` — Inventario, Stock Actual.~~ **Migrado en Tanda 3e** (04/09/2026). Con `branchId` (join con `ProductStock`, ya lo tenía). Primer caso de dominio TRANSVERSAL: el `api/` de productos se creó en `shared/api/products/`, no en `modules/inventory/api/`, porque `compras`/`orders` ya lo consumían — ver la sección "Migrar un dominio transversal, consumido por más de un módulo" más abajo y `DECISIONES_TECNICAS.md`.
 - [ ] `src/modules/inventory/InventoryPage.tsx` (tab Reposición / `TabPurchases`) — **Con `branchId`**.
 - [ ] `src/modules/inventory/components/TabCategories.tsx` — Inventario, Categorías. Evaluar si es de empresa (catálogo) o de sucursal (stock por categoría) antes de implementar.
 - [ ] `src/modules/inventory/components/TabMovements.tsx` — Inventario, Movimientos. **Con `branchId`** (un movimiento de stock es de una sucursal).
@@ -222,4 +243,4 @@ Antes de dar un módulo por migrado:
 
 ---
 
-**Verificación funcional en navegador PENDIENTE (del propio piloto `suppliers` que esta guía usa como plantilla) — ver `docs/VERIFICACION_TANDA_0_1.md`.** El cambio de Tanda 2 (cache/dedupe/invalidación vía TanStack Query, transparente para esta guía) tiene su propio checklist, también pendiente — ver `docs/VERIFICACION_TANDA_2.md`. Lo mismo para Tanda 2.5 (`useCachedQuery`, httpClient unificado) — ver `docs/VERIFICACION_TANDA_2_5.md`. Y para Tanda 3a (`orders`, primer módulo sin service previo) — ver `docs/VERIFICACION_TANDA_3A.md`. Y para Tanda 3b (`cash`, segundo módulo sin service previo) — ver `docs/VERIFICACION_TANDA_3B.md`. Y para Tanda 3c (3 vistas de `settings`) — ver `docs/VERIFICACION_TANDA_3C.md`. Y para Tanda 3d (Directorio de `clients`) — ver `docs/VERIFICACION_TANDA_3D.md`.
+**Verificación funcional en navegador PENDIENTE (del propio piloto `suppliers` que esta guía usa como plantilla) — ver `docs/VERIFICACION_TANDA_0_1.md`.** El cambio de Tanda 2 (cache/dedupe/invalidación vía TanStack Query, transparente para esta guía) tiene su propio checklist, también pendiente — ver `docs/VERIFICACION_TANDA_2.md`. Lo mismo para Tanda 2.5 (`useCachedQuery`, httpClient unificado) — ver `docs/VERIFICACION_TANDA_2_5.md`. Y para Tanda 3a (`orders`, primer módulo sin service previo) — ver `docs/VERIFICACION_TANDA_3A.md`. Y para Tanda 3b (`cash`, segundo módulo sin service previo) — ver `docs/VERIFICACION_TANDA_3B.md`. Y para Tanda 3c (3 vistas de `settings`) — ver `docs/VERIFICACION_TANDA_3C.md`. Y para Tanda 3d (Directorio de `clients`) — ver `docs/VERIFICACION_TANDA_3D.md`. Y para Tanda 3e (Stock Actual de `inventory` + capa `api/` de productos) — ver `docs/VERIFICACION_TANDA_3E.md`.

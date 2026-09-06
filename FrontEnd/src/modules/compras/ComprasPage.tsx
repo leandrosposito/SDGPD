@@ -16,7 +16,7 @@ import type { Supplier } from '@/shared/types/supplier.types';
 import type { InventoryItem } from '@/shared/types/inventory.types';
 import type { PurchaseOrder, PurchaseOrderStatus, PurchaseOrdersQueryFilters } from '@/shared/types/purchaseOrder.types';
 import { fetchSuppliers } from '@/modules/suppliers/api/suppliers.service';
-import { fetchProducts, getStockForBranch } from '@/services/mock/products.service';
+import { fetchProducts, getStockForBranch } from '@/shared/api/products/products.service';
 import { getPurchaseOrdersPage, exportPurchaseOrders, updatePurchaseOrderStatus, computePurchaseOrderTotal } from '@/services/mock/purchaseOrders.service';
 import type { PurchaseOrderFormInput } from './components/PurchaseOrderFormModal.schema';
 import { PurchaseOrderFilters } from './components/PurchaseOrderFilters';
@@ -125,7 +125,7 @@ export const ComprasPage: FC = () => {
   const { data: productsData, error: productsError } = useCachedQuery(
     'products',
     undefined,
-    (signal) => fetchProducts(signal),
+    (signal) => fetchProducts(empresaId ?? '', signal),
     { staleTime: CACHE_STALE_TIME.CATALOG }
   );
   const products = productsData ?? EMPTY_PRODUCTS;
@@ -188,7 +188,7 @@ export const ComprasPage: FC = () => {
       // Cantidad recalculada aca (autoridad del servicio), no confiada
       // a un query param: el stock pudo cambiar entre que se listo el
       // bajo stock en Inventario y el click en "Generar OC".
-      const stock = branchIdParam ? await getStockForBranch(product.id, branchIdParam) : undefined;
+      const stock = branchIdParam ? await getStockForBranch(empresaId ?? '', product.id, branchIdParam) : undefined;
       const suggestedQuantity = stock ? Math.max(stock.minStock - stock.stock, 0) : 0;
       if (cancelled) return;
 

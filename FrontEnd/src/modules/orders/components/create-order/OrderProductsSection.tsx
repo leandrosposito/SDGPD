@@ -3,7 +3,7 @@ import type { KeyboardEvent } from 'react';
 import { toast } from 'sonner';
 import type { InventoryItem } from '@/shared/types/inventory.types';
 import { useSessionStore } from '@/shared/state/useSessionStore';
-import { getStockForBranch } from '@/services/mock/products.service';
+import { getStockForBranch } from '@/shared/api/products/products.service';
 
 // ============================================================
 // OrderProductsSection — Core product search and table
@@ -42,6 +42,7 @@ export const OrderProductsSection: FC<OrderProductsSectionProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const activeBranchId = useSessionStore((s) => s.activeBranchId);
+  const empresaId = useSessionStore((s) => s.session?.company.id);
 
   const handleKeyDown = async (e: KeyboardEvent<HTMLInputElement>) => {
     // Intercept Enter key for barcode scanners
@@ -57,7 +58,9 @@ export const OrderProductsSection: FC<OrderProductsSectionProps> = ({
         // Adjust price mock based on price list
         const modifier = priceList === 'Mayorista' ? 0.9 : priceList === 'Distribuidor' ? 0.8 : 1;
         const price = match.price * modifier;
-        const stockRecord = activeBranchId ? await getStockForBranch(match.id, activeBranchId) : undefined;
+        const stockRecord = activeBranchId
+          ? await getStockForBranch(empresaId ?? '', match.id, activeBranchId)
+          : undefined;
         const stock = stockRecord?.stock ?? 0;
 
         const existingItemIndex = items.findIndex(i => i.sku === match.sku);
