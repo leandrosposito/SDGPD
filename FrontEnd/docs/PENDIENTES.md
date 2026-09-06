@@ -189,15 +189,20 @@ momento se decide implementar un flujo real de ajuste de stock manual, este arch
 es el punto de partida más cercano a algo funcional (ya resuelve el stock actual del
 producto vía `getStockForBranch`).
 
-### 12. `InventoryMovement`/`ProductHistoryEvent` sin `branchId` — pendiente para Tanda 3g — Severidad: Baja (bloquea el scope, no la función)
+### 12. `InventoryMovement`/`ProductHistoryEvent` sin `branchId` — CERRADO A NIVEL DE CÓDIGO (Tanda 3g, 06/09/2026), sin verificación funcional confirmada
 
-Detectado en `RELEVAMIENTO_INVENTORY.md` (sección C) y confirmado como decisión
-cerrada para cuando se migren estas dos tabs (Tanda 3g, ver `DECISIONES_TECNICAS.md`
-y `GUIA_MIGRACION_MODULO.md`): un movimiento de stock ocurre físicamente en un
-depósito, y el historial es la traza de esos movimientos — ambos tipos
-(`shared/types/inventory.types.ts`) necesitan sumar `branchId: Branch['id']` antes
-de escribir el DTO de esa tanda. No se tocó en Tanda 3e (fuera de su alcance
-cerrado: solo capa `api/` de productos + Stock Actual).
+Detectado en `RELEVAMIENTO_INVENTORY.md` (sección C), no se tocó en Tanda 3e (fuera
+de su alcance cerrado) y se resolvió en Tanda 3g: `branchId: Branch['id']` agregado
+a ambos tipos (`shared/types/inventory.types.ts`), poblado en el mock repartido
+entre las 3 sucursales activas (no todos en `branch-001` — ver
+`DECISIONES_TECNICAS.md`, entrada de Tanda 3g, punto 2). `TabMovements.tsx` y
+`TabProductHistory.tsx` migradas a `usePagedQuery` contra
+`modules/inventory/api/movements/` y `modules/inventory/api/product-history/`,
+filtrando por la sucursal activa. Verificado por script contra los datos reales del
+mock que el filtro devuelve conjuntos disjuntos por sucursal (ver
+`DECISIONES_TECNICAS.md` punto 8) — **no verificado todavía en el navegador**, ver
+`docs/VERIFICACION_TANDA_3G.md`. Mismo matiz que el ítem 8 de esta tabla: resuelto
+por código, no confirmado en los hechos.
 
 ### 13. `updateProduct` descarta los lotes del producto al editar — Severidad: Baja/Media (bug preexistente, preservado sin cambios en Tanda 3e)
 
@@ -313,7 +318,7 @@ escáner físico normalmente no dispara dos `Enter` en un intervalo tan corto.
 | 9 | `ProductLot` embebido en catálogo (empresa), debería ser por sucursal | Vigente — deuda de modelado, no bloqueante | Baja |
 | 10 | 4 tabs de `inventory` (Ajustes, Categorías, Listas de Precios, Import/Export): UI sin funcionalidad | Vigente — features futuras, no código muerto | — |
 | 11 | `StockAdjustmentModal.tsx` — huérfano, no montado | Vigente | Baja |
-| 12 | `InventoryMovement`/`ProductHistoryEvent` sin `branchId` | Vigente — pendiente para Tanda 3g | Baja |
+| 12 | `InventoryMovement`/`ProductHistoryEvent` sin `branchId` | Resuelto por código (Tanda 3g), sin verificar en navegador | Baja |
 | 13 | `updateProduct` (productos) descarta los lotes existentes al editar | Vigente — preexistente, preservado en Tanda 3e | Baja/Media |
 | 14 | Productos sin registro de stock en ninguna sucursal (`inv-019`) — decisión de producto pendiente, no bug | Vigente — comportamiento E5 correcto, sin cambios | N/A |
 | — | `NewTransactionModal` formato de hora | No reproduce | — |

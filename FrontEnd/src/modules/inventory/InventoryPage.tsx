@@ -51,6 +51,15 @@ import './InventoryPage.css';
 // products.service ahora vive en shared/api/products/ (Tanda 3e, ver
 // DECISIONES_TECNICAS.md): es un dominio transversal, no exclusivo de
 // este modulo.
+//
+// Tanda 3g: TabMovements y TabProductHistory tambien pasan a
+// autoconsultarse (usePagedQuery + modules/inventory/api/movements y
+// modules/inventory/api/product-history — dominios EXCLUSIVOS de este
+// modulo, a diferencia de products). El padre dejo de repartirles
+// `data` por props. INVENTORY_MOCK_DATA sigue haciendo falta ACA solo
+// por `.suggestions` (TabPurchases, Reposicion — fuera de alcance de
+// 3g, es 3f): `.movements`/`.history` ya no se leen desde este archivo,
+// solo desde los services nuevos.
 // ============================================================
 
 const USER_ROLE: 'ADMIN' | 'EMPLOYEE' = 'ADMIN';
@@ -199,7 +208,13 @@ export const InventoryPage: FC = () => {
     {
       id: 'movements',
       label: 'Movimientos',
-      content: <TabMovements data={INVENTORY_MOCK_DATA.movements} />
+      // TabMovements se autoconsulta (paginado, Tanda 3g): mismo gate
+      // que TabStockCurrent/TabLowStock.
+      content: !activeBranchId ? (
+        <SkeletonTable rows={5} cols={7} />
+      ) : (
+        <TabMovements branchId={activeBranchId} branchName={activeBranchName} />
+      )
     },
     {
       id: 'purchases',
@@ -234,7 +249,13 @@ export const InventoryPage: FC = () => {
     {
       id: 'history',
       label: 'Historial del Producto',
-      content: <TabProductHistory data={INVENTORY_MOCK_DATA.history} />
+      // TabProductHistory se autoconsulta (paginado, Tanda 3g): mismo
+      // gate que TabStockCurrent/TabLowStock.
+      content: !activeBranchId ? (
+        <SkeletonTable rows={5} cols={6} />
+      ) : (
+        <TabProductHistory branchId={activeBranchId} branchName={activeBranchName} />
+      )
     },
     {
       id: 'importexport',

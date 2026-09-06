@@ -63,6 +63,12 @@ export interface InventoryItem {
   retailMargin?: number;
 }
 
+// AMPLIACION DE MODELO (Tanda 3g, no un refactor — ver DECISIONES_TECNICAS.md):
+// `branchId` no existia antes. Un evento de historial es la traza de algo
+// que le paso a un producto EN UNA SUCURSAL (un ingreso, un cambio de
+// precio efectivo alli, etc.) — mismo criterio de scope que `ProductStock`/
+// `PurchaseSuggestion` (E1). Poblado en el mock repartido entre las 3
+// sucursales activas (ver `inventory.data.ts`).
 export interface ProductHistoryEvent {
   id: string;
   date: string;
@@ -71,8 +77,15 @@ export interface ProductHistoryEvent {
   eventType: string;
   description: string;
   user: string;
+  branchId: Branch['id'];
 }
 
+// AMPLIACION DE MODELO (Tanda 3g, no un refactor): `branchId` no existia
+// antes. Un movimiento de stock (ingreso/egreso/ajuste) ocurre fisicamente
+// en un deposito concreto — el tipo no lo capturaba, pese a que
+// `ProductStock` (la entidad que ese movimiento en teoria afecta) ya es de
+// sucursal desde Tanda 2.5 (E1). Poblado en el mock repartido entre las 3
+// sucursales activas (ver `inventory.data.ts`).
 export interface InventoryMovement {
   id: string;
   date: string;
@@ -82,6 +95,7 @@ export interface InventoryMovement {
   quantity: number;
   user: string;
   notes: string;
+  branchId: Branch['id'];
 }
 
 export interface PurchaseSuggestion {

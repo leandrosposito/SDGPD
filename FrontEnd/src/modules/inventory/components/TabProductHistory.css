@@ -1,0 +1,77 @@
+.tab-history {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.tab-history__header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.tab-history__title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-2);
+}
+
+.tab-history__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.tab-history__search-wrapper {
+  max-width: 24rem;
+  width: 100%;
+}
+
+.tab-history__branch-note {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  background: var(--color-info-muted);
+  border: 0.0625rem solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  margin: 0;
+}
+
+.tab-history__table-container {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 0.0625rem solid var(--color-border);
+  background: var(--color-bg-elevated);
+}
+
+/* Mismo patron que .tab-low-stock__sort-btn / .suppliers-table__sort-btn
+   — header de columna clickeable, orden server-side. */
+.tab-history__sort-btn {
+  display: inline-flex;
+  align-items: center;
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-weight: inherit;
+  font-size: inherit;
+  padding: 0;
+  cursor: pointer;
+  transition: color var(--transition-fast) ease;
+}
+
+.tab-history__sort-btn:hover {
+  color: var(--color-text-primary);
+}
+
+.tab-history__sort-icon {
+  margin-left: var(--space-1);
+  color: var(--color-accent);
+}
+
+.tab-history__sort-icon--inactive {
+  color: var(--color-text-tertiary);
+  opacity: 0.5;
+}

@@ -66,6 +66,14 @@ export const INVENTORY_MOCK_DATA: InventoryData = {
     // OC" con un producto sin proveedor valido — ver sug-004 abajo.
     { id: 'inv-019', sku: 'DESC-LEG-500', barcode: '7791019000015', name: 'Producto Descontinuado 500g', description: 'Proveedor dado de baja del sistema',  category: 'Almacen',    unitOfMeasure: 'Unidad',  status: 'active', supplierId: 'sup-999', cost: 500,  price: 700 },
   ],
+  // branchId agregado en Tanda 3g (ampliacion de modelo, ver
+  // DECISIONES_TECNICAS.md) — repartido entre las 3 sucursales activas
+  // a proposito (no todos en branch-001), para que el filtrado por
+  // sucursal sea verificable: branch-001 y branch-002 con 3 cada una,
+  // branch-003 con 2. mov-001/mov-002 son los 2 registros originales
+  // (solo se les agrego branchId); mov-003 a mov-008 son nuevos,
+  // agregados en esta tanda para que haya suficiente volumen para
+  // paginar/ordenar de forma demostrable (2 registros no alcanzaban).
   movements: [
     {
       id: 'mov-001',
@@ -76,6 +84,7 @@ export const INVENTORY_MOCK_DATA: InventoryData = {
       quantity: 500,
       user: 'Admin',
       notes: 'Recepcion OC-0042',
+      branchId: 'branch-001',
     },
     {
       id: 'mov-002',
@@ -86,6 +95,73 @@ export const INVENTORY_MOCK_DATA: InventoryData = {
       quantity: 100,
       user: 'Ventas',
       notes: 'Pedido PED-00384',
+      branchId: 'branch-001',
+    },
+    {
+      id: 'mov-003',
+      date: '2026-06-14T09:00:00Z',
+      sku: 'ARR-LAR-1K',
+      productName: 'Arroz Largo Fino 1kg',
+      type: 'adjustment',
+      quantity: 12,
+      user: 'Admin',
+      notes: 'Ajuste por conteo fisico',
+      branchId: 'branch-001',
+    },
+    {
+      id: 'mov-004',
+      date: '2026-06-11T11:20:00Z',
+      sku: 'ACE-GIR-15',
+      productName: 'Aceite de Girasol 1.5L',
+      type: 'out',
+      quantity: 60,
+      user: 'Ventas',
+      notes: 'Pedido PED-00379',
+      branchId: 'branch-002',
+    },
+    {
+      id: 'mov-005',
+      date: '2026-06-15T14:45:00Z',
+      sku: 'GAS-COL-225',
+      productName: 'Gaseosa Cola 2.25L',
+      type: 'in',
+      quantity: 200,
+      user: 'Admin',
+      notes: 'Recepcion OC-0044',
+      branchId: 'branch-002',
+    },
+    {
+      id: 'mov-006',
+      date: '2026-06-16T08:10:00Z',
+      sku: 'DET-LIQ-750',
+      productName: 'Detergente Liquido 750ml',
+      type: 'out',
+      quantity: 30,
+      user: 'Ventas',
+      notes: 'Pedido PED-00391',
+      branchId: 'branch-002',
+    },
+    {
+      id: 'mov-007',
+      date: '2026-06-12T16:00:00Z',
+      sku: 'CER-RUB-1L',
+      productName: 'Cerveza Rubia 1L',
+      type: 'in',
+      quantity: 150,
+      user: 'Admin',
+      notes: 'Recepcion OC-0041',
+      branchId: 'branch-003',
+    },
+    {
+      id: 'mov-008',
+      date: '2026-06-17T13:30:00Z',
+      sku: 'AGU-MIN-15',
+      productName: 'Agua Mineral 1.5L',
+      type: 'adjustment',
+      quantity: 5,
+      user: 'Admin',
+      notes: 'Ajuste por rotura',
+      branchId: 'branch-003',
     },
   ],
   // Sugerencias por sucursal (E1/3.5): una por cada sucursal activa,
@@ -147,6 +223,17 @@ export const INVENTORY_MOCK_DATA: InventoryData = {
       estimatedCost: 30000,
     },
   ],
+  // branchId agregado en Tanda 3g (ampliacion de modelo) — mismo criterio
+  // de reparto que `movements` arriba: branch-001 y branch-002 con 3 cada
+  // una, branch-003 con 2. hist-001 a hist-003 son los 3 registros
+  // originales (solo se les agrego branchId); hist-004 a hist-008 son
+  // nuevos. hist-002 (Ingreso +500 desde OC-0042) sigue describiendo el
+  // mismo evento real que mov-001 (misma fecha/sku/cantidad) — no hay
+  // ninguna relacion MODELADA entre los dos tipos (ni mov.id en el
+  // evento, ni al reves, ver Paso 1 del reconocimiento de Tanda 3g), es
+  // pura coincidencia de que dos entradas de mock curadas a mano
+  // describan el mismo hecho desde dos angulos distintos (auditoria de
+  // producto vs. movimiento fisico de stock).
   history: [
     {
       id: 'hist-001',
@@ -156,6 +243,7 @@ export const INVENTORY_MOCK_DATA: InventoryData = {
       eventType: 'Precio cambiado',
       description: 'Aumento de costo de proveedor un 5%',
       user: 'Admin',
+      branchId: 'branch-001',
     },
     {
       id: 'hist-002',
@@ -165,6 +253,7 @@ export const INVENTORY_MOCK_DATA: InventoryData = {
       eventType: 'Ingreso',
       description: 'Ingreso +500 desde OC-0042',
       user: 'Admin',
+      branchId: 'branch-001',
     },
     {
       id: 'hist-003',
@@ -174,6 +263,57 @@ export const INVENTORY_MOCK_DATA: InventoryData = {
       eventType: 'Proveedor actualizado',
       description: 'Cambio de proveedor a Molinos Rio de la Plata',
       user: 'Admin',
-    }
+      branchId: 'branch-001',
+    },
+    {
+      id: 'hist-004',
+      date: '2026-06-11T11:20:00Z',
+      sku: 'ACE-GIR-15',
+      productName: 'Aceite de Girasol 1.5L',
+      eventType: 'Egreso',
+      description: 'Egreso -60 por Pedido PED-00379',
+      user: 'Ventas',
+      branchId: 'branch-002',
+    },
+    {
+      id: 'hist-005',
+      date: '2026-06-15T14:45:00Z',
+      sku: 'GAS-COL-225',
+      productName: 'Gaseosa Cola 2.25L',
+      eventType: 'Ingreso',
+      description: 'Ingreso +200 desde OC-0044',
+      user: 'Admin',
+      branchId: 'branch-002',
+    },
+    {
+      id: 'hist-006',
+      date: '2026-06-16T08:10:00Z',
+      sku: 'DET-LIQ-750',
+      productName: 'Detergente Liquido 750ml',
+      eventType: 'Egreso',
+      description: 'Egreso -30 por Pedido PED-00391',
+      user: 'Ventas',
+      branchId: 'branch-002',
+    },
+    {
+      id: 'hist-007',
+      date: '2026-06-12T16:00:00Z',
+      sku: 'CER-RUB-1L',
+      productName: 'Cerveza Rubia 1L',
+      eventType: 'Ingreso',
+      description: 'Ingreso +150 desde OC-0041',
+      user: 'Admin',
+      branchId: 'branch-003',
+    },
+    {
+      id: 'hist-008',
+      date: '2026-06-17T13:30:00Z',
+      sku: 'AGU-MIN-15',
+      productName: 'Agua Mineral 1.5L',
+      eventType: 'Ajuste',
+      description: 'Ajuste -5 por rotura',
+      user: 'Admin',
+      branchId: 'branch-003',
+    },
   ],
 };
