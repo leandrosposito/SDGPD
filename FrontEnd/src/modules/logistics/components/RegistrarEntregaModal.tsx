@@ -3,9 +3,9 @@ import { toast } from 'sonner';
 import { Modal } from '@/shared/components/ui/Modal';
 import { EvidenceUploader } from '@/shared/components/ui/EvidenceUploader';
 import { useEvidenceUpload } from '@/shared/hooks/useEvidenceUpload';
+import { useCachedQuery, CACHE_STALE_TIME } from '@/shared/hooks/useCachedQuery';
 import { useSessionStore } from '@/shared/state/useSessionStore';
 import type { Delivery } from '@/shared/types/logistics.types';
-import type { Order } from '@/shared/types/order.types';
 import { derivePendingQuantity } from '@/shared/utils/orderFulfillment';
 import { getOrderById } from '@/modules/orders/api/orders.service';
 import { registrarEntrega, type RegistrarEntregaLineInput } from '../services/deliveries.service';
@@ -18,6 +18,13 @@ import './RegistrarEntregaModal.css';
 // permite cargar, por linea, cuanto se entrega ahora y cuanto se
 // rechaza — con motivo y evidencia si hay rechazo. Al confirmar crea
 // el remito (append-only) y finaliza el viaje.
+//
+// El pedido se trae via useCachedQuery (V6a de
+// VERIFICACION_CORRIDA_COMPLETA.md, corrigiendo un useEffect+setState
+// manual que bypaseaba el hook compartido) — mismo criterio de cache/
+// dedupe/staleTime que el resto del proyecto, keyParams = orderId asi
+// que abrir el modal dos veces para el mismo pedido no repite el
+// fetch mientras siga fresco.
 // ============================================================
 
 interface LineDraft {
@@ -36,42 +43,54 @@ interface RegistrarEntregaModalProps {
 export const RegistrarEntregaModal: FC<RegistrarEntregaModalProps> = ({ isOpen, onClose, delivery, onRegistered }) => {
   const fullName = useSessionStore((s) => s.session?.fullName) ?? 'Usuario';
   const empresaId = useSessionStore((s) => s.session?.company.id);
-  const [order, setOrder] = useState<Order | null>(null);
-  const [isLoadingOrder, setIsLoadingOrder] = useState(false);
   const [drafts, setDrafts] = useState<Record<string, LineDraft>>({});
   const [isSaving, setIsSaving] = useState(false);
   const evidence = useEvidenceUpload();
 
+  const {
+    data: order,
+    isLoading: isLoadingOrder,
+    error: orderError,
+  } = useCachedQuery(
+    'order-detail',
+    delivery?.orderId ?? null,
+    (signal) => {
+      // Guardado por `enabled` (Boolean(delivery) && Boolean(empresaId))
+      // — nunca deberia dispararse con cualquiera de los dos en null,
+      // pero preferimos un error explicito a un `!` de asercion.
+      if (!delivery || !empresaId) throw new Error('RegistrarEntregaModal: fetch de pedido sin delivery/empresaId.');
+      return getOrderById(empresaId, delivery.orderId, signal);
+    },
+    { enabled: isOpen && Boolean(delivery) && Boolean(empresaId), staleTime: CACHE_STALE_TIME.OPERATIONAL }
+  );
+
   useEffect(() => {
-    // setState se dispara desde el callback de un microtask
-    // (Promise.resolve().then), nunca de forma sincronica en el cuerpo
-    // del efecto — evita el cascading render que react-hooks/set-state-in-effect
-    // senala (mismo patron ya usado en AlertsBell.tsx, Tanda 7).
+    if (orderError) toast.error('No se pudo cargar el pedido de esta entrega.');
+  }, [orderError]);
+
+  // Seedea los drafts editables a partir del pedido YA TRAIDO por
+  // useCachedQuery (no dispara ningun fetch — reacciona a datos que
+  // ya llegaron, mismo patron que cualquier form que precarga sus
+  // campos desde props/query data). Se resetea tambien al cerrar el
+  // modal para no arrastrar cantidades de la entrega anterior.
+  useEffect(() => {
+    // Microtask (mismo patron que ReprogramarModal/AlertsBell, Tanda
+    // 7/8) para no disparar setState sincronico en el cuerpo del efecto.
     Promise.resolve().then(() => {
-      if (!isOpen || !delivery || !empresaId) {
-        setOrder(null);
+      if (!isOpen || !order) {
         setDrafts({});
         evidence.reset();
         return;
       }
-      setIsLoadingOrder(true);
-      getOrderById(empresaId, delivery.orderId)
-        .then((found) => {
-          setOrder(found ?? null);
-          if (found) {
-            const initial: Record<string, LineDraft> = {};
-            for (const item of found.items) {
-              const pending = derivePendingQuantity(item);
-              initial[item.id] = { entregar: pending, rechazar: 0, motivo: '' };
-            }
-            setDrafts(initial);
-          }
-        })
-        .catch(() => toast.error('No se pudo cargar el pedido de esta entrega.'))
-        .finally(() => setIsLoadingOrder(false));
+      const initial: Record<string, LineDraft> = {};
+      for (const item of order.items) {
+        const pending = derivePendingQuantity(item);
+        initial[item.id] = { entregar: pending, rechazar: 0, motivo: '' };
+      }
+      setDrafts(initial);
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo debe correr al abrir/cambiar de entrega
-  }, [isOpen, delivery]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo debe re-seedear cuando cambia el pedido/se abre, no en cada cambio de `evidence`
+  }, [isOpen, order]);
 
   const hasAnyRejection = useMemo(() => Object.values(drafts).some((d) => d.rechazar > 0), [drafts]);
 
