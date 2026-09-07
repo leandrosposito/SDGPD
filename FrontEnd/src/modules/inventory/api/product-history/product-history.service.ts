@@ -1,6 +1,7 @@
 import type { ProductHistoryEvent } from '@/shared/types/inventory.types';
 import type { Branch } from '@/shared/types/session.types';
-import type { PageQuery, PageResult } from '@/shared/types/pagination.types';
+import type { PageQuery, PageResult, ExportResult } from '@/shared/types/pagination.types';
+import { MAX_EXPORT_ROWS } from '@/shared/types/pagination.types';
 import { INVENTORY_MOCK_DATA } from '@/data/mock/inventory.data';
 import { httpClient } from '@/shared/api/httpClient';
 import type { ProductHistoryEventDTO, ProductHistoryPageDTO } from './dto';
@@ -116,4 +117,23 @@ export async function getProductHistoryPage(
     page: pageDTO.meta.page,
     pageSize: pageDTO.meta.page_size,
   };
+}
+
+// Exportar (mismo patron que exportMovements): reusa
+// filterAndSortProductHistory, no duplica el filtro+orden.
+export async function exportProductHistory(
+  filters: ProductHistoryQueryFilters,
+  sort?: { field: ProductHistorySortField; direction: 'asc' | 'desc' }
+): Promise<ExportResult<ProductHistoryEvent>> {
+  return httpClient.request<ExportResult<ProductHistoryEvent>>({
+    method: 'GET',
+    path: '/inventory/product-history/export',
+    params: { empresaId: filters.empresaId, branchId: filters.branchId, search: filters.search },
+    mock: () => {
+      const sorted = filterAndSortProductHistory(filters, sort).map(productHistoryEventFromDTO);
+      const truncated = sorted.length > MAX_EXPORT_ROWS;
+      const items = sorted.slice(0, MAX_EXPORT_ROWS);
+      return { items: structuredClone(items), truncated };
+    },
+  });
 }

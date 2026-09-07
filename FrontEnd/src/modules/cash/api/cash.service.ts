@@ -1,5 +1,6 @@
 import type { CashTransaction, ExpenseAnalysis } from '@/shared/types/cash.types';
-import type { PageQuery, PageResult } from '@/shared/types/pagination.types';
+import type { PageQuery, PageResult, ExportResult } from '@/shared/types/pagination.types';
+import { MAX_EXPORT_ROWS } from '@/shared/types/pagination.types';
 import { CASH_MOCK_DATA } from '@/data/mock/cash.data';
 import { httpClient } from '@/shared/api/httpClient';
 import { ApiError } from '@/shared/api/ApiError';
@@ -180,6 +181,27 @@ export async function getCashTransactionsPage(
       },
     },
   };
+}
+
+// Exportar (mismo patron que exportClientAccounts/exportSuppliers/etc.):
+// reusa el MISMO orden (compareByTime) que getCashTransactionsPage,
+// sin duplicar logica. Sin filtro propio (CashMovementsQueryFilters
+// solo tiene empresaId, ver comentario arriba) - exporta TODO el
+// store, hasta MAX_EXPORT_ROWS.
+export async function exportCashTransactions(
+  filters: CashMovementsQueryFilters
+): Promise<ExportResult<CashTransaction>> {
+  return httpClient.request<ExportResult<CashTransaction>>({
+    method: 'GET',
+    path: '/cash/transactions/export',
+    params: { empresaId: filters.empresaId },
+    mock: () => {
+      const sorted = [...cashTransactionsDTOStore].sort(compareByTime).map(cashTransactionFromDTO);
+      const truncated = sorted.length > MAX_EXPORT_ROWS;
+      const items = sorted.slice(0, MAX_EXPORT_ROWS);
+      return { items: structuredClone(items), truncated };
+    },
+  });
 }
 
 function nextTransactionId(): string {

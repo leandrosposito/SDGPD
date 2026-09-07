@@ -4,6 +4,13 @@
   gap: var(--space-4);
 }
 
+.tab-movements__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
 .tab-movements__branch-note {
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
@@ -12,6 +19,7 @@
   border-radius: var(--radius-md);
   padding: var(--space-2) var(--space-3);
   margin: 0;
+  flex: 1;
 }
 
 .tab-movements__table-container {

@@ -5,9 +5,11 @@ import {
   getClientsPage,
   createClient,
   updateClient,
+  exportClients,
   type ClientFormInput,
   type ClientsQueryFilters,
 } from './api/clients.service';
+import type { ExportColumn } from '@/shared/components/ui/ExportButton';
 import { usePagedQuery } from '@/shared/hooks/usePagedQuery';
 import { useUrlListState } from '@/shared/hooks/useUrlListState';
 import { useSessionStore } from '@/shared/state/useSessionStore';
@@ -53,6 +55,18 @@ const TAB_VALUES: readonly ActiveTab[] = ['directory', 'accounts', 'overdue'];
 function isActiveTab(value: string | undefined): value is ActiveTab {
   return TAB_VALUES.includes(value as ActiveTab);
 }
+
+const directoryExportColumns: ExportColumn<ClientAccount>[] = [
+  { header: 'Razon Social', accessor: (c) => c.clientName },
+  { header: 'CUIT', accessor: (c) => c.cuit },
+  { header: 'Direccion', accessor: (c) => c.address },
+  { header: 'Telefono', accessor: (c) => c.phone },
+  { header: 'Zona', accessor: (c) => c.zone },
+  { header: 'Vendedor', accessor: (c) => c.sellerName },
+  { header: 'Limite de Credito', accessor: (c) => c.creditLimit },
+  { header: 'Saldo Actual', accessor: (c) => c.currentBalance },
+  { header: 'Estado', accessor: (c) => c.status },
+];
 
 export const ClientsPage: FC = () => {
   const empresaId = useSessionStore((s) => s.session?.company.id);
@@ -164,7 +178,11 @@ export const ClientsPage: FC = () => {
           <h2 className="page-header__title">Clientes</h2>
           <p className="page-header__subtitle">Directorio comercial y gestion de cuentas corrientes</p>
         </div>
-        <ClientActionBar onNewClient={() => setIsCreateModalOpen(true)} />
+        <ClientActionBar
+          onNewClient={() => setIsCreateModalOpen(true)}
+          exportColumns={directoryExportColumns}
+          exportRows={() => exportClients(directoryFilters)}
+        />
       </header>
 
       <ClientFilters

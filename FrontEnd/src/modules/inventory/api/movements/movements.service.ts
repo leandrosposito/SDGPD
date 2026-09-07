@@ -1,6 +1,7 @@
 import type { InventoryMovement } from '@/shared/types/inventory.types';
 import type { Branch } from '@/shared/types/session.types';
-import type { PageQuery, PageResult } from '@/shared/types/pagination.types';
+import type { PageQuery, PageResult, ExportResult } from '@/shared/types/pagination.types';
+import { MAX_EXPORT_ROWS } from '@/shared/types/pagination.types';
 import { INVENTORY_MOCK_DATA } from '@/data/mock/inventory.data';
 import { httpClient } from '@/shared/api/httpClient';
 import type { InventoryMovementDTO, InventoryMovementsPageDTO } from './dto';
@@ -107,4 +108,23 @@ export async function getMovementsPage(
     page: pageDTO.meta.page,
     pageSize: pageDTO.meta.page_size,
   };
+}
+
+// Exportar (mismo patron que exportClientAccounts/exportSuppliers/etc.):
+// reusa filterAndSortMovements, no duplica el filtro+orden.
+export async function exportMovements(
+  filters: MovementsQueryFilters,
+  sort?: { field: MovementsSortField; direction: 'asc' | 'desc' }
+): Promise<ExportResult<InventoryMovement>> {
+  return httpClient.request<ExportResult<InventoryMovement>>({
+    method: 'GET',
+    path: '/inventory/movements/export',
+    params: { empresaId: filters.empresaId, branchId: filters.branchId },
+    mock: () => {
+      const sorted = filterAndSortMovements(filters, sort).map(inventoryMovementFromDTO);
+      const truncated = sorted.length > MAX_EXPORT_ROWS;
+      const items = sorted.slice(0, MAX_EXPORT_ROWS);
+      return { items: structuredClone(items), truncated };
+    },
+  });
 }
