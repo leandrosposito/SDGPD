@@ -1,4 +1,4 @@
-import { useMemo, useState, type FC } from 'react';
+import { useEffect, useMemo, useState, type FC } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Supplier } from '@/shared/types/supplier.types';
@@ -8,9 +8,11 @@ import {
   createSupplier,
   updateSupplier,
   type SuppliersQueryFilters,
+  type SuppliersSortField,
   type SupplierFormInput,
 } from './api/suppliers.service';
 import { usePagedQuery } from '@/shared/hooks/usePagedQuery';
+import { useUrlListState } from '@/shared/hooks/useUrlListState';
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
 import { useSessionStore } from '@/shared/state/useSessionStore';
 import { Pagination } from '@/shared/components/ui/Pagination';
@@ -53,17 +55,45 @@ export const SuppliersPage: FC = () => {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
 
-  const [searchTerm, setSearchTerm] = useState('');
+  // Tanda 4 (corrida completa, A13): pagina, orden, busqueda y categoria
+  // viven en la URL — unica fuente de verdad del listado.
+  const urlState = useUrlListState<SuppliersSortField, 'q' | 'category'>({
+    sortFields: ['name', 'cuit', 'currentBalance', 'category'],
+    filterKeys: ['q', 'category'],
+  });
+
+  const [searchTerm, setSearchTerm] = useState(urlState.filters.q ?? '');
   const debouncedSearchTerm = useDebouncedValue(searchTerm, 300);
-  const [selectedCategory, setSelectedCategory] = useState('');
+
+  useEffect(() => {
+    const current = urlState.filters.q ?? '';
+    if (debouncedSearchTerm !== current) {
+      urlState.setFilter('q', debouncedSearchTerm || undefined);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo debe reaccionar al valor debounceado, no a cada render de urlState
+  }, [debouncedSearchTerm]);
+
+  // V3 de VERIFICACION_CORRIDA_COMPLETA.md: si la URL cambia externamente
+  // (back/forward del navegador) mientras el componente sigue montado,
+  // el input debe reflejarlo — sin este efecto quedaba mostrando texto
+  // viejo aunque el listado ya se hubiera re-filtrado segun la URL real.
+  useEffect(() => {
+    // Microtask (mismo patron ya usado en ReprogramarModal/AlertsBell/
+    // RegistrarEntregaModal) para no disparar setState sincronico en
+    // el cuerpo del efecto.
+    Promise.resolve().then(() => setSearchTerm(urlState.filters.q ?? ''));
+  }, [urlState.filters.q]);
+
+  const selectedCategory = urlState.filters.category ?? '';
+  const setSelectedCategory = (category: string) => urlState.setFilter('category', category || undefined);
 
   const filters: SuppliersQueryFilters = useMemo(
     () => ({
       empresaId: empresaId ?? '',
-      search: debouncedSearchTerm || undefined,
-      category: selectedCategory || undefined,
+      search: urlState.filters.q || undefined,
+      category: urlState.filters.category || undefined,
     }),
-    [empresaId, debouncedSearchTerm, selectedCategory]
+    [empresaId, urlState.filters.q, urlState.filters.category]
   );
 
   const {
@@ -80,7 +110,13 @@ export const SuppliersPage: FC = () => {
     setPageSize,
     setSort,
     refetch,
-  } = usePagedQuery(fetchSuppliersPage, filters, { enabled: Boolean(empresaId) });
+  } = usePagedQuery(fetchSuppliersPage, filters, {
+    enabled: Boolean(empresaId),
+    page: urlState.page,
+    onPageChange: urlState.setPage,
+    sort: urlState.sort,
+    onSortChange: urlState.setSort,
+  });
 
   // RF-PRO-001: Alta / Modificacion de proveedor contra suppliers.service
   // (persiste en memoria durante la sesion). Tras guardar, se vuelve a

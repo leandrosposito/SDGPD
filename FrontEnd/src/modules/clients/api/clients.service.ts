@@ -16,6 +16,7 @@ import { MAX_EXPORT_ROWS } from '@/shared/types/pagination.types';
 import { CLIENTS_MOCK_DATA } from '@/data/mock/clients.data';
 import { httpClient } from '@/shared/api/httpClient';
 import { ApiError } from '@/shared/api/ApiError';
+import { asClientId } from '@/shared/types/ids.types';
 import type { ClientAccountDTO, ClientsPageDTO } from './dto';
 import { clientFromDTO, clientToDTO, clientFormInputToDTO, type ClientFormInput } from './mapper';
 
@@ -132,6 +133,22 @@ export async function getClientsPage(
   };
 }
 
+// Catalogo completo, sin paginar (Tanda 5, ADR-006/AUDIT_4_IDS_RELACIONES.md
+// hallazgo ALTO #1): alimenta el combobox de seleccion de cliente real de
+// CreateOrderModal — mismo criterio que fetchProducts/fetchSuppliers (un
+// combobox necesita el catalogo entero para buscar/filtrar en memoria,
+// no un listado paginado). No usar para ninguna vista de exhibicion de
+// listado — para eso esta getClientsPage, que si pagina server-side.
+export async function fetchClientsCatalog(empresaId: string, signal?: AbortSignal): Promise<ClientAccount[]> {
+  return httpClient.request<ClientAccount[]>({
+    method: 'GET',
+    path: '/clients/catalog',
+    params: { empresaId },
+    signal,
+    mock: () => structuredClone(clientsStore),
+  });
+}
+
 export async function createClient(empresaId: string, input: ClientFormInput): Promise<ClientAccount> {
   const dto = await httpClient.request<ClientAccountDTO>({
     method: 'POST',
@@ -140,7 +157,7 @@ export async function createClient(empresaId: string, input: ClientFormInput): P
     mock: () => {
       const newClient: ClientAccount = {
         ...input,
-        id: `cli-${Date.now()}`,
+        id: asClientId(`cli-${Date.now()}`),
         totalDebit: 0,
         totalCredit: 0,
         currentBalance: 0,

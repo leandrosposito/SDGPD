@@ -8,6 +8,7 @@ import { LoadingState } from '@/shared/components/ui/LoadingState';
 import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay';
 import { Pagination } from '@/shared/components/ui/Pagination';
 import { usePagedQuery } from '@/shared/hooks/usePagedQuery';
+import { useUrlListState } from '@/shared/hooks/useUrlListState';
 import { useCachedQuery, CACHE_STALE_TIME } from '@/shared/hooks/useCachedQuery';
 import { useSessionStore } from '@/shared/state/useSessionStore';
 import type { PermissionMatrix } from '@/shared/types/settings.types';
@@ -47,6 +48,9 @@ const EMPTY_PERMISSIONS: PermissionMatrix[] = [];
 export const TabUsersRoles: FC = () => {
   const empresaId = useSessionStore((s) => s.session?.company.id);
 
+  // Tanda 4 (corrida completa, A13): pagina en la URL, prefijo `usr_`.
+  const urlState = useUrlListState({ prefix: 'usr' });
+
   const filters: UsersQueryFilters = useMemo(() => ({ empresaId: empresaId ?? '' }), [empresaId]);
 
   const {
@@ -61,7 +65,11 @@ export const TabUsersRoles: FC = () => {
     setPage,
     setPageSize,
     refetch,
-  } = usePagedQuery(getUsersPage, filters, { enabled: Boolean(empresaId) });
+  } = usePagedQuery(getUsersPage, filters, {
+    enabled: Boolean(empresaId),
+    page: urlState.page,
+    onPageChange: urlState.setPage,
+  });
 
   useEffect(() => {
     if (error) toast.error('No se pudo cargar el listado de usuarios.');

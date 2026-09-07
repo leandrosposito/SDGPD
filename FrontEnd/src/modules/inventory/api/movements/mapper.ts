@@ -1,4 +1,5 @@
 import type { InventoryMovement } from '@/shared/types/inventory.types';
+import { asBranchId } from '@/shared/types/ids.types';
 import type { InventoryMovementDTO } from './dto';
 
 // ============================================================
@@ -16,7 +17,7 @@ export function inventoryMovementFromDTO(dto: InventoryMovementDTO): InventoryMo
     quantity: dto.cantidad,
     user: dto.usuario,
     notes: dto.notas,
-    branchId: dto.sucursal_id,
+    branchId: asBranchId(dto.sucursal_id),
   };
 }
 

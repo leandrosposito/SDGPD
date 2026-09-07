@@ -19,6 +19,9 @@ export interface OrderItemDTO {
   cantidad: number;
   precio_unitario: number;
   subtotal: number;
+  // Acumulado de todos los remitos ya aplicados (ADR-001, Tanda 8) —
+  // 0 para un pedido recien creado.
+  cantidad_entregada: number;
 }
 
 export interface OrderHistoryEventDTO {
@@ -33,6 +36,7 @@ export interface OrderDTO {
   numero_pedido: string;
   fecha: string;
   cliente: {
+    id: string;
     nombre: string;
     direccion: string;
     zona: string;
@@ -87,6 +91,7 @@ export interface OrdersPageDTO {
 // propio servidor), nunca el cliente.
 export interface CreateOrderDTO {
   cliente: {
+    id: string;
     nombre: string;
     direccion: string;
     zona: string;

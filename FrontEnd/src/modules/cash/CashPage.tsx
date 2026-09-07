@@ -6,6 +6,7 @@ import { ErrorState } from '@/shared/components/ui/ErrorState';
 import { LoadingState } from '@/shared/components/ui/LoadingState';
 import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay';
 import { usePagedQuery } from '@/shared/hooks/usePagedQuery';
+import { useUrlListState } from '@/shared/hooks/useUrlListState';
 import { useSessionStore } from '@/shared/state/useSessionStore';
 import { CashKPIs } from './components/CashKPIs';
 import { CashTransactionsTable } from './components/CashTransactionsTable';
@@ -39,6 +40,10 @@ export const CashPage: FC = () => {
 
   const filters: CashMovementsQueryFilters = useMemo(() => ({ empresaId: empresaId ?? '' }), [empresaId]);
 
+  // Tanda 4 (corrida completa, A13): pagina en la URL — sin busqueda ni
+  // orden propios en este listado, asi que solo se controla `page`.
+  const urlState = useUrlListState();
+
   const {
     items: transactions,
     aggregates,
@@ -52,7 +57,11 @@ export const CashPage: FC = () => {
     setPage,
     setPageSize,
     refetch,
-  } = usePagedQuery(getCashTransactionsPage, filters, { enabled: Boolean(empresaId) });
+  } = usePagedQuery(getCashTransactionsPage, filters, {
+    enabled: Boolean(empresaId),
+    page: urlState.page,
+    onPageChange: urlState.setPage,
+  });
 
   useEffect(() => {
     if (error) toast.error('No se pudo cargar el movimiento de caja.');

@@ -8,6 +8,7 @@ import { ErrorState } from '@/shared/components/ui/ErrorState';
 import { LoadingState } from '@/shared/components/ui/LoadingState';
 import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay';
 import { usePagedQuery } from '@/shared/hooks/usePagedQuery';
+import { useUrlListState } from '@/shared/hooks/useUrlListState';
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
 import { useSessionStore } from '@/shared/state/useSessionStore';
 import { getStockedProductsPage, type StockedProductsQueryFilters } from '@/shared/api/products/products.service';
@@ -62,12 +63,39 @@ function formatCurrency(value: number): string {
 
 export const TabStockCurrent: FC<TabStockCurrentProps> = ({ branchId, branchName, onOpenLots, onEditProduct, userRole }) => {
   const empresaId = useSessionStore((s) => s.session?.company.id);
-  const [searchQuery, setSearchQuery] = useState('');
+
+  // Tanda 4 (corrida completa, A13): pagina y busqueda en la URL,
+  // prefijo `stock_`. Sin orden: esta tab no tiene columnas clickeables.
+  const urlState = useUrlListState<never, 'q'>({
+    prefix: 'stock',
+    filterKeys: ['q'],
+  });
+
+  const [searchQuery, setSearchQuery] = useState(urlState.filters.q ?? '');
   const debouncedSearchQuery = useDebouncedValue(searchQuery, SEARCH_DEBOUNCE_MS);
 
+  useEffect(() => {
+    const current = urlState.filters.q ?? '';
+    if (debouncedSearchQuery !== current) {
+      urlState.setFilter('q', debouncedSearchQuery || undefined);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo debe reaccionar al valor debounceado
+  }, [debouncedSearchQuery]);
+
+  // V3 de VERIFICACION_CORRIDA_COMPLETA.md: si la URL cambia externamente
+  // (back/forward del navegador) mientras el componente sigue montado,
+  // el input debe reflejarlo — sin este efecto quedaba mostrando texto
+  // viejo aunque el listado ya se hubiera re-filtrado segun la URL real.
+  useEffect(() => {
+    // Microtask (mismo patron ya usado en ReprogramarModal/AlertsBell/
+    // RegistrarEntregaModal) para no disparar setState sincronico en
+    // el cuerpo del efecto.
+    Promise.resolve().then(() => setSearchQuery(urlState.filters.q ?? ''));
+  }, [urlState.filters.q]);
+
   const filters: StockedProductsQueryFilters = useMemo(
-    () => ({ empresaId: empresaId ?? '', branchId, search: debouncedSearchQuery || undefined }),
-    [empresaId, branchId, debouncedSearchQuery]
+    () => ({ empresaId: empresaId ?? '', branchId, search: urlState.filters.q || undefined }),
+    [empresaId, branchId, urlState.filters.q]
   );
 
   const {
@@ -83,7 +111,11 @@ export const TabStockCurrent: FC<TabStockCurrentProps> = ({ branchId, branchName
     setPage,
     setPageSize,
     refetch,
-  } = usePagedQuery(getStockedProductsPage, filters, { enabled: Boolean(empresaId) && Boolean(branchId) });
+  } = usePagedQuery(getStockedProductsPage, filters, {
+    enabled: Boolean(empresaId) && Boolean(branchId),
+    page: urlState.page,
+    onPageChange: urlState.setPage,
+  });
 
   useEffect(() => {
     if (error) toast.error('No se pudo cargar el stock de la sucursal.');

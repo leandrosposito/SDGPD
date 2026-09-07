@@ -8,6 +8,7 @@ import type { Branch } from '@/shared/types/session.types';
 import type { Supplier } from '@/shared/types/supplier.types';
 import type { InventoryItem } from '@/shared/types/inventory.types';
 import type { PurchaseOrder } from '@/shared/types/purchaseOrder.types';
+import { asBranchId } from '@/shared/types/ids.types';
 import { createPurchaseOrder } from '@/services/mock/purchaseOrders.service';
 import {
   purchaseOrderFormSchema,
@@ -142,7 +143,7 @@ export const PurchaseOrderFormModal: FC<PurchaseOrderFormModalProps> = ({
       try {
         const result = await createPurchaseOrder({
           supplierId: values.supplierId,
-          branchId: values.branchId,
+          branchId: asBranchId(values.branchId),
           currency: values.currency,
           status,
           lines: values.lines.map(({ productId, quantity, unitPrice }) => ({ productId, quantity, unitPrice })),

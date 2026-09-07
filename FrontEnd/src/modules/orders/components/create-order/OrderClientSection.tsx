@@ -1,12 +1,26 @@
-import { type FC } from 'react';
+import { useMemo, useState, type FC } from 'react';
+import type { ClientAccount } from '@/shared/types/client.types';
 
 // ============================================================
 // OrderClientSection — Client & Commercial Information
+//
+// Cliente: combobox de busqueda contra un catalogo ya cargado en
+// memoria (Tanda 5, AUDIT_4_IDS_RELACIONES.md hallazgo ALTO #1) — mismo
+// patron que el buscador de producto de PurchaseOrderFormModal.tsx
+// (texto libre que filtra products/suppliers en memoria, lista de
+// resultados acotada, click para elegir). Ya no es un <input> de texto
+// libre sin relacion real: eligiendo un ClientAccount se completa
+// clientId + el snapshot (nombre/direccion/zona) a partir del cliente
+// real, no de lo que el usuario tipeo.
 // ============================================================
 
+const CLIENT_MATCH_LIMIT = 8;
+
 interface OrderClientSectionProps {
-  client: string;
-  onClientChange: (c: string) => void;
+  clients: ClientAccount[];
+  selectedClient: ClientAccount | null;
+  onSelectClient: (client: ClientAccount) => void;
+  onClearClient: () => void;
   seller: string;
   onSellerChange: (s: string) => void;
   paymentMethod: string;
@@ -18,8 +32,10 @@ interface OrderClientSectionProps {
 }
 
 export const OrderClientSection: FC<OrderClientSectionProps> = ({
-  client,
-  onClientChange,
+  clients,
+  selectedClient,
+  onSelectClient,
+  onClearClient,
   seller,
   onSellerChange,
   paymentMethod,
@@ -28,19 +44,57 @@ export const OrderClientSection: FC<OrderClientSectionProps> = ({
   onPriceListChange,
   hasDebtAlert,
 }) => {
+  const [clientQuery, setClientQuery] = useState('');
+
+  const clientMatches = useMemo(() => {
+    const q = clientQuery.trim().toLowerCase();
+    if (!q) return [];
+    return clients
+      .filter((c) => c.clientName.toLowerCase().includes(q) || c.cuit.toLowerCase().includes(q))
+      .slice(0, CLIENT_MATCH_LIMIT);
+  }, [clients, clientQuery]);
+
+  function handleSelectClient(client: ClientAccount) {
+    onSelectClient(client);
+    setClientQuery('');
+  }
+
   return (
     <section className="co-section">
       <h3 className="co-section__title">1. Datos del Cliente y Comercial</h3>
       <div className="co-grid">
-        <div className="co-form-group co-form-group--span-2">
-          <label className="co-label">Cliente</label>
-          <input
-            type="text"
-            className="co-input"
-            placeholder="Buscar por razon social o CUIT..."
-            value={client}
-            onChange={(e) => onClientChange(e.target.value)}
-          />
+        <div className="co-form-group co-form-group--span-2" style={{ position: 'relative' }}>
+          <label className="co-label" htmlFor="co-client-search">Cliente</label>
+          {selectedClient ? (
+            <div className="co-input co-client-selected">
+              <span className="co-client-selected__name">{selectedClient.clientName}</span>
+              <span className="co-client-selected__cuit">{selectedClient.cuit}</span>
+              <button type="button" className="co-client-selected__change" onClick={onClearClient}>
+                Cambiar
+              </button>
+            </div>
+          ) : (
+            <input
+              id="co-client-search"
+              type="text"
+              className="co-input"
+              placeholder="Buscar por razon social o CUIT..."
+              value={clientQuery}
+              onChange={(e) => setClientQuery(e.target.value)}
+            />
+          )}
+          {!selectedClient && clientMatches.length > 0 && (
+            <ul className="co-client-matches" role="listbox" aria-label="Resultados de busqueda de clientes">
+              {clientMatches.map((c) => (
+                <li key={c.id}>
+                  <button type="button" className="co-client-matches__item" onClick={() => handleSelectClient(c)}>
+                    <span className="co-client-matches__name">{c.clientName}</span>
+                    <span className="co-client-matches__cuit">{c.cuit}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
         <div className="co-form-group">
           <label className="co-label">Vendedor</label>

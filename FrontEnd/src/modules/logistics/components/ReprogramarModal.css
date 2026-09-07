@@ -1,0 +1,40 @@
+.reprogramar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.reprogramar__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+}
+
+.reprogramar__field input,
+.reprogramar__field textarea {
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--border-color, #ccc);
+  border-radius: var(--radius-sm, 4px);
+  font: inherit;
+}
+
+.reprogramar__cancel,
+.reprogramar__confirm {
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-md, 6px);
+  cursor: pointer;
+  border: 1px solid var(--border-color, #ccc);
+}
+
+.reprogramar__confirm {
+  background: var(--color-primary, #2563eb);
+  color: white;
+  border-color: transparent;
+}
+
+.reprogramar__confirm:disabled,
+.reprogramar__cancel:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

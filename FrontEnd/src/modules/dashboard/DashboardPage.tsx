@@ -4,6 +4,7 @@ import { KpiGrid } from './components/KpiGrid';
 import { SalesChart } from './components/SalesChart';
 import { TopProductsChart } from './components/TopProductsChart';
 import { RecentOrdersTable } from './components/RecentOrdersTable';
+import { DashboardAggregatesSection } from './components/DashboardAggregatesSection';
 import './DashboardPage.css';
 
 // ============================================================
@@ -71,6 +72,9 @@ export const DashboardPage: FC = () => {
           isLoading={isLoading}
         />
       </section>
+
+      {/* Agregados server-side nuevos (Tanda 7, corrida completa) */}
+      <DashboardAggregatesSection />
     </div>
   );
 };

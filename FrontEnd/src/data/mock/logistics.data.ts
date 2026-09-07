@@ -1,4 +1,5 @@
-import type { Delivery } from '@/shared/types/logistics.types';
+import { asOrderId, asBranchId, asDeliveryId } from '@/shared/types/ids.types';
+import type { Delivery, DeliveryHistoryEvent, DeliveryStatus } from '@/shared/types/logistics.types';
 
 // ============================================================
 // MOCK DATA — Logistics (Entregas)
@@ -11,6 +12,15 @@ import type { Delivery } from '@/shared/types/logistics.types';
 // (session.mock.ts): repartido de forma pareja pero no uniforme entre
 // las 3 sucursales para que el cambio de sucursal activa se note en
 // pantalla (branch-001: 8, branch-002: 6, branch-003: 4 del total).
+//
+// DeliveryStatus migro a los 5 estados de ADR-002 en Tanda 8 (corrida
+// completa): pending->CREADO, in_transit->EN_TRANSITO,
+// delivered->FINALIZADO (mapeo directo del mock anterior, sin cambiar
+// el reparto de estados entre entregas). `historial`/`reprogramaciones`
+// se generan con `buildDelivery` en vez de repetirse 18 veces a mano:
+// cada entrega arranca con un unico evento de alta (desde: null) hacia
+// su estado actual y sin reprogramaciones — mismo criterio que
+// cualquier otro mock que no necesita variar ese detalle por fila.
 // ============================================================
 
 function toISODate(date: Date): string {
@@ -31,8 +41,48 @@ const TODAY_ISO = toISODate(TODAY);
 const YESTERDAY_ISO = toISODate(shiftDays(TODAY, -1));
 const TOMORROW_ISO = toISODate(shiftDays(TODAY, 1));
 
-export const LOGISTICS_MOCK_DATA: Delivery[] = [
-  // --- Hoy: pendientes ---
+interface DeliverySeed {
+  id: string;
+  orderId: string;
+  branchId: string;
+  clientName: string;
+  address: string;
+  date: string;
+  estimatedTime: string;
+  status: DeliveryStatus;
+  zone: 'Norte' | 'Centro' | 'Sur';
+  priority: 'high' | 'medium' | 'low';
+  collectionAmount: number;
+}
+
+function buildDelivery(seed: DeliverySeed): Delivery {
+  const createdEvent: DeliveryHistoryEvent = {
+    id: `${seed.id}-h0`,
+    desde: null,
+    hasta: seed.status,
+    quien: 'Sistema (dato de ejemplo)',
+    cuando: `${seed.date}T00:00:00Z`,
+  };
+
+  return {
+    id: asDeliveryId(seed.id),
+    orderId: asOrderId(seed.orderId),
+    branchId: asBranchId(seed.branchId),
+    clientName: seed.clientName,
+    address: seed.address,
+    date: seed.date,
+    estimatedTime: seed.estimatedTime,
+    status: seed.status,
+    zone: seed.zone,
+    priority: seed.priority,
+    collectionAmount: seed.collectionAmount,
+    historial: [createdEvent],
+    reprogramaciones: [],
+  };
+}
+
+const SEEDS: DeliverySeed[] = [
+  // --- Hoy: creadas (todavia no salieron) ---
   {
     id: 'del-001',
     orderId: 'ord-001',
@@ -41,7 +91,7 @@ export const LOGISTICS_MOCK_DATA: Delivery[] = [
     address: 'Av. Belgrano 1234',
     date: TODAY_ISO,
     estimatedTime: '08:00 - 10:00',
-    status: 'pending',
+    status: 'CREADO',
     zone: 'Norte',
     priority: 'high',
     collectionAmount: 57172.5,
@@ -54,7 +104,7 @@ export const LOGISTICS_MOCK_DATA: Delivery[] = [
     address: 'San Martin 567',
     date: TODAY_ISO,
     estimatedTime: '09:00 - 11:00',
-    status: 'pending',
+    status: 'CREADO',
     zone: 'Centro',
     priority: 'medium',
     collectionAmount: 227964,
@@ -67,7 +117,7 @@ export const LOGISTICS_MOCK_DATA: Delivery[] = [
     address: 'Rivadavia 890',
     date: TODAY_ISO,
     estimatedTime: '09:30 - 11:30',
-    status: 'pending',
+    status: 'CREADO',
     zone: 'Sur',
     priority: 'low',
     collectionAmount: 18585.6,
@@ -80,7 +130,7 @@ export const LOGISTICS_MOCK_DATA: Delivery[] = [
     address: 'Sarmiento 111',
     date: TODAY_ISO,
     estimatedTime: '10:00 - 12:00',
-    status: 'pending',
+    status: 'CREADO',
     zone: 'Norte',
     priority: 'medium',
     collectionAmount: 77319,
@@ -93,13 +143,13 @@ export const LOGISTICS_MOCK_DATA: Delivery[] = [
     address: 'Mitre 432',
     date: TODAY_ISO,
     estimatedTime: '10:30 - 12:30',
-    status: 'pending',
+    status: 'CREADO',
     zone: 'Norte',
     priority: 'low',
     collectionAmount: 40656,
   },
 
-  // --- Hoy: en ruta ---
+  // --- Hoy: en transito ---
   {
     id: 'del-006',
     orderId: 'ord-006',
@@ -108,7 +158,7 @@ export const LOGISTICS_MOCK_DATA: Delivery[] = [
     address: 'Av. Belgrano 1234',
     date: TODAY_ISO,
     estimatedTime: '08:00 - 10:00',
-    status: 'in_transit',
+    status: 'EN_TRANSITO',
     zone: 'Norte',
     priority: 'high',
     collectionAmount: 52272,
@@ -121,7 +171,7 @@ export const LOGISTICS_MOCK_DATA: Delivery[] = [
     address: 'Av. Colon 220',
     date: TODAY_ISO,
     estimatedTime: '11:00 - 13:00',
-    status: 'in_transit',
+    status: 'EN_TRANSITO',
     zone: 'Sur',
     priority: 'medium',
     collectionAmount: 31800,
@@ -134,7 +184,7 @@ export const LOGISTICS_MOCK_DATA: Delivery[] = [
     address: '25 de Mayo 45',
     date: TODAY_ISO,
     estimatedTime: '11:30 - 13:30',
-    status: 'in_transit',
+    status: 'EN_TRANSITO',
     zone: 'Centro',
     priority: 'low',
     collectionAmount: 8700,
@@ -147,7 +197,7 @@ export const LOGISTICS_MOCK_DATA: Delivery[] = [
     address: 'Alem 300',
     date: TODAY_ISO,
     estimatedTime: '12:00 - 14:00',
-    status: 'in_transit',
+    status: 'EN_TRANSITO',
     zone: 'Norte',
     priority: 'high',
     collectionAmount: 54300,
@@ -160,13 +210,13 @@ export const LOGISTICS_MOCK_DATA: Delivery[] = [
     address: 'Peron 998',
     date: TODAY_ISO,
     estimatedTime: '12:30 - 14:30',
-    status: 'in_transit',
+    status: 'EN_TRANSITO',
     zone: 'Sur',
     priority: 'medium',
     collectionAmount: 97600,
   },
 
-  // --- Hoy: completadas ---
+  // --- Hoy: finalizadas ---
   {
     id: 'del-011',
     orderId: 'ord-005',
@@ -175,7 +225,7 @@ export const LOGISTICS_MOCK_DATA: Delivery[] = [
     address: 'Urquiza 77',
     date: TODAY_ISO,
     estimatedTime: '07:30 - 09:00',
-    status: 'delivered',
+    status: 'FINALIZADO',
     zone: 'Centro',
     priority: 'low',
     collectionAmount: 22100,
@@ -188,7 +238,7 @@ export const LOGISTICS_MOCK_DATA: Delivery[] = [
     address: 'Av. Belgrano 1234',
     date: TODAY_ISO,
     estimatedTime: '08:00 - 09:30',
-    status: 'delivered',
+    status: 'FINALIZADO',
     zone: 'Norte',
     priority: 'high',
     collectionAmount: 47200,
@@ -201,7 +251,7 @@ export const LOGISTICS_MOCK_DATA: Delivery[] = [
     address: 'Sarmiento 111',
     date: TODAY_ISO,
     estimatedTime: '08:30 - 10:00',
-    status: 'delivered',
+    status: 'FINALIZADO',
     zone: 'Norte',
     priority: 'medium',
     collectionAmount: 19400,
@@ -214,7 +264,7 @@ export const LOGISTICS_MOCK_DATA: Delivery[] = [
     address: 'Rivadavia 890',
     date: TODAY_ISO,
     estimatedTime: '09:00 - 10:30',
-    status: 'delivered',
+    status: 'FINALIZADO',
     zone: 'Sur',
     priority: 'low',
     collectionAmount: 12000,
@@ -229,7 +279,7 @@ export const LOGISTICS_MOCK_DATA: Delivery[] = [
     address: 'Mitre 432',
     date: YESTERDAY_ISO,
     estimatedTime: '10:00 - 11:30',
-    status: 'delivered',
+    status: 'FINALIZADO',
     zone: 'Norte',
     priority: 'medium',
     collectionAmount: 40656,
@@ -242,7 +292,7 @@ export const LOGISTICS_MOCK_DATA: Delivery[] = [
     address: 'San Martin 567',
     date: YESTERDAY_ISO,
     estimatedTime: '11:00 - 12:30',
-    status: 'delivered',
+    status: 'FINALIZADO',
     zone: 'Centro',
     priority: 'low',
     collectionAmount: 25000,
@@ -257,7 +307,7 @@ export const LOGISTICS_MOCK_DATA: Delivery[] = [
     address: 'Alem 300',
     date: TOMORROW_ISO,
     estimatedTime: '08:00 - 10:00',
-    status: 'pending',
+    status: 'CREADO',
     zone: 'Norte',
     priority: 'medium',
     collectionAmount: 54300,
@@ -270,9 +320,11 @@ export const LOGISTICS_MOCK_DATA: Delivery[] = [
     address: '25 de Mayo 45',
     date: TOMORROW_ISO,
     estimatedTime: '09:00 - 11:00',
-    status: 'pending',
+    status: 'CREADO',
     zone: 'Centro',
     priority: 'low',
     collectionAmount: 8700,
   },
 ];
+
+export const LOGISTICS_MOCK_DATA: Delivery[] = SEEDS.map(buildDelivery);

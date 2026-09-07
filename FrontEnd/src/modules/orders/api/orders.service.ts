@@ -1,10 +1,12 @@
 import type { Order, OrderStatus } from '@/shared/types/order.types';
+import type { OrderId, OrderLineId } from '@/shared/types/ids.types';
 import type { PageQuery, PageResult, DateRangeQueryFilters } from '@/shared/types/pagination.types';
 import { ORDERS_MOCK_DATA } from '@/data/mock/orders.data';
 import { httpClient } from '@/shared/api/httpClient';
 import { ApiError } from '@/shared/api/ApiError';
 import type { OrderDTO, OrdersPageDTO, OrdersAggregatesDTO } from './dto';
 import { orderFromDTO, orderToDTO, orderFormInputToDTO, type OrderFormInput } from './mapper';
+import type { OrderProjectionForAggregation } from '@/modules/dashboard/api/dashboardAggregates';
 
 export type { OrderFormInput };
 
@@ -199,11 +201,21 @@ export async function getOrdersPage(
 }
 
 function nextOrderId(): string {
+  // Devuelve string (no OrderId): OrderDTO.id es la forma "de red"
+  // (plano), el branding ocurre en el mapper al volver a dominio
+  // (orderFromDTO) — mismo criterio que el resto de los ids DTO.
   return `ord-${Date.now()}`;
 }
 
 function nextOrderNumber(): string {
   return `PED-${Date.now().toString().slice(-5)}`;
+}
+
+// Id de linea (OrderLineId, Tanda 5/ADR-006) asignado por el service,
+// nunca por el cliente — `index` evita colisiones entre lineas del
+// mismo pedido creadas en el mismo milisegundo (Date.now() solo).
+function nextOrderLineId(index: number): string {
+  return `oi-${Date.now()}-${index}`;
 }
 
 // RF-PED-001: alta manual (CreateOrderModal). `source` siempre
@@ -224,6 +236,7 @@ export async function createOrder(empresaId: string, input: OrderFormInput): Pro
         numero_pedido: nextOrderNumber(),
         fecha: now,
         cliente: {
+          id: input.clientId,
           nombre: input.clientName,
           direccion: input.clientAddress,
           zona: input.clientZone,
@@ -239,13 +252,14 @@ export async function createOrder(empresaId: string, input: OrderFormInput): Pro
           total: input.totalAmount,
         },
         notas: input.notes,
-        items: input.items.map((item) => ({
-          id: item.id,
+        items: input.items.map((item, index) => ({
+          id: nextOrderLineId(index),
           sku: item.sku,
           nombre: item.name,
           cantidad: item.quantity,
           precio_unitario: item.unitPrice,
           subtotal: item.subtotal,
+          cantidad_entregada: 0,
         })),
         historial: [{ id: `h-${Date.now()}`, fecha: now, estado: 'pending', descripcion: 'Pedido creado manualmente' }],
       };
@@ -315,4 +329,87 @@ export async function cancelOrder(orderId: string): Promise<OrderStatusTransitio
       return { success: true, orderId, previousStatus, newStatus: 'cancelled' };
     },
   });
+}
+
+// ------------------------------------------------------------
+// Proyeccion minima para agregados de OTRO service (Tanda 7 de la
+// corrida completa, dashboardAggregates.service.ts) — NO es un punto
+// de entrada de red (no pasa por httpClient): es una lectura interna
+// "servidor a servidor" del propio store en memoria de este modulo,
+// nunca expuesta a un componente ni cruza hacia afuera del tablero.
+// Devuelve solo los 4 campos que las agrupaciones de
+// dashboardAggregates.ts necesitan, no el DTO completo.
+// ------------------------------------------------------------
+export function getOrdersSnapshotForAggregation(): OrderProjectionForAggregation[] {
+  return ordersDTOStore.map((dto) => ({
+    status: dto.estado,
+    date: dto.fecha,
+    zone: dto.cliente.zona,
+    totalAmount: dto.importes.total,
+  }));
+}
+
+// ------------------------------------------------------------
+// getOrderById — lectura puntual de UN pedido completo (Tanda 8,
+// corrida completa): lo necesita el modal de "Registrar entrega" de
+// Logistica para mostrar las lineas del pedido (pedida/entregada/
+// pendiente) antes de cargar un remito. A diferencia de
+// getOrdersSnapshotForAggregation (lectura interna servidor-a-servidor,
+// nunca cruza hacia un componente), esta SI la consume la UI
+// directamente — pasa por httpClient como cualquier otro endpoint de
+// lectura del proyecto.
+// ------------------------------------------------------------
+export async function getOrderById(
+  empresaId: string,
+  orderId: OrderId,
+  signal?: AbortSignal
+): Promise<Order | undefined> {
+  const dto = await httpClient.request<OrderDTO | undefined>({
+    method: 'GET',
+    path: `/orders/${orderId}`,
+    params: { empresaId },
+    signal,
+    mock: () => ordersDTOStore.find((d) => d.id === orderId),
+  });
+  return dto ? orderFromDTO(dto) : undefined;
+}
+
+export interface OrderLineDeliveryDelta {
+  orderLineId: OrderLineId;
+  cantidadEntregada: number;
+}
+
+// ------------------------------------------------------------
+// applyDeliveryToOrderLines — aplica un remito (deliveries.service.ts,
+// Tanda 8/ADR-001) a las lineas del pedido: ACUMULA (no reemplaza)
+// `cantidadEntregada` de cada linea afectada. Es una llamada
+// "servidor a servidor" (deliveries.service.ts, otro modulo, invoca
+// esta funcion) — mismo criterio que getOrdersSnapshotForAggregation:
+// la variable de store (`ordersDTOStore`) nunca sale de este archivo,
+// solo funciones que la leen/mutan bajo control de orders.service.ts.
+// No pasa por httpClient a proposito: es el equivalente a que un
+// backend real invoque otro modulo interno propio, no una peticion de
+// red — httpClient existe para el trafico cliente-servidor, no para
+// llamadas entre dos servicios del mismo "servidor" mock.
+// ------------------------------------------------------------
+export async function applyDeliveryToOrderLines(orderId: OrderId, deltas: OrderLineDeliveryDelta[]): Promise<Order> {
+  const existing = ordersDTOStore.find((dto) => dto.id === orderId);
+  if (!existing) {
+    throw new ApiError(404, 'CLIENT_ERROR', `No se encontro el pedido ${orderId} para aplicar el remito.`);
+  }
+
+  const deltaByLine = new Map(deltas.map((d) => [d.orderLineId as string, d.cantidadEntregada]));
+
+  const updated: OrderDTO = {
+    ...existing,
+    items: existing.items.map((item) => {
+      const delta = deltaByLine.get(item.id);
+      if (!delta) return item;
+      return { ...item, cantidad_entregada: item.cantidad_entregada + delta };
+    }),
+  };
+
+  ordersDTOStore = ordersDTOStore.map((dto) => (dto.id === orderId ? updated : dto));
+
+  return orderFromDTO(updated);
 }

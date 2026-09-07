@@ -160,3 +160,21 @@
 .deliveries-table__action-btn:hover {
   background: var(--color-accent-hover);
 }
+
+.deliveries-table__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.deliveries-table__action-btn--ghost {
+  background: transparent;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--border-color, #ccc);
+}
+
+.deliveries-table__action-btn--ghost:hover {
+  background: var(--bg-subtle, #f4f4f5);
+}

@@ -8,6 +8,7 @@ import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary';
 import { SkeletonTable } from '@/shared/components/ui/SkeletonLoader';
 import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay';
 import { usePagedQuery } from '@/shared/hooks/usePagedQuery';
+import { useUrlListState } from '@/shared/hooks/useUrlListState';
 import { useCachedQuery, CACHE_STALE_TIME } from '@/shared/hooks/useCachedQuery';
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
 import { useSessionStore } from '@/shared/state/useSessionStore';
@@ -15,6 +16,7 @@ import type { Branch } from '@/shared/types/session.types';
 import type { Supplier } from '@/shared/types/supplier.types';
 import type { InventoryItem } from '@/shared/types/inventory.types';
 import type { PurchaseOrder, PurchaseOrderStatus, PurchaseOrdersQueryFilters } from '@/shared/types/purchaseOrder.types';
+import { isBranchId, type BranchId } from '@/shared/types/ids.types';
 import { fetchSuppliers } from '@/modules/suppliers/api/suppliers.service';
 import { fetchProducts, getStockForBranch } from '@/shared/api/products/products.service';
 import { getPurchaseOrdersPage, exportPurchaseOrders, updatePurchaseOrderStatus, computePurchaseOrderTotal } from '@/services/mock/purchaseOrders.service';
@@ -28,7 +30,7 @@ import { TabPendingReceipt } from './components/TabPendingReceipt';
 import { PURCHASE_ORDER_STATUS_LABEL } from './purchaseOrderLabels';
 import { Tabs, type TabItem } from '@/shared/components/ui/Tabs';
 import { DateRangeFilter } from '@/shared/components/ui/DateRangeFilter';
-import { defaultDateRangeValue, type DateRangeValue } from '@/shared/components/ui/dateRangePresets';
+import type { DateRangeValue } from '@/shared/components/ui/dateRangePresets';
 import { ExportButton, type ExportColumn } from '@/shared/components/ui/ExportButton';
 import './ComprasPage.css';
 
@@ -67,16 +69,66 @@ const EMPTY_BRANCHES: Branch[] = [];
 const EMPTY_SUPPLIERS: Supplier[] = [];
 const EMPTY_PRODUCTS: InventoryItem[] = [];
 
+// Parseo explicito (ADR-006/Tanda 5) del unico id que este archivo lee
+// desde la URL (el param `sucursal` del deep-link de traspaso, y el
+// filtro `branch` de useUrlListState): un valor mal formado no debe
+// romper el render, se trata como "sin sucursal" con un aviso en
+// consola en vez de silenciarse sin rastro.
+function safeBranchId(raw: string | null | undefined): BranchId | undefined {
+  if (!raw) return undefined;
+  if (!isBranchId(raw)) {
+    console.warn(`ComprasPage: valor de sucursal invalido en la URL, se ignora: "${raw}"`);
+    return undefined;
+  }
+  return raw;
+}
+
 export const ComprasPage: FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeBranchId = useSessionStore((s) => s.activeBranchId);
   const session = useSessionStore((s) => s.session);
 
-  const [searchQuery, setSearchQuery] = useState('');
+  // Tanda 4 (corrida completa, A13): pagina/filtros del Listado General
+  // y la tab activa viven en la URL, prefijados `oc_` — este archivo YA
+  // usa `useSearchParams` (mas abajo) para un mecanismo de deep-link
+  // DISTINTO (`proveedor`/`producto`/`sucursal`, de traspaso de accion,
+  // no de estado de vista); el prefijo evita cualquier colision de
+  // nombres con esos tres params reservados.
+  const ocUrlState = useUrlListState<never, 'q' | 'supplier' | 'status' | 'branch' | 'preset' | 'from' | 'to' | 'tab'>({
+    prefix: 'oc',
+    filterKeys: ['q', 'supplier', 'status', 'branch', 'preset', 'from', 'to', 'tab'],
+  });
+
+  const [searchQuery, setSearchQuery] = useState(ocUrlState.filters.q ?? '');
   const debouncedSearchQuery = useDebouncedValue(searchQuery, 300);
-  const [supplierFilter, setSupplierFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState<PurchaseOrderStatus | ''>('');
-  const [branchFilter, setBranchFilter] = useState('');
+
+  useEffect(() => {
+    const current = ocUrlState.filters.q ?? '';
+    if (debouncedSearchQuery !== current) {
+      ocUrlState.setFilter('q', debouncedSearchQuery || undefined);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo debe reaccionar al valor debounceado
+  }, [debouncedSearchQuery]);
+
+  // V3 de VERIFICACION_CORRIDA_COMPLETA.md: si la URL cambia externamente
+  // (back/forward del navegador) mientras el componente sigue montado,
+  // el input debe reflejarlo — sin este efecto quedaba mostrando texto
+  // viejo aunque el listado ya se hubiera re-filtrado segun la URL real.
+  useEffect(() => {
+    // Microtask (mismo patron ya usado en ReprogramarModal/AlertsBell/
+    // RegistrarEntregaModal) para no disparar setState sincronico en
+    // el cuerpo del efecto.
+    Promise.resolve().then(() => setSearchQuery(ocUrlState.filters.q ?? ''));
+  }, [ocUrlState.filters.q]);
+
+  const supplierFilter = ocUrlState.filters.supplier ?? '';
+  const setSupplierFilter = (value: string) => ocUrlState.setFilter('supplier', value || undefined);
+  const statusFilter = (ocUrlState.filters.status ?? '') as PurchaseOrderStatus | '';
+  const setStatusFilter = (value: PurchaseOrderStatus | '') => ocUrlState.setFilter('status', value || undefined);
+  const branchFilter = ocUrlState.filters.branch ?? '';
+  const setBranchFilter = (value: string) => ocUrlState.setFilter('branch', value || undefined);
+  const activeTab = ocUrlState.filters.tab === 'pending-receipt' ? 'pending-receipt' : 'listado';
+  const setActiveTab = (tab: string) => ocUrlState.setFilter('tab', tab === 'listado' ? undefined : tab);
 
   const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -95,12 +147,27 @@ export const ComprasPage: FC = () => {
   const [defaultLinesFromUrl, setDefaultLinesFromUrl] = useState<PurchaseOrderFormInput['lines'] | undefined>(
     undefined
   );
-  const [activeTab, setActiveTab] = useState('listado');
   // Rango de fecha (tarea transversal): default 'all' (sin filtro) —
   // este listado hoy no filtraba por fecha, "Hoy" como default
   // ocultaria de entrada todo el historico existente sin que el
-  // usuario haya tocado nada (ver DECISIONES_TECNICAS.md).
-  const [dateRange, setDateRange] = useState<DateRangeValue>(() => defaultDateRangeValue('all'));
+  // usuario haya tocado nada (ver DECISIONES_TECNICAS.md). Tanda 4: vive
+  // en la URL (`oc_preset`/`oc_from`/`oc_to`) junto al resto de filtros.
+  const dateRange: DateRangeValue = useMemo(
+    () => ({
+      preset: (ocUrlState.filters.preset as DateRangeValue['preset'] | undefined) ?? 'all',
+      dateFrom: ocUrlState.filters.from,
+      dateTo: ocUrlState.filters.to,
+    }),
+    [ocUrlState.filters.preset, ocUrlState.filters.from, ocUrlState.filters.to]
+  );
+
+  function setDateRange(next: DateRangeValue) {
+    ocUrlState.setFilters({
+      preset: next.preset === 'all' ? undefined : next.preset,
+      from: next.dateFrom,
+      to: next.dateTo,
+    });
+  }
 
   // Catalogo de productos y lista de proveedores (Tanda 2.5,
   // useCachedQuery — ver RELEVAMIENTO_CACHE.md/DECISIONES_TECNICAS.md):
@@ -181,7 +248,7 @@ export const ComprasPage: FC = () => {
       return;
     }
 
-    const branchIdParam = searchParams.get('sucursal') ?? activeBranchId ?? undefined;
+    const branchIdParam = safeBranchId(searchParams.get('sucursal')) ?? activeBranchId ?? undefined;
     let cancelled = false;
 
     (async () => {
@@ -235,7 +302,7 @@ export const ComprasPage: FC = () => {
       search: debouncedSearchQuery || undefined,
       supplierId: supplierFilter || undefined,
       status: statusFilter || undefined,
-      branchId: branchFilter || undefined,
+      branchId: safeBranchId(branchFilter),
       dateFrom: dateRange.dateFrom,
       dateTo: dateRange.dateTo,
     }),
@@ -255,7 +322,10 @@ export const ComprasPage: FC = () => {
     setPage,
     setPageSize,
     refetch,
-  } = usePagedQuery(getPurchaseOrdersPage, filters);
+  } = usePagedQuery(getPurchaseOrdersPage, filters, {
+    page: ocUrlState.page,
+    onPageChange: ocUrlState.setPage,
+  });
 
   useEffect(() => {
     if (error) toast.error('No se pudo cargar el listado de ordenes de compra.');

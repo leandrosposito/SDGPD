@@ -5,11 +5,15 @@ import { useCachedQuery, CACHE_STALE_TIME } from '@/shared/hooks/useCachedQuery'
 import { useSessionStore } from '@/shared/state/useSessionStore';
 import type { InventoryItem } from '@/shared/types/inventory.types';
 import type { Order } from '@/shared/types/order.types';
+import type { ClientAccount } from '@/shared/types/client.types';
 import { fetchProducts } from '@/shared/api/products/products.service';
+import { fetchClientsCatalog } from '@/modules/clients/api/clients.service';
 import { createOrder, type OrderFormInput } from '@/modules/orders/api/orders.service';
+import { todayLocalDateString } from '@/shared/utils/date';
 
 // Referencia estable: ver mismo patron en ComprasPage/InventoryPage.
 const EMPTY_PRODUCTS: InventoryItem[] = [];
+const EMPTY_CLIENTS: ClientAccount[] = [];
 import { OrderClientSection } from './OrderClientSection';
 import { OrderDatesSection } from './OrderDatesSection';
 import { OrderProductsSection, type OrderProductItem } from './OrderProductsSection';
@@ -48,17 +52,36 @@ export const CreateOrderModal: FC<CreateOrderModalProps> = ({ isOpen, onClose, o
     if (productsError) toast.error('No se pudo cargar el listado de productos.');
   }, [productsError]);
 
-  // Client Section State
-  const [client, setClient] = useState('');
+  // Clientes reales disponibles para elegir (Tanda 5,
+  // AUDIT_4_IDS_RELACIONES.md hallazgo ALTO #1) — mismo criterio de
+  // catalogo completo sin paginar que products (combobox, no listado).
+  const { data: clientsData, error: clientsError } = useCachedQuery(
+    'clients-catalog',
+    undefined,
+    (signal) => fetchClientsCatalog(empresaId ?? '', signal),
+    { staleTime: CACHE_STALE_TIME.CATALOG }
+  );
+  const clients = clientsData ?? EMPTY_CLIENTS;
+
+  useEffect(() => {
+    if (clientsError) toast.error('No se pudo cargar el listado de clientes.');
+  }, [clientsError]);
+
+  // Client Section State — selectedClient es la relacion tipada real
+  // (Order.clientId), no texto libre (Tanda 5).
+  const [selectedClient, setSelectedClient] = useState<ClientAccount | null>(null);
   const [seller, setSeller] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('');
   const [priceList, setPriceList] = useState('Mayorista');
 
-  // Mock debt alert if a specific client is typed
-  const hasDebtAlert = client.toLowerCase().includes('excedido') || client.toLowerCase().includes('deuda');
+  // Alerta de deuda derivada del cliente REAL elegido (antes era un
+  // match de texto contra lo que el usuario tipeaba, sin relacion con
+  // ningun dato real) — currentBalance/creditLimit ya existen en
+  // ClientAccount (client.types.ts).
+  const hasDebtAlert = selectedClient ? selectedClient.currentBalance > selectedClient.creditLimit : false;
 
   // Dates Section State
-  const [orderDate, setOrderDate] = useState(new Date().toISOString().split('T')[0]);
+  const [orderDate, setOrderDate] = useState(todayLocalDateString());
   const [deliveryDate, setDeliveryDate] = useState('');
   const [initialStatus, setInitialStatus] = useState('pending');
 
@@ -78,11 +101,11 @@ export const CreateOrderModal: FC<CreateOrderModalProps> = ({ isOpen, onClose, o
 
   const handleClose = () => {
     // Reset state on close
-    setClient('');
+    setSelectedClient(null);
     setSeller('');
     setPaymentMethod('');
     setPriceList('Mayorista');
-    setOrderDate(new Date().toISOString().split('T')[0]);
+    setOrderDate(todayLocalDateString());
     setDeliveryDate('');
     setInitialStatus('pending');
     setItems([]);
@@ -106,13 +129,19 @@ export const CreateOrderModal: FC<CreateOrderModalProps> = ({ isOpen, onClose, o
       return;
     }
 
+    if (!selectedClient) {
+      toast.error('Elegi un cliente antes de confirmar el pedido.');
+      return;
+    }
+
     const tax = (subtotal - discount) * 0.21;
     const totalAmount = subtotal - discount + tax;
 
     const input: OrderFormInput = {
-      clientName: client,
-      clientAddress: address,
-      clientZone: locality,
+      clientId: selectedClient.id,
+      clientName: selectedClient.clientName,
+      clientAddress: selectedClient.address,
+      clientZone: selectedClient.zone,
       sellerName: seller,
       paymentMethod: paymentMethod as Order['paymentMethod'],
       subtotal,
@@ -121,7 +150,6 @@ export const CreateOrderModal: FC<CreateOrderModalProps> = ({ isOpen, onClose, o
       totalAmount,
       notes,
       items: items.map((item) => ({
-        id: item.id,
         sku: item.sku,
         name: item.name,
         quantity: item.quantity,
@@ -147,8 +175,10 @@ export const CreateOrderModal: FC<CreateOrderModalProps> = ({ isOpen, onClose, o
     <Modal isOpen={isOpen} onClose={handleClose} title="Nuevo Pedido" size="xl">
       <div className="create-order">
         <OrderClientSection
-          client={client}
-          onClientChange={setClient}
+          clients={clients}
+          selectedClient={selectedClient}
+          onSelectClient={setSelectedClient}
+          onClearClient={() => setSelectedClient(null)}
           seller={seller}
           onSellerChange={setSeller}
           paymentMethod={paymentMethod}
@@ -202,7 +232,11 @@ export const CreateOrderModal: FC<CreateOrderModalProps> = ({ isOpen, onClose, o
             <button className="co-btn co-btn--outline" onClick={handleClose}>
               Guardar Borrador
             </button>
-            <button className="co-btn co-btn--primary" onClick={handleConfirm} disabled={items.length === 0 || isSaving}>
+            <button
+              className="co-btn co-btn--primary"
+              onClick={handleConfirm}
+              disabled={items.length === 0 || !selectedClient || isSaving}
+            >
               {isSaving ? 'Guardando...' : 'Confirmar Pedido'}
             </button>
           </div>

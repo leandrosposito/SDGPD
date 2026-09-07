@@ -8,6 +8,7 @@ import { LoadingState } from '@/shared/components/ui/LoadingState';
 import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay';
 import { Pagination } from '@/shared/components/ui/Pagination';
 import { usePagedQuery } from '@/shared/hooks/usePagedQuery';
+import { useUrlListState } from '@/shared/hooks/useUrlListState';
 import { useSessionStore } from '@/shared/state/useSessionStore';
 import { getInvoicesPage, type InvoicesQueryFilters } from '@/modules/settings/api/subscription/subscription.service';
 import '@/modules/settings/SettingsPage.css';
@@ -25,6 +26,10 @@ import '@/modules/settings/SettingsPage.css';
 export const TabSubscription: FC = () => {
   const empresaId = useSessionStore((s) => s.session?.company.id);
 
+  // Tanda 4 (corrida completa, A13): pagina en la URL, prefijo `sub_`
+  // (Settings tiene varias tabs con su propio listado paginado).
+  const urlState = useUrlListState({ prefix: 'sub' });
+
   const filters: InvoicesQueryFilters = useMemo(() => ({ empresaId: empresaId ?? '' }), [empresaId]);
 
   const {
@@ -39,7 +44,11 @@ export const TabSubscription: FC = () => {
     setPage,
     setPageSize,
     refetch,
-  } = usePagedQuery(getInvoicesPage, filters, { enabled: Boolean(empresaId) });
+  } = usePagedQuery(getInvoicesPage, filters, {
+    enabled: Boolean(empresaId),
+    page: urlState.page,
+    onPageChange: urlState.setPage,
+  });
 
   useEffect(() => {
     if (error) toast.error('No se pudo cargar el historial de cobros.');

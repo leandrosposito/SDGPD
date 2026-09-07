@@ -1,19 +1,18 @@
 import type { FC } from 'react';
-import { Clock, MapPin, Truck, CheckCircle2 } from 'lucide-react';
-import type { Delivery, DeliveryStatus } from '@/shared/types/logistics.types';
+import { Clock, MapPin, Truck, PackageCheck, CalendarClock, History } from 'lucide-react';
+import type { Delivery } from '@/shared/types/logistics.types';
+import { puedeTransicionar } from '@/shared/types/deliveryStatus.types';
 import { Table } from '@/shared/components/ui/Table';
 import { Badge } from '@/shared/components/ui/Badge';
 import { DELIVERY_STATUS_LABEL, DELIVERY_STATUS_VARIANT } from '../deliveryStatusLabels';
 import '../LogisticsPage.css';
 
 // ============================================================
-// DeliveriesTable — Tabla paginable de entregas del dia
+// DeliveriesTable — Tabla paginable de entregas del dia. Acciones
+// (Tanda 8, ADR-002) derivadas de `puedeTransicionar`, nunca de una
+// comparacion de estado a mano por boton — si el mapa de transiciones
+// cambia, esta tabla lo hereda solo.
 // ============================================================
-
-const NEXT_ACTION_LABEL: Partial<Record<DeliveryStatus, string>> = {
-  pending: 'Marcar en ruta',
-  in_transit: 'Marcar entregada',
-};
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(value);
@@ -21,10 +20,19 @@ function formatCurrency(value: number): string {
 
 interface DeliveriesTableProps {
   deliveries: Delivery[];
-  onAdvanceStatus: (deliveryId: string) => void;
+  onMarkInTransit: (delivery: Delivery) => void;
+  onRegisterDelivery: (delivery: Delivery) => void;
+  onReprogram: (delivery: Delivery) => void;
+  onShowHistory: (delivery: Delivery) => void;
 }
 
-export const DeliveriesTable: FC<DeliveriesTableProps> = ({ deliveries, onAdvanceStatus }) => {
+export const DeliveriesTable: FC<DeliveriesTableProps> = ({
+  deliveries,
+  onMarkInTransit,
+  onRegisterDelivery,
+  onReprogram,
+  onShowHistory,
+}) => {
   return (
     <Table
       data={deliveries}
@@ -76,22 +84,31 @@ export const DeliveriesTable: FC<DeliveriesTableProps> = ({ deliveries, onAdvanc
         {
           header: 'Acciones',
           align: 'right',
-          accessor: (d) => {
-            const actionLabel = NEXT_ACTION_LABEL[d.status];
-            if (!actionLabel) return null;
-            const ActionIcon = d.status === 'pending' ? Truck : CheckCircle2;
-            return (
-              <button
-                type="button"
-                className="deliveries-table__action-btn"
-                onClick={() => onAdvanceStatus(d.id)}
-                aria-label={`${actionLabel} - entrega ${d.id}`}
-              >
-                <ActionIcon size={14} aria-hidden="true" />
-                {actionLabel}
+          accessor: (d) => (
+            <div className="deliveries-table__actions">
+              {puedeTransicionar(d.status, 'EN_TRANSITO') && (
+                <button type="button" className="deliveries-table__action-btn" onClick={() => onMarkInTransit(d)} aria-label={`Marcar en ruta - entrega ${d.id}`}>
+                  <Truck size={14} aria-hidden="true" />
+                  En ruta
+                </button>
+              )}
+              {puedeTransicionar(d.status, 'FINALIZADO') && (
+                <button type="button" className="deliveries-table__action-btn" onClick={() => onRegisterDelivery(d)} aria-label={`Registrar entrega - entrega ${d.id}`}>
+                  <PackageCheck size={14} aria-hidden="true" />
+                  Registrar entrega
+                </button>
+              )}
+              {puedeTransicionar(d.status, 'REPROGRAMADO') && (
+                <button type="button" className="deliveries-table__action-btn" onClick={() => onReprogram(d)} aria-label={`Reprogramar - entrega ${d.id}`}>
+                  <CalendarClock size={14} aria-hidden="true" />
+                  Reprogramar
+                </button>
+              )}
+              <button type="button" className="deliveries-table__action-btn deliveries-table__action-btn--ghost" onClick={() => onShowHistory(d)} aria-label={`Ver historial - entrega ${d.id}`}>
+                <History size={14} aria-hidden="true" />
               </button>
-            );
-          },
+            </div>
+          ),
         },
       ]}
     />

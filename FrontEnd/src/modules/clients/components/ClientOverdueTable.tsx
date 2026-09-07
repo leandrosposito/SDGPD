@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FC } from 'react';
+import { useEffect, useMemo, type FC } from 'react';
 import { toast } from 'sonner';
 import { AlertTriangle } from 'lucide-react';
 import { Table } from '@/shared/components/ui/Table';
@@ -8,8 +8,9 @@ import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary';
 import { SkeletonTable } from '@/shared/components/ui/SkeletonLoader';
 import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay';
 import { usePagedQuery } from '@/shared/hooks/usePagedQuery';
+import { useUrlListState } from '@/shared/hooks/useUrlListState';
 import { DateRangeFilter } from '@/shared/components/ui/DateRangeFilter';
-import { defaultDateRangeValue, type DateRangeValue } from '@/shared/components/ui/dateRangePresets';
+import type { DateRangePreset, DateRangeValue } from '@/shared/components/ui/dateRangePresets';
 import { ExportButton, type ExportColumn } from '@/shared/components/ui/ExportButton';
 import { getOverdueClientsPage, exportOverdueClients } from '@/modules/clients/api/clients.service';
 import type {
@@ -51,8 +52,36 @@ interface ClientOverdueTableProps {
 }
 
 export const ClientOverdueTable: FC<ClientOverdueTableProps> = ({ search }) => {
-  const [bucketFilter, setBucketFilter] = useState<BucketFilter>('all');
-  const [dateRange, setDateRange] = useState<DateRangeValue>(() => defaultDateRangeValue('all'));
+  // Tanda 4 (corrida completa, A13): pagina, tramo y rango de fecha
+  // propios de esta tab, prefijados `over_` (misma razon que `acc_` en
+  // ClientAccountsTable — tabs montadas en la misma pagina).
+  const urlState = useUrlListState<never, 'preset' | 'from' | 'to' | 'bucket'>({
+    prefix: 'over',
+    filterKeys: ['preset', 'from', 'to', 'bucket'],
+  });
+
+  const bucketFilter: BucketFilter =
+    urlState.filters.bucket && AGING_BUCKET_ORDER.includes(urlState.filters.bucket as AgingBucket)
+      ? (urlState.filters.bucket as AgingBucket)
+      : 'all';
+  const setBucketFilter = (bucket: BucketFilter) => urlState.setFilter('bucket', bucket === 'all' ? undefined : bucket);
+
+  const dateRange: DateRangeValue = useMemo(
+    () => ({
+      preset: (urlState.filters.preset as DateRangePreset | undefined) ?? 'all',
+      dateFrom: urlState.filters.from,
+      dateTo: urlState.filters.to,
+    }),
+    [urlState.filters.preset, urlState.filters.from, urlState.filters.to]
+  );
+
+  function setDateRange(next: DateRangeValue) {
+    urlState.setFilters({
+      preset: next.preset === 'all' ? undefined : next.preset,
+      from: next.dateFrom,
+      to: next.dateTo,
+    });
+  }
 
   const filters: OverdueClientsQueryFilters = useMemo(
     () => ({
@@ -76,7 +105,10 @@ export const ClientOverdueTable: FC<ClientOverdueTableProps> = ({ search }) => {
     error,
     setPage,
     setPageSize,
-  } = usePagedQuery(getOverdueClientsPage, filters);
+  } = usePagedQuery(getOverdueClientsPage, filters, {
+    page: urlState.page,
+    onPageChange: urlState.setPage,
+  });
 
   useEffect(() => {
     if (error) toast.error('No se pudo cargar el listado de clientes morosos.');

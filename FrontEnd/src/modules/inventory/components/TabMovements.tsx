@@ -8,6 +8,7 @@ import { LoadingState } from '@/shared/components/ui/LoadingState';
 import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary';
 import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay';
 import { usePagedQuery } from '@/shared/hooks/usePagedQuery';
+import { useUrlListState } from '@/shared/hooks/useUrlListState';
 import { useSessionStore } from '@/shared/state/useSessionStore';
 import {
   getMovementsPage,
@@ -45,6 +46,13 @@ function formatDate(isoString: string): string {
 export const TabMovements: FC<TabMovementsProps> = ({ branchId, branchName }) => {
   const empresaId = useSessionStore((s) => s.session?.company.id);
 
+  // Tanda 4 (corrida completa, A13): pagina y orden en la URL, prefijo
+  // `mov_`.
+  const urlState = useUrlListState<MovementsSortField, never>({
+    prefix: 'mov',
+    sortFields: ['date', 'productName', 'quantity'],
+  });
+
   const filters: MovementsQueryFilters = useMemo(
     () => ({ empresaId: empresaId ?? '', branchId }),
     [empresaId, branchId]
@@ -64,7 +72,12 @@ export const TabMovements: FC<TabMovementsProps> = ({ branchId, branchName }) =>
     setPageSize,
     setSort,
     refetch,
-  } = usePagedQuery(getMovementsPage, filters);
+  } = usePagedQuery(getMovementsPage, filters, {
+    page: urlState.page,
+    onPageChange: urlState.setPage,
+    sort: urlState.sort,
+    onSortChange: urlState.setSort,
+  });
 
   useEffect(() => {
     if (error) toast.error('No se pudo cargar el historial de movimientos.');

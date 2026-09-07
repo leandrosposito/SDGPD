@@ -9,6 +9,7 @@ import { ErrorState } from '@/shared/components/ui/ErrorState';
 import { LoadingState } from '@/shared/components/ui/LoadingState';
 import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay';
 import { usePagedQuery } from '@/shared/hooks/usePagedQuery';
+import { useUrlListState } from '@/shared/hooks/useUrlListState';
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
 import { useSessionStore } from '@/shared/state/useSessionStore';
 import { OrderFilters } from './components/OrderFilters';
@@ -67,13 +68,46 @@ function formatDate(iso: string): string {
 export const OrdersPage: FC = () => {
   const empresaId = useSessionStore((s) => s.session?.company.id);
 
-  const [activeStatus, setActiveStatus] = useState<OrderStatus | 'all'>('all');
-  const [searchQuery, setSearchQuery] = useState('');
+  // Tanda 4 (corrida completa, A13): pagina y todos los filtros en la
+  // URL — unico listado de esta pagina, sin prefijo.
+  const urlState = useUrlListState<never, 'q' | 'status' | 'seller' | 'payment' | 'from' | 'to'>({
+    filterKeys: ['q', 'status', 'seller', 'payment', 'from', 'to'],
+  });
+
+  const activeStatus = (urlState.filters.status ?? 'all') as OrderStatus | 'all';
+  const setActiveStatus = (value: OrderStatus | 'all') => urlState.setFilter('status', value === 'all' ? undefined : value);
+
+  const [searchQuery, setSearchQuery] = useState(urlState.filters.q ?? '');
   const debouncedSearchQuery = useDebouncedValue(searchQuery, 300);
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
-  const [seller, setSeller] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('');
+
+  useEffect(() => {
+    const current = urlState.filters.q ?? '';
+    if (debouncedSearchQuery !== current) {
+      urlState.setFilter('q', debouncedSearchQuery || undefined);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo debe reaccionar al valor debounceado
+  }, [debouncedSearchQuery]);
+
+  // V3 de VERIFICACION_CORRIDA_COMPLETA.md: si la URL cambia externamente
+  // (back/forward del navegador) mientras el componente sigue montado,
+  // el input debe reflejarlo — sin este efecto quedaba mostrando texto
+  // viejo aunque el listado ya se hubiera re-filtrado segun la URL real.
+  useEffect(() => {
+    // Microtask (mismo patron ya usado en ReprogramarModal/AlertsBell/
+    // RegistrarEntregaModal) para no disparar setState sincronico en
+    // el cuerpo del efecto.
+    Promise.resolve().then(() => setSearchQuery(urlState.filters.q ?? ''));
+  }, [urlState.filters.q]);
+
+  const dateFrom = urlState.filters.from ?? '';
+  const setDateFrom = (value: string) => urlState.setFilter('from', value || undefined);
+  const dateTo = urlState.filters.to ?? '';
+  const setDateTo = (value: string) => urlState.setFilter('to', value || undefined);
+  const seller = urlState.filters.seller ?? '';
+  const setSeller = (value: string) => urlState.setFilter('seller', value || undefined);
+  const paymentMethod = urlState.filters.payment ?? '';
+  const setPaymentMethod = (value: string) => urlState.setFilter('payment', value || undefined);
+
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -84,14 +118,14 @@ export const OrdersPage: FC = () => {
   const filters: OrdersQueryFilters = useMemo(
     () => ({
       empresaId: empresaId ?? '',
-      search: debouncedSearchQuery || undefined,
-      status: activeStatus === 'all' ? undefined : activeStatus,
-      seller: seller || undefined,
-      paymentMethod: paymentMethod || undefined,
-      dateFrom: dateFrom || undefined,
-      dateTo: dateTo || undefined,
+      search: urlState.filters.q || undefined,
+      status: urlState.filters.status ? (urlState.filters.status as OrderStatus) : undefined,
+      seller: urlState.filters.seller || undefined,
+      paymentMethod: urlState.filters.payment || undefined,
+      dateFrom: urlState.filters.from || undefined,
+      dateTo: urlState.filters.to || undefined,
     }),
-    [empresaId, debouncedSearchQuery, activeStatus, seller, paymentMethod, dateFrom, dateTo]
+    [empresaId, urlState.filters.q, urlState.filters.status, urlState.filters.seller, urlState.filters.payment, urlState.filters.from, urlState.filters.to]
   );
 
   const {
@@ -107,7 +141,11 @@ export const OrdersPage: FC = () => {
     setPage,
     setPageSize,
     refetch,
-  } = usePagedQuery(getOrdersPage, filters, { enabled: Boolean(empresaId) });
+  } = usePagedQuery(getOrdersPage, filters, {
+    enabled: Boolean(empresaId),
+    page: urlState.page,
+    onPageChange: urlState.setPage,
+  });
 
   useEffect(() => {
     if (error) toast.error('No se pudo cargar el listado de pedidos.');

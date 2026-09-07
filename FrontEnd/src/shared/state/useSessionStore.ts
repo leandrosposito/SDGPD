@@ -52,11 +52,16 @@ interface SessionState {
 // empresa de la sesion autenticada antes de servir cualquier dato.
 function resolveInitialBranchId(session: SessionUser): Branch['id'] {
   const storedBranchId = localStorage.getItem(ACTIVE_BRANCH_STORAGE_KEY);
-  const storedBranchIsUsable = session.branches.some(
+  const storedBranch = session.branches.find(
     (branch) => branch.id === storedBranchId && branch.status === 'active'
   );
 
-  return storedBranchIsUsable ? (storedBranchId as string) : session.defaultBranchId;
+  // storedBranch, si existe, YA es un Branch['id'] real de la sesion
+  // (Tanda 5, ADR-006) — se toma su .id tipado en vez de re-envolver
+  // el string crudo de localStorage con asBranchId (que ademas
+  // lanzaria si alguna vez el storage tuviera un valor con otro
+  // formato, cosa que este chequeo ya descarto).
+  return storedBranch ? storedBranch.id : session.defaultBranchId;
 }
 
 export const useSessionStore = create<SessionState>()((set, get) => ({

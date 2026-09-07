@@ -14,9 +14,10 @@ import { SkeletonTable } from '@/shared/components/ui/SkeletonLoader';
 import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay';
 import { Pagination } from '@/shared/components/ui/Pagination';
 import { DateRangeFilter } from '@/shared/components/ui/DateRangeFilter';
-import { defaultDateRangeValue, type DateRangeValue } from '@/shared/components/ui/dateRangePresets';
+import type { DateRangeValue } from '@/shared/components/ui/dateRangePresets';
 import { ExportButton, type ExportColumn } from '@/shared/components/ui/ExportButton';
 import { usePagedQuery } from '@/shared/hooks/usePagedQuery';
+import { useUrlListState } from '@/shared/hooks/useUrlListState';
 import { getPurchaseOrdersPage, exportPurchaseOrders, updatePurchaseOrderStatus, computePurchaseOrderTotal } from '@/services/mock/purchaseOrders.service';
 import { PurchaseOrdersTable } from './PurchaseOrdersTable';
 import { PurchaseOrderDetailPanel } from './PurchaseOrderDetailPanel';
@@ -61,12 +62,32 @@ export const TabPendingReceipt: FC<TabPendingReceiptProps> = ({
   const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
-  // Rango de fecha propio (tarea transversal), independiente del que
-  // pueda tener el tab "Listado General" de la misma pagina — cada
-  // usePagedQuery de este archivo tiene su propio estado, mismo
-  // criterio que branchId/status. Default 'all': este tab hoy no
-  // filtraba por fecha.
-  const [dateRange, setDateRange] = useState<DateRangeValue>(() => defaultDateRangeValue('all'));
+  // Rango de fecha y pagina propios (tarea transversal + Tanda 4,
+  // corrida completa), independientes del tab "Listado General" de la
+  // misma pagina — prefijo `rec_` para no chocar con `oc_` (ComprasPage)
+  // ni con proveedor/producto/sucursal (deep-link de ComprasPage.tsx).
+  // Default 'all' de rango: este tab hoy no filtraba por fecha.
+  const urlState = useUrlListState<never, 'preset' | 'from' | 'to'>({
+    prefix: 'rec',
+    filterKeys: ['preset', 'from', 'to'],
+  });
+
+  const dateRange: DateRangeValue = useMemo(
+    () => ({
+      preset: (urlState.filters.preset as DateRangeValue['preset'] | undefined) ?? 'all',
+      dateFrom: urlState.filters.from,
+      dateTo: urlState.filters.to,
+    }),
+    [urlState.filters.preset, urlState.filters.from, urlState.filters.to]
+  );
+
+  function setDateRange(next: DateRangeValue) {
+    urlState.setFilters({
+      preset: next.preset === 'all' ? undefined : next.preset,
+      from: next.dateFrom,
+      to: next.dateTo,
+    });
+  }
 
   const filters: PurchaseOrdersQueryFilters = useMemo(
     () => ({ status: 'sent', branchId, dateFrom: dateRange.dateFrom, dateTo: dateRange.dateTo }),
@@ -85,7 +106,10 @@ export const TabPendingReceipt: FC<TabPendingReceiptProps> = ({
     setPage,
     setPageSize,
     refetch,
-  } = usePagedQuery(getPurchaseOrdersPage, filters);
+  } = usePagedQuery(getPurchaseOrdersPage, filters, {
+    page: urlState.page,
+    onPageChange: urlState.setPage,
+  });
 
   useEffect(() => {
     if (error) toast.error('No se pudo cargar el listado de pendientes de recepcion.');

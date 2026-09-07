@@ -7,6 +7,7 @@ import { LoadingState } from '@/shared/components/ui/LoadingState';
 import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary';
 import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay';
 import { usePagedQuery } from '@/shared/hooks/usePagedQuery';
+import { useUrlListState } from '@/shared/hooks/useUrlListState';
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
 import { useSessionStore } from '@/shared/state/useSessionStore';
 import {
@@ -47,12 +48,40 @@ function formatDate(isoString: string): string {
 
 export const TabProductHistory: FC<TabProductHistoryProps> = ({ branchId, branchName }) => {
   const empresaId = useSessionStore((s) => s.session?.company.id);
-  const [searchTerm, setSearchTerm] = useState('');
+
+  // Tanda 4 (corrida completa, A13): pagina, orden y busqueda en la
+  // URL, prefijo `hist_`.
+  const urlState = useUrlListState<ProductHistorySortField, 'q'>({
+    prefix: 'hist',
+    sortFields: ['date', 'productName'],
+    filterKeys: ['q'],
+  });
+
+  const [searchTerm, setSearchTerm] = useState(urlState.filters.q ?? '');
   const debouncedSearchTerm = useDebouncedValue(searchTerm, SEARCH_DEBOUNCE_MS);
 
+  useEffect(() => {
+    const current = urlState.filters.q ?? '';
+    if (debouncedSearchTerm !== current) {
+      urlState.setFilter('q', debouncedSearchTerm || undefined);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo debe reaccionar al valor debounceado
+  }, [debouncedSearchTerm]);
+
+  // V3 de VERIFICACION_CORRIDA_COMPLETA.md: si la URL cambia externamente
+  // (back/forward del navegador) mientras el componente sigue montado,
+  // el input debe reflejarlo — sin este efecto quedaba mostrando texto
+  // viejo aunque el listado ya se hubiera re-filtrado segun la URL real.
+  useEffect(() => {
+    // Microtask (mismo patron ya usado en ReprogramarModal/AlertsBell/
+    // RegistrarEntregaModal) para no disparar setState sincronico en
+    // el cuerpo del efecto.
+    Promise.resolve().then(() => setSearchTerm(urlState.filters.q ?? ''));
+  }, [urlState.filters.q]);
+
   const filters: ProductHistoryQueryFilters = useMemo(
-    () => ({ empresaId: empresaId ?? '', branchId, search: debouncedSearchTerm || undefined }),
-    [empresaId, branchId, debouncedSearchTerm]
+    () => ({ empresaId: empresaId ?? '', branchId, search: urlState.filters.q || undefined }),
+    [empresaId, branchId, urlState.filters.q]
   );
 
   const {
@@ -69,7 +98,12 @@ export const TabProductHistory: FC<TabProductHistoryProps> = ({ branchId, branch
     setPageSize,
     setSort,
     refetch,
-  } = usePagedQuery(getProductHistoryPage, filters);
+  } = usePagedQuery(getProductHistoryPage, filters, {
+    page: urlState.page,
+    onPageChange: urlState.setPage,
+    sort: urlState.sort,
+    onSortChange: urlState.setSort,
+  });
 
   useEffect(() => {
     if (error) toast.error('No se pudo cargar el historial del producto.');
