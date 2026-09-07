@@ -359,10 +359,15 @@ export function getOrdersSnapshotForAggregation(): OrderProjectionForAggregation
 // directamente — pasa por httpClient como cualquier otro endpoint de
 // lectura del proyecto.
 // ------------------------------------------------------------
-export async function getOrderById(orderId: OrderId, signal?: AbortSignal): Promise<Order | undefined> {
+export async function getOrderById(
+  empresaId: string,
+  orderId: OrderId,
+  signal?: AbortSignal
+): Promise<Order | undefined> {
   const dto = await httpClient.request<OrderDTO | undefined>({
     method: 'GET',
     path: `/orders/${orderId}`,
+    params: { empresaId },
     signal,
     mock: () => ordersDTOStore.find((d) => d.id === orderId),
   });

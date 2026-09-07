@@ -35,6 +35,7 @@ interface RegistrarEntregaModalProps {
 
 export const RegistrarEntregaModal: FC<RegistrarEntregaModalProps> = ({ isOpen, onClose, delivery, onRegistered }) => {
   const fullName = useSessionStore((s) => s.session?.fullName) ?? 'Usuario';
+  const empresaId = useSessionStore((s) => s.session?.company.id);
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoadingOrder, setIsLoadingOrder] = useState(false);
   const [drafts, setDrafts] = useState<Record<string, LineDraft>>({});
@@ -47,14 +48,14 @@ export const RegistrarEntregaModal: FC<RegistrarEntregaModalProps> = ({ isOpen, 
     // del efecto — evita el cascading render que react-hooks/set-state-in-effect
     // senala (mismo patron ya usado en AlertsBell.tsx, Tanda 7).
     Promise.resolve().then(() => {
-      if (!isOpen || !delivery) {
+      if (!isOpen || !delivery || !empresaId) {
         setOrder(null);
         setDrafts({});
         evidence.reset();
         return;
       }
       setIsLoadingOrder(true);
-      getOrderById(delivery.orderId)
+      getOrderById(empresaId, delivery.orderId)
         .then((found) => {
           setOrder(found ?? null);
           if (found) {
