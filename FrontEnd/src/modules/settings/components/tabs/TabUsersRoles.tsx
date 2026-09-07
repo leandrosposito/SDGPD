@@ -7,13 +7,15 @@ import { ErrorState } from '@/shared/components/ui/ErrorState';
 import { LoadingState } from '@/shared/components/ui/LoadingState';
 import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay';
 import { Pagination } from '@/shared/components/ui/Pagination';
+import { ExportButton, type ExportColumn } from '@/shared/components/ui/ExportButton';
 import { usePagedQuery } from '@/shared/hooks/usePagedQuery';
 import { useUrlListState } from '@/shared/hooks/useUrlListState';
 import { useCachedQuery, CACHE_STALE_TIME } from '@/shared/hooks/useCachedQuery';
 import { useSessionStore } from '@/shared/state/useSessionStore';
-import type { PermissionMatrix } from '@/shared/types/settings.types';
+import type { PermissionMatrix, UserAccount } from '@/shared/types/settings.types';
 import {
   getUsersPage,
+  exportUsers,
   getPermissionsMatrix,
   updateRolePermission,
   type UsersQueryFilters,
@@ -106,11 +108,21 @@ export const TabUsersRoles: FC = () => {
     }
   };
 
+  const exportColumns: ExportColumn<UserAccount>[] = [
+    { header: 'Nombre', accessor: (u) => u.name },
+    { header: 'Email', accessor: (u) => u.email },
+    { header: 'Rol', accessor: (u) => u.role },
+    { header: 'Estado', accessor: (u) => (u.status === 'active' ? 'Activo' : 'Inactivo') },
+  ];
+
   return (
     <>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h3 className="settings-section-title" style={{ marginBottom: 0, borderBottom: 'none' }}>Directorio de Usuarios</h3>
-        <button className="client-modal-btn client-modal-btn--primary">Nuevo Usuario</button>
+        <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
+          <ExportButton fileNamePrefix="usuarios" columns={exportColumns} fetchRows={() => exportUsers(filters)} />
+          <button className="client-modal-btn client-modal-btn--primary">Nuevo Usuario</button>
+        </div>
       </div>
 
       <div style={{ width: '100%' }}>

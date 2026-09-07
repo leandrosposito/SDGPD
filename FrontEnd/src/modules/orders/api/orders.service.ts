@@ -1,6 +1,7 @@
 import type { Order, OrderStatus } from '@/shared/types/order.types';
 import type { OrderId, OrderLineId } from '@/shared/types/ids.types';
-import type { PageQuery, PageResult, DateRangeQueryFilters } from '@/shared/types/pagination.types';
+import type { PageQuery, PageResult, DateRangeQueryFilters, ExportResult } from '@/shared/types/pagination.types';
+import { MAX_EXPORT_ROWS } from '@/shared/types/pagination.types';
 import { ORDERS_MOCK_DATA } from '@/data/mock/orders.data';
 import { httpClient } from '@/shared/api/httpClient';
 import { ApiError } from '@/shared/api/ApiError';
@@ -198,6 +199,39 @@ export async function getOrdersPage(
       todayBilling: pageDTO.meta.aggregates.facturacion_hoy,
     },
   };
+}
+
+// Exportar (tarea transversal, ADR-004): TODO lo que matchea filtros+
+// estado, sin paginar, hasta MAX_EXPORT_ROWS. Reusa filterAndSortOrders
+// (misma logica que getOrdersPage, no duplicada) + el mismo filtro de
+// estado que resolveMockOrdersPage aplica DESPUES de filterAndSortOrders
+// (el estado no participa de matchesFilters a proposito, ver comentario
+// de OrdersAggregates mas arriba).
+export async function exportOrders(
+  filters: OrdersQueryFilters,
+  sort?: { field: OrdersSortField; direction: 'asc' | 'desc' }
+): Promise<ExportResult<Order>> {
+  return httpClient.request<ExportResult<OrderDTO>>({
+    method: 'GET',
+    path: '/orders/export',
+    params: {
+      empresaId: filters.empresaId,
+      search: filters.search,
+      status: filters.status,
+      seller: filters.seller,
+      paymentMethod: filters.paymentMethod,
+      dateFrom: filters.dateFrom,
+      dateTo: filters.dateTo,
+    },
+    mock: () => {
+      const sorted = filterAndSortOrders(filters, sort).filter(
+        (dto) => !filters.status || dto.estado === filters.status
+      );
+      const truncated = sorted.length > MAX_EXPORT_ROWS;
+      const items = sorted.slice(0, MAX_EXPORT_ROWS);
+      return { items: structuredClone(items), truncated };
+    },
+  }).then((result) => ({ items: result.items.map(orderFromDTO), truncated: result.truncated }));
 }
 
 function nextOrderId(): string {

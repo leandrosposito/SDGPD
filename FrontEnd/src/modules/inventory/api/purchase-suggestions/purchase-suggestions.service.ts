@@ -1,6 +1,7 @@
 import type { PurchaseSuggestion } from '@/shared/types/inventory.types';
 import type { Branch } from '@/shared/types/session.types';
-import type { PageQuery, PageResult } from '@/shared/types/pagination.types';
+import type { PageQuery, PageResult, ExportResult } from '@/shared/types/pagination.types';
+import { MAX_EXPORT_ROWS } from '@/shared/types/pagination.types';
 import { INVENTORY_MOCK_DATA } from '@/data/mock/inventory.data';
 import { httpClient } from '@/shared/api/httpClient';
 import type { PurchaseSuggestionDTO, PurchaseSuggestionsPageDTO } from './dto';
@@ -62,6 +63,25 @@ export async function getPurchaseSuggestionsPage(
   };
 }
 
-// Exportar (ADR-004) queda para la Tanda C de esta sesión (agrega
-// ExportButton a los listados que faltan) — este archivo solo cierra
-// la Tanda 3f (paginado server-side), sin ensanchar su alcance.
+// Exportar (Tanda C de esta sesion, ADR-004): TODO lo que matchea
+// branchId+empresaId, sin paginar, hasta MAX_EXPORT_ROWS. Reusa
+// filterAndSortPurchaseSuggestions (misma logica que getPurchaseSuggestionsPage,
+// no duplicada).
+export async function exportPurchaseSuggestions(
+  filters: PurchaseSuggestionsQueryFilters,
+  sort?: { field: PurchaseSuggestionsSortField; direction: 'asc' | 'desc' }
+): Promise<ExportResult<PurchaseSuggestion>> {
+  return httpClient
+    .request<ExportResult<PurchaseSuggestionDTO>>({
+      method: 'GET',
+      path: '/inventory/purchase-suggestions/export',
+      params: { empresaId: filters.empresaId, branchId: filters.branchId },
+      mock: () => {
+        const sorted = filterAndSortPurchaseSuggestions(suggestionsDTOStore, filters, sort);
+        const truncated = sorted.length > MAX_EXPORT_ROWS;
+        const items = sorted.slice(0, MAX_EXPORT_ROWS);
+        return { items: structuredClone(items), truncated };
+      },
+    })
+    .then((result) => ({ items: result.items.map(purchaseSuggestionFromDTO), truncated: result.truncated }));
+}

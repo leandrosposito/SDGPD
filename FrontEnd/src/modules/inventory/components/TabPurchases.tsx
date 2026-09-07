@@ -8,6 +8,7 @@ import { ErrorState } from '@/shared/components/ui/ErrorState';
 import { LoadingState } from '@/shared/components/ui/LoadingState';
 import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary';
 import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay';
+import { ExportButton, type ExportColumn } from '@/shared/components/ui/ExportButton';
 import { usePagedQuery } from '@/shared/hooks/usePagedQuery';
 import { useUrlListState } from '@/shared/hooks/useUrlListState';
 import { useSessionStore } from '@/shared/state/useSessionStore';
@@ -17,6 +18,7 @@ import type { Branch } from '@/shared/types/session.types';
 import type { PageSort } from '@/shared/types/pagination.types';
 import {
   getPurchaseSuggestionsPage,
+  exportPurchaseSuggestions,
   type PurchaseSuggestionsQueryFilters,
   type PurchaseSuggestionsSortField,
 } from '@/modules/inventory/api/purchase-suggestions/purchase-suggestions.service';
@@ -188,6 +190,15 @@ export const TabPurchases: FC<TabPurchasesProps> = ({ branchName, branchId, prod
     }
   };
 
+  const exportColumns: ExportColumn<PurchaseSuggestion>[] = [
+    { header: 'SKU', accessor: (s) => s.sku },
+    { header: 'Producto', accessor: (s) => s.productName },
+    { header: 'Proveedor', accessor: (s) => s.supplierName },
+    { header: 'Stock Actual', accessor: (s) => s.currentStock },
+    { header: 'A Comprar', accessor: (s) => s.suggestedQuantity },
+    { header: 'Costo Est.', accessor: (s) => s.estimatedCost },
+  ];
+
   if (isLoading) {
     return <LoadingState message="Cargando sugerencias de reposicion..." />;
   }
@@ -207,6 +218,7 @@ export const TabPurchases: FC<TabPurchasesProps> = ({ branchName, branchId, prod
             Productos con stock por debajo de su minimo.
           </p>
         </div>
+        <ExportButton fileNamePrefix="reposicion" columns={exportColumns} fetchRows={() => exportPurchaseSuggestions(filters, sort)} />
       </header>
 
       <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)', background: 'var(--color-info-muted)', border: '0.0625rem solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: 'var(--space-2) var(--space-3)', margin: 0 }}>

@@ -8,6 +8,7 @@ import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary';
 import { ErrorState } from '@/shared/components/ui/ErrorState';
 import { LoadingState } from '@/shared/components/ui/LoadingState';
 import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay';
+import { ExportButton, type ExportColumn } from '@/shared/components/ui/ExportButton';
 import { usePagedQuery } from '@/shared/hooks/usePagedQuery';
 import { useUrlListState } from '@/shared/hooks/useUrlListState';
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
@@ -16,7 +17,7 @@ import { OrderFilters } from './components/OrderFilters';
 import { OrderDetailPanel } from './components/OrderDetailPanel';
 import { CreateOrderModal } from './components/create-order/CreateOrderModal';
 import { OrderKpis } from './components/OrderKpis';
-import { getOrdersPage, advanceOrderStatus, cancelOrder, type OrdersQueryFilters } from './api/orders.service';
+import { getOrdersPage, exportOrders, advanceOrderStatus, cancelOrder, type OrdersQueryFilters } from './api/orders.service';
 import './OrdersPage.css';
 
 // ============================================================
@@ -193,6 +194,17 @@ export const OrdersPage: FC = () => {
     refetch();
   };
 
+  const exportColumns: ExportColumn<Order>[] = [
+    { header: 'N Pedido', accessor: (o) => o.orderNumber },
+    { header: 'Fecha', accessor: (o) => formatDate(o.date) },
+    { header: 'Cliente', accessor: (o) => o.clientName },
+    { header: 'Zona', accessor: (o) => o.clientZone },
+    { header: 'Vendedor', accessor: (o) => o.sellerName },
+    { header: 'Forma de Pago', accessor: (o) => o.paymentMethod },
+    { header: 'Estado', accessor: (o) => STATUS_LABEL[o.status] },
+    { header: 'Importe', accessor: (o) => o.totalAmount },
+  ];
+
   return (
     <div className="orders-page page-enter">
       <header className="page-header">
@@ -200,12 +212,15 @@ export const OrdersPage: FC = () => {
           <h2 className="page-header__title">Pedidos y Ventas</h2>
           <p className="page-header__subtitle">Ingreso, seguimiento y gestion de pedidos</p>
         </div>
-        <button
-          className="client-modal-btn client-modal-btn--primary"
-          onClick={() => setIsCreateModalOpen(true)}
-        >
-          Nuevo Pedido
-        </button>
+        <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
+          <ExportButton fileNamePrefix="pedidos" columns={exportColumns} fetchRows={() => exportOrders(filters)} />
+          <button
+            className="client-modal-btn client-modal-btn--primary"
+            onClick={() => setIsCreateModalOpen(true)}
+          >
+            Nuevo Pedido
+          </button>
+        </div>
       </header>
 
       <OrderKpis aggregates={aggregates} />
