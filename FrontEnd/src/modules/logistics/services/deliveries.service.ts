@@ -1,6 +1,6 @@
 import type { Delivery, DeliveryStatus, DeliveryHistoryEvent, ReprogramacionEvent } from '@/shared/types/logistics.types';
 import type { Branch } from '@/shared/types/session.types';
-import type { DeliveryId, OrderLineId } from '@/shared/types/ids.types';
+import type { DeliveryId, OrderLineId, OrderId, BranchId } from '@/shared/types/ids.types';
 import type { DeliveryNote, DeliveryNoteLine } from '@/shared/types/deliveryNote.types';
 import { puedeTransicionar } from '@/shared/types/deliveryStatus.types';
 import type { PageQuery, PageResult, DateRangeQueryFilters, ExportResult } from '@/shared/types/pagination.types';
@@ -41,6 +41,24 @@ let deliveriesStore: Delivery[] = structuredClone(LOGISTICS_MOCK_DATA);
 // Remitos (Tanda 8, ADR-001): append-only, nunca se edita uno
 // existente — registrarEntrega solo agrega.
 let deliveryNotesStore: DeliveryNote[] = [];
+
+// ------------------------------------------------------------
+// getOrderBranchLinksForAggregation — ADR-009 (alcance del dashboard).
+// Llamada "servidor a servidor" (dashboardAggregates.service.ts, otro
+// modulo, la invoca) — mismo criterio que
+// orders.service.ts#getOrdersSnapshotForAggregation/applyDeliveryToOrderLines:
+// la variable de store (`deliveriesStore`) nunca sale de este archivo,
+// solo funciones que la leen bajo control de este service. No pasa
+// por httpClient a proposito, mismo motivo ya documentado ahi.
+//
+// Es la relacion real que permite filtrar pedidos por sucursal sin
+// agregarle branchId a Order (Order es alcance EMPRESA, decision ya
+// cerrada) — un pedido "pertenece" a una sucursal si tiene al menos
+// una Delivery con ese branchId.
+// ------------------------------------------------------------
+export function getOrderBranchLinksForAggregation(): { orderId: OrderId; branchId: BranchId }[] {
+  return deliveriesStore.map((d) => ({ orderId: d.orderId, branchId: d.branchId }));
+}
 
 export function toISODate(date: Date): string {
   const year = date.getFullYear();
