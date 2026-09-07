@@ -1,6 +1,7 @@
 import { useState, useEffect, type FC } from 'react';
 import { Link } from 'react-router-dom';
 import { BranchSelector } from './BranchSelector';
+import { AlertsBell } from './AlertsBell';
 import './Header.css';
 
 // ============================================================
@@ -11,12 +12,6 @@ const IconSearch: FC = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
     <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2"/>
     <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-  </svg>
-);
-
-const IconBell: FC = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-    <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 );
 
@@ -150,15 +145,7 @@ export const Header: FC<HeaderProps> = ({ onRefresh }) => {
           {theme === 'dark' ? <IconSun /> : <IconMoon />}
         </button>
 
-        <button
-          id="header-notifications-btn"
-          className="header__action-btn header__action-btn--notify"
-          aria-label="Notificaciones (3 nuevas)"
-          title="Notificaciones"
-        >
-          <IconBell />
-          <span className="header__notify-badge" aria-hidden="true">3</span>
-        </button>
+        <AlertsBell />
 
         <Link to="/settings" className="header__user" aria-label="Configuración de Usuario" style={{ textDecoration: 'none' }}>
           <div className="header__avatar" aria-hidden="true">

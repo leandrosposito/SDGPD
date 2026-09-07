@@ -5,6 +5,7 @@ import { httpClient } from '@/shared/api/httpClient';
 import { ApiError } from '@/shared/api/ApiError';
 import type { OrderDTO, OrdersPageDTO, OrdersAggregatesDTO } from './dto';
 import { orderFromDTO, orderToDTO, orderFormInputToDTO, type OrderFormInput } from './mapper';
+import type { OrderProjectionForAggregation } from '@/modules/dashboard/api/dashboardAggregates';
 
 export type { OrderFormInput };
 
@@ -326,4 +327,22 @@ export async function cancelOrder(orderId: string): Promise<OrderStatusTransitio
       return { success: true, orderId, previousStatus, newStatus: 'cancelled' };
     },
   });
+}
+
+// ------------------------------------------------------------
+// Proyeccion minima para agregados de OTRO service (Tanda 7 de la
+// corrida completa, dashboardAggregates.service.ts) — NO es un punto
+// de entrada de red (no pasa por httpClient): es una lectura interna
+// "servidor a servidor" del propio store en memoria de este modulo,
+// nunca expuesta a un componente ni cruza hacia afuera del tablero.
+// Devuelve solo los 4 campos que las agrupaciones de
+// dashboardAggregates.ts necesitan, no el DTO completo.
+// ------------------------------------------------------------
+export function getOrdersSnapshotForAggregation(): OrderProjectionForAggregation[] {
+  return ordersDTOStore.map((dto) => ({
+    status: dto.estado,
+    date: dto.fecha,
+    zone: dto.cliente.zona,
+    totalAmount: dto.importes.total,
+  }));
 }
