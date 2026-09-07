@@ -26,6 +26,19 @@ El tablero (`DashboardPage` + `DashboardAggregatesSection`, Tanda 7 de la corrid
 
 El encabezado del tablero muestra siempre el alcance activo elegido (sucursal X / toda la empresa). Además, **cada tarjeta individual muestra su propio alcance real** — no alcanza con un rótulo global si una tarjeta (cuentas por cobrar) no puede honrar ese alcance. Ninguna tarjeta puede mostrar un número sin que quede claro, en la propia tarjeta, a qué recorte corresponde.
 
+### Reconciliación — por qué la suma de los recortes por sucursal NO da el total de empresa (adenda 2026-09-08, verificado contra el mock real, no hipotético)
+
+Esto no es un caso teórico: `ord-004` en el mock tiene 3 `Delivery` — dos desde `branch-001` (`del-004`, `del-010`) y una desde `branch-003` (`del-016`). Confirmado también por el smoke script (`scripts/smoke/adr-009.smoke.mjs`, casos "ord-004 (multi-sucursal) aparece en branch-001" y "...en branch-002" — mismo mecanismo, aplica igual a la combinación real branch-001/branch-003 del mock).
+
+**Dos distorsiones reales y aceptadas, ninguna es un bug:**
+
+1. **Doble conteo en pedidos multi-sucursal.** El `totalAmount` de `ord-004` entra COMPLETO al agregado de `branch-001` Y COMPLETO al de `branch-003` — no se prorratea. Sumar "Ventas por zona" de todas las sucursales una por una da un total MAYOR que "Ventas por zona" visto con el filtro en "Toda la empresa" (que cuenta `ord-004` una sola vez). Es la consecuencia directa y ya aceptada de la decisión de la sección anterior ("si el pedido tiene entregas desde más de una sucursal... cuenta para cada una").
+2. **Pedidos sin ninguna entrega desaparecen de TODAS las vistas por sucursal.** `ord-003` (sin ninguna `Delivery` asociada, confirmado en el mock y por el smoke script: "ord-003 (sin entregas) no aparece en ningun filtro por sucursal") sí aparece en la vista "Toda la empresa" (que no filtra, usa el snapshot completo) pero en NINGUNA vista de sucursal puntual. Sumar "Pedidos por estado" de todas las sucursales una por una da un total MENOR que "Toda la empresa" — los pedidos todavía sin despachar desde ningún depósito quedan fuera de cualquier recorte por sucursal, visibles solo en el agregado de empresa.
+
+**Por qué se acepta así, sin cambiar el comportamiento:** ambas distorsiones son la consecuencia honesta de que la relación pedido↔sucursal es real (vía `Delivery`), no inventada — un pedido que génuinamente se despachó desde dos depósitos genuinamente cuenta para los dos; un pedido que todavía no se despachó desde ningún lado genuinamente no "pertenece" a ninguno todavía. Forzar que sumen (ej. prorrateando `ord-004` a mitades, o inventándole una sucursal a `ord-003`) sería menos honesto que la distorsión misma. La UI debe advertirlo, no ocultarlo: cuando hay un filtro de sucursal activo, la sección muestra una nota aclarando que estos números no van a coincidir con "Toda la empresa" sumados sucursal por sucursal, por las dos razones de arriba.
+
+**Corrección a la sección "Qué se rompe si se cambia" (más abajo):** la afirmación original de que "cada pedido del mock tiene sus entregas en una sola sucursal" era incorrecta — no se verificó contra los datos reales al escribirla. Corregida en esa sección.
+
 ## Alternativas descartadas
 
 1. **Agregar `branchId` a `Order`.** Es la forma "más limpia" de resolver esto en abstracto, pero es un cambio de modelo de datos que toca el mapper/DTO/mock/formulario de creación de pedidos — una tanda aparte, no lo que pide este ADR. La relación vía `Delivery` da el mismo resultado honesto sin ese costo.
@@ -35,6 +48,6 @@ El encabezado del tablero muestra siempre el alcance activo elegido (sucursal X 
 
 ## Qué se rompe si se cambia después
 
-- Si en algún momento se agrega `branchId` real a `Order` (la alternativa #1 descartada), el filtro vía `Delivery` para ventas/pedidos debería migrarse a usar el campo directo — más simple y sin el caso de borde de "pedido con entregas en más de una sucursal". No es una migración destructiva: ambos caminos dan el mismo resultado hoy porque cada pedido del mock tiene sus entregas en una sola sucursal.
+- Si en algún momento se agrega `branchId` real a `Order` (la alternativa #1 descartada), el filtro vía `Delivery` para ventas/pedidos debería migrarse a usar el campo directo — más simple y sin el caso de borde de "pedido con entregas en más de una sucursal" (que SÍ ocurre en el mock real, `ord-004` — ver "Reconciliación" arriba, corrige una afirmación anterior de este mismo documento que decía lo contrario sin haberlo verificado).
 - Si se decide en el futuro modelar `ClientAccount`/facturas con relación a sucursal (ej. "sucursal de venta"), la tarjeta de cuentas por cobrar deja de ser la única excepción "empresa-only" — hay que sacar esa restricción explícitamente del código y de esta decisión, no dejarla como código muerto.
 - Cualquier tarjeta nueva que se agregue al dashboard en el futuro debe declarar explícitamente, desde el día uno, si puede honrar el filtro de sucursal o no — no asumir que "todo lo del dashboard se filtra igual" (exactamente el error que este ADR corrige).
