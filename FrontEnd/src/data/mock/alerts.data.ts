@@ -9,9 +9,9 @@ import type { Alert } from '@/shared/types/alert.types';
 
 export const ALERTS_MOCK_DATA: Alert[] = [
   { id: 'alr-015', tipo: 'producto-por-vencer', severidad: 'alta', creadoEn: '2026-09-07T09:00:00Z', leida: false, productId: 'inv-004', productName: 'Yogur Bebible 1L', branchId: 'branch-001', diasParaVencer: 2 },
-  { id: 'alr-014', tipo: 'transferencia-retrasada', severidad: 'alta', creadoEn: '2026-09-07T08:30:00Z', leida: false, deliveryId: 'del-021', branchDestino: 'Sucursal Centro', diasRetraso: 3 },
+  { id: 'alr-014', tipo: 'transferencia-retrasada', severidad: 'alta', creadoEn: '2026-09-07T08:30:00Z', leida: false, deliveryId: 'del-017', branchDestino: 'Sucursal Centro', diasRetraso: 3 },
   { id: 'alr-013', tipo: 'producto-por-vencer', severidad: 'media', creadoEn: '2026-09-06T18:00:00Z', leida: false, productId: 'inv-011', productName: 'Fiambre Jamon Cocido 500g', branchId: 'branch-002', diasParaVencer: 5 },
-  { id: 'alr-012', tipo: 'transferencia-retrasada', severidad: 'media', creadoEn: '2026-09-06T15:20:00Z', leida: false, deliveryId: 'del-019', branchDestino: 'Sucursal Norte', diasRetraso: 1 },
+  { id: 'alr-012', tipo: 'transferencia-retrasada', severidad: 'media', creadoEn: '2026-09-06T15:20:00Z', leida: false, deliveryId: 'del-018', branchDestino: 'Sucursal Norte', diasRetraso: 1 },
   { id: 'alr-011', tipo: 'producto-por-vencer', severidad: 'baja', creadoEn: '2026-09-06T10:00:00Z', leida: false, productId: 'inv-007', productName: 'Leche Entera 1L', branchId: 'branch-001', diasParaVencer: 9 },
   { id: 'alr-010', tipo: 'transferencia-retrasada', severidad: 'baja', creadoEn: '2026-09-05T17:45:00Z', leida: true, deliveryId: 'del-015', branchDestino: 'Sucursal Centro', diasRetraso: 1 },
   { id: 'alr-009', tipo: 'producto-por-vencer', severidad: 'alta', creadoEn: '2026-09-05T12:00:00Z', leida: true, productId: 'inv-018', productName: 'Queso Cremoso 300g', branchId: 'branch-003', diasParaVencer: 1 },
