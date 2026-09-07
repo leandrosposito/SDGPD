@@ -1,5 +1,6 @@
 import type { Order, OrderStatus } from '@/shared/types/order.types';
 import type { OrderId, OrderLineId } from '@/shared/types/ids.types';
+import { asOrderId } from '@/shared/types/ids.types';
 import type { PageQuery, PageResult, DateRangeQueryFilters, ExportResult } from '@/shared/types/pagination.types';
 import { MAX_EXPORT_ROWS } from '@/shared/types/pagination.types';
 import { ORDERS_MOCK_DATA } from '@/data/mock/orders.data';
@@ -376,6 +377,7 @@ export async function cancelOrder(orderId: string): Promise<OrderStatusTransitio
 // ------------------------------------------------------------
 export function getOrdersSnapshotForAggregation(): OrderProjectionForAggregation[] {
   return ordersDTOStore.map((dto) => ({
+    id: asOrderId(dto.id),
     status: dto.estado,
     date: dto.fecha,
     zone: dto.cliente.zona,

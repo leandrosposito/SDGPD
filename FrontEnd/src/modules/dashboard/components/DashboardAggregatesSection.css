@@ -2,6 +2,44 @@
   margin-top: var(--space-4);
 }
 
+.dashboard-aggregates__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.dashboard-aggregates__heading {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+.dashboard-aggregates__scope {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-tertiary);
+}
+
+.dashboard-aggregates__scope-select {
+  font-size: var(--font-size-sm);
+  padding: var(--space-1) var(--space-2);
+  border: 0.0625rem solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-elevated);
+  color: var(--color-text-primary);
+}
+
+.dashboard-aggregates__card-scope {
+  font-size: var(--font-size-xs, 0.75rem);
+  color: var(--color-text-tertiary);
+  margin: calc(-1 * var(--space-2)) 0 0;
+}
+
 .dashboard-aggregates__loading {
   padding: var(--space-4);
   text-align: center;
