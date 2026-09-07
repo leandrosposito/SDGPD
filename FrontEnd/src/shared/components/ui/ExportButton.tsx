@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import * as XLSX from 'xlsx';
-import { toast } from 'sonner';
 import { FileSpreadsheet, FileText, ChevronDown } from 'lucide-react';
-import { toISODateString } from './dateRangePresets';
+import { useExportJob } from '@/shared/hooks/useExportJob';
+import type { ExportColumn, ExportFetchResult } from '@/shared/api/exports/exportTypes';
 import './ExportButton.css';
 
 // ============================================================
@@ -11,27 +10,23 @@ import './ExportButton.css';
 // criterio que DateRangeFilter/Table/Pagination): ningun listado
 // importa el de otro, todos consumen este componente.
 //
-// No conoce ningun service: recibe `fetchRows` (una funcion que ya
-// trae los datos a exportar, con los filtros vigentes de quien lo usa
-// — ver *.service.ts#exportX) y `columns` (como traducir cada fila a
-// columnas con headers en espanol). Generacion de Excel/CSV con `xlsx`
-// (SheetJS, instalado desde cdn.sheetjs.com — ver DECISIONES_TECNICAS.md
-// para el porque de esa fuente en vez del registry de npm). El CSV se
-// arma con XLSX.utils.sheet_to_csv sobre la misma hoja que arma el
-// Excel (una sola fuente de verdad de las columnas para los dos
-// formatos) y se descarga con un Blob + <a download> nativo, sin
-// sumar file-saver.
+// Tanda 6 (corrida completa, ADR-004): el archivo YA NO se arma aca —
+// este componente no importa `xlsx` ni usa Blob/URL directamente.
+// Delega en useExportJob (crea el job, pollea su estado) que a su vez
+// delega en buildExportFile (la unica pieza que genera el archivo real,
+// simulando "el servidor lo genero"). La firma publica de este
+// componente (fileNamePrefix/columns/fetchRows/disabled/label) es
+// IDENTICA a la version anterior a proposito: los 7 call-sites
+// existentes no cambian ni una linea — solo cambia que ahora "exportar"
+// es un job asincrono con progreso, no una descarga sincrona inmediata.
+//
+// `fetchRows` sigue siendo la funcion que cada listado ya pasa hoy
+// (`() => exportX(filters)`, con `filters` ya sourced de la URL desde
+// Tanda 4) — el contrato "los mismos filtros del listado" del ADR-004
+// ya estaba resuelto antes de esta tanda, no hizo falta tocarlo.
 // ============================================================
 
-export interface ExportColumn<T> {
-  header: string;
-  accessor: (row: T) => string | number;
-}
-
-export interface ExportFetchResult<T> {
-  items: T[];
-  truncated: boolean;
-}
+export type { ExportColumn, ExportFetchResult };
 
 interface ExportButtonProps<T> {
   // Prefijo del nombre de archivo, ej. "ordenes-compra" ->
@@ -47,16 +42,10 @@ interface ExportButtonProps<T> {
   label?: string;
 }
 
-function downloadBlob(blob: Blob, fileName: string) {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-}
+const STATUS_LABEL: Record<string, string> = {
+  pendiente: 'Preparando...',
+  procesando: 'Exportando...',
+};
 
 export function ExportButton<T>({
   fileNamePrefix,
@@ -66,8 +55,8 @@ export function ExportButton<T>({
   label = 'Exportar',
 }: ExportButtonProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const { start, isRunning, status, progress } = useExportJob<T>();
 
   useEffect(() => {
     if (!isOpen) return;
@@ -87,47 +76,14 @@ export function ExportButton<T>({
     };
   }, [isOpen]);
 
-  async function handleExport(format: 'xlsx' | 'csv') {
+  function handleExport(formato: 'xlsx' | 'csv') {
     setIsOpen(false);
-    setIsExporting(true);
-    try {
-      const { items, truncated } = await fetchRows();
-
-      if (items.length === 0) {
-        toast.error('No hay datos para exportar con los filtros actuales.');
-        return;
-      }
-
-      const rows = items.map((row) =>
-        Object.fromEntries(columns.map((col) => [col.header, col.accessor(row)]))
-      );
-      const worksheet = XLSX.utils.json_to_sheet(rows, { header: columns.map((c) => c.header) });
-      const fileName = `${fileNamePrefix}_${toISODateString(new Date())}.${format}`;
-
-      if (format === 'xlsx') {
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, 'Datos');
-        XLSX.writeFile(workbook, fileName);
-      } else {
-        const csv = XLSX.utils.sheet_to_csv(worksheet);
-        // BOM UTF-8: Excel abre el CSV con acentos/ñ correctos en vez
-        // de romper el encoding al doble-clickearlo en Windows.
-        downloadBlob(new Blob(['﻿', csv], { type: 'text/csv;charset=utf-8;' }), fileName);
-      }
-
-      if (truncated) {
-        toast.warning(
-          `Se exportaron las primeras ${items.length} filas: hay mas resultados de los que entran en un solo archivo de export.`
-        );
-      } else {
-        toast.success(`Se exportaron ${items.length} filas a "${fileName}".`);
-      }
-    } catch {
-      toast.error('No se pudo generar el archivo de exportacion.');
-    } finally {
-      setIsExporting(false);
-    }
+    start({ fileNamePrefix, columns, fetchRows, formato });
   }
+
+  const buttonLabel = isRunning
+    ? `${STATUS_LABEL[status] ?? 'Exportando...'} ${progress}%`
+    : label;
 
   return (
     <div className="export-button" ref={containerRef}>
@@ -136,12 +92,12 @@ export function ExportButton<T>({
         className="export-button__trigger"
         aria-haspopup="menu"
         aria-expanded={isOpen}
-        aria-label={isExporting ? 'Exportando...' : 'Exportar listado a Excel o CSV'}
-        disabled={disabled || isExporting}
+        aria-label={isRunning ? `${buttonLabel}` : 'Exportar listado a Excel o CSV'}
+        disabled={disabled || isRunning}
         onClick={() => setIsOpen((prev) => !prev)}
       >
         <FileSpreadsheet size={16} aria-hidden="true" />
-        {isExporting ? 'Exportando...' : label}
+        {buttonLabel}
         <ChevronDown size={14} aria-hidden="true" className={`export-button__chevron${isOpen ? ' export-button__chevron--open' : ''}`} />
       </button>
 
