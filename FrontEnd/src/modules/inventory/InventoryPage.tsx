@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useState, type FC } from 'react';
+import { useEffect, useState, type FC } from 'react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
-import { INVENTORY_MOCK_DATA } from '@/data/mock/inventory.data';
 import type { InventoryItem } from '@/shared/types/inventory.types';
 import { useSessionStore } from '@/shared/state/useSessionStore';
 import { useCachedQuery, CACHE_STALE_TIME } from '@/shared/hooks/useCachedQuery';
@@ -56,10 +55,15 @@ import './InventoryPage.css';
 // autoconsultarse (usePagedQuery + modules/inventory/api/movements y
 // modules/inventory/api/product-history — dominios EXCLUSIVOS de este
 // modulo, a diferencia de products). El padre dejo de repartirles
-// `data` por props. INVENTORY_MOCK_DATA sigue haciendo falta ACA solo
-// por `.suggestions` (TabPurchases, Reposicion — fuera de alcance de
-// 3g, es 3f): `.movements`/`.history` ya no se leen desde este archivo,
-// solo desde los services nuevos.
+// `data` por props.
+//
+// Tanda 3f (cierra la ultima tanda de migracion pendiente, ver
+// AUDIT_2026-09-07_conexion-export-3fg.md): TabPurchases tambien pasa a
+// autoconsultarse (usePagedQuery + modules/inventory/api/purchase-suggestions),
+// asi que este archivo ya NO importa INVENTORY_MOCK_DATA para nada —
+// los 4 dominios de inventory (products via shared/api/, movements,
+// product-history, purchase-suggestions) se leen todos desde su propio
+// service.
 // ============================================================
 
 const USER_ROLE: 'ADMIN' | 'EMPLOYEE' = 'ADMIN';
@@ -108,15 +112,6 @@ export const InventoryPage: FC = () => {
   useEffect(() => {
     if (suppliersError) toast.error('No se pudo cargar el listado de proveedores.');
   }, [suppliersError]);
-
-  // TabPurchases (3.5): sugerencias filtradas por sucursal activa. Es un
-  // filtro simple sobre una lista ya en memoria (mismo criterio que
-  // DeliveryFilters sobre `deliveries`), no un acceso a stock — no pasa
-  // por products.service.
-  const purchaseSuggestions = useMemo(
-    () => INVENTORY_MOCK_DATA.suggestions.filter((s) => s.branchId === activeBranchId),
-    [activeBranchId]
-  );
 
   const handleOpenLotsPanel = (product: InventoryItem) => {
     setSelectedProduct(product);
@@ -219,11 +214,12 @@ export const InventoryPage: FC = () => {
     {
       id: 'purchases',
       label: 'Reposicion',
+      // TabPurchases se autoconsulta (paginado, Tanda 3f): mismo gate
+      // que TabStockCurrent/TabLowStock/TabMovements.
       content: !activeBranchId ? (
         <SkeletonTable rows={3} cols={6} />
       ) : (
         <TabPurchases
-          data={purchaseSuggestions}
           branchName={activeBranchName}
           branchId={activeBranchId}
           products={products}
