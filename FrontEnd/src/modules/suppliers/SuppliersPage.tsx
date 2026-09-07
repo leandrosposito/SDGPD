@@ -73,6 +73,17 @@ export const SuppliersPage: FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- solo debe reaccionar al valor debounceado, no a cada render de urlState
   }, [debouncedSearchTerm]);
 
+  // V3 de VERIFICACION_CORRIDA_COMPLETA.md: si la URL cambia externamente
+  // (back/forward del navegador) mientras el componente sigue montado,
+  // el input debe reflejarlo — sin este efecto quedaba mostrando texto
+  // viejo aunque el listado ya se hubiera re-filtrado segun la URL real.
+  useEffect(() => {
+    // Microtask (mismo patron ya usado en ReprogramarModal/AlertsBell/
+    // RegistrarEntregaModal) para no disparar setState sincronico en
+    // el cuerpo del efecto.
+    Promise.resolve().then(() => setSearchTerm(urlState.filters.q ?? ''));
+  }, [urlState.filters.q]);
+
   const selectedCategory = urlState.filters.category ?? '';
   const setSelectedCategory = (category: string) => urlState.setFilter('category', category || undefined);
 

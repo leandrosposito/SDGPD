@@ -68,6 +68,17 @@ export const TabProductHistory: FC<TabProductHistoryProps> = ({ branchId, branch
     // eslint-disable-next-line react-hooks/exhaustive-deps -- solo debe reaccionar al valor debounceado
   }, [debouncedSearchTerm]);
 
+  // V3 de VERIFICACION_CORRIDA_COMPLETA.md: si la URL cambia externamente
+  // (back/forward del navegador) mientras el componente sigue montado,
+  // el input debe reflejarlo — sin este efecto quedaba mostrando texto
+  // viejo aunque el listado ya se hubiera re-filtrado segun la URL real.
+  useEffect(() => {
+    // Microtask (mismo patron ya usado en ReprogramarModal/AlertsBell/
+    // RegistrarEntregaModal) para no disparar setState sincronico en
+    // el cuerpo del efecto.
+    Promise.resolve().then(() => setSearchTerm(urlState.filters.q ?? ''));
+  }, [urlState.filters.q]);
+
   const filters: ProductHistoryQueryFilters = useMemo(
     () => ({ empresaId: empresaId ?? '', branchId, search: urlState.filters.q || undefined }),
     [empresaId, branchId, urlState.filters.q]
