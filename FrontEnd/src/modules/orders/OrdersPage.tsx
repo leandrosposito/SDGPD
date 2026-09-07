@@ -164,7 +164,11 @@ export const OrdersPage: FC = () => {
   // se actualiza a mano para que el panel refleje el cambio al
   // instante, sin esperar al refetch.
   const handleAdvanceStatus = async (order: Order) => {
-    const result = await advanceOrderStatus(order.id);
+    if (!empresaId) {
+      toast.error('Todavia no hay una sesion activa.');
+      return;
+    }
+    const result = await advanceOrderStatus(empresaId, order.id);
     if (!result.success || !result.newStatus) {
       toast.error('No se pudo actualizar el estado del pedido.');
       return;
@@ -176,7 +180,11 @@ export const OrdersPage: FC = () => {
   };
 
   const handleCancel = async (order: Order) => {
-    const result = await cancelOrder(order.id);
+    if (!empresaId) {
+      toast.error('Todavia no hay una sesion activa.');
+      return;
+    }
+    const result = await cancelOrder(empresaId, order.id);
     if (!result.success) {
       toast.error('No se pudo cancelar el pedido.');
       return;
