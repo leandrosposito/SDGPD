@@ -5,6 +5,8 @@
 // agingLabels.ts/deliveryStatusLabels.ts/purchaseOrderLabels.ts.
 // ============================================================
 
+import { toLocalDateString as toISODateString } from '@/shared/utils/date';
+
 export type DateRangePreset = 'all' | 'today' | 'last7days' | 'thisMonth' | 'thisQuarter' | 'custom';
 
 export interface DateRangeValue {
@@ -33,12 +35,10 @@ export const PRESET_ORDER: readonly DateRangePreset[] = [
 
 type FixedPreset = 'today' | 'last7days' | 'thisMonth' | 'thisQuarter';
 
-export function toISODateString(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
+// Re-exportado con el nombre historico (Fase 0.2 de la corrida completa,
+// delegado al helper unico de shared/utils/date.ts) para no tocar los
+// call-sites existentes (ExportButton.tsx y los de mas abajo).
+export { toISODateString };
 
 // Rango [dateFrom, dateTo] de uno de los 4 presets fijos (no 'all', no
 // 'custom' — esos dos no tienen un rango calculado, ver defaultDateRangeValue).

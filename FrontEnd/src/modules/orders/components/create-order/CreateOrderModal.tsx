@@ -7,6 +7,7 @@ import type { InventoryItem } from '@/shared/types/inventory.types';
 import type { Order } from '@/shared/types/order.types';
 import { fetchProducts } from '@/shared/api/products/products.service';
 import { createOrder, type OrderFormInput } from '@/modules/orders/api/orders.service';
+import { todayLocalDateString } from '@/shared/utils/date';
 
 // Referencia estable: ver mismo patron en ComprasPage/InventoryPage.
 const EMPTY_PRODUCTS: InventoryItem[] = [];
@@ -58,7 +59,7 @@ export const CreateOrderModal: FC<CreateOrderModalProps> = ({ isOpen, onClose, o
   const hasDebtAlert = client.toLowerCase().includes('excedido') || client.toLowerCase().includes('deuda');
 
   // Dates Section State
-  const [orderDate, setOrderDate] = useState(new Date().toISOString().split('T')[0]);
+  const [orderDate, setOrderDate] = useState(todayLocalDateString());
   const [deliveryDate, setDeliveryDate] = useState('');
   const [initialStatus, setInitialStatus] = useState('pending');
 
@@ -82,7 +83,7 @@ export const CreateOrderModal: FC<CreateOrderModalProps> = ({ isOpen, onClose, o
     setSeller('');
     setPaymentMethod('');
     setPriceList('Mayorista');
-    setOrderDate(new Date().toISOString().split('T')[0]);
+    setOrderDate(todayLocalDateString());
     setDeliveryDate('');
     setInitialStatus('pending');
     setItems([]);
