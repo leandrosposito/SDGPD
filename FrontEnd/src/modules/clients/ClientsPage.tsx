@@ -9,6 +9,7 @@ import {
   type ClientsQueryFilters,
 } from './api/clients.service';
 import { usePagedQuery } from '@/shared/hooks/usePagedQuery';
+import { useUrlListState } from '@/shared/hooks/useUrlListState';
 import { useSessionStore } from '@/shared/state/useSessionStore';
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
 import { Pagination } from '@/shared/components/ui/Pagination';
@@ -47,17 +48,46 @@ type ActiveTab = 'directory' | 'accounts' | 'overdue';
 // no uno por tab.
 const SEARCH_DEBOUNCE_MS = 300;
 
+const TAB_VALUES: readonly ActiveTab[] = ['directory', 'accounts', 'overdue'];
+
+function isActiveTab(value: string | undefined): value is ActiveTab {
+  return TAB_VALUES.includes(value as ActiveTab);
+}
+
 export const ClientsPage: FC = () => {
   const empresaId = useSessionStore((s) => s.session?.company.id);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<ActiveTab>('directory');
 
-  // Filters State
-  const [searchQuery, setSearchQuery] = useState('');
-  const [zone, setZone] = useState('');
-  const [seller, setSeller] = useState('');
-  const [status, setStatus] = useState('');
+  // Tanda 4 (corrida completa, A13): tab activa, busqueda/zona/vendedor/
+  // estado (compartidos por las 3 tabs, ver comentario de cabecera) y la
+  // pagina del Directorio viven en la URL, sin prefijo — es el filtro
+  // "principal" de la pagina. Cuentas Corrientes/Morosos tienen su
+  // propia pagina prefijada (`acc_`/`over_`) en sus propios componentes,
+  // pero comparten esta misma busqueda via prop `search`, igual que antes.
+  const urlState = useUrlListState<never, 'q' | 'zone' | 'seller' | 'status' | 'tab'>({
+    filterKeys: ['q', 'zone', 'seller', 'status', 'tab'],
+  });
+
+  const activeTab: ActiveTab = isActiveTab(urlState.filters.tab) ? urlState.filters.tab : 'directory';
+  const setActiveTab = (tab: ActiveTab) => urlState.setFilter('tab', tab === 'directory' ? undefined : tab);
+
+  const [searchQuery, setSearchQuery] = useState(urlState.filters.q ?? '');
   const debouncedSearchQuery = useDebouncedValue(searchQuery, SEARCH_DEBOUNCE_MS);
+
+  useEffect(() => {
+    const current = urlState.filters.q ?? '';
+    if (debouncedSearchQuery !== current) {
+      urlState.setFilter('q', debouncedSearchQuery || undefined);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo debe reaccionar al valor debounceado
+  }, [debouncedSearchQuery]);
+
+  const zone = urlState.filters.zone ?? '';
+  const setZone = (value: string) => urlState.setFilter('zone', value || undefined);
+  const seller = urlState.filters.seller ?? '';
+  const setSeller = (value: string) => urlState.setFilter('seller', value || undefined);
+  const status = urlState.filters.status ?? '';
+  const setStatus = (value: string) => urlState.setFilter('status', value || undefined);
 
   // Directorio de Clientes (Tanda 3d): usePagedQuery server-side,
   // reemplaza al useCachedQuery + filtrado en memoria de Tanda 2.5.
@@ -68,12 +98,12 @@ export const ClientsPage: FC = () => {
   const directoryFilters: ClientsQueryFilters = useMemo(
     () => ({
       empresaId: empresaId ?? '',
-      search: debouncedSearchQuery || undefined,
-      zone: zone || undefined,
-      seller: seller || undefined,
-      status: (status || undefined) as ClientAccount['status'] | undefined,
+      search: urlState.filters.q || undefined,
+      zone: urlState.filters.zone || undefined,
+      seller: urlState.filters.seller || undefined,
+      status: (urlState.filters.status || undefined) as ClientAccount['status'] | undefined,
     }),
-    [empresaId, debouncedSearchQuery, zone, seller, status]
+    [empresaId, urlState.filters.q, urlState.filters.zone, urlState.filters.seller, urlState.filters.status]
   );
 
   const {
@@ -88,7 +118,11 @@ export const ClientsPage: FC = () => {
     setPage,
     setPageSize,
     refetch,
-  } = usePagedQuery(getClientsPage, directoryFilters, { enabled: Boolean(empresaId) });
+  } = usePagedQuery(getClientsPage, directoryFilters, {
+    enabled: Boolean(empresaId),
+    page: urlState.page,
+    onPageChange: urlState.setPage,
+  });
 
   useEffect(() => {
     if (error) toast.error('No se pudo cargar el listado de clientes.');

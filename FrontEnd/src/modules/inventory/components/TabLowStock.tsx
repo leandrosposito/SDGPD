@@ -12,6 +12,7 @@ import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary';
 import { SkeletonTable } from '@/shared/components/ui/SkeletonLoader';
 import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay';
 import { usePagedQuery } from '@/shared/hooks/usePagedQuery';
+import { useUrlListState } from '@/shared/hooks/useUrlListState';
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
 import { ExportButton, type ExportColumn } from '@/shared/components/ui/ExportButton';
 import {
@@ -66,14 +67,31 @@ export const TabLowStock: FC<TabLowStockProps> = ({ branchId, branchName }) => {
   const statusByProductId = useReplenishmentStore((s) => s.statusByProductId);
   const requestReplenishment = useReplenishmentStore((s) => s.requestReplenishment);
 
-  const [searchQuery, setSearchQuery] = useState('');
+  // Tanda 4 (corrida completa, A13): pagina, orden y busqueda viven en
+  // la URL, prefijadas `bajo_` (4 tabs de Inventario montadas en la
+  // misma pagina, cada una con su propio namespace de params).
+  const urlState = useUrlListState<LowStockSortField, 'q'>({
+    prefix: 'bajo',
+    sortFields: ['sku', 'name', 'stock', 'minStock', 'deficit'],
+    filterKeys: ['q'],
+  });
+
+  const [searchQuery, setSearchQuery] = useState(urlState.filters.q ?? '');
   const debouncedSearchQuery = useDebouncedValue(searchQuery, SEARCH_DEBOUNCE_MS);
+
+  useEffect(() => {
+    const current = urlState.filters.q ?? '';
+    if (debouncedSearchQuery !== current) {
+      urlState.setFilter('q', debouncedSearchQuery || undefined);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo debe reaccionar al valor debounceado
+  }, [debouncedSearchQuery]);
 
   // empresaId explicito (Tanda 3e): products.service ahora lo exige en
   // todo metodo, mismo criterio que orders/cash/clients.
   const filters: LowStockQueryFilters = useMemo(
-    () => ({ empresaId: empresaId ?? '', branchId, search: debouncedSearchQuery || undefined }),
-    [empresaId, branchId, debouncedSearchQuery]
+    () => ({ empresaId: empresaId ?? '', branchId, search: urlState.filters.q || undefined }),
+    [empresaId, branchId, urlState.filters.q]
   );
 
   const {
@@ -89,7 +107,12 @@ export const TabLowStock: FC<TabLowStockProps> = ({ branchId, branchName }) => {
     setPage,
     setPageSize,
     setSort,
-  } = usePagedQuery(getLowStockPage, filters);
+  } = usePagedQuery(getLowStockPage, filters, {
+    page: urlState.page,
+    onPageChange: urlState.setPage,
+    sort: urlState.sort,
+    onSortChange: urlState.setSort,
+  });
 
   useEffect(() => {
     if (error) toast.error('No se pudo cargar el listado de bajo stock.');

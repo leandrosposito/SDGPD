@@ -10,6 +10,11 @@ import './BranchSelector.css';
 // (elegible). Dropdown propio con soporte basico de teclado/ARIA:
 // aria-haspopup + aria-expanded en el trigger, role="listbox"/"option"
 // en el menu, cierre con Escape o click afuera.
+//
+// Tanda 4 (corrida completa): agrega dos casos de borde explicitos que
+// antes no tenian tratamiento propio — session.branches.length === 0
+// (sin sucursales, estado no interactivo) y === 1 (una sola sucursal,
+// no debe "estorbar": se muestra estatico, sin boton de dropdown).
 // ============================================================
 
 export const BranchSelector: FC = () => {
@@ -48,7 +53,30 @@ export const BranchSelector: FC = () => {
 
   // Sesion todavia no cargada: placeholder del mismo tamano para que
   // el header no salte de layout cuando la sesion llegue.
-  if (isLoading || !session || !activeBranchId) {
+  if (isLoading || !session) {
+    return (
+      <div className="branch-selector branch-selector--loading">
+        <SkeletonLoader width="11rem" height="2.25rem" borderRadius="var(--radius-md)" />
+      </div>
+    );
+  }
+
+  // Sin sucursales: no hay nada que elegir, y activeBranchId tampoco
+  // deberia resolver a nada real en este caso — estado no interactivo,
+  // sin lanzar ningun error.
+  if (session.branches.length === 0) {
+    return (
+      <div className="branch-selector branch-selector--empty" aria-disabled="true">
+        <Building2 size={16} aria-hidden="true" className="branch-selector__icon" />
+        <span className="branch-selector__text">
+          <span className="branch-selector__company">{session.company.name}</span>
+          <span className="branch-selector__branch">Sin sucursales disponibles</span>
+        </span>
+      </div>
+    );
+  }
+
+  if (!activeBranchId) {
     return (
       <div className="branch-selector branch-selector--loading">
         <SkeletonLoader width="11rem" height="2.25rem" borderRadius="var(--radius-md)" />
@@ -57,6 +85,20 @@ export const BranchSelector: FC = () => {
   }
 
   const activeBranch = session.branches.find((b) => b.id === activeBranchId);
+
+  // Una sola sucursal: no hay nada entre lo que elegir, mostrar estatico
+  // en vez de un dropdown clickeable sin utilidad real.
+  if (session.branches.length === 1) {
+    return (
+      <div className="branch-selector branch-selector--single">
+        <Building2 size={16} aria-hidden="true" className="branch-selector__icon" />
+        <span className="branch-selector__text">
+          <span className="branch-selector__company">{session.company.name}</span>
+          <span className="branch-selector__branch">{activeBranch?.name ?? session.branches[0].name}</span>
+        </span>
+      </div>
+    );
+  }
 
   function handleTriggerKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
     if (event.key === 'ArrowDown' && !isOpen) {

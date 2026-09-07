@@ -1,13 +1,14 @@
-import { useEffect, useMemo, useState, type FC } from 'react';
+import { useEffect, useMemo, type FC } from 'react';
 import { toast } from 'sonner';
 import type { DeliveryStatus } from '@/shared/types/logistics.types';
 import { usePagedQuery } from '@/shared/hooks/usePagedQuery';
+import { useUrlListState } from '@/shared/hooks/useUrlListState';
 import { Pagination } from '@/shared/components/ui/Pagination';
 import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary';
 import { SkeletonTable } from '@/shared/components/ui/SkeletonLoader';
 import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay';
 import { DateRangeFilter } from '@/shared/components/ui/DateRangeFilter';
-import { defaultDateRangeValue, type DateRangeValue } from '@/shared/components/ui/dateRangePresets';
+import { computeDateRangeForPreset, type DateRangeValue } from '@/shared/components/ui/dateRangePresets';
 import { ExportButton, type ExportColumn } from '@/shared/components/ui/ExportButton';
 import { useSessionStore } from '@/shared/state/useSessionStore';
 import type { Delivery } from '@/shared/types/logistics.types';
@@ -44,8 +45,40 @@ const PRIORITY_LABEL: Record<Delivery['priority'], string> = {
 export const LogisticsPage: FC = () => {
   const activeBranchId = useSessionStore((s) => s.activeBranchId);
   const session = useSessionStore((s) => s.session);
-  const [statusFilter, setStatusFilter] = useState<DeliveryStatusFilter>('all');
-  const [dateRange, setDateRange] = useState<DateRangeValue>(() => defaultDateRangeValue('today'));
+
+  // Tanda 4 (corrida completa, A13): pagina, estado y rango de fecha en
+  // la URL — unico listado de esta pagina, sin prefijo.
+  const urlState = useUrlListState<never, 'preset' | 'from' | 'to' | 'status'>({
+    filterKeys: ['preset', 'from', 'to', 'status'],
+  });
+
+  const statusFilter = (urlState.filters.status ?? 'all') as DeliveryStatusFilter;
+  const setStatusFilter = (value: DeliveryStatusFilter) => urlState.setFilter('status', value === 'all' ? undefined : value);
+
+  // Default 'today' (comportamiento historico, antes fijo a "hoy"
+  // hardcodeado): sin preset en la URL, se interpreta 'today' — y como
+  // ningun handlePresetChange corrio todavia para computar dateFrom/
+  // dateTo reales (DateRangeFilter.tsx los computa recien al elegir un
+  // preset), hay que calcularlos ahora mismo con la misma funcion, para
+  // no perder el filtro "solo hoy" en el primer render.
+  const dateRange: DateRangeValue = useMemo(() => {
+    const preset = (urlState.filters.preset as DateRangeValue['preset'] | undefined) ?? 'today';
+    if (urlState.filters.from || urlState.filters.to) {
+      return { preset, dateFrom: urlState.filters.from, dateTo: urlState.filters.to };
+    }
+    if (preset === 'all' || preset === 'custom') {
+      return { preset, dateFrom: undefined, dateTo: undefined };
+    }
+    return { preset, ...computeDateRangeForPreset(preset) };
+  }, [urlState.filters.preset, urlState.filters.from, urlState.filters.to]);
+
+  function setDateRange(next: DateRangeValue) {
+    urlState.setFilters({
+      preset: next.preset === 'today' ? undefined : next.preset,
+      from: next.dateFrom,
+      to: next.dateTo,
+    });
+  }
 
   const activeBranchName = session?.branches.find((b) => b.id === activeBranchId)?.name ?? '';
 
@@ -74,7 +107,11 @@ export const LogisticsPage: FC = () => {
     setPage,
     setPageSize,
     refetch,
-  } = usePagedQuery(getDeliveriesPage, filters, { enabled: activeBranchId !== null });
+  } = usePagedQuery(getDeliveriesPage, filters, {
+    enabled: activeBranchId !== null,
+    page: urlState.page,
+    onPageChange: urlState.setPage,
+  });
 
   useEffect(() => {
     if (error) toast.error('No se pudo cargar la lista de entregas.');
