@@ -1,5 +1,6 @@
 import type { InvoiceRecord } from '@/shared/types/settings.types';
-import type { PageQuery, PageResult } from '@/shared/types/pagination.types';
+import type { PageQuery, PageResult, ExportResult } from '@/shared/types/pagination.types';
+import { MAX_EXPORT_ROWS } from '@/shared/types/pagination.types';
 import { SETTINGS_MOCK_INVOICES } from '@/data/mock/settings.data';
 import { httpClient } from '@/shared/api/httpClient';
 import type { InvoiceRecordDTO, InvoicesPageDTO } from './dto';
@@ -74,4 +75,31 @@ export async function getInvoicesPage(
     page: pageDTO.meta.page,
     pageSize: pageDTO.meta.page_size,
   };
+}
+
+// Exportar (tarea transversal, ADR-004): TODO el historial, sin
+// paginar, hasta MAX_EXPORT_ROWS. Reusa compareInvoices (misma logica
+// de orden que getInvoicesPage, no duplicada) — sin filtros propios
+// (InvoicesQueryFilters solo tiene empresaId).
+export async function exportInvoices(
+  filters: InvoicesQueryFilters,
+  sort?: { field: InvoicesSortField; direction: 'asc' | 'desc' }
+): Promise<ExportResult<InvoiceRecord>> {
+  return httpClient
+    .request<ExportResult<InvoiceRecordDTO>>({
+      method: 'GET',
+      path: '/settings/invoices/export',
+      params: { empresaId: filters.empresaId },
+      mock: () => {
+        const direction = sort?.direction ?? 'desc';
+        const sorted = [...invoicesDTOStore].sort((a, b) => {
+          const cmp = compareInvoices(a, b);
+          return direction === 'asc' ? cmp : -cmp;
+        });
+        const truncated = sorted.length > MAX_EXPORT_ROWS;
+        const items = sorted.slice(0, MAX_EXPORT_ROWS);
+        return { items: structuredClone(items), truncated };
+      },
+    })
+    .then((result) => ({ items: result.items.map(invoiceFromDTO), truncated: result.truncated }));
 }

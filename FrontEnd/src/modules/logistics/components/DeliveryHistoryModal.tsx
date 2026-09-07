@@ -1,6 +1,8 @@
 import type { FC } from 'react';
 import { Modal } from '@/shared/components/ui/Modal';
+import { Badge } from '@/shared/components/ui/Badge';
 import type { Delivery } from '@/shared/types/logistics.types';
+import { isRechazoTotal } from '@/shared/types/deliveryNote.types';
 import { DELIVERY_STATUS_LABEL } from '../deliveryStatusLabels';
 import { getDeliveryNotesForDelivery } from '../services/deliveries.service';
 import './DeliveryHistoryModal.css';
@@ -9,6 +11,10 @@ import './DeliveryHistoryModal.css';
 // DeliveryHistoryModal — historial append-only de una entrega (ADR-002):
 // transiciones de estado, reprogramaciones y remitos aplicados. Panel
 // simple de solo lectura, sin acciones.
+//
+// isRechazoTotal conectada acá (Tanda 8/ADR-002) — antes solo la
+// ejercitaba su propio smoke script, ver
+// docs/auditorias/AUDIT_2026-09-07_conexion-export-3fg.md.
 // ============================================================
 
 interface DeliveryHistoryModalProps {
@@ -59,6 +65,12 @@ export const DeliveryHistoryModal: FC<DeliveryHistoryModalProps> = ({ isOpen, on
                 <li key={note.id}>
                   {note.id} — {note.lines.length} línea(s), {note.creadoPor} ({new Date(note.creadoEn).toLocaleString('es-AR')})
                   {note.evidenciaIds.length > 0 && ` — ${note.evidenciaIds.length} evidencia(s)`}
+                  {isRechazoTotal(note.lines) && (
+                    <>
+                      {' '}
+                      <Badge label="Rechazo total" variant="danger" />
+                    </>
+                  )}
                 </li>
               ))}
             </ul>

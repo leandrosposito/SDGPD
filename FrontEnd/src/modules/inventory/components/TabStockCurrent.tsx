@@ -7,13 +7,18 @@ import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary';
 import { ErrorState } from '@/shared/components/ui/ErrorState';
 import { LoadingState } from '@/shared/components/ui/LoadingState';
 import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay';
+import { ExportButton, type ExportColumn } from '@/shared/components/ui/ExportButton';
 import { usePagedQuery } from '@/shared/hooks/usePagedQuery';
 import { useUrlListState } from '@/shared/hooks/useUrlListState';
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
 import { useSessionStore } from '@/shared/state/useSessionStore';
-import { getStockedProductsPage, type StockedProductsQueryFilters } from '@/shared/api/products/products.service';
+import {
+  getStockedProductsPage,
+  exportStockedProducts,
+  type StockedProductsQueryFilters,
+} from '@/shared/api/products/products.service';
 import { ProductSearchBar } from './ProductSearchBar';
-import type { InventoryItem } from '@/shared/types/inventory.types';
+import type { InventoryItem, StockedInventoryItem } from '@/shared/types/inventory.types';
 import type { Branch } from '@/shared/types/session.types';
 import './TabStockCurrent.css';
 
@@ -60,6 +65,18 @@ function formatCurrency(value: number): string {
     currency: 'ARS',
   }).format(value);
 }
+
+const stockExportColumns: ExportColumn<StockedInventoryItem>[] = [
+  { header: 'Codigo', accessor: (row) => row.sku },
+  { header: 'Cod. Barras', accessor: (row) => row.barcode },
+  { header: 'Nombre', accessor: (row) => row.name },
+  { header: 'Categoria', accessor: (row) => row.category },
+  { header: 'U.M.', accessor: (row) => row.unitOfMeasure },
+  { header: 'Stock Actual', accessor: (row) => row.stock },
+  { header: 'Costo', accessor: (row) => row.cost },
+  { header: 'Valor Stock', accessor: (row) => row.stock * row.cost },
+  { header: 'Estado', accessor: (row) => (row.status === 'active' ? 'ACTIVO' : 'INACTIVO') },
+];
 
 export const TabStockCurrent: FC<TabStockCurrentProps> = ({ branchId, branchName, onOpenLots, onEditProduct, userRole }) => {
   const empresaId = useSessionStore((s) => s.session?.company.id);
@@ -131,7 +148,14 @@ export const TabStockCurrent: FC<TabStockCurrentProps> = ({ branchId, branchName
 
   return (
     <div className="tab-stock">
-      <ProductSearchBar searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+      <div className="tab-stock__toolbar">
+        <ProductSearchBar searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+        <ExportButton
+          fileNamePrefix="stock-actual"
+          columns={stockExportColumns}
+          fetchRows={() => exportStockedProducts(filters)}
+        />
+      </div>
 
       <p className="tab-stock__branch-note">
         Mostrando stock de <strong>{branchName}</strong>. El stock de otras sucursales no se ve aca.

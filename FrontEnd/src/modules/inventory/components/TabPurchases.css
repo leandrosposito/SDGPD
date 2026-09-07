@@ -1,0 +1,24 @@
+/* Header de columna clickeable, orden server-side (Tanda 3f) — mismo
+   patron que .tab-movements__sort-btn / .tab-low-stock__sort-btn. */
+.tab-purchases__sort-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-weight: inherit;
+  font-size: inherit;
+  padding: 0;
+  cursor: pointer;
+  transition: color var(--transition-fast) ease;
+}
+
+.tab-purchases__sort-btn:hover {
+  color: var(--color-text-primary);
+}
+
+.tab-purchases__sort-arrow {
+  color: var(--color-accent);
+  font-size: 0.625rem;
+}

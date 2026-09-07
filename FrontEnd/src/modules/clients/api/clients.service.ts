@@ -133,6 +133,29 @@ export async function getClientsPage(
   };
 }
 
+// Exportar Directorio de Clientes (mismo patron que exportClientAccounts,
+// mas abajo): reusa matchesDirectoryFilters, no duplica el filtro.
+export async function exportClients(
+  filters: ClientsQueryFilters,
+  sort?: { field: ClientsSortField; direction: 'asc' | 'desc' }
+): Promise<ExportResult<ClientAccount>> {
+  return httpClient.request<ExportResult<ClientAccount>>({
+    method: 'GET',
+    path: '/clients/export',
+    params: { empresaId: filters.empresaId, search: filters.search, zone: filters.zone, seller: filters.seller, status: filters.status },
+    mock: () => {
+      const inScope = clientsStore.filter((c) => matchesDirectoryFilters(c, filters));
+      const sorted = [...inScope].sort((a, b) => {
+        const cmp = a.clientName.localeCompare(b.clientName);
+        return sort?.direction === 'desc' ? -cmp : cmp;
+      });
+      const truncated = sorted.length > MAX_EXPORT_ROWS;
+      const items = sorted.slice(0, MAX_EXPORT_ROWS);
+      return { items: structuredClone(items), truncated };
+    },
+  });
+}
+
 // Catalogo completo, sin paginar (Tanda 5, ADR-006/AUDIT_4_IDS_RELACIONES.md
 // hallazgo ALTO #1): alimenta el combobox de seleccion de cliente real de
 // CreateOrderModal — mismo criterio que fetchProducts/fetchSuppliers (un

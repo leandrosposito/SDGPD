@@ -1,5 +1,6 @@
 import type { UserAccount, PermissionMatrix, SystemRole } from '@/shared/types/settings.types';
-import type { PageQuery, PageResult } from '@/shared/types/pagination.types';
+import type { PageQuery, PageResult, ExportResult } from '@/shared/types/pagination.types';
+import { MAX_EXPORT_ROWS } from '@/shared/types/pagination.types';
 import { SETTINGS_MOCK_USERS, SETTINGS_MOCK_PERMISSIONS } from '@/data/mock/settings.data';
 import { httpClient } from '@/shared/api/httpClient';
 import type { UserAccountDTO, UsersPageDTO, PermissionMatrixDTO } from './dto';
@@ -80,6 +81,32 @@ export async function getUsersPage(
     page: pageDTO.meta.page,
     pageSize: pageDTO.meta.page_size,
   };
+}
+
+// Exportar (tarea transversal, ADR-004): TODOS los usuarios, sin
+// paginar, hasta MAX_EXPORT_ROWS. Reusa compareUsers (misma logica de
+// orden que getUsersPage, no duplicada) — sin filtros propios
+// (UsersQueryFilters solo tiene empresaId).
+export async function exportUsers(
+  filters: UsersQueryFilters,
+  sort?: { field: UsersSortField; direction: 'asc' | 'desc' }
+): Promise<ExportResult<UserAccount>> {
+  return httpClient
+    .request<ExportResult<UserAccountDTO>>({
+      method: 'GET',
+      path: '/settings/users/export',
+      params: { empresaId: filters.empresaId },
+      mock: () => {
+        const sorted = [...usersDTOStore].sort((a, b) => {
+          const cmp = compareUsers(a, b);
+          return sort?.direction === 'desc' ? -cmp : cmp;
+        });
+        const truncated = sorted.length > MAX_EXPORT_ROWS;
+        const items = sorted.slice(0, MAX_EXPORT_ROWS);
+        return { items: structuredClone(items), truncated };
+      },
+    })
+    .then((result) => ({ items: result.items.map(userFromDTO), truncated: result.truncated }));
 }
 
 // Matriz completa (4 roles) — vía useCachedQuery en el componente, no

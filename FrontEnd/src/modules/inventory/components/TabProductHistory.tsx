@@ -6,15 +6,18 @@ import { ErrorState } from '@/shared/components/ui/ErrorState';
 import { LoadingState } from '@/shared/components/ui/LoadingState';
 import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary';
 import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay';
+import { ExportButton, type ExportColumn } from '@/shared/components/ui/ExportButton';
 import { usePagedQuery } from '@/shared/hooks/usePagedQuery';
 import { useUrlListState } from '@/shared/hooks/useUrlListState';
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
 import { useSessionStore } from '@/shared/state/useSessionStore';
 import {
   getProductHistoryPage,
+  exportProductHistory,
   type ProductHistoryQueryFilters,
   type ProductHistorySortField,
 } from '@/modules/inventory/api/product-history/product-history.service';
+import type { ProductHistoryEvent } from '@/shared/types/inventory.types';
 import type { Branch } from '@/shared/types/session.types';
 import type { PageSort } from '@/shared/types/pagination.types';
 import './TabProductHistory.css';
@@ -35,6 +38,15 @@ interface TabProductHistoryProps {
   branchId: Branch['id'];
   branchName: string;
 }
+
+const productHistoryExportColumns: ExportColumn<ProductHistoryEvent>[] = [
+  { header: 'Fecha', accessor: (e) => e.date },
+  { header: 'SKU', accessor: (e) => e.sku },
+  { header: 'Producto', accessor: (e) => e.productName },
+  { header: 'Evento', accessor: (e) => e.eventType },
+  { header: 'Descripcion', accessor: (e) => e.description },
+  { header: 'Usuario', accessor: (e) => e.user },
+];
 
 function formatDate(isoString: string): string {
   return new Date(isoString).toLocaleString('es-AR', {
@@ -167,6 +179,11 @@ export const TabProductHistory: FC<TabProductHistoryProps> = ({ branchId, branch
           <p className="tab-history__branch-note">
             Mostrando historial de <strong>{branchName}</strong>.
           </p>
+          <ExportButton
+            fileNamePrefix="historial-producto"
+            columns={productHistoryExportColumns}
+            fetchRows={() => exportProductHistory(filters, sort)}
+          />
         </div>
       </header>
 

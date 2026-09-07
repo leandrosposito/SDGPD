@@ -5,15 +5,18 @@ import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary';
 import { ErrorState } from '@/shared/components/ui/ErrorState';
 import { LoadingState } from '@/shared/components/ui/LoadingState';
 import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay';
+import { ExportButton, type ExportColumn } from '@/shared/components/ui/ExportButton';
 import { usePagedQuery } from '@/shared/hooks/usePagedQuery';
 import { useUrlListState } from '@/shared/hooks/useUrlListState';
 import { useSessionStore } from '@/shared/state/useSessionStore';
+import type { CashTransaction } from '@/shared/types/cash.types';
 import { CashKPIs } from './components/CashKPIs';
 import { CashTransactionsTable } from './components/CashTransactionsTable';
 import { NewTransactionModal } from './components/NewTransactionModal';
 import {
   getCashTransactionsPage,
   createCashTransaction,
+  exportCashTransactions,
   type CashMovementsQueryFilters,
   type CashTransactionFormInput,
 } from './api/cash.service';
@@ -33,6 +36,16 @@ import './CashPage.css';
 // menos usaba `activeBranchId` transitoriamente), acá no hay ninguna
 // referencia a sucursal en todo el módulo.
 // ============================================================
+
+const cashExportColumns: ExportColumn<CashTransaction>[] = [
+  { header: 'Hora', accessor: (t) => t.time },
+  { header: 'Tipo', accessor: (t) => (t.type === 'income' ? 'Ingreso' : 'Egreso') },
+  { header: 'Categoria', accessor: (t) => t.category },
+  { header: 'Entidad', accessor: (t) => t.entity ?? '' },
+  { header: 'Comprobante', accessor: (t) => t.linkedVoucher ?? '' },
+  { header: 'Descripcion', accessor: (t) => t.description },
+  { header: 'Monto', accessor: (t) => t.amount },
+];
 
 export const CashPage: FC = () => {
   const empresaId = useSessionStore((s) => s.session?.company.id);
@@ -97,6 +110,11 @@ export const CashPage: FC = () => {
           <p className="page-header__subtitle">Flujo de ingresos y egresos contables</p>
         </div>
         <div className="page-header__actions">
+          <ExportButton
+            fileNamePrefix="caja"
+            columns={cashExportColumns}
+            fetchRows={() => exportCashTransactions(filters)}
+          />
           <button className="client-modal-btn client-modal-btn--outline" style={{ marginRight: '0.5rem' }}>
             Cierre de Caja
           </button>

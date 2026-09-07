@@ -402,6 +402,25 @@ export async function getStockedProductsPage(
   };
 }
 
+// Exportar Stock Actual (mismo patron que exportLowStock, mas abajo):
+// reusa filterAndSortStockedProducts, no duplica el filtro+orden.
+export async function exportStockedProducts(
+  filters: StockedProductsQueryFilters,
+  sort?: { field: StockedProductSortField; direction: 'asc' | 'desc' }
+): Promise<ExportResult<StockedInventoryItem>> {
+  return httpClient.request<ExportResult<StockedInventoryItem>>({
+    method: 'GET',
+    path: '/products/stock-by-branch/export',
+    params: { empresaId: filters.empresaId, branchId: filters.branchId, search: filters.search },
+    mock: () => {
+      const { sorted } = filterAndSortStockedProducts(filters, sort);
+      const truncated = sorted.length > MAX_EXPORT_ROWS;
+      const items = sorted.slice(0, MAX_EXPORT_ROWS).map(stockedProductFromDTO);
+      return { items, truncated };
+    },
+  });
+}
+
 // ============================================================
 // BAJO STOCK MÍNIMO — PAGINADO SERVER-SIDE (ya existía antes de esta
 // tanda, migrado acá sin cambios de comportamiento). A diferencia de

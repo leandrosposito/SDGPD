@@ -7,10 +7,12 @@ import { ErrorState } from '@/shared/components/ui/ErrorState';
 import { LoadingState } from '@/shared/components/ui/LoadingState';
 import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay';
 import { Pagination } from '@/shared/components/ui/Pagination';
+import { ExportButton, type ExportColumn } from '@/shared/components/ui/ExportButton';
 import { usePagedQuery } from '@/shared/hooks/usePagedQuery';
 import { useUrlListState } from '@/shared/hooks/useUrlListState';
 import { useSessionStore } from '@/shared/state/useSessionStore';
-import { getInvoicesPage, type InvoicesQueryFilters } from '@/modules/settings/api/subscription/subscription.service';
+import { getInvoicesPage, exportInvoices, type InvoicesQueryFilters } from '@/modules/settings/api/subscription/subscription.service';
+import type { InvoiceRecord } from '@/shared/types/settings.types';
 import '@/modules/settings/SettingsPage.css';
 
 // ============================================================
@@ -54,9 +56,19 @@ export const TabSubscription: FC = () => {
     if (error) toast.error('No se pudo cargar el historial de cobros.');
   }, [error]);
 
+  const exportColumns: ExportColumn<InvoiceRecord>[] = [
+    { header: 'Fecha', accessor: (i) => i.date },
+    { header: 'Plan', accessor: (i) => i.plan },
+    { header: 'Monto', accessor: (i) => i.amount },
+    { header: 'Estado', accessor: (i) => (i.status === 'paid' ? 'Pagado' : 'Pendiente') },
+  ];
+
   return (
     <>
-      <h3 className="settings-section-title">Suscripción y Facturación SaaS</h3>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h3 className="settings-section-title">Suscripción y Facturación SaaS</h3>
+        <ExportButton fileNamePrefix="facturas" columns={exportColumns} fetchRows={() => exportInvoices(filters)} />
+      </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-6)' }}>
         <div style={{ background: 'var(--color-bg-base)', padding: 'var(--space-6)', borderRadius: 'var(--radius-lg)', border: '0.0625rem solid var(--color-accent-light)' }}>

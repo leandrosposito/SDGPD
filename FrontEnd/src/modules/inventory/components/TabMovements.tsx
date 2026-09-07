@@ -7,14 +7,17 @@ import { ErrorState } from '@/shared/components/ui/ErrorState';
 import { LoadingState } from '@/shared/components/ui/LoadingState';
 import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary';
 import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay';
+import { ExportButton, type ExportColumn } from '@/shared/components/ui/ExportButton';
 import { usePagedQuery } from '@/shared/hooks/usePagedQuery';
 import { useUrlListState } from '@/shared/hooks/useUrlListState';
 import { useSessionStore } from '@/shared/state/useSessionStore';
 import {
   getMovementsPage,
+  exportMovements,
   type MovementsQueryFilters,
   type MovementsSortField,
 } from '@/modules/inventory/api/movements/movements.service';
+import type { InventoryMovement } from '@/shared/types/inventory.types';
 import type { Branch } from '@/shared/types/session.types';
 import type { PageSort } from '@/shared/types/pagination.types';
 import './TabMovements.css';
@@ -33,6 +36,16 @@ interface TabMovementsProps {
   branchId: Branch['id'];
   branchName: string;
 }
+
+const movementsExportColumns: ExportColumn<InventoryMovement>[] = [
+  { header: 'Fecha', accessor: (m) => m.date },
+  { header: 'SKU', accessor: (m) => m.sku },
+  { header: 'Producto', accessor: (m) => m.productName },
+  { header: 'Tipo', accessor: (m) => (m.type === 'in' ? 'Ingreso' : m.type === 'out' ? 'Egreso' : 'Ajuste') },
+  { header: 'Cantidad', accessor: (m) => m.quantity },
+  { header: 'Usuario', accessor: (m) => m.user },
+  { header: 'Notas', accessor: (m) => m.notes },
+];
 
 function formatDate(isoString: string): string {
   return new Date(isoString).toLocaleString('es-AR', {
@@ -130,9 +143,16 @@ export const TabMovements: FC<TabMovementsProps> = ({ branchId, branchName }) =>
 
   return (
     <div className="tab-movements">
-      <p className="tab-movements__branch-note">
-        Mostrando movimientos de <strong>{branchName}</strong>.
-      </p>
+      <div className="tab-movements__header">
+        <p className="tab-movements__branch-note">
+          Mostrando movimientos de <strong>{branchName}</strong>.
+        </p>
+        <ExportButton
+          fileNamePrefix="movimientos"
+          columns={movementsExportColumns}
+          fetchRows={() => exportMovements(filters)}
+        />
+      </div>
       <ErrorBoundary
         fallbackTitle="No se pudo mostrar el historial de movimientos."
         fallbackMessage="Recarga la pagina para intentar de nuevo."
