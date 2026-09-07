@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FC, type KeyboardEvent } from 'react'
 import { Building2, Check, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSessionStore } from '@/shared/state/useSessionStore';
+import type { Branch } from '@/shared/types/session.types';
 import { SkeletonLoader } from '@/shared/components/ui/SkeletonLoader';
 import './BranchSelector.css';
 
@@ -107,7 +108,7 @@ export const BranchSelector: FC = () => {
     }
   }
 
-  function handleSelect(branchId: string, branchName: string) {
+  function handleSelect(branchId: Branch['id'], branchName: string) {
     setIsOpen(false);
     triggerRef.current?.focus();
 

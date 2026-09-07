@@ -3,6 +3,7 @@
 // ============================================================
 
 import type { DateRangeQueryFilters } from '@/shared/types/pagination.types';
+import type { ClientId } from '@/shared/types/ids.types';
 
 // Moneda de un importe (ISO 4217). El mock incluye ARS y USD (C1,
 // DECISIONES_TECNICAS.md) para poder probar que los importes se
@@ -48,7 +49,7 @@ export type ClientTransaction =
   | ClientAdjustmentTransaction;
 
 export interface ClientAccount {
-  id: string;
+  id: ClientId;
   clientName: string;
   cuit: string;
   address: string;

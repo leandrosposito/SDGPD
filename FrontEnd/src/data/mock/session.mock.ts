@@ -1,4 +1,5 @@
 import type { SessionUser } from '@/shared/types/session.types';
+import { asBranchId } from '@/shared/types/ids.types';
 
 // ============================================================
 // MOCK DATA — Session (empresa, usuario y sucursales)
@@ -19,7 +20,7 @@ export const SESSION_MOCK_DATA: SessionUser = {
   },
   branches: [
     {
-      id: 'branch-001',
+      id: asBranchId('branch-001'),
       name: 'Sucursal Centro',
       code: 'CTR',
       city: 'Cordoba',
@@ -27,7 +28,7 @@ export const SESSION_MOCK_DATA: SessionUser = {
       status: 'active',
     },
     {
-      id: 'branch-002',
+      id: asBranchId('branch-002'),
       name: 'Sucursal Norte',
       code: 'NOR',
       city: 'Cordoba',
@@ -35,7 +36,7 @@ export const SESSION_MOCK_DATA: SessionUser = {
       status: 'active',
     },
     {
-      id: 'branch-003',
+      id: asBranchId('branch-003'),
       name: 'Sucursal Sur',
       code: 'SUR',
       city: 'Cordoba',
@@ -43,7 +44,7 @@ export const SESSION_MOCK_DATA: SessionUser = {
       status: 'active',
     },
     {
-      id: 'branch-004',
+      id: asBranchId('branch-004'),
       name: 'Sucursal Villa Maria (cerrada)',
       code: 'VMA',
       city: 'Villa Maria',
@@ -51,5 +52,5 @@ export const SESSION_MOCK_DATA: SessionUser = {
       status: 'inactive',
     },
   ],
-  defaultBranchId: 'branch-001',
+  defaultBranchId: asBranchId('branch-001'),
 };

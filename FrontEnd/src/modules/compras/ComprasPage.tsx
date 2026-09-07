@@ -16,6 +16,7 @@ import type { Branch } from '@/shared/types/session.types';
 import type { Supplier } from '@/shared/types/supplier.types';
 import type { InventoryItem } from '@/shared/types/inventory.types';
 import type { PurchaseOrder, PurchaseOrderStatus, PurchaseOrdersQueryFilters } from '@/shared/types/purchaseOrder.types';
+import { isBranchId, type BranchId } from '@/shared/types/ids.types';
 import { fetchSuppliers } from '@/modules/suppliers/api/suppliers.service';
 import { fetchProducts, getStockForBranch } from '@/shared/api/products/products.service';
 import { getPurchaseOrdersPage, exportPurchaseOrders, updatePurchaseOrderStatus, computePurchaseOrderTotal } from '@/services/mock/purchaseOrders.service';
@@ -67,6 +68,20 @@ const EMPTY_BRANCHES: Branch[] = [];
 // fallback de useCachedQuery mientras no resolvio.
 const EMPTY_SUPPLIERS: Supplier[] = [];
 const EMPTY_PRODUCTS: InventoryItem[] = [];
+
+// Parseo explicito (ADR-006/Tanda 5) del unico id que este archivo lee
+// desde la URL (el param `sucursal` del deep-link de traspaso, y el
+// filtro `branch` de useUrlListState): un valor mal formado no debe
+// romper el render, se trata como "sin sucursal" con un aviso en
+// consola en vez de silenciarse sin rastro.
+function safeBranchId(raw: string | null | undefined): BranchId | undefined {
+  if (!raw) return undefined;
+  if (!isBranchId(raw)) {
+    console.warn(`ComprasPage: valor de sucursal invalido en la URL, se ignora: "${raw}"`);
+    return undefined;
+  }
+  return raw;
+}
 
 export const ComprasPage: FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -222,7 +237,7 @@ export const ComprasPage: FC = () => {
       return;
     }
 
-    const branchIdParam = searchParams.get('sucursal') ?? activeBranchId ?? undefined;
+    const branchIdParam = safeBranchId(searchParams.get('sucursal')) ?? activeBranchId ?? undefined;
     let cancelled = false;
 
     (async () => {
@@ -276,7 +291,7 @@ export const ComprasPage: FC = () => {
       search: debouncedSearchQuery || undefined,
       supplierId: supplierFilter || undefined,
       status: statusFilter || undefined,
-      branchId: branchFilter || undefined,
+      branchId: safeBranchId(branchFilter),
       dateFrom: dateRange.dateFrom,
       dateTo: dateRange.dateTo,
     }),

@@ -87,7 +87,7 @@ export const LogisticsPage: FC = () => {
   // referencia cuando de verdad cambia sucursal, rango o estado.
   const filters: DeliveryQueryFilters = useMemo(
     () => ({
-      branchId: activeBranchId ?? '',
+      branchId: activeBranchId,
       dateFrom: dateRange.dateFrom,
       dateTo: dateRange.dateTo,
       status: statusFilter === 'all' ? undefined : statusFilter,

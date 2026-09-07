@@ -1,3 +1,4 @@
+import { asBranchId } from '@/shared/types/ids.types';
 import type { InventoryData } from '@/shared/types/inventory.types';
 
 export const INVENTORY_MOCK_DATA: InventoryData = {
@@ -84,7 +85,7 @@ export const INVENTORY_MOCK_DATA: InventoryData = {
       quantity: 500,
       user: 'Admin',
       notes: 'Recepcion OC-0042',
-      branchId: 'branch-001',
+      branchId: asBranchId('branch-001'),
     },
     {
       id: 'mov-002',
@@ -95,7 +96,7 @@ export const INVENTORY_MOCK_DATA: InventoryData = {
       quantity: 100,
       user: 'Ventas',
       notes: 'Pedido PED-00384',
-      branchId: 'branch-001',
+      branchId: asBranchId('branch-001'),
     },
     {
       id: 'mov-003',
@@ -106,7 +107,7 @@ export const INVENTORY_MOCK_DATA: InventoryData = {
       quantity: 12,
       user: 'Admin',
       notes: 'Ajuste por conteo fisico',
-      branchId: 'branch-001',
+      branchId: asBranchId('branch-001'),
     },
     {
       id: 'mov-004',
@@ -117,7 +118,7 @@ export const INVENTORY_MOCK_DATA: InventoryData = {
       quantity: 60,
       user: 'Ventas',
       notes: 'Pedido PED-00379',
-      branchId: 'branch-002',
+      branchId: asBranchId('branch-002'),
     },
     {
       id: 'mov-005',
@@ -128,7 +129,7 @@ export const INVENTORY_MOCK_DATA: InventoryData = {
       quantity: 200,
       user: 'Admin',
       notes: 'Recepcion OC-0044',
-      branchId: 'branch-002',
+      branchId: asBranchId('branch-002'),
     },
     {
       id: 'mov-006',
@@ -139,7 +140,7 @@ export const INVENTORY_MOCK_DATA: InventoryData = {
       quantity: 30,
       user: 'Ventas',
       notes: 'Pedido PED-00391',
-      branchId: 'branch-002',
+      branchId: asBranchId('branch-002'),
     },
     {
       id: 'mov-007',
@@ -150,7 +151,7 @@ export const INVENTORY_MOCK_DATA: InventoryData = {
       quantity: 150,
       user: 'Admin',
       notes: 'Recepcion OC-0041',
-      branchId: 'branch-003',
+      branchId: asBranchId('branch-003'),
     },
     {
       id: 'mov-008',
@@ -161,7 +162,7 @@ export const INVENTORY_MOCK_DATA: InventoryData = {
       quantity: 5,
       user: 'Admin',
       notes: 'Ajuste por rotura',
-      branchId: 'branch-003',
+      branchId: asBranchId('branch-003'),
     },
   ],
   // Sugerencias por sucursal (E1/3.5): una por cada sucursal activa,
@@ -177,7 +178,7 @@ export const INVENTORY_MOCK_DATA: InventoryData = {
       sku: 'YER-MAT-1K',
       productName: 'Yerba Mate 1kg Paquete',
       supplierName: 'Las Marias S.A.C.I.',
-      branchId: 'branch-001',
+      branchId: asBranchId('branch-001'),
       currentStock: 50,
       minStock: 150,
       suggestedQuantity: 300,
@@ -189,7 +190,7 @@ export const INVENTORY_MOCK_DATA: InventoryData = {
       sku: 'ACE-GIR-15',
       productName: 'Aceite de Girasol 1.5L',
       supplierName: 'Molinos Canuelas S.A.',
-      branchId: 'branch-002',
+      branchId: asBranchId('branch-002'),
       currentStock: 0,
       minStock: 180,
       suggestedQuantity: 400,
@@ -201,7 +202,7 @@ export const INVENTORY_MOCK_DATA: InventoryData = {
       sku: 'ACE-OLI-05',
       productName: 'Aceite de Oliva 500ml',
       supplierName: 'Molinos Canuelas S.A.',
-      branchId: 'branch-003',
+      branchId: asBranchId('branch-003'),
       currentStock: 6,
       minStock: 55,
       suggestedQuantity: 100,
@@ -216,7 +217,7 @@ export const INVENTORY_MOCK_DATA: InventoryData = {
       sku: 'DESC-LEG-500',
       productName: 'Producto Descontinuado 500g',
       supplierName: 'Proveedor Desconocido',
-      branchId: 'branch-001',
+      branchId: asBranchId('branch-001'),
       currentStock: 3,
       minStock: 40,
       suggestedQuantity: 60,
@@ -243,7 +244,7 @@ export const INVENTORY_MOCK_DATA: InventoryData = {
       eventType: 'Precio cambiado',
       description: 'Aumento de costo de proveedor un 5%',
       user: 'Admin',
-      branchId: 'branch-001',
+      branchId: asBranchId('branch-001'),
     },
     {
       id: 'hist-002',
@@ -253,7 +254,7 @@ export const INVENTORY_MOCK_DATA: InventoryData = {
       eventType: 'Ingreso',
       description: 'Ingreso +500 desde OC-0042',
       user: 'Admin',
-      branchId: 'branch-001',
+      branchId: asBranchId('branch-001'),
     },
     {
       id: 'hist-003',
@@ -263,7 +264,7 @@ export const INVENTORY_MOCK_DATA: InventoryData = {
       eventType: 'Proveedor actualizado',
       description: 'Cambio de proveedor a Molinos Rio de la Plata',
       user: 'Admin',
-      branchId: 'branch-001',
+      branchId: asBranchId('branch-001'),
     },
     {
       id: 'hist-004',
@@ -273,7 +274,7 @@ export const INVENTORY_MOCK_DATA: InventoryData = {
       eventType: 'Egreso',
       description: 'Egreso -60 por Pedido PED-00379',
       user: 'Ventas',
-      branchId: 'branch-002',
+      branchId: asBranchId('branch-002'),
     },
     {
       id: 'hist-005',
@@ -283,7 +284,7 @@ export const INVENTORY_MOCK_DATA: InventoryData = {
       eventType: 'Ingreso',
       description: 'Ingreso +200 desde OC-0044',
       user: 'Admin',
-      branchId: 'branch-002',
+      branchId: asBranchId('branch-002'),
     },
     {
       id: 'hist-006',
@@ -293,7 +294,7 @@ export const INVENTORY_MOCK_DATA: InventoryData = {
       eventType: 'Egreso',
       description: 'Egreso -30 por Pedido PED-00391',
       user: 'Ventas',
-      branchId: 'branch-002',
+      branchId: asBranchId('branch-002'),
     },
     {
       id: 'hist-007',
@@ -303,7 +304,7 @@ export const INVENTORY_MOCK_DATA: InventoryData = {
       eventType: 'Ingreso',
       description: 'Ingreso +150 desde OC-0041',
       user: 'Admin',
-      branchId: 'branch-003',
+      branchId: asBranchId('branch-003'),
     },
     {
       id: 'hist-008',
@@ -313,7 +314,7 @@ export const INVENTORY_MOCK_DATA: InventoryData = {
       eventType: 'Ajuste',
       description: 'Ajuste -5 por rotura',
       user: 'Admin',
-      branchId: 'branch-003',
+      branchId: asBranchId('branch-003'),
     },
   ],
 };

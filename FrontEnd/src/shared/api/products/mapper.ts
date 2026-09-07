@@ -1,4 +1,5 @@
 import type { InventoryItem, ProductLot, ProductStock, StockedInventoryItem } from '@/shared/types/inventory.types';
+import { asBranchId } from '@/shared/types/ids.types';
 import type {
   ProductLotDTO,
   ProductDTO,
@@ -87,7 +88,7 @@ export function productToDTO(item: InventoryItem): ProductDTO {
 export function productStockFromDTO(dto: ProductStockDTO): ProductStock {
   return {
     productId: dto.producto_id,
-    branchId: dto.sucursal_id,
+    branchId: asBranchId(dto.sucursal_id),
     stock: dto.stock,
     minStock: dto.stock_minimo,
   };
@@ -107,7 +108,7 @@ export function stockedProductFromDTO(dto: StockedProductDTO): StockedInventoryI
   return {
     ...productFromDTO(dto),
     productId: dto.producto_id,
-    branchId: dto.sucursal_id,
+    branchId: asBranchId(dto.sucursal_id),
     stock: dto.stock,
     minStock: dto.stock_minimo,
   };

@@ -41,7 +41,11 @@ export function toISODate(date: Date): string {
 // "Hoy" como default (dateFrom=dateTo=hoy es equivalente al viejo
 // comportamiento fijo), pero ahora el usuario puede elegir otro rango.
 export interface DeliveryQueryFilters extends DateRangeQueryFilters {
-  branchId: Branch['id'];
+  // null solo mientras activeBranchId todavia no cargo — LogisticsPage
+  // pasa `enabled: activeBranchId !== null` a usePagedQuery para ese
+  // caso, asi que matchesScope nunca ve null en la practica (Tanda 5,
+  // ADR-006: branding de BranchId no permite un placeholder '' valido).
+  branchId: Branch['id'] | null;
   // undefined = todos los estados (filtro "Todas" en DeliveryFilters).
   status?: DeliveryStatus;
 }
@@ -120,7 +124,7 @@ export async function getDeliveriesPage(
     method: 'GET',
     path: '/deliveries',
     params: {
-      branchId: query.filters.branchId,
+      branchId: query.filters.branchId ?? undefined,
       status: query.filters.status,
       dateFrom: query.filters.dateFrom,
       dateTo: query.filters.dateTo,
@@ -179,7 +183,7 @@ export async function exportDeliveries(
   return httpClient.request<ExportResult<Delivery>>({
     method: 'GET',
     path: '/deliveries/export',
-    params: { branchId: filters.branchId, status: filters.status, dateFrom: filters.dateFrom, dateTo: filters.dateTo },
+    params: { branchId: filters.branchId ?? undefined, status: filters.status, dateFrom: filters.dateFrom, dateTo: filters.dateTo },
     mock: () => {
       const inScope = filterDeliveriesInScope(filters);
       const filtered = filters.status ? inScope.filter((d) => d.status === filters.status) : inScope;

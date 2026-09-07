@@ -1,4 +1,5 @@
 import type { ClientAccount } from '@/shared/types/client.types';
+import { asClientId } from '@/shared/types/ids.types';
 import type { ClientAccountDTO, ClientFormPayloadDTO } from './dto';
 
 // ============================================================
@@ -20,7 +21,7 @@ export type ClientFormInput = Pick<
 
 export function clientFromDTO(dto: ClientAccountDTO): ClientAccount {
   return {
-    id: dto.id,
+    id: asClientId(dto.id),
     clientName: dto.cliente.razon_social,
     cuit: dto.cliente.cuit,
     address: dto.cliente.direccion,

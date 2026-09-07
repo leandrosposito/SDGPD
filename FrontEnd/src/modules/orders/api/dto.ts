@@ -33,6 +33,7 @@ export interface OrderDTO {
   numero_pedido: string;
   fecha: string;
   cliente: {
+    id: string;
     nombre: string;
     direccion: string;
     zona: string;
@@ -87,6 +88,7 @@ export interface OrdersPageDTO {
 // propio servidor), nunca el cliente.
 export interface CreateOrderDTO {
   cliente: {
+    id: string;
     nombre: string;
     direccion: string;
     zona: string;

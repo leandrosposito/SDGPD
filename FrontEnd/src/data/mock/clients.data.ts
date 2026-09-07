@@ -1,3 +1,4 @@
+import { asClientId } from '@/shared/types/ids.types';
 import type { ClientAccount } from '@/shared/types/client.types';
 
 // ============================================================
@@ -60,7 +61,7 @@ function issuedFor(dueDays: number, termDays = 30): string {
 export const CLIENTS_MOCK_DATA: ClientAccount[] = [
   // --- Tramo 1-30, borde: vencio hace 2 dias ---
   {
-    id: 'cli-001',
+    id: asClientId('cli-001'),
     clientName: 'Almacen La Esquina',
     cuit: '30-71234567-8',
     address: 'Av. Belgrano 1234',
@@ -89,7 +90,7 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
   },
   // --- Tramo 31-60 ---
   {
-    id: 'cli-002',
+    id: asClientId('cli-002'),
     clientName: 'Distribuidora San Martin',
     cuit: '30-87654321-9',
     address: 'San Martin 567',
@@ -118,7 +119,7 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
   },
   // --- Tramo 61-90 + excede limite de credito ---
   {
-    id: 'cli-003',
+    id: asClientId('cli-003'),
     clientName: 'Kiosco El Paso (Excedido)',
     cuit: '27-12345678-0',
     address: 'Rivadavia 890',
@@ -147,7 +148,7 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
   },
   // --- Al dia: factura vieja, totalmente pagada ---
   {
-    id: 'cli-004',
+    id: asClientId('cli-004'),
     clientName: 'Supermercado Lider',
     cuit: '30-11223344-5',
     address: 'San Martin 567',
@@ -186,7 +187,7 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
   },
   // --- Tramo 90+ ---
   {
-    id: 'cli-005',
+    id: asClientId('cli-005'),
     clientName: 'Almacen Don Pedro',
     cuit: '20-22334455-6',
     address: 'Av. Colon 220',
@@ -215,7 +216,7 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
   },
   // --- Deuda en varios tramos a la vez (1-30 y 61-90) ---
   {
-    id: 'cli-006',
+    id: asClientId('cli-006'),
     clientName: 'Despensa Los Pinos',
     cuit: '30-33445566-7',
     address: 'Sarmiento 111',
@@ -255,7 +256,7 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
   },
   // --- Pago parcial: la factura queda abierta por el saldo ---
   {
-    id: 'cli-007',
+    id: asClientId('cli-007'),
     clientName: 'Kiosco Central',
     cuit: '27-44556677-8',
     address: '25 de Mayo 45',
@@ -294,7 +295,7 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
   },
   // --- Saldo a favor: el pago excede el total de la factura ---
   {
-    id: 'cli-008',
+    id: asClientId('cli-008'),
     clientName: 'Maxikiosco Norte',
     cuit: '30-55667788-9',
     address: 'Mitre 432',
@@ -333,7 +334,7 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
   },
   // --- Al dia: cliente nuevo, sin transacciones ---
   {
-    id: 'cli-009',
+    id: asClientId('cli-009'),
     clientName: 'Minimarket Don Jose',
     cuit: '20-66778899-0',
     address: 'Alem 300',
@@ -350,7 +351,7 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
   },
   // --- Tramo 90+ + excede limite de credito ---
   {
-    id: 'cli-010',
+    id: asClientId('cli-010'),
     clientName: 'Almacen Sur',
     cuit: '30-77889900-1',
     address: 'Peron 998',
@@ -379,7 +380,7 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
   },
   // --- Factura NO vencida todavia: no debe aparecer como moroso ---
   {
-    id: 'cli-011',
+    id: asClientId('cli-011'),
     clientName: 'Autoservicio La Familia',
     cuit: '27-88990011-2',
     address: 'Urquiza 77',
@@ -408,7 +409,7 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
   },
   // --- Tramo 31-60 ---
   {
-    id: 'cli-012',
+    id: asClientId('cli-012'),
     clientName: 'Distribuidora del Centro',
     cuit: '30-99001122-3',
     address: 'Av. Rivadavia 2200',
@@ -437,7 +438,7 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
   },
   // --- Tramo 1-30 ---
   {
-    id: 'cli-013',
+    id: asClientId('cli-013'),
     clientName: 'Kiosco 24hs',
     cuit: '27-00112233-4',
     address: 'Independencia 456',
@@ -466,7 +467,7 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
   },
   // --- Tramo 61-90 ---
   {
-    id: 'cli-014',
+    id: asClientId('cli-014'),
     clientName: 'Almacen Norte',
     cuit: '30-11002233-5',
     address: 'Av. Belgrano 3400',
@@ -495,7 +496,7 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
   },
   // --- Deuda en varios tramos a la vez (31-60 y 90+) ---
   {
-    id: 'cli-015',
+    id: asClientId('cli-015'),
     clientName: 'Supermercado El Sol',
     cuit: '30-22003344-6',
     address: 'San Martin 890',
@@ -535,7 +536,7 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
   },
   // --- Pago parcial + ajuste de credito (ambos se imputan FIFO) ---
   {
-    id: 'cli-016',
+    id: asClientId('cli-016'),
     clientName: 'Despensa Rivadavia',
     cuit: '27-33004455-7',
     address: 'Rivadavia 1500',
@@ -584,7 +585,7 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
   },
   // --- Al dia: factura vieja totalmente pagada ---
   {
-    id: 'cli-017',
+    id: asClientId('cli-017'),
     clientName: 'Kiosco Belgrano',
     cuit: '30-44005566-8',
     address: 'Av. Belgrano 800',
@@ -623,7 +624,7 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
   },
   // --- Tramo 1-30 ---
   {
-    id: 'cli-018',
+    id: asClientId('cli-018'),
     clientName: 'Distribuidora Mitre',
     cuit: '27-55006677-9',
     address: 'Mitre 200',
@@ -652,7 +653,7 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
   },
   // --- Ajuste de debito (recargo) que NO se imputa ni entra en aging ---
   {
-    id: 'cli-019',
+    id: asClientId('cli-019'),
     clientName: 'Almacen Alberdi',
     cuit: '30-66007788-0',
     address: 'Alberdi 640',
@@ -691,7 +692,7 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
   },
   // --- Tramo 61-90 ---
   {
-    id: 'cli-020',
+    id: asClientId('cli-020'),
     clientName: 'Minimarket Urquiza',
     cuit: '27-77008899-1',
     address: 'Urquiza 990',
@@ -720,7 +721,7 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
   },
   // --- Tramo 90+, monto grande ---
   {
-    id: 'cli-021',
+    id: asClientId('cli-021'),
     clientName: 'Kiosco Sarmiento',
     cuit: '30-88009900-2',
     address: 'Sarmiento 1200',
@@ -749,7 +750,7 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
   },
   // --- Al dia: sin transacciones ---
   {
-    id: 'cli-022',
+    id: asClientId('cli-022'),
     clientName: 'Autoservicio Moreno',
     cuit: '27-99001100-3',
     address: 'Moreno 340',
@@ -766,7 +767,7 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
   },
   // --- Multi-tramo (1-30 y 31-60) + excede limite de credito ---
   {
-    id: 'cli-023',
+    id: asClientId('cli-023'),
     clientName: 'Distribuidora Alem',
     cuit: '30-00112200-4',
     address: 'Alem 780',
@@ -806,7 +807,7 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
   },
   // --- Al dia: factura vieja pagada al contado ---
   {
-    id: 'cli-024',
+    id: asClientId('cli-024'),
     clientName: 'Almacen Peron',
     cuit: '27-11223300-5',
     address: 'Peron 450',
@@ -845,7 +846,7 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
   },
   // --- Tramo 31-60 ---
   {
-    id: 'cli-025',
+    id: asClientId('cli-025'),
     clientName: 'Kiosco Independencia',
     cuit: '30-22334400-6',
     address: 'Independencia 900',
@@ -874,7 +875,7 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
   },
   // --- Al dia, con factura NO vencida ademas de una vieja ya pagada ---
   {
-    id: 'cli-026',
+    id: asClientId('cli-026'),
     clientName: 'Supermercado Rivadavia',
     cuit: '27-33445500-7',
     address: 'Rivadavia 2100',
@@ -924,7 +925,7 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
   },
   // --- Deuda en varios tramos a la vez (61-90 y 90+) ---
   {
-    id: 'cli-027',
+    id: asClientId('cli-027'),
     clientName: 'Distribuidora Belgrano',
     cuit: '30-44556600-8',
     address: 'Av. Belgrano 5500',
@@ -964,7 +965,7 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
   },
   // --- Tramo 1-30 ---
   {
-    id: 'cli-028',
+    id: asClientId('cli-028'),
     clientName: 'Almacen San Martin (Sur)',
     cuit: '27-55667700-9',
     address: 'San Martin 3300',
@@ -993,7 +994,7 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
   },
   // --- Tramo 1-30 ---
   {
-    id: 'cli-029',
+    id: asClientId('cli-029'),
     clientName: 'Kiosco La Paz',
     cuit: '30-66778800-0',
     address: 'La Paz 210',
@@ -1023,7 +1024,7 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
   // --- Deuda en dos monedas a la vez (ARS y USD), pago que solo cubre
   // una de las dos (C1: prueba que la imputacion no cruza monedas) ---
   {
-    id: 'cli-030',
+    id: asClientId('cli-030'),
     clientName: 'Comercial Multimoneda SRL',
     cuit: '30-90112233-4',
     address: 'Av. Libertador 4400',

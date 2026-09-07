@@ -1,4 +1,5 @@
 import type { ProductHistoryEvent } from '@/shared/types/inventory.types';
+import { asBranchId } from '@/shared/types/ids.types';
 import type { ProductHistoryEventDTO } from './dto';
 
 // ============================================================
@@ -15,7 +16,7 @@ export function productHistoryEventFromDTO(dto: ProductHistoryEventDTO): Product
     eventType: dto.tipo_evento,
     description: dto.descripcion,
     user: dto.usuario,
-    branchId: dto.sucursal_id,
+    branchId: asBranchId(dto.sucursal_id),
   };
 }
 

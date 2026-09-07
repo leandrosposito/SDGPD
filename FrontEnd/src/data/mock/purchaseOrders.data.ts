@@ -1,3 +1,4 @@
+import { asBranchId } from '@/shared/types/ids.types';
 import type { PurchaseOrder } from '@/shared/types/purchaseOrder.types';
 
 // ============================================================
@@ -53,7 +54,7 @@ export const PURCHASE_ORDERS_MOCK_DATA: PurchaseOrder[] = [
   {
     id: 'po-001',
     supplierId: 'sup-001',
-    branchId: 'branch-001',
+    branchId: asBranchId('branch-001'),
     currency: 'ARS',
     status: 'draft',
     createdAt: '2026-08-20T09:00:00Z',
@@ -63,7 +64,7 @@ export const PURCHASE_ORDERS_MOCK_DATA: PurchaseOrder[] = [
   {
     id: 'po-002',
     supplierId: 'sup-002',
-    branchId: 'branch-002',
+    branchId: asBranchId('branch-002'),
     currency: 'ARS',
     status: 'sent',
     createdAt: '2026-08-15T11:30:00Z',
@@ -79,7 +80,7 @@ export const PURCHASE_ORDERS_MOCK_DATA: PurchaseOrder[] = [
   {
     id: 'po-003',
     supplierId: 'sup-003',
-    branchId: 'branch-003',
+    branchId: asBranchId('branch-003'),
     currency: 'ARS',
     status: 'cancelled',
     createdAt: '2026-08-10T14:00:00Z',
@@ -89,7 +90,7 @@ export const PURCHASE_ORDERS_MOCK_DATA: PurchaseOrder[] = [
   {
     id: 'po-004',
     supplierId: 'sup-001',
-    branchId: 'branch-002',
+    branchId: asBranchId('branch-002'),
     currency: 'ARS',
     status: 'received',
     createdAt: '2026-07-28T08:45:00Z',
@@ -99,7 +100,7 @@ export const PURCHASE_ORDERS_MOCK_DATA: PurchaseOrder[] = [
   {
     id: 'po-005',
     supplierId: 'sup-002',
-    branchId: 'branch-001',
+    branchId: asBranchId('branch-001'),
     currency: 'ARS',
     status: 'received',
     createdAt: '2026-06-30T10:00:00Z',
@@ -109,7 +110,7 @@ export const PURCHASE_ORDERS_MOCK_DATA: PurchaseOrder[] = [
   {
     id: 'po-006',
     supplierId: 'sup-001',
-    branchId: 'branch-003',
+    branchId: asBranchId('branch-003'),
     currency: 'USD',
     status: 'sent',
     createdAt: '2026-08-22T09:00:00Z',
@@ -118,7 +119,7 @@ export const PURCHASE_ORDERS_MOCK_DATA: PurchaseOrder[] = [
   {
     id: 'po-007',
     supplierId: 'sup-003',
-    branchId: 'branch-001',
+    branchId: asBranchId('branch-001'),
     currency: 'USD',
     status: 'draft',
     createdAt: '2026-08-25T16:20:00Z',
@@ -131,7 +132,7 @@ export const PURCHASE_ORDERS_MOCK_DATA: PurchaseOrder[] = [
 // moneda para cubrir la matriz completa varias veces con datos
 // reproducibles entre corridas.
 const SUPPLIER_IDS = ['sup-001', 'sup-002', 'sup-003'];
-const BRANCH_IDS = ['branch-001', 'branch-002', 'branch-003'];
+const BRANCH_IDS = ['branch-001', 'branch-002', 'branch-003'].map(asBranchId);
 const STATUSES: PurchaseOrder['status'][] = ['draft', 'sent', 'received', 'cancelled'];
 const CURRENCIES: PurchaseOrder['currency'][] = ['ARS', 'USD'];
 

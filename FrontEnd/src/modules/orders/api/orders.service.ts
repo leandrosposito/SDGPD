@@ -199,11 +199,21 @@ export async function getOrdersPage(
 }
 
 function nextOrderId(): string {
+  // Devuelve string (no OrderId): OrderDTO.id es la forma "de red"
+  // (plano), el branding ocurre en el mapper al volver a dominio
+  // (orderFromDTO) — mismo criterio que el resto de los ids DTO.
   return `ord-${Date.now()}`;
 }
 
 function nextOrderNumber(): string {
   return `PED-${Date.now().toString().slice(-5)}`;
+}
+
+// Id de linea (OrderLineId, Tanda 5/ADR-006) asignado por el service,
+// nunca por el cliente — `index` evita colisiones entre lineas del
+// mismo pedido creadas en el mismo milisegundo (Date.now() solo).
+function nextOrderLineId(index: number): string {
+  return `oi-${Date.now()}-${index}`;
 }
 
 // RF-PED-001: alta manual (CreateOrderModal). `source` siempre
@@ -224,6 +234,7 @@ export async function createOrder(empresaId: string, input: OrderFormInput): Pro
         numero_pedido: nextOrderNumber(),
         fecha: now,
         cliente: {
+          id: input.clientId,
           nombre: input.clientName,
           direccion: input.clientAddress,
           zona: input.clientZone,
@@ -239,8 +250,8 @@ export async function createOrder(empresaId: string, input: OrderFormInput): Pro
           total: input.totalAmount,
         },
         notas: input.notes,
-        items: input.items.map((item) => ({
-          id: item.id,
+        items: input.items.map((item, index) => ({
+          id: nextOrderLineId(index),
           sku: item.sku,
           nombre: item.name,
           cantidad: item.quantity,
