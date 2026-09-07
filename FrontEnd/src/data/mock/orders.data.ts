@@ -24,9 +24,9 @@ export const ORDERS_MOCK_DATA: Order[] = [
     totalAmount: 57172.5,
     notes: 'Entregar antes del mediodia.',
     items: [
-      { id: asOrderLineId('oi-101'), sku: 'ACE-GIR-15', name: 'Aceite Girasol 1.5L', quantity: 12, unitPrice: 2100, subtotal: 25200 },
-      { id: asOrderLineId('oi-102'), sku: 'YER-TAR-1K', name: 'Yerba Taragui 1kg', quantity: 6,  unitPrice: 3600, subtotal: 21600 },
-      { id: asOrderLineId('oi-103'), sku: 'GAL-SUR-200', name: 'Galletitas Surtidas 200g', quantity: 1, unitPrice: 450, subtotal: 450 },
+      { id: asOrderLineId('oi-101'), sku: 'ACE-GIR-15', name: 'Aceite Girasol 1.5L', quantity: 12, unitPrice: 2100, subtotal: 25200, cantidadEntregada: 0 },
+      { id: asOrderLineId('oi-102'), sku: 'YER-TAR-1K', name: 'Yerba Taragui 1kg', quantity: 6,  unitPrice: 3600, subtotal: 21600, cantidadEntregada: 0 },
+      { id: asOrderLineId('oi-103'), sku: 'GAL-SUR-200', name: 'Galletitas Surtidas 200g', quantity: 1, unitPrice: 450, subtotal: 450, cantidadEntregada: 0 },
     ],
     history: [
       { id: 'h1', date: '2026-06-13T08:15:00Z', status: 'pending', description: 'Pedido ingresado via Mobile App' }
@@ -50,9 +50,9 @@ export const ORDERS_MOCK_DATA: Order[] = [
     totalAmount: 227964,
     notes: '',
     items: [
-      { id: asOrderLineId('oi-201'), sku: 'ACE-GIR-15', name: 'Aceite Girasol 1.5L', quantity: 48, unitPrice: 2100, subtotal: 100800 },
-      { id: asOrderLineId('oi-202'), sku: 'ACE-OLI-05', name: 'Aceite Oliva 500ml', quantity: 12, unitPrice: 5600, subtotal: 67200 },
-      { id: asOrderLineId('oi-203'), sku: 'YER-UNI-05', name: 'Yerba Union 500g', quantity: 20, unitPrice: 1520, subtotal: 30400 },
+      { id: asOrderLineId('oi-201'), sku: 'ACE-GIR-15', name: 'Aceite Girasol 1.5L', quantity: 48, unitPrice: 2100, subtotal: 100800, cantidadEntregada: 0 },
+      { id: asOrderLineId('oi-202'), sku: 'ACE-OLI-05', name: 'Aceite Oliva 500ml', quantity: 12, unitPrice: 5600, subtotal: 67200, cantidadEntregada: 0 },
+      { id: asOrderLineId('oi-203'), sku: 'YER-UNI-05', name: 'Yerba Union 500g', quantity: 20, unitPrice: 1520, subtotal: 30400, cantidadEntregada: 0 },
     ],
     history: [
       { id: 'h2', date: '2026-06-13T07:45:00Z', status: 'pending', description: 'Pedido ingresado via Mobile App' },
@@ -77,8 +77,8 @@ export const ORDERS_MOCK_DATA: Order[] = [
     totalAmount: 18585.6,
     notes: '',
     items: [
-      { id: asOrderLineId('oi-301'), sku: 'GAL-SUR-200', name: 'Galletitas Surtidas 200g', quantity: 24, unitPrice: 450, subtotal: 10800 },
-      { id: asOrderLineId('oi-302'), sku: 'YER-UNI-05', name: 'Yerba Union 500g', quantity: 3, unitPrice: 1520, subtotal: 4560 },
+      { id: asOrderLineId('oi-301'), sku: 'GAL-SUR-200', name: 'Galletitas Surtidas 200g', quantity: 24, unitPrice: 450, subtotal: 10800, cantidadEntregada: 0 },
+      { id: asOrderLineId('oi-302'), sku: 'YER-UNI-05', name: 'Yerba Union 500g', quantity: 3, unitPrice: 1520, subtotal: 4560, cantidadEntregada: 0 },
     ],
     history: [
       { id: 'h4', date: '2026-06-12T16:30:00Z', status: 'pending', description: 'Pedido ingresado manualmente' },
@@ -104,8 +104,8 @@ export const ORDERS_MOCK_DATA: Order[] = [
     totalAmount: 77319,
     notes: '',
     items: [
-      { id: asOrderLineId('oi-401'), sku: 'ACE-GIR-15', name: 'Aceite Girasol 1.5L', quantity: 24, unitPrice: 2100, subtotal: 50400 },
-      { id: asOrderLineId('oi-402'), sku: 'GAL-SUR-200', name: 'Galletitas Surtidas 200g', quantity: 30, unitPrice: 450, subtotal: 13500 },
+      { id: asOrderLineId('oi-401'), sku: 'ACE-GIR-15', name: 'Aceite Girasol 1.5L', quantity: 24, unitPrice: 2100, subtotal: 50400, cantidadEntregada: 0 },
+      { id: asOrderLineId('oi-402'), sku: 'GAL-SUR-200', name: 'Galletitas Surtidas 200g', quantity: 30, unitPrice: 450, subtotal: 13500, cantidadEntregada: 0 },
     ],
     history: [
       { id: 'h7', date: '2026-06-12T11:00:00Z', status: 'pending', description: 'Pedido ingresado via Mobile App' },
@@ -133,7 +133,7 @@ export const ORDERS_MOCK_DATA: Order[] = [
     totalAmount: 40656,
     notes: 'Cliente cancelo por quiebre de caja.',
     items: [
-      { id: asOrderLineId('oi-501'), sku: 'ACE-OLI-05', name: 'Aceite Oliva 500ml', quantity: 6, unitPrice: 5600, subtotal: 33600 },
+      { id: asOrderLineId('oi-501'), sku: 'ACE-OLI-05', name: 'Aceite Oliva 500ml', quantity: 6, unitPrice: 5600, subtotal: 33600, cantidadEntregada: 0 },
     ],
     history: [
       { id: 'h12', date: '2026-06-11T09:20:00Z', status: 'pending', description: 'Pedido ingresado' },
@@ -158,7 +158,7 @@ export const ORDERS_MOCK_DATA: Order[] = [
     totalAmount: 52272,
     notes: '',
     items: [
-      { id: asOrderLineId('oi-601'), sku: 'YER-TAR-1K', name: 'Yerba Taragui 1kg', quantity: 12, unitPrice: 3600, subtotal: 43200 },
+      { id: asOrderLineId('oi-601'), sku: 'YER-TAR-1K', name: 'Yerba Taragui 1kg', quantity: 12, unitPrice: 3600, subtotal: 43200, cantidadEntregada: 0 },
     ],
     history: [
       { id: 'h14', date: '2026-06-11T08:00:00Z', status: 'pending', description: 'Pedido ingresado via Mobile App' },

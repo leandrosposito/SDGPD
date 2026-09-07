@@ -93,7 +93,19 @@ export interface UsePagedQueryOptions<TSort extends string> {
   // Permite diferir el primer fetch (ej. todavia no hay sucursal activa
   // porque la sesion esta cargando). Default true.
   enabled?: boolean;
+  // ADR-003 (Tanda 8, corrida completa): "tiempo real" es polling, no
+  // WebSocket/SSE. `live: true` hace que este hook vuelva a pedir la
+  // MISMA pagina paginada (nunca la lista completa) cada
+  // LIVE_REFETCH_INTERVAL_MS, sin refrescar con la pestaña en segundo
+  // plano. No se usa directo desde un componente — ver
+  // shared/hooks/useLiveQuery.ts, el wrapper que expone esta opcion
+  // con un nombre que documenta la intencion en el call-site.
+  live?: boolean;
 }
+
+// 30s por defecto (ADR-003) — constante nombrada, no un numero suelto
+// en cada consumidor.
+export const LIVE_REFETCH_INTERVAL_MS = 30_000;
 
 export interface UsePagedQueryResult<TItem, TSort extends string, TAggregates> {
   items: TItem[];
@@ -138,6 +150,7 @@ export function usePagedQuery<TItem, TFilters, TSort extends string = string, TA
     page: pageOption,
     onPageChange,
     enabled = true,
+    live = false,
   } = options;
 
   const empresaId = useSessionStore((s) => s.session?.company.id);
@@ -195,6 +208,11 @@ export function usePagedQuery<TItem, TFilters, TSort extends string = string, TA
     queryFn: ({ signal }) => fetchPage({ page, pageSize, filters: trackedFilters, sort }, signal),
     enabled: queryEnabled,
     placeholderData: keepPreviousData,
+    // ADR-003: solo cuando `live` esta prendido. `refetchIntervalInBackground:
+    // false` es el default de TanStack Query, pero se deja explicito
+    // (mismo criterio que el resto de defaultOptions de queryClient.ts)
+    // para que quede documentado que es una decision, no un olvido.
+    ...(live ? { refetchInterval: LIVE_REFETCH_INTERVAL_MS, refetchIntervalInBackground: false } : {}),
   });
 
   // Alinea la pagina local a la que realmente devolvio el servidor

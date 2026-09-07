@@ -23,6 +23,9 @@ import type { OrderDTO, OrderItemDTO, OrderHistoryEventDTO, CreateOrderDTO } fro
 // de dominio real, antes tampoco deberia haberlo hecho (reusaba el id
 // del PRODUCTO, no un id de linea real, ver OrderProductItem.id en
 // OrderProductsSection.tsx).
+// `cantidadEntregada` tampoco la pide el formulario (Tanda 8,
+// ADR-001): un pedido recien creado arranca siempre en 0, el service
+// la asigna, igual criterio que `id`.
 export type OrderFormInput = Pick<
   Order,
   | 'clientId'
@@ -37,7 +40,7 @@ export type OrderFormInput = Pick<
   | 'totalAmount'
   | 'notes'
 > & {
-  items: Array<Omit<OrderItem, 'id'>>;
+  items: Array<Omit<OrderItem, 'id' | 'cantidadEntregada'>>;
 };
 
 function orderItemFromDTO(dto: OrderItemDTO): OrderItem {
@@ -48,6 +51,7 @@ function orderItemFromDTO(dto: OrderItemDTO): OrderItem {
     quantity: dto.cantidad,
     unitPrice: dto.precio_unitario,
     subtotal: dto.subtotal,
+    cantidadEntregada: dto.cantidad_entregada,
   };
 }
 
@@ -59,6 +63,7 @@ function orderItemToDTO(item: OrderItem): OrderItemDTO {
     cantidad: item.quantity,
     precio_unitario: item.unitPrice,
     subtotal: item.subtotal,
+    cantidad_entregada: item.cantidadEntregada,
   };
 }
 
@@ -153,6 +158,8 @@ export function orderFormInputToDTO(input: OrderFormInput): CreateOrderDTO {
     // id vacio a proposito: el service asigna el OrderLineId real al
     // crear el pedido (ver orders.service.ts#createOrder), el mismo
     // criterio que ya usaba para id/numero_pedido del pedido en si.
+    // cantidad_entregada siempre 0: un pedido recien creado no tiene
+    // ningun remito aplicado todavia (Tanda 8, ADR-001).
     items: input.items.map((item) => ({
       id: '',
       sku: item.sku,
@@ -160,6 +167,7 @@ export function orderFormInputToDTO(input: OrderFormInput): CreateOrderDTO {
       cantidad: item.quantity,
       precio_unitario: item.unitPrice,
       subtotal: item.subtotal,
+      cantidad_entregada: 0,
     })),
   };
 }

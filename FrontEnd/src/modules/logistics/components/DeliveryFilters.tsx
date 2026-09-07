@@ -21,7 +21,11 @@ interface DeliveryFiltersProps {
   onStatusChange: (status: DeliveryStatusFilter) => void;
 }
 
-const STATUS_ORDER: DeliveryStatus[] = ['pending', 'in_transit', 'delivered'];
+// REPROGRAMADO no aparece como opcion de filtro (Tanda 8, ADR-002):
+// es transitorio, una entrega nunca queda "parada" en ese estado (ver
+// deliveryStatus.types.ts) — no tiene sentido poder filtrar por algo
+// que nunca se observa persistido.
+const STATUS_ORDER: DeliveryStatus[] = ['CREADO', 'EN_TRANSITO', 'FINALIZADO', 'CANCELADO'];
 
 export const DeliveryFilters: FC<DeliveryFiltersProps> = ({
   aggregates,

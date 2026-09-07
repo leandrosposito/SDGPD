@@ -1,0 +1,46 @@
+.registrar-entrega {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.registrar-entrega__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.registrar-entrega__table th,
+.registrar-entrega__table td {
+  padding: 0.4rem 0.5rem;
+  border-bottom: 1px solid var(--border-color, #e2e2e2);
+  text-align: left;
+}
+
+.registrar-entrega__table input[type='number'] {
+  width: 4.5rem;
+}
+
+.registrar-entrega__table input[type='text'] {
+  width: 100%;
+}
+
+.registrar-entrega__cancel,
+.registrar-entrega__confirm {
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-md, 6px);
+  cursor: pointer;
+  border: 1px solid var(--border-color, #ccc);
+}
+
+.registrar-entrega__confirm {
+  background: var(--color-primary, #2563eb);
+  color: white;
+  border-color: transparent;
+}
+
+.registrar-entrega__confirm:disabled,
+.registrar-entrega__cancel:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

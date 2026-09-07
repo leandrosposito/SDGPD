@@ -19,7 +19,7 @@ function formatCurrency(value: number): string {
 
 export const LogisticsKPIs: FC<LogisticsKPIsProps> = ({ aggregates }) => {
   const totalOrders = aggregates?.totalForScope ?? 0;
-  const deliveredOrders = aggregates?.countByStatus.delivered ?? 0;
+  const deliveredOrders = aggregates?.countByStatus.FINALIZADO ?? 0;
   const deliveryProgress = totalOrders > 0 ? (deliveredOrders / totalOrders) * 100 : 0;
   const pendingCollection = aggregates?.pendingCollectionAmount ?? 0;
 

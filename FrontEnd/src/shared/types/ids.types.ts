@@ -6,10 +6,10 @@
 // firma (ej. getStockForBranch(empresaId, productId, branchId) — los 3
 // son string, invertir dos no tira error de compilacion).
 //
-// Migracion incremental (ADR-006): esta tanda solo trae OrderId,
-// BranchId, OrderLineId y ClientId — los 4 que Tandas 4/5 necesitan.
-// ProductId/DeliveryId quedan para cuando la tanda que los necesite
-// (Tanda 8) llegue.
+// Migracion incremental (ADR-006): Tanda 5 trajo OrderId, BranchId,
+// OrderLineId y ClientId. Tanda 8 (entregas) agrega DeliveryId, que es
+// lo unico que necesitaba de esta lista. ProductId queda pendiente
+// para cuando una tanda futura lo necesite.
 //
 // Patron: interseccion con un campo fantasma (`__brand`), nunca existe
 // en runtime — el UNICO `as` aceptable del proyecto para estos tipos
@@ -45,11 +45,13 @@ export type OrderId = string & { readonly __brand: 'OrderId' };
 export type BranchId = string & { readonly __brand: 'BranchId' };
 export type OrderLineId = string & { readonly __brand: 'OrderLineId' };
 export type ClientId = string & { readonly __brand: 'ClientId' };
+export type DeliveryId = string & { readonly __brand: 'DeliveryId' };
 
 const ORDER_ID_PATTERN = /^ord-/;
 const BRANCH_ID_PATTERN = /^branch-/;
 const ORDER_LINE_ID_PATTERN = /^oi-/;
 const CLIENT_ID_PATTERN = /^cli-/;
+const DELIVERY_ID_PATTERN = /^del-/;
 
 export function isOrderId(raw: string): raw is OrderId {
   return ORDER_ID_PATTERN.test(raw);
@@ -84,5 +86,14 @@ export function isClientId(raw: string): raw is ClientId {
 
 export function asClientId(raw: string): ClientId {
   if (!isClientId(raw)) throw new InvalidIdError('ClientId', raw);
+  return raw;
+}
+
+export function isDeliveryId(raw: string): raw is DeliveryId {
+  return DELIVERY_ID_PATTERN.test(raw);
+}
+
+export function asDeliveryId(raw: string): DeliveryId {
+  if (!isDeliveryId(raw)) throw new InvalidIdError('DeliveryId', raw);
   return raw;
 }

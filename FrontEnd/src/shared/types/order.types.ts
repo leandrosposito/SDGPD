@@ -23,6 +23,13 @@ export interface OrderHistoryEvent {
   description: string;
 }
 
+// `quantity` cumple el rol de "cantidadPedida" (ADR-001, Tanda 8) por
+// convencion de esta tanda — no se renombra para no forzar un cambio
+// masivo en los formularios/mappers de Pedidos ya existentes.
+// `cantidadEntregada` es nueva: se acumula con cada remito
+// (`registrarEntrega`, deliveries.service.ts) y arranca en 0 para todo
+// pedido nuevo. La cantidad pendiente NUNCA se persiste, se deriva
+// siempre con `derivePendingQuantity` (shared/utils/orderFulfillment.ts).
 export interface OrderItem {
   id: OrderLineId;
   sku: string;
@@ -30,6 +37,7 @@ export interface OrderItem {
   quantity: number;
   unitPrice: number;
   subtotal: number;
+  cantidadEntregada: number;
 }
 
 export interface Order {
