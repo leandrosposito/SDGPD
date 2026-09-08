@@ -118,6 +118,7 @@ export const TabPurchases: FC<TabPurchasesProps> = ({ branchName, branchId, prod
   );
 
   const handleGenerateOrder = async (suggestion: PurchaseSuggestion) => {
+    if (!empresaId) return;
     const product = products.find((p) => p.id === suggestion.productId);
     if (!product) {
       toast.error(`No se encontro "${suggestion.productName}" en el catalogo de productos.`);
@@ -141,7 +142,7 @@ export const TabPurchases: FC<TabPurchasesProps> = ({ branchName, branchId, prod
         ? suggestion.estimatedCost / suggestion.suggestedQuantity
         : suggestion.estimatedCost;
 
-      const result = await generatePurchaseOrderFromSuggestion({
+      const result = await generatePurchaseOrderFromSuggestion(empresaId, {
         supplierId: supplier.id,
         branchId,
         productId: product.id,

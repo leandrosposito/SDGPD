@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 import { Search, Trash2 } from 'lucide-react';
 import { Modal } from '@/shared/components/ui/Modal';
+import { useSessionStore } from '@/shared/state/useSessionStore';
 import type { Branch } from '@/shared/types/session.types';
 import type { Supplier } from '@/shared/types/supplier.types';
 import type { InventoryItem } from '@/shared/types/inventory.types';
@@ -67,6 +68,7 @@ export const PurchaseOrderFormModal: FC<PurchaseOrderFormModalProps> = ({
   defaultLines,
   onCreated,
 }) => {
+  const empresaId = useSessionStore((s) => s.session?.company.id);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [productQuery, setProductQuery] = useState('');
 
@@ -139,9 +141,10 @@ export const PurchaseOrderFormModal: FC<PurchaseOrderFormModalProps> = ({
 
   const submitOrder = (status: 'draft' | 'sent') =>
     handleSubmit(async (values) => {
+      if (!empresaId) return;
       setIsSubmitting(true);
       try {
-        const result = await createPurchaseOrder({
+        const result = await createPurchaseOrder(empresaId, {
           supplierId: values.supplierId,
           branchId: asBranchId(values.branchId),
           currency: values.currency,

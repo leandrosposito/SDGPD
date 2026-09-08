@@ -76,6 +76,7 @@ export const SupplierDetailPanel: FC<SupplierDetailPanelProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState('basics');
   const session = useSessionStore((s) => s.session);
+  const empresaId = session?.company.id;
   const branches = session?.branches ?? EMPTY_BRANCHES;
   const branchesById = useMemo(() => new Map(branches.map((b) => [b.id, b])), [branches]);
 
@@ -96,7 +97,7 @@ export const SupplierDetailPanel: FC<SupplierDetailPanelProps> = ({
   } = useCachedQuery(
     'purchase-orders-by-supplier',
     supplierId,
-    (signal) => getPurchaseOrdersBySupplierId(supplierId ?? '', signal),
+    (signal) => getPurchaseOrdersBySupplierId(empresaId ?? '', supplierId ?? '', signal),
     { staleTime: CACHE_STALE_TIME.OPERATIONAL, enabled: isOpen && supplierId !== null }
   );
   const orders = ordersData ?? EMPTY_ORDERS;
