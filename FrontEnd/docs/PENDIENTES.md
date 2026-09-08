@@ -49,7 +49,7 @@ nada — es una inconsistencia de nomenclatura, no un bug.
 
 **Corrección de conteo:** son **4** archivos, no 45 — verificado con
 `git ls-files Documentacion/ | grep -E '\.(docx|pdf)$'`:
-- `Documentacion/01. Product Vision SDGPD.docx` / `.pdf`
+- `Documentacion/negocio/01. Product Vision SDGPD.docx` / `.pdf`
 - `Documentacion/Product Vision SDGPD.docx` / `.pdf`
 
 Causa confirmada: los 4 archivos se agregaron en el commit `4d1e8a2` (25/08/2026);
@@ -128,8 +128,8 @@ Por diseño, las mutaciones de ambos módulos (crear, cambiar estado/movimiento)
 deberían sobrevivir a navegar afuera y volver — **pero esto no se probó en el
 navegador para ninguno de los dos**: los commits de las dos tandas se autorizaron en
 base a `tsc -b`/`lint`/`build` limpios y análisis de código, no en base a estos
-checklists. El punto 4 de `docs/VERIFICACION_TANDA_3A.md` (Pedidos) y el punto 4 de
-`docs/VERIFICACION_TANDA_3B.md` (Caja) — exactamente este comportamiento en cada
+checklists. El punto 4 de `docs/historial/verificaciones/VERIFICACION_TANDA_3A.md` (Pedidos) y el punto 4 de
+`docs/historial/verificaciones/VERIFICACION_TANDA_3B.md` (Caja) — exactamente este comportamiento en cada
 módulo — siguen "No ejecutado". Hasta que se confirmen, este ítem se considera
 **resuelto por código, no verificado en los hechos** — se deja este matiz explícito
 en vez de marcarlo simplemente "cerrado".
@@ -201,7 +201,7 @@ entre las 3 sucursales activas (no todos en `branch-001` — ver
 filtrando por la sucursal activa. Verificado por script contra los datos reales del
 mock que el filtro devuelve conjuntos disjuntos por sucursal (ver
 `DECISIONES_TECNICAS.md` punto 8) — **no verificado todavía en el navegador**, ver
-`docs/VERIFICACION_TANDA_3G.md`. Mismo matiz que el ítem 8 de esta tabla: resuelto
+`docs/historial/verificaciones/VERIFICACION_TANDA_3G.md`. Mismo matiz que el ítem 8 de esta tabla: resuelto
 por código, no confirmado en los hechos.
 
 ### 13. `updateProduct` descarta los lotes del producto al editar — Severidad: Baja/Media (bug preexistente, preservado sin cambios en Tanda 3e)
