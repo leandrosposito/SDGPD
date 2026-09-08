@@ -234,6 +234,9 @@ export async function updateClient(empresaId: string, id: string, input: ClientF
 // (recalcular saldos sobre el rango) es una feature de reporteria
 // distinta, fuera de alcance de esta tarea.
 export interface ClientAccountsQueryFilters extends DateRangeQueryFilters {
+  // Regla 3.5 del protocolo: toda funcion de service lleva empresaId
+  // explicito. Agregado en el barrido de AUDIT_2026-09-08_empresaId-sweep.md.
+  empresaId: string;
   search?: string;
 }
 
@@ -304,6 +307,7 @@ export async function getClientAccountsPage(
     method: 'GET',
     path: '/clients/accounts',
     params: {
+      empresaId: query.filters.empresaId,
       search: query.filters.search,
       dateFrom: query.filters.dateFrom,
       dateTo: query.filters.dateTo,
@@ -337,7 +341,7 @@ export async function exportClientAccounts(
   return httpClient.request<ExportResult<ClientAccount>>({
     method: 'GET',
     path: '/clients/accounts/export',
-    params: { search: filters.search, dateFrom: filters.dateFrom, dateTo: filters.dateTo },
+    params: { empresaId: filters.empresaId, search: filters.search, dateFrom: filters.dateFrom, dateTo: filters.dateTo },
     mock: () => {
       const sorted = sortClientAccounts(filterClientAccountsInScope(filters), sort);
       const truncated = sorted.length > MAX_EXPORT_ROWS;
@@ -673,6 +677,7 @@ export async function getOverdueClientsPage(
     method: 'GET',
     path: '/clients/overdue',
     params: {
+      empresaId: query.filters.empresaId,
       search: query.filters.search,
       bucket: query.filters.bucket,
       dateFrom: query.filters.dateFrom,
@@ -727,7 +732,13 @@ export async function exportOverdueClients(
   return httpClient.request<ExportResult<OverdueClientRow>>({
     method: 'GET',
     path: '/clients/overdue/export',
-    params: { search: filters.search, bucket: filters.bucket, dateFrom: filters.dateFrom, dateTo: filters.dateTo },
+    params: {
+      empresaId: filters.empresaId,
+      search: filters.search,
+      bucket: filters.bucket,
+      dateFrom: filters.dateFrom,
+      dateTo: filters.dateTo,
+    },
     mock: () => {
       const snapshot = applyDateRangeToSnapshot(getOverdueSnapshot(), filters.dateFrom, filters.dateTo);
       const inScope = snapshot.filter((entry) => matchesSearch(entry.row.clientName, entry.row.cuit, filters.search));

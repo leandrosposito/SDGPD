@@ -83,9 +83,19 @@ export async function getDashboardAggregates(
 // directa ni via Delivery (una entrega no es lo mismo que una factura
 // vencida). Esta tarjeta queda EMPRESA-ONLY siempre, decision explicita
 // de ADR-009, no un olvido. La UI debe mostrarlo como tal.
-export async function getOverdueTotalsInMoney(branchId?: BranchId, signal?: AbortSignal): Promise<Money[]> {
+//
+// empresaId SI es obligatorio y SI se usa (regla 3.5 del protocolo,
+// AUDIT_2026-09-08_empresaId-sweep.md): antes esta funcion no podia
+// recibirlo porque getOverdueClientsPage tampoco lo aceptaba en sus
+// filtros — se corrigio de raiz junto con clients.service.ts en el
+// mismo lote.
+export async function getOverdueTotalsInMoney(
+  empresaId: string,
+  branchId?: BranchId,
+  signal?: AbortSignal
+): Promise<Money[]> {
   void branchId; // ver comentario arriba: aceptado por contrato, no usado.
-  const page = await getOverdueClientsPage({ page: 1, pageSize: 1, filters: {} }, signal);
+  const page = await getOverdueClientsPage({ page: 1, pageSize: 1, filters: { empresaId } }, signal);
   const byBucket = page.aggregates?.byBucket ?? [];
 
   const totalsByCurrency = new Map<Currency, number>();

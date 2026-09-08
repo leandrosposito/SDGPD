@@ -35,6 +35,23 @@ const STATUS_LABEL: Record<OrderStatus, string> = {
 
 const EMPRESA_LABEL = 'Toda la empresa';
 
+// ADR-009, seccion "Reconciliacion": un pedido con entregas en 2+
+// sucursales se cuenta completo en cada una (no se prorratea) — real y
+// verificado contra el mock (los 6 pedidos semilla tienen entregas en
+// 2 o 3 sucursales cada uno, ver scripts/verificacion/v-adr009-order-branch-links.mjs,
+// ord-004 es el ejemplo citado en el ADR). Un pedido sin ninguna
+// entrega desaparece de TODAS las vistas por sucursal (solo aparece en
+// "Toda la empresa") es el mismo mecanismo, correcto en el codigo,
+// pero SIN caso real en el mock hoy (ningun pedido semilla tiene cero
+// entregas) — ocurre con cualquier pedido recien creado antes de que
+// Logistica genere su primera entrega. Sumar los recortes por sucursal
+// nunca va a dar el mismo total que "Toda la empresa", a proposito.
+// Solo aplica a Ventas por zona/Pedidos por estado (las que SI varian
+// con el filtro) y solo cuando el alcance activo es una sucursal
+// puntual — en "Toda la empresa" no hay nada que reconciliar.
+const RECONCILIATION_NOTE =
+  'Los números de esta sucursal pueden no coincidir con la suma exacta de todas las sucursales: un pedido despachado desde más de un depósito cuenta en cada uno, y los pedidos que todavía no tienen ninguna entrega asignada solo aparecen en "Toda la empresa".';
+
 export const DashboardAggregatesSection: FC = () => {
   const session = useSessionStore((s) => s.session);
   const { data, isLoading, error, resolvedBranchId, isExplicitAll, setBranchFilter } = useDashboardAggregates();
@@ -117,6 +134,10 @@ export const DashboardAggregatesSection: FC = () => {
         <h3 className="dashboard-aggregates__heading">Agregados — Mostrando: {scopeLabel}</h3>
         {scopeSelector}
       </div>
+
+      {resolvedBranchId && (
+        <p className="dashboard-aggregates__reconciliation-note">{RECONCILIATION_NOTE}</p>
+      )}
 
       <div className="dashboard-aggregates__grid">
         <div className="dashboard-aggregates__card">

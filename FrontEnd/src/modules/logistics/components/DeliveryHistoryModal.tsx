@@ -1,6 +1,7 @@
 import type { FC } from 'react';
 import { Modal } from '@/shared/components/ui/Modal';
 import { Badge } from '@/shared/components/ui/Badge';
+import { useSessionStore } from '@/shared/state/useSessionStore';
 import type { Delivery } from '@/shared/types/logistics.types';
 import { isRechazoTotal } from '@/shared/types/deliveryNote.types';
 import { DELIVERY_STATUS_LABEL } from '../deliveryStatusLabels';
@@ -24,9 +25,11 @@ interface DeliveryHistoryModalProps {
 }
 
 export const DeliveryHistoryModal: FC<DeliveryHistoryModalProps> = ({ isOpen, onClose, delivery }) => {
+  const empresaId = useSessionStore((s) => s.session?.company.id);
+
   if (!delivery) return null;
 
-  const notes = getDeliveryNotesForDelivery(delivery.id);
+  const notes = getDeliveryNotesForDelivery(empresaId ?? '', delivery.id);
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={`Historial — ${delivery.id}`} size="md">

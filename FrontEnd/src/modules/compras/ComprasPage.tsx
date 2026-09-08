@@ -299,6 +299,7 @@ export const ComprasPage: FC = () => {
 
   const filters: PurchaseOrdersQueryFilters = useMemo(
     () => ({
+      empresaId: empresaId ?? '',
       search: debouncedSearchQuery || undefined,
       supplierId: supplierFilter || undefined,
       status: statusFilter || undefined,
@@ -306,7 +307,7 @@ export const ComprasPage: FC = () => {
       dateFrom: dateRange.dateFrom,
       dateTo: dateRange.dateTo,
     }),
-    [debouncedSearchQuery, supplierFilter, statusFilter, branchFilter, dateRange]
+    [empresaId, debouncedSearchQuery, supplierFilter, statusFilter, branchFilter, dateRange]
   );
 
   const {
@@ -339,7 +340,7 @@ export const ComprasPage: FC = () => {
   const handleTransition = async (order: PurchaseOrder, nextStatus: PurchaseOrderStatus) => {
     setIsTransitioning(true);
     try {
-      const result = await updatePurchaseOrderStatus(order.id, nextStatus);
+      const result = await updatePurchaseOrderStatus(empresaId ?? '', order.id, nextStatus);
       if (result.success && result.order) {
         toast.success(`Orden ${order.id} actualizada.`);
         setSelectedOrder(result.order);

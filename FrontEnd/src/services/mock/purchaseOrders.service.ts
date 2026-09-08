@@ -145,6 +145,7 @@ export async function getPurchaseOrdersPage(
     method: 'GET',
     path: '/purchase-orders',
     params: {
+      empresaId: query.filters.empresaId,
       search: query.filters.search,
       supplierId: query.filters.supplierId,
       branchId: query.filters.branchId,
@@ -192,6 +193,7 @@ export async function exportPurchaseOrders(
     method: 'GET',
     path: '/purchase-orders/export',
     params: {
+      empresaId: filters.empresaId,
       search: filters.search,
       supplierId: filters.supplierId,
       branchId: filters.branchId,
@@ -217,12 +219,14 @@ export async function exportPurchaseOrders(
 // (mismo criterio que getStockedProductsForBranch en products.service.ts,
 // P8): es un panel de detalle de UN proveedor, no un listado general.
 export async function getPurchaseOrdersBySupplierId(
+  empresaId: string,
   supplierId: Supplier['id'],
   signal?: AbortSignal
 ): Promise<PurchaseOrder[]> {
   return httpClient.request<PurchaseOrder[]>({
     method: 'GET',
     path: `/purchase-orders/by-supplier/${supplierId}`,
+    params: { empresaId },
     signal,
     mock: () => {
       const orders = purchaseOrdersStore
@@ -245,11 +249,14 @@ function nextLineId(seed: number): string {
 // 'draft' — 'sent' solo si el formulario lo pide explicitamente
 // ("Emitir Orden de Compra" vs "Guardar Borrador"). 'received'/
 // 'cancelled' nunca se crean directo: son resultado de una transicion.
-export async function createPurchaseOrder(input: CreatePurchaseOrderInput): Promise<CreatePurchaseOrderResult> {
+export async function createPurchaseOrder(
+  empresaId: string,
+  input: CreatePurchaseOrderInput
+): Promise<CreatePurchaseOrderResult> {
   return httpClient.request<CreatePurchaseOrderResult>({
     method: 'POST',
     path: '/purchase-orders',
-    body: input,
+    body: { empresaId, ...input },
     mock: () => {
       if (!input.supplierId) {
         return { success: false, reason: 'invalid-supplier' };
@@ -286,13 +293,14 @@ const VALID_TRANSITIONS: Record<PurchaseOrderStatus, readonly PurchaseOrderStatu
 };
 
 export async function updatePurchaseOrderStatus(
+  empresaId: string,
   orderId: PurchaseOrder['id'],
   nextStatus: PurchaseOrderStatus
 ): Promise<PurchaseOrderTransitionResult> {
   return httpClient.request<PurchaseOrderTransitionResult>({
     method: 'PUT',
     path: `/purchase-orders/${orderId}/status`,
-    body: { status: nextStatus },
+    body: { empresaId, status: nextStatus },
     mock: () => {
       const existing = purchaseOrdersStore.find((o) => o.id === orderId);
       if (!existing) {
@@ -323,12 +331,13 @@ export async function updatePurchaseOrderStatus(
 // Una vez que esa orden deja de ser 'draft' (se envia/recibe/cancela),
 // el proximo "Generar OC" para ese proveedor+sucursal crea una nueva.
 export async function generatePurchaseOrderFromSuggestion(
+  empresaId: string,
   input: GeneratePurchaseOrderFromSuggestionInput
 ): Promise<GeneratePurchaseOrderResult> {
   return httpClient.request<GeneratePurchaseOrderResult>({
     method: 'POST',
     path: '/purchase-orders/from-suggestion',
-    body: input,
+    body: { empresaId, ...input },
     mock: () => {
       if (!input.supplierId) {
         return { success: false, merged: false, reason: 'invalid-supplier' };

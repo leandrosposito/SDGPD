@@ -101,7 +101,7 @@ export const RegistrarEntregaModal: FC<RegistrarEntregaModalProps> = ({ isOpen, 
   }
 
   async function handleConfirm() {
-    if (!order || !delivery) return;
+    if (!order || !delivery || !empresaId) return;
 
     const lines: RegistrarEntregaLineInput[] = order.items
       .map((item) => {
@@ -134,7 +134,7 @@ export const RegistrarEntregaModal: FC<RegistrarEntregaModalProps> = ({ isOpen, 
 
     setIsSaving(true);
     try {
-      const result = await registrarEntrega(delivery.id, lines, evidence.uploadedFileIds, fullName);
+      const result = await registrarEntrega(empresaId, delivery.id, lines, evidence.uploadedFileIds, fullName);
       if (result.success) {
         toast.success('Entrega registrada correctamente.');
         onRegistered();

@@ -326,10 +326,11 @@ export interface OrderStatusTransitionResult {
   reason?: OrderStatusTransitionReason;
 }
 
-export async function advanceOrderStatus(orderId: string): Promise<OrderStatusTransitionResult> {
+export async function advanceOrderStatus(empresaId: string, orderId: string): Promise<OrderStatusTransitionResult> {
   return httpClient.request<OrderStatusTransitionResult>({
     method: 'PUT',
     path: `/orders/${orderId}/advance`,
+    params: { empresaId },
     mock: () => {
       const existing = ordersDTOStore.find((dto) => dto.id === orderId);
       if (!existing) {
@@ -350,10 +351,11 @@ export async function advanceOrderStatus(orderId: string): Promise<OrderStatusTr
 // comportamiento que handleCancel en OrdersPage.tsx antes de esta
 // tanda (a diferencia de purchaseOrders, que sí valida transiciones
 // válidas para cancelar).
-export async function cancelOrder(orderId: string): Promise<OrderStatusTransitionResult> {
+export async function cancelOrder(empresaId: string, orderId: string): Promise<OrderStatusTransitionResult> {
   return httpClient.request<OrderStatusTransitionResult>({
     method: 'PUT',
     path: `/orders/${orderId}/cancel`,
+    params: { empresaId },
     mock: () => {
       const existing = ordersDTOStore.find((dto) => dto.id === orderId);
       if (!existing) {

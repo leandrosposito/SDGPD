@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FC } from 'react';
 import { toast } from 'sonner';
 import { PackageCheck } from 'lucide-react';
+import { useSessionStore } from '@/shared/state/useSessionStore';
 import type { Branch } from '@/shared/types/session.types';
 import type { Supplier } from '@/shared/types/supplier.types';
 import type { InventoryItem } from '@/shared/types/inventory.types';
@@ -59,6 +60,7 @@ export const TabPendingReceipt: FC<TabPendingReceiptProps> = ({
   branchesById,
   productsById,
 }) => {
+  const empresaId = useSessionStore((s) => s.session?.company.id);
   const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -90,8 +92,8 @@ export const TabPendingReceipt: FC<TabPendingReceiptProps> = ({
   }
 
   const filters: PurchaseOrdersQueryFilters = useMemo(
-    () => ({ status: 'sent', branchId, dateFrom: dateRange.dateFrom, dateTo: dateRange.dateTo }),
-    [branchId, dateRange]
+    () => ({ empresaId: empresaId ?? '', status: 'sent', branchId, dateFrom: dateRange.dateFrom, dateTo: dateRange.dateTo }),
+    [empresaId, branchId, dateRange]
   );
 
   const {
@@ -123,7 +125,7 @@ export const TabPendingReceipt: FC<TabPendingReceiptProps> = ({
   const handleTransition = async (order: PurchaseOrder, nextStatus: PurchaseOrderStatus) => {
     setIsTransitioning(true);
     try {
-      const result = await updatePurchaseOrderStatus(order.id, nextStatus);
+      const result = await updatePurchaseOrderStatus(empresaId ?? '', order.id, nextStatus);
       if (result.success && result.order) {
         toast.success(`Orden ${order.id} actualizada.`);
         // La orden ya no matchea status:'sent' -> desaparece de esta

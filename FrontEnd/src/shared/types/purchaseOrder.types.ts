@@ -72,6 +72,9 @@ export interface PurchaseOrder {
 // `createdAt` — el unico campo de fecha propio de la orden (O2: no hay
 // fecha de "vencimiento" ni "entrega" en este dominio).
 export interface PurchaseOrdersQueryFilters extends DateRangeQueryFilters {
+  // Obligatorio (regla 3.5, PROTOCOLO.md): toda funcion de service de
+  // datos de negocio lleva empresaId explicito. AUDIT_2026-09-08_empresaId-sweep.md.
+  empresaId: string;
   search?: string;
   supplierId?: Supplier['id'];
   status?: PurchaseOrderStatus;

@@ -10,6 +10,7 @@ import type { DateRangeValue } from '@/shared/components/ui/dateRangePresets';
 import { ExportButton, type ExportColumn } from '@/shared/components/ui/ExportButton';
 import { usePagedQuery } from '@/shared/hooks/usePagedQuery';
 import { useUrlListState } from '@/shared/hooks/useUrlListState';
+import { useSessionStore } from '@/shared/state/useSessionStore';
 import type { ClientAccount } from '@/shared/types/client.types';
 import {
   getClientAccountsPage,
@@ -43,6 +44,8 @@ interface ClientAccountsTableProps {
 }
 
 export const ClientAccountsTable: FC<ClientAccountsTableProps> = ({ search }) => {
+  const empresaId = useSessionStore((s) => s.session?.company.id);
+
   // Tanda 4 (corrida completa, A13): pagina y rango de fecha propios de
   // esta tab, prefijados `acc_` para no chocar con Directorio/Morosos
   // (montados en la misma pagina, aunque solo uno a la vez).
@@ -69,8 +72,8 @@ export const ClientAccountsTable: FC<ClientAccountsTableProps> = ({ search }) =>
   }
 
   const filters: ClientAccountsQueryFilters = useMemo(
-    () => ({ search, dateFrom: dateRange.dateFrom, dateTo: dateRange.dateTo }),
-    [search, dateRange]
+    () => ({ empresaId: empresaId ?? '', search, dateFrom: dateRange.dateFrom, dateTo: dateRange.dateTo }),
+    [empresaId, search, dateRange]
   );
 
   const {

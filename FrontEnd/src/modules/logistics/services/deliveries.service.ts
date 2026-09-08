@@ -72,6 +72,10 @@ export function toISODate(date: Date): string {
 // "Hoy" como default (dateFrom=dateTo=hoy es equivalente al viejo
 // comportamiento fijo), pero ahora el usuario puede elegir otro rango.
 export interface DeliveryQueryFilters extends DateRangeQueryFilters {
+  // Regla 3.5 del protocolo: toda funcion de service lleva empresaId
+  // explicito (AUDIT_2026-09-08_empresaId-sweep.md) — faltaba en las 6
+  // funciones de este archivo, corregido en este lote.
+  empresaId: string;
   // null solo mientras activeBranchId todavia no cargo — LogisticsPage
   // pasa `enabled: activeBranchId !== null` a usePagedQuery para ese
   // caso, asi que matchesScope nunca ve null en la practica (Tanda 5,
@@ -163,6 +167,7 @@ export async function getDeliveriesPage(
     method: 'GET',
     path: '/deliveries',
     params: {
+      empresaId: query.filters.empresaId,
       branchId: query.filters.branchId ?? undefined,
       status: query.filters.status,
       dateFrom: query.filters.dateFrom,
@@ -222,7 +227,13 @@ export async function exportDeliveries(
   return httpClient.request<ExportResult<Delivery>>({
     method: 'GET',
     path: '/deliveries/export',
-    params: { branchId: filters.branchId ?? undefined, status: filters.status, dateFrom: filters.dateFrom, dateTo: filters.dateTo },
+    params: {
+      empresaId: filters.empresaId,
+      branchId: filters.branchId ?? undefined,
+      status: filters.status,
+      dateFrom: filters.dateFrom,
+      dateTo: filters.dateTo,
+    },
     mock: () => {
       const inScope = filterDeliveriesInScope(filters);
       const filtered = filters.status ? inScope.filter((d) => d.status === filters.status) : inScope;
@@ -261,6 +272,7 @@ function appendHistoryEvent(delivery: Delivery, hasta: DeliveryStatus, quien: st
 }
 
 export async function transitionDelivery(
+  empresaId: string,
   deliveryId: DeliveryId,
   hasta: DeliveryStatus,
   quien: string
@@ -268,7 +280,7 @@ export async function transitionDelivery(
   return httpClient.request<DeliveryTransitionResult>({
     method: 'PUT',
     path: `/deliveries/${deliveryId}/transition`,
-    body: { hasta, quien },
+    body: { empresaId, hasta, quien },
     mock: () => {
       const delivery = deliveriesStore.find((d) => d.id === deliveryId);
       if (!delivery) {
@@ -312,13 +324,14 @@ export interface ReprogramDeliveryResult {
 }
 
 export async function reprogramDelivery(
+  empresaId: string,
   deliveryId: DeliveryId,
   input: ReprogramDeliveryInput
 ): Promise<ReprogramDeliveryResult> {
   return httpClient.request<ReprogramDeliveryResult>({
     method: 'PUT',
     path: `/deliveries/${deliveryId}/reprogram`,
-    body: input,
+    body: { empresaId, ...input },
     mock: () => {
       const delivery = deliveriesStore.find((d) => d.id === deliveryId);
       if (!delivery) {
@@ -372,6 +385,7 @@ export interface RegistrarEntregaResult {
 }
 
 export async function registrarEntrega(
+  empresaId: string,
   deliveryId: DeliveryId,
   lines: RegistrarEntregaLineInput[],
   evidenciaIds: string[],
@@ -380,7 +394,7 @@ export async function registrarEntrega(
   return httpClient.request<RegistrarEntregaResult>({
     method: 'POST',
     path: `/deliveries/${deliveryId}/notes`,
-    body: { lines, evidenciaIds, creadoPor },
+    body: { empresaId, lines, evidenciaIds, creadoPor },
     mock: async () => {
       const delivery = deliveriesStore.find((d) => d.id === deliveryId);
       if (!delivery) {
@@ -433,6 +447,14 @@ export async function registrarEntrega(
 // lectura chica y sincronica sobre un array que ya vive en memoria del
 // navegador (no hay latencia real que simular para esto, a diferencia
 // de un GET real).
-export function getDeliveryNotesForDelivery(deliveryId: DeliveryId): DeliveryNote[] {
+//
+// empresaId explicito por regla 3.5 del protocolo, aunque el cuerpo no
+// lo use para filtrar: es un punto de entrada real (lo llama
+// DeliveryHistoryModal.tsx directo, no es una llamada interna
+// servidor-a-servidor), y el mock de una sola empresa no necesita
+// aplicarlo — mismo criterio ya usado en el resto del proyecto para
+// parametros aceptados por contrato pero no aplicados al mock.
+export function getDeliveryNotesForDelivery(empresaId: string, deliveryId: DeliveryId): DeliveryNote[] {
+  void empresaId;
   return deliveryNotesStore.filter((note) => note.deliveryId === deliveryId);
 }

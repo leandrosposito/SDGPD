@@ -90,7 +90,7 @@ export function useDashboardAggregates(): UseDashboardAggregatesReturn {
     async (signal) => {
       const [aggregates, overdueTotals] = await Promise.all([
         getDashboardAggregates(empresaId ?? '', { branchId: resolvedBranchId }, signal),
-        getOverdueTotalsInMoney(resolvedBranchId, signal),
+        getOverdueTotalsInMoney(empresaId ?? '', resolvedBranchId, signal),
       ]);
       return { ...aggregates, overdueTotals };
     },
