@@ -51,6 +51,7 @@ const PRIORITY_LABEL: Record<Delivery['priority'], string> = {
 export const LogisticsPage: FC = () => {
   const activeBranchId = useSessionStore((s) => s.activeBranchId);
   const session = useSessionStore((s) => s.session);
+  const empresaId = useSessionStore((s) => s.session?.company.id);
   const fullName = session?.fullName ?? 'Usuario';
 
   // Tanda 4 (corrida completa, A13): pagina, estado y rango de fecha en
@@ -95,12 +96,13 @@ export const LogisticsPage: FC = () => {
   // o estado.
   const filters: DeliveryQueryFilters = useMemo(
     () => ({
+      empresaId: empresaId ?? '',
       branchId: activeBranchId,
       dateFrom: dateRange.dateFrom,
       dateTo: dateRange.dateTo,
       status: statusFilter === 'all' ? undefined : statusFilter,
     }),
-    [activeBranchId, dateRange, statusFilter]
+    [empresaId, activeBranchId, dateRange, statusFilter]
   );
 
   const {
@@ -139,7 +141,7 @@ export const LogisticsPage: FC = () => {
   const [historialTarget, setHistorialTarget] = useState<Delivery | null>(null);
 
   const handleMarkInTransit = async (delivery: Delivery) => {
-    const result = await transitionDelivery(delivery.id, 'EN_TRANSITO', fullName);
+    const result = await transitionDelivery(empresaId ?? '', delivery.id, 'EN_TRANSITO', fullName);
     if (result.success && result.newStatus) {
       toast.success(`Entrega ${delivery.id} actualizada a "${DELIVERY_STATUS_LABEL[result.newStatus]}".`);
       // P10: la lista y los agregados son responsabilidad del servidor

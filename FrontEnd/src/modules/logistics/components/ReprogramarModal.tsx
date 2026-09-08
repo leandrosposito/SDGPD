@@ -24,6 +24,7 @@ interface ReprogramarModalProps {
 
 export const ReprogramarModal: FC<ReprogramarModalProps> = ({ isOpen, onClose, delivery, onReprogrammed }) => {
   const fullName = useSessionStore((s) => s.session?.fullName) ?? 'Usuario';
+  const empresaId = useSessionStore((s) => s.session?.company.id);
   const [fechaNueva, setFechaNueva] = useState(todayLocalDateString());
   const [motivo, setMotivo] = useState('');
   const [responsable, setResponsable] = useState(fullName);
@@ -45,7 +46,7 @@ export const ReprogramarModal: FC<ReprogramarModalProps> = ({ isOpen, onClose, d
   if (!delivery) return null;
 
   async function handleConfirm() {
-    if (!delivery) return;
+    if (!delivery || !empresaId) return;
     if (!motivo.trim()) {
       toast.error('El motivo de la reprogramación es obligatorio.');
       return;
@@ -53,7 +54,11 @@ export const ReprogramarModal: FC<ReprogramarModalProps> = ({ isOpen, onClose, d
 
     setIsSaving(true);
     try {
-      const result = await reprogramDelivery(delivery.id, { fechaNueva, motivo: motivo.trim(), responsable: responsable.trim() || fullName });
+      const result = await reprogramDelivery(empresaId, delivery.id, {
+        fechaNueva,
+        motivo: motivo.trim(),
+        responsable: responsable.trim() || fullName,
+      });
       if (result.success) {
         toast.success('Entrega reprogramada — vuelve a estado Creada.');
         onReprogrammed();
