@@ -15,7 +15,7 @@ Todo lo demás (cómo auditar, cómo implementar, cómo verificar, cuándo merge
 - No hay backend. Todo se apoya en contratos de API tipados + adaptadores mock. Cuando exista el backend real se cambia el adaptador, no la UI.
 - Rama base de trabajo: `lean`. Nunca se toca `main`.
 - Alcance de dominio: productos, proveedores, clientes, pedidos, caja y settings son alcance EMPRESA. Stock, reposición y logística son alcance SUCURSAL. Products es transversal (`shared/api/products/`).
-- Antes de empezar cualquier tarea, leer: `docs/auditorias/AUDIT_00_RESUMEN.md`, los `docs/adr/ADR-*.md` y `docs/VERIFICACION_CORRIDA_COMPLETA.md`. Los hallazgos y decisiones que ya están ahí no se re-discuten ni se re-auditan.
+- Antes de empezar cualquier tarea, leer: `docs/historial/auditorias/AUDIT_00_RESUMEN.md`, los `docs/adr/ADR-*.md` y `docs/historial/verificaciones/VERIFICACION_CORRIDA_COMPLETA.md`. Los hallazgos y decisiones que ya están ahí no se re-discuten ni se re-auditan.
 
 ## 2. REGLAS PERMANENTES
 
@@ -49,7 +49,7 @@ Todo lo demás (cómo auditar, cómo implementar, cómo verificar, cuándo merge
 
 No re-auditar el proyecto entero. Sólo: qué tocan estas tareas, qué existe hoy en esos archivos, qué hallazgos previos del `AUDIT_00_RESUMEN` caen dentro del alcance, y qué se rompe si se cambia.
 
-Sale en `docs/auditorias/AUDIT_<fecha>_<tema>.md`: hallazgos con severidad y archivo:línea, qué está bien y no hay que romper, y el plan de tandas.
+Sale en `docs/historial/auditorias/AUDIT_<fecha>_<tema>.md`: hallazgos con severidad y archivo:línea, qué está bien y no hay que romper, y el plan de tandas.
 
 ### Fase B — Decisiones
 
@@ -86,7 +86,7 @@ Según la sección 8.
 4. Smoke script `.mjs` (sin framework) de la lógica pura agregada, en `scripts/smoke/`.
 5. **Gate de conexión:** toda función nueva exportada tiene al menos un call-site real en la UI, sin contar su propio smoke test. Una función que sólo la llama su test es código muerto disfrazado de feature terminada, y hace que el gate 4 valide algo que nadie usa. Si no tiene call-site, la tanda no está terminada.
 6. Autorrevisión del diff completo buscando: `any` colados, agregados en cliente, query keys sin scope, listados sin paginar, services sin `empresaId`, archivos fuera de alcance.
-7. Checklist de navegador escrito en `docs/VERIFICACION_<tanda>.md`, con pasos concretos y resultado esperado.
+7. Checklist de navegador escrito en `docs/historial/verificaciones/VERIFICACION_<tanda>.md`, con pasos concretos y resultado esperado.
 
 Si un gate falla: corregir, máximo 3 intentos. Si sigue fallando, revertir esa tanda, documentarla como no hecha y seguir con la siguiente si es independiente.
 
@@ -137,7 +137,7 @@ Nunca mergear a `main`. Nunca mergear con un CRÍTICO o un ALTO abierto. Si no s
 4. El build queda peor que la línea base y no se puede revertir limpio.
 5. Implementar algo exigiría reescribir un dominio entero.
 
-## 10. INFORME FINAL (siempre, en `docs/REPORTE_<fecha>.md`)
+## 10. INFORME FINAL (siempre, en `docs/historial/reportes/REPORTE_<fecha>.md`)
 
 ```
 ## Qué hice, por tanda (hecha / parcial / no hecha + por qué)
