@@ -34,6 +34,16 @@
   color: var(--color-text-primary);
 }
 
+.dashboard-aggregates__reconciliation-note {
+  font-size: var(--font-size-xs, 0.75rem);
+  color: var(--color-text-secondary);
+  background: var(--color-info-muted);
+  border: 0.0625rem solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  margin: 0 0 var(--space-3);
+}
+
 .dashboard-aggregates__card-scope {
   font-size: var(--font-size-xs, 0.75rem);
   color: var(--color-text-tertiary);
