@@ -97,6 +97,11 @@ export interface OpenInvoice {
 // dias" + "vencimiento entre el 1 y el 15 de agosto" son dos filtros
 // simultaneos sobre el mismo conjunto de facturas abiertas).
 export interface OverdueClientsQueryFilters extends DateRangeQueryFilters {
+  // Regla 3.5 del protocolo: toda funcion de service lleva empresaId
+  // explicito. Agregado en el barrido de AUDIT_2026-09-08_empresaId-sweep.md
+  // (el mock sigue sin filtrar realmente por el, una sola empresa hoy,
+  // mismo criterio que el resto del proyecto).
+  empresaId: string;
   search?: string; // nombre o CUIT (M6)
   bucket?: AgingBucket; // filtro por tramo de mayor antiguedad del cliente
 }

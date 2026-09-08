@@ -9,6 +9,7 @@ import { SkeletonTable } from '@/shared/components/ui/SkeletonLoader';
 import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay';
 import { usePagedQuery } from '@/shared/hooks/usePagedQuery';
 import { useUrlListState } from '@/shared/hooks/useUrlListState';
+import { useSessionStore } from '@/shared/state/useSessionStore';
 import { DateRangeFilter } from '@/shared/components/ui/DateRangeFilter';
 import type { DateRangePreset, DateRangeValue } from '@/shared/components/ui/dateRangePresets';
 import { ExportButton, type ExportColumn } from '@/shared/components/ui/ExportButton';
@@ -52,6 +53,8 @@ interface ClientOverdueTableProps {
 }
 
 export const ClientOverdueTable: FC<ClientOverdueTableProps> = ({ search }) => {
+  const empresaId = useSessionStore((s) => s.session?.company.id);
+
   // Tanda 4 (corrida completa, A13): pagina, tramo y rango de fecha
   // propios de esta tab, prefijados `over_` (misma razon que `acc_` en
   // ClientAccountsTable — tabs montadas en la misma pagina).
@@ -85,12 +88,13 @@ export const ClientOverdueTable: FC<ClientOverdueTableProps> = ({ search }) => {
 
   const filters: OverdueClientsQueryFilters = useMemo(
     () => ({
+      empresaId: empresaId ?? '',
       search,
       bucket: bucketFilter === 'all' ? undefined : bucketFilter,
       dateFrom: dateRange.dateFrom,
       dateTo: dateRange.dateTo,
     }),
-    [search, bucketFilter, dateRange]
+    [empresaId, search, bucketFilter, dateRange]
   );
 
   const {
