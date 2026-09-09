@@ -15,3 +15,14 @@ SDGPD is an ERP built around business domains (Core, Comercial, Inventario, Log�
 ## Commands
 
 No repo-root-level commands. All commands run from `FrontEnd/` — see `FrontEnd/CLAUDE.md`.
+
+## Dónde buscar (FrontEnd/docs/)
+
+| Vas a... | Mirá primero |
+|---|---|
+| Tocar la estructura de `src/` (módulos, capas, dónde vive qué) | `docs/ARQUITECTURA.md` |
+| Entender una decisión técnica ya tomada | `docs/DECISIONES_TECNICAS.md` + `docs/adr/` |
+| Saber el estado actual del proyecto (qué está cerrado, qué sigue abierto) | `docs/ESTADO.md` |
+| Ver la deuda técnica viva | `docs/PENDIENTES.md` |
+| Migrar un listado a la capa `api/` + `usePagedQuery` | `docs/GUIA_MIGRACION_MODULO.md` |
+| El proceso de trabajo en sí (fases, gates, cuándo mergear) | `FrontEnd/docs/PROTOCOLO.md` |
