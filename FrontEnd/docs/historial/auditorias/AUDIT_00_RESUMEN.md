@@ -13,6 +13,8 @@ Ninguna de las 14 auditorías encontró un hallazgo de severidad BLOQUEANTE. En 
 
 Esto no significa que no haya deuda seria — hay 11 hallazgos ALTO que conviene resolver antes o durante Fase C — pero ninguno corrompe datos entre empresas/sucursales ni bloquea la Fase B (ADRs) tal como está.
 
+**A15 (2026-09-09, Logística/Entregas) confirma lo mismo en su alcance**: `empresaId` sigue siendo obligatorio en `DeliveryQueryFilters` (ya corregido en el barrido de empresaId de sesión anterior) y no se encontró ningún hallazgo BLOQUEANTE — los 13 hallazgos nuevos (5 ALTO, 3 MEDIO, 5 BAJO, sumados a la tabla de abajo) son gaps funcionales frente al modelo logístico objetivo (ADR-010/011), no corrupción de datos ni regresión de algo que funcionaba.
+
 ## Cobertura
 
 | Auditoría | Archivo | Hallazgos (A/M/B) |
@@ -31,6 +33,9 @@ Esto no significa que no haya deuda seria — hay 11 hallazgos ALTO que conviene
 | A12 — Errores, carga, vacíos | `AUDIT_12_ERRORES.md` | 0/0/2 |
 | A13 — Rutas y deep links | `AUDIT_13_RUTAS.md` | 1/1/1 |
 | A14 — Deuda declarada | `AUDIT_14_DEUDA_DECLARADA.md` | 2/2/5 (+1 info) |
+| A15 — Logística / Entregas (2026-09-09, posterior a las 14 de arriba — ver nota) | `AUDIT_15_LOGISTICA.md` | 5/3/5 |
+
+**Nota sobre A15:** a diferencia de A1-A14 (todas del 2026-09-06, antes de Fase B/C), A15 se hizo el 2026-09-09, después de que Tandas 4-8 y varias sesiones más ya estuvieran mergeadas a `lean` — es una auditoría de re-entrada acotada al módulo de Logística/Entregas, no una repetición de las 14 originales. Sus hallazgos se numeran continuando la secuencia de abajo (47+), agrupados por severidad igual que el resto; los números no son estrictamente correlativos dentro de cada sección porque se insertaron después, no se renumeró todo el documento.
 
 Tres hallazgos aparecen en más de una auditoría, mirados desde ángulos distintos (services, volumen, deuda declarada) — se consolidan en una sola fila de la tabla siguiente, citando todas sus fuentes: **Reposición/Tanda 3f sin migrar** (A2#1 + A3#1 + A14#5) y **Analytics sin service** (A2#4 + A3#2). El par de A8 (#1 code-splitting / #2 bundle único) también se fusiona en una fila porque el propio audit los marca como una sola causa/solución.
 
@@ -52,6 +57,11 @@ Esfuerzo estimado en talle (S ≈ ≤1 día, M ≈ 2-4 días, L ≈ 1-2 semanas,
 | 8 | Fechas (bug real) | A11#1 | `CreateOrderModal` prellena la fecha de pedido con `toISOString().split('T')[0]` — da el día siguiente en horario nocturno en Argentina (UTC-3). Bug reproducible, no solo deuda de diseño. | S — fix de una línea, usando el helper `toISODateString` que ya existe y ya es correcto en otros lugares del propio código. |
 | 9 | Rutas/deep links | A13#1 | Filtros/página/orden de los 13 listados paginados viven solo en memoria (`useState`), nunca en la URL — imposible compartir un link directo a un listado filtrado, y un F5 pierde el estado. | M-L — helper compartido de serialización + 13 consumidores a migrar. |
 | 10 | Verificación funcional | A14#1 | 5 tandas (3a Pedidos, 3b Caja, 3c Settings, 3d Clientes, 3g Movimientos/Historial) cerradas a nivel de código con checklist de navegador 100% sin ejecutar, incluidos los puntos centrales de cada una. | S (para Leandro) — los checklists ya están escritos, es ejecución mecánica, no código nuevo. |
+| 47 | Logística | A15#1 | No existe ninguna función para crear una `Delivery` nueva en todo el proyecto — las 18 entregas del mock son estáticas, sin ningún camino manual ni automático para que un pedido genere una entrega. | — (techo funcional, no de volumen): el módulo no puede operar sobre datos reales hasta que exista. | Insumo directo de ADR-010/011 (motor de asignación), no una corrección de esta ronda. |
+| 48 | Logística | A15#2 | `OrderStatus` (`order.types.ts:15`) mezcla estado comercial, logístico y financiero en una sola columna — un pedido no puede representar "facturado y con una línea rechazada" sin perder uno de los dos hechos. | Cada estado logístico nuevo que se agregue multiplica combinaciones imposibles de expresar en una sola columna. | Insumo directo de ADR-010 punto 1 (tres ejes independientes). |
+| 49 | Logística | A15#3 | Finalizar una `Delivery` (`registrarEntrega`) nunca actualiza `Order.status`, que solo avanza por click manual en otra pantalla — ambos estados pueden divergir indefinidamente sin que nada lo detecte. | A más entregas por día, más pedidos quedan con `Order.status` desactualizado esperando un click manual — no escala con operación real. | Insumo directo de ADR-010 punto 1/3. |
+| 50 | Logística | A15#5 | Ninguna de las 3 mutaciones de entregas (`transitionDelivery`/`reprogramDelivery`/`registrarEntrega`) tiene clave de idempotencia — un reintento de red desde el celular de un chofer puede duplicar un remito. | Con choferes en zonas de mala señal, un doble-submit duplicaría `cantidadEntregada` aplicada al pedido — corrompe el dato de cumplimiento. | Insumo directo de ADR-010 punto 4. |
+| 51 | Logística | A15#6 | Sin ningún campo de Proof of Delivery (receptor, firma, ubicación, timestamp de dispositivo) — la evidencia solo existe hoy para rechazos, nunca para una entrega exitosa. | — (capacidad ausente, no problema de escala). | Insumo directo de ADR-010 punto 7. |
 
 ### MEDIO
 
@@ -71,6 +81,9 @@ Esfuerzo estimado en talle (S ≈ ≤1 día, M ≈ 2-4 días, L ≈ 1-2 semanas,
 | 22 | Rutas | A13#2 | El único uso real de `useSearchParams` del proyecto es un mecanismo de "traspaso" de acción entre pantallas (`ComprasPage`), no de persistencia de estado de vista — no resuelve el caso general del hallazgo ALTO #9, aunque es buen precedente de patrón. | — (informativo, no requiere acción propia). |
 | 23 | Deuda declarada | A14#2 | Tanda 3e (Stock Actual + Bajo Stock Mínimo) tiene 1 de 12 puntos de su checklist verificados en navegador — incluida toda la funcionalidad nueva de búsqueda/orden server-side. | S (para Leandro) — checklist ya escrito. |
 | 24 | Deuda declarada | A14#3 | La tabla de resultados de `VERIFICACION_TANDA_2.md` tiene sus 7 celdas vacías en vez de "No ejecutado" explícito — inconsistencia de formato que facilita pasarlo por alto. | S — completar el texto de la tabla. |
+| 52 | Logística | A15#4 | Un pedido puede tener múltiples `Delivery` (18 para 6 pedidos en el mock) sin ninguna relación explícita entre ellas — no se puede distinguir "reintento de la misma mercadería" de "despacho parcial genuino" solo con el dato. | Un reporte que sume cantidades/`collectionAmount` de todas las `Delivery` de un pedido sobre o subestima según cuál sea el caso real. | Insumo directo de ADR-010 punto 2 (jerarquía Viaje→Parada→Entrega). |
+| 53 | Logística | A15#7 | La mercadería rechazada no toca stock ni caja en ningún punto del código — desaparece del sistema sin generar ningún movimiento contable. | Cuanta más mercadería se rechace, más diverge el stock/caja real del que el sistema cree tener, sin rastro. | Insumo directo de ADR-010 punto 6 (logística inversa). |
+| 54 | Verificación funcional | A15#8 | `VERIFICACION_TANDA_8.md` (Entregas), 10 puntos, sin ninguna evidencia de ejecución — no estaba capturado en el hallazgo ALTO #10 (que solo lista 5 tandas anteriores a Tanda 8). | — (deuda de verificación, no de código). | Ejecutarlo antes de extender el módulo hacia ADR-010/011. |
 
 ### BAJO
 
@@ -97,6 +110,11 @@ Esfuerzo estimado en talle (S ≈ ≤1 día, M ≈ 2-4 días, L ≈ 1-2 semanas,
 | 43 | Deuda declarada | A14#7 | `updateProduct` descarta los lotes (`ProductLot[]`) existentes al editar un producto — bug preexistente, confirmado y preservado sin cambios en Tanda 3e. | S — conservar `lots` del registro anterior salvo edición explícita. |
 | 44 | Deuda declarada | A14#9 | 4 tabs de Inventory (Ajustes, Categorías, Listas de Precios, Import/Export) son UI construida sin funcionalidad real — features futuras documentadas, no código muerto a borrar. | — (registro, no acción). |
 | 45 | Deuda declarada | A14#10 | `StockAdjustmentModal.tsx` sigue huérfano, no montado en ningún lado. | — (sin acción salvo que se decida implementar ajuste manual de stock). |
+| 55 | Logística | A15#9 | `getDeliveryNotesForDelivery` no pagina — acotado de hecho hoy (máximo 1 remito por entrega, `FINALIZADO` es terminal), pero deja de estarlo en el momento en que se habiliten reintentos con múltiples remitos por entrega. | Bajo hoy; relevante en cuanto ADR-010 habilite más de un remito por entrega. | Si se habilita, paginar en la misma tanda — no esperar a que se note en producción. |
+| 56 | Logística | A15#10 | `toISODate` (`deliveries.service.ts:63-68`) exportada sin ningún consumidor real — el mock tiene su propia copia local. | — | No borrar (regla del protocolo); candidata a limpieza si ADR-010 no la necesita. |
+| 57 | Logística | A15#11 | IDs de eventos/remitos generados con `Date.now()` sin garantía real de unicidad — colisión improbable en el mock single-thread, mal patrón si migra a backend con escritura concurrente. | Bajo con el volumen mock actual. | Reemplazar por ID server-side con unicidad garantizada cuando exista backend real. |
+| 58 | Logística | A15#12 | El botón "Imprimir Hoja de Ruta" (`LogisticsPage.tsx:130-133`) no hace nada más que un `console.log` — promete una función que no existe. | — | Insumo de ADR-011 punto 7 (documentos impresos vía job server-side). |
+| 59 | Logística | A15#13 | `DeliveryNote.id`/`DeliveryHistoryEvent.id` son `string` plano, sin branded type, a diferencia de `DeliveryId`/`OrderId`/`OrderLineId`. | — | Si ADR-010 amplía la jerarquía de entidades, tipar los IDs nuevos desde el día uno. |
 
 ### INFO
 
