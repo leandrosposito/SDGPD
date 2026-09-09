@@ -10,7 +10,7 @@ SDGPD is an ERP built around business domains (Core, Comercial, Inventario, Log�
 
 - `FrontEnd/` — React app, actively developed. All code today lives here. See `FrontEnd/CLAUDE.md` for stack, architecture, and implementation details.
 - `BackEnd/` — completely empty, not started. No backend exists yet.
-- `Documentacion/` — business/domain specs (Product Vision, Arquitectura Funcional del Negocio, Modelo Funcional del Dominio) as .docx/.pdf, plus some derived .md/.txt extracts. Consult these for business rules and domain vocabulary (in Spanish) before inventing behavior for a module.
+- `Documentacion/` — business/domain specs (Product Vision, Arquitectura Funcional del Negocio, Modelo Funcional del Dominio) as .docx/.pdf, plus some derived .md/.txt extracts. See `Documentacion/README.md` first — it maps which file is which and which ones are current vs. archived. Consult these for business rules and domain vocabulary (in Spanish) before inventing behavior for a module.
 
 ## Commands
 

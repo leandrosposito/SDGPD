@@ -29,6 +29,7 @@ Todo lo demás (cómo auditar, cómo implementar, cómo verificar, cuándo merge
 7. Un commit por tanda, chico y reversible. Nada de un commit gigante al final.
 8. La verificación funcional en navegador la hace Leandro. Cada tanda deja su checklist.
 9. Cuando una tarea exija una decisión de diseño que ningún ADR cubre: tomarla, eligiendo la opción más consistente con los ADRs existentes, escribir el ADR nuevo, implementar, y marcarla bien visible en el informe final bajo "decisiones tomadas sin consultar". No frenar la corrida esperando respuesta.
+10. Todo documento que afirme algo sobre la estructura del código (qué carpetas/archivos existen, cuántos hay, dónde vive qué) lleva al principio la fecha en que esa afirmación se verificó contra el filesystem. Quien lo lea después de esa fecha lo reverifica antes de confiar en él — la fecha no es decoración, es la advertencia de que el código pudo moverse desde entonces.
 
 ## 3. REGLAS DE ESCALABILIDAD (no negociables, aplican a todo código nuevo)
 
@@ -58,7 +59,7 @@ Para cada tarea: ¿hay un ADR que la cubra? Si sí, se sigue. Si no, se escribe 
 
 ### Fase C — Implementación por tandas
 
-Tandas chicas, ordenadas por dependencia, lo transversal primero (lo que cambia firmas o contexto compartido va antes que lo que lo consume). Cada tanda: implementar → 7 gates → checklist → commit → push.
+Tandas chicas, ordenadas por dependencia, lo transversal primero (lo que cambia firmas o contexto compartido va antes que lo que lo consume). Cada tanda: implementar → 8 gates → checklist → commit → push.
 
 ### Fase D — Verificación adversarial (obligatoria, no se delega)
 
@@ -79,7 +80,7 @@ Verificaciones mínimas, siempre:
 
 Según la sección 8.
 
-## 5. LOS 7 GATES (al cierre de cada tanda)
+## 5. LOS 8 GATES (al cierre de cada tanda)
 
 1. `tsc --noEmit` sin errores nuevos respecto de la línea base.
 2. `eslint` sin errores nuevos.
@@ -88,6 +89,7 @@ Según la sección 8.
 5. **Gate de conexión:** toda función nueva exportada tiene al menos un call-site real en la UI, sin contar su propio smoke test. Una función que sólo la llama su test es código muerto disfrazado de feature terminada, y hace que el gate 4 valide algo que nadie usa. Si no tiene call-site, la tanda no está terminada.
 6. Autorrevisión del diff completo buscando: `any` colados, agregados en cliente, query keys sin scope, listados sin paginar, services sin `empresaId`, archivos fuera de alcance.
 7. Checklist de navegador escrito en `docs/historial/verificaciones/VERIFICACION_<tanda>.md`, con pasos concretos y resultado esperado.
+8. **Gate de arquitectura:** si la tanda cambió la estructura de `src/` (carpetas nuevas o borradas, módulos nuevos, un componente/service que se movió de lugar), actualizar `docs/ARQUITECTURA.md` es parte de la misma tanda, no una tarea de documentación aparte para después. Una tanda que cambia dónde vive algo y no toca `ARQUITECTURA.md` no está terminada.
 
 Si un gate falla: corregir, máximo 3 intentos. Si sigue fallando, revertir esa tanda, documentarla como no hecha y seguir con la siguiente si es independiente.
 
@@ -104,7 +106,7 @@ Todas ya ocurrieron acá. Revisarlas activamente, no de memoria:
 
 ## 7. DEFINICIÓN DE "TERMINADO"
 
-Una tanda está terminada cuando: pasa los 7 gates, está conectada a la UI, tiene su checklist escrito, su commit propio y está pusheada. Las tres cosas juntas. Código que compila pero no lo llama nadie no está terminado.
+Una tanda está terminada cuando: pasa los 8 gates, está conectada a la UI, tiene su checklist escrito, su commit propio y está pusheada. Las tres cosas juntas. Código que compila pero no lo llama nadie no está terminado.
 
 ## 8. MERGE — QUÉ SE SUBE Y QUÉ NO
 
