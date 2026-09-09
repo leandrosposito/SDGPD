@@ -1,25 +1,49 @@
+import { lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { AppShell } from '../layouts/AppShell';
 import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary';
 import { queryClient } from '@/shared/api/queryClient';
-import { DashboardPage } from '@/modules/dashboard/DashboardPage';
-import { ClientsPage } from '@/modules/clients/ClientsPage';
-import { InventoryPage } from '@/modules/inventory/InventoryPage';
-import { LogisticsPage } from '@/modules/logistics/LogisticsPage';
-import { CashPage } from '@/modules/cash/CashPage';
-import { SuppliersPage } from '@/modules/suppliers/SuppliersPage';
-import { ComprasPage } from '@/modules/compras/ComprasPage';
-import { OrdersPage } from '@/modules/orders/OrdersPage';
-import { AnalyticsPage } from '@/modules/analytics/AnalyticsPage';
-import { SettingsPage } from '@/modules/settings/SettingsPage';
-
 
 // ============================================================
 // AppRoutes — Application routes (React Router v6)
-// Each module gets its own route. Placeholder pages are
-// replaced with real module components as they are built.
+// Cada modulo pesa un chunk propio (Tanda 10A, code-splitting por
+// ruta, ADR-012): import() dinamico en vez de import estatico. El
+// <Suspense> que cubre la carga vive en AppShell (alrededor de
+// <Outlet/>), no aca — ver el comentario en AppShell.tsx sobre por
+// que no se pone al nivel de <Routes>.
 // ============================================================
+
+const DashboardPage = lazy(() =>
+  import('@/modules/dashboard/DashboardPage').then(m => ({ default: m.DashboardPage }))
+);
+const ClientsPage = lazy(() =>
+  import('@/modules/clients/ClientsPage').then(m => ({ default: m.ClientsPage }))
+);
+const InventoryPage = lazy(() =>
+  import('@/modules/inventory/InventoryPage').then(m => ({ default: m.InventoryPage }))
+);
+const LogisticsPage = lazy(() =>
+  import('@/modules/logistics/LogisticsPage').then(m => ({ default: m.LogisticsPage }))
+);
+const CashPage = lazy(() =>
+  import('@/modules/cash/CashPage').then(m => ({ default: m.CashPage }))
+);
+const SuppliersPage = lazy(() =>
+  import('@/modules/suppliers/SuppliersPage').then(m => ({ default: m.SuppliersPage }))
+);
+const ComprasPage = lazy(() =>
+  import('@/modules/compras/ComprasPage').then(m => ({ default: m.ComprasPage }))
+);
+const OrdersPage = lazy(() =>
+  import('@/modules/orders/OrdersPage').then(m => ({ default: m.OrdersPage }))
+);
+const AnalyticsPage = lazy(() =>
+  import('@/modules/analytics/AnalyticsPage').then(m => ({ default: m.AnalyticsPage }))
+);
+const SettingsPage = lazy(() =>
+  import('@/modules/settings/SettingsPage').then(m => ({ default: m.SettingsPage }))
+);
 
 export function AppRoutes() {
   return (
