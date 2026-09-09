@@ -33,12 +33,12 @@ Este archivo es un ÍNDICE, no el log. El detalle completo de cada decisión (co
 | Migración de Movimientos e Historial del Producto, agrega `branchId` a ambos tipos (Tanda 3g) | 06/09/2026 | Log, `[06/09/2026] — Migra Movimientos e Historial del Producto` |
 | Modelo de entrega parcial (remitos append-only, línea con cantidad entregada) | 07/09/2026 | `docs/adr/ADR-001-entrega-parcial.md` |
 | Máquina de estados de la entrega/viaje | 07/09/2026 | `docs/adr/ADR-002-maquina-estados-entrega.md` |
-| Mecanismo de "tiempo real" simulado (sin backend) | 07/09/2026 | `docs/adr/ADR-003-tiempo-real.md` |
+| Mecanismo de "tiempo real" simulado (sin backend) — **enmendado 09/09/2026**: `useLiveQuery` acepta intervalo por consumidor, default 30s sin cambios, posición de viaje 10-15s | 07/09/2026 | `docs/adr/ADR-003-tiempo-real.md` |
 | Contrato de exportación (Excel/CSV) server-side | 07/09/2026 | `docs/adr/ADR-004-exportacion.md` |
 | Evidencia del rechazo de mercadería (upload de fotos/PDF) | 07/09/2026 | `docs/adr/ADR-005-evidencia-rechazo.md` |
 | IDs tipados (branded types: `OrderId`, `BranchId`, etc.) | 07/09/2026 | `docs/adr/ADR-006-ids-tipados.md` |
 | Alcance y ciclo de vida de las alertas del tablero | 07/09/2026 | `docs/adr/ADR-007-alertas.md` |
 | Dinero y cantidades (módulo `Money`, centavos enteros) | 07/09/2026 | `docs/adr/ADR-008-dinero-cantidades.md` |
 | Alcance del dashboard: empresa vs. sucursal, elegido por el usuario | 07/09/2026 | `docs/adr/ADR-009-alcance-dashboard.md` |
-| Modelo logístico: 3 ejes de estado (comercial/logístico/financiero), jerarquía Viaje→Parada→Entrega→Línea, idempotencia, catálogo de motivos, logística inversa, POD — **Propuesto, sin aprobar** | 09/09/2026 | `docs/adr/ADR-010-modelo-logistico.md` |
-| Viajes, capacidad multidimensional y motor de asignación por filtro — **Propuesto, sin aprobar** | 09/09/2026 | `docs/adr/ADR-011-viajes-y-asignacion.md` |
+| Modelo logístico: 3 ejes de estado (comercial escribible, logístico y financiero como proyecciones de solo lectura), jerarquía Viaje→Parada→Entrega→Línea (Parada multi-pedido), idempotencia (clave al formar la intención), catálogo de motivos (con flags), logística inversa, POD — **Aceptado 09/09/2026** | 09/09/2026 | `docs/adr/ADR-010-modelo-logistico.md` |
+| Viajes, capacidad multidimensional y motor de asignación por filtro (techo ~100, 409 granular, ventanas horarias anidadas) — **Aceptado 09/09/2026** | 09/09/2026 | `docs/adr/ADR-011-viajes-y-asignacion.md` |

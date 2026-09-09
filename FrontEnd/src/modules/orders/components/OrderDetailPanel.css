@@ -192,3 +192,43 @@
   opacity: 0.45;
   cursor: default;
 }
+
+/* Deliveries (Tanda 9) */
+.order-detail__deliveries {
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
+  border-top: 0.0625rem solid var(--color-border);
+}
+
+.order-detail__deliveries-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.order-detail__deliveries-header .order-detail__section-title {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.order-detail__deliveries-empty {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+}
+
+.order-detail__btn-create-delivery {
+  background-color: var(--color-accent);
+  color: white;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.order-detail__btn-create-delivery:disabled {
+  opacity: 0.45;
+  cursor: default;
+}

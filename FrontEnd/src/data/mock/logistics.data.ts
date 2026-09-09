@@ -1,4 +1,4 @@
-import { asOrderId, asBranchId, asDeliveryId } from '@/shared/types/ids.types';
+import { asOrderId, asBranchId, asDeliveryId, asDeliveryHistoryEventId } from '@/shared/types/ids.types';
 import type { Delivery, DeliveryHistoryEvent, DeliveryStatus } from '@/shared/types/logistics.types';
 
 // ============================================================
@@ -57,7 +57,10 @@ interface DeliverySeed {
 
 function buildDelivery(seed: DeliverySeed): Delivery {
   const createdEvent: DeliveryHistoryEvent = {
-    id: `${seed.id}-h0`,
+    // Tanda 9 (AUDIT_15#13): antes `${seed.id}-h0` sin branding — el
+    // seed no matchea DELIVERY_ID_PATTERN, se arma un id propio con el
+    // prefijo dh- exigido por asDeliveryHistoryEventId.
+    id: asDeliveryHistoryEventId(`dh-${seed.id}-0`),
     desde: null,
     hasta: seed.status,
     quien: 'Sistema (dato de ejemplo)',

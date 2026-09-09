@@ -39,7 +39,8 @@ import './LogisticsPage.css';
 // lista completa. Las acciones de avanzar/registrar entrega/
 // reprogramar pasan por la maquina de estados tipada de
 // deliveryStatus.types.ts (ver DeliveriesTable, que decide que boton
-// mostrar segun `puedeTransicionar`, no por su cuenta).
+// mostrar segun `allowedTransitions` — Tanda 9, ver el header de
+// DeliveriesTable.tsx).
 // ============================================================
 
 const PRIORITY_LABEL: Record<Delivery['priority'], string> = {
@@ -141,7 +142,11 @@ export const LogisticsPage: FC = () => {
   const [historialTarget, setHistorialTarget] = useState<Delivery | null>(null);
 
   const handleMarkInTransit = async (delivery: Delivery) => {
-    const result = await transitionDelivery(empresaId ?? '', delivery.id, 'EN_TRANSITO', fullName);
+    // Idempotencia (ADR-010 seccion 4): esta accion no pasa por un
+    // modal — el click ES la formacion de la intencion, la clave se
+    // genera aca, una vez por click, nunca dentro del service.
+    const idempotencyKey = crypto.randomUUID();
+    const result = await transitionDelivery(empresaId ?? '', idempotencyKey, delivery.id, 'EN_TRANSITO', fullName);
     if (result.success && result.newStatus) {
       toast.success(`Entrega ${delivery.id} actualizada a "${DELIVERY_STATUS_LABEL[result.newStatus]}".`);
       // P10: la lista y los agregados son responsabilidad del servidor

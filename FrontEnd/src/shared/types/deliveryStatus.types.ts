@@ -1,4 +1,4 @@
-import type { DeliveryStatus } from './logistics.types';
+import type { DeliveryStatus, AllowedTransition } from './logistics.types';
 
 // ============================================================
 // deliveryStatus.types — Maquina de estados del viaje (ADR-002,
@@ -30,4 +30,32 @@ export const DELIVERY_TRANSITIONS: Record<DeliveryStatus, readonly DeliveryStatu
 
 export function puedeTransicionar(desde: DeliveryStatus, hasta: DeliveryStatus): boolean {
   return DELIVERY_TRANSITIONS[desde].includes(hasta);
+}
+
+// Motivo server-side para cada transicion NO permitida desde un estado
+// dado — Tanda 9, ADR-010 seccion 3 (correccion 2026-09-09). Sin esto
+// el cliente tendria que inventar su propio texto o, peor, deducir la
+// regla de negocio para explicarselo al usuario (exactamente el
+// antipatron que esta correccion cierra).
+const TODOS_LOS_ESTADOS: readonly DeliveryStatus[] = ['CREADO', 'EN_TRANSITO', 'FINALIZADO', 'REPROGRAMADO', 'CANCELADO'];
+
+function motivoNoPermitida(desde: DeliveryStatus, hasta: DeliveryStatus): string {
+  if (desde === 'FINALIZADO') return 'Esta entrega ya está finalizada — no admite más transiciones.';
+  if (desde === 'CANCELADO') return 'Esta entrega está cancelada — no admite más transiciones.';
+  if (hasta === 'FINALIZADO' && desde === 'CREADO') return 'Todavía no salió a la calle — marcala "En ruta" antes de registrar la entrega.';
+  if (hasta === 'CREADO' && desde !== 'REPROGRAMADO') return 'Solo se vuelve a "Creada" reprogramando la entrega.';
+  return `No se puede pasar de "${desde}" a "${hasta}" directamente.`;
+}
+
+// Contrato de API (ADR-010 seccion 3): un objeto por CADA estado del
+// dominio distinto del actual, nunca solo un array de los permitidos
+// — `allowedTransitions` calculado UNA sola vez acá, tanto el mock
+// (deliveries.service.ts) como el cliente (DeliveriesTable.tsx) leen
+// el resultado, ninguno de los dos vuelve a llamar `puedeTransicionar`
+// por su cuenta para decidir que mostrar.
+export function computeAllowedTransitions(desde: DeliveryStatus): AllowedTransition[] {
+  return TODOS_LOS_ESTADOS.filter((hasta) => hasta !== desde).map((hasta) => {
+    const permitida = puedeTransicionar(desde, hasta);
+    return permitida ? { transicion: hasta, permitida } : { transicion: hasta, permitida, motivo: motivoNoPermitida(desde, hasta) };
+  });
 }

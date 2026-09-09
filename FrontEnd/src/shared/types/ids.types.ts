@@ -46,12 +46,19 @@ export type BranchId = string & { readonly __brand: 'BranchId' };
 export type OrderLineId = string & { readonly __brand: 'OrderLineId' };
 export type ClientId = string & { readonly __brand: 'ClientId' };
 export type DeliveryId = string & { readonly __brand: 'DeliveryId' };
+// Tanda 9 (modelo logistico base, ADR-010/AUDIT_15 hallazgo #13): estos
+// dos quedaban como string plano pese a que Delivery/DeliveryNote ya
+// tenian el resto de sus relaciones tipadas.
+export type DeliveryNoteId = string & { readonly __brand: 'DeliveryNoteId' };
+export type DeliveryHistoryEventId = string & { readonly __brand: 'DeliveryHistoryEventId' };
 
 const ORDER_ID_PATTERN = /^ord-/;
 const BRANCH_ID_PATTERN = /^branch-/;
 const ORDER_LINE_ID_PATTERN = /^oi-/;
 const CLIENT_ID_PATTERN = /^cli-/;
 const DELIVERY_ID_PATTERN = /^del-/;
+const DELIVERY_NOTE_ID_PATTERN = /^remito-/;
+const DELIVERY_HISTORY_EVENT_ID_PATTERN = /^dh-/;
 
 export function isOrderId(raw: string): raw is OrderId {
   return ORDER_ID_PATTERN.test(raw);
@@ -95,5 +102,23 @@ export function isDeliveryId(raw: string): raw is DeliveryId {
 
 export function asDeliveryId(raw: string): DeliveryId {
   if (!isDeliveryId(raw)) throw new InvalidIdError('DeliveryId', raw);
+  return raw;
+}
+
+export function isDeliveryNoteId(raw: string): raw is DeliveryNoteId {
+  return DELIVERY_NOTE_ID_PATTERN.test(raw);
+}
+
+export function asDeliveryNoteId(raw: string): DeliveryNoteId {
+  if (!isDeliveryNoteId(raw)) throw new InvalidIdError('DeliveryNoteId', raw);
+  return raw;
+}
+
+export function isDeliveryHistoryEventId(raw: string): raw is DeliveryHistoryEventId {
+  return DELIVERY_HISTORY_EVENT_ID_PATTERN.test(raw);
+}
+
+export function asDeliveryHistoryEventId(raw: string): DeliveryHistoryEventId {
+  if (!isDeliveryHistoryEventId(raw)) throw new InvalidIdError('DeliveryHistoryEventId', raw);
   return raw;
 }

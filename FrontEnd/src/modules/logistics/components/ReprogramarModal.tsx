@@ -1,4 +1,4 @@
-import { useEffect, useState, type FC } from 'react';
+import { useState, type FC } from 'react';
 import { toast } from 'sonner';
 import { Modal } from '@/shared/components/ui/Modal';
 import { useSessionStore } from '@/shared/state/useSessionStore';
@@ -13,6 +13,15 @@ import './ReprogramarModal.css';
 // de sesion, editable). Al confirmar, la entrega vuelve a CREADO con
 // la fecha nueva (deliveries.service.ts#reprogramDelivery se encarga
 // de los 2 pasos de transicion internos).
+//
+// Tanda 9 (ADR-010 seccion 4): idempotente — la clave se genera al
+// abrir el modal (la intencion de reprogramar esta entrega), no al
+// confirmar, mismo criterio que RegistrarEntregaModal. El reseteo de
+// campos y la clave comparten el mismo disparador (isOpen pasa a
+// true) asi que se ajustan juntos, durante el render — no en un
+// useEffect con un microtask envolviendo el setState: esa es la
+// trampa conocida de este proyecto (PROTOCOLO.md seccion 6, #5),
+// "la regla se calla, el problema queda".
 // ============================================================
 
 interface ReprogramarModalProps {
@@ -29,24 +38,27 @@ export const ReprogramarModal: FC<ReprogramarModalProps> = ({ isOpen, onClose, d
   const [motivo, setMotivo] = useState('');
   const [responsable, setResponsable] = useState(fullName);
   const [isSaving, setIsSaving] = useState(false);
+  const [idempotencyKey, setIdempotencyKey] = useState('');
 
-  useEffect(() => {
-    // Microtask (mismo patron que RegistrarEntregaModal/AlertsBell,
-    // Tanda 7/8) para no disparar setState sincronico en el cuerpo del
-    // efecto.
-    Promise.resolve().then(() => {
-      if (isOpen) {
-        setFechaNueva(todayLocalDateString());
-        setMotivo('');
-        setResponsable(fullName);
-      }
-    });
-  }, [isOpen, fullName]);
+  // Ajuste de estado durante el render (react.dev/learn/you-might-not-
+  // need-an-effect): cuando `openTrigger` cambia (el modal pasa a
+  // abierto, para esta entrega u otra), se resetean campos + clave en
+  // el mismo render extra que React descarta antes de pintar — no hay
+  // useEffect involucrado.
+  const openTrigger = isOpen ? (delivery?.id ?? '') : null;
+  const [lastOpenTrigger, setLastOpenTrigger] = useState<string | null>(null);
+  if (openTrigger !== null && openTrigger !== lastOpenTrigger) {
+    setLastOpenTrigger(openTrigger);
+    setIdempotencyKey(crypto.randomUUID());
+    setFechaNueva(todayLocalDateString());
+    setMotivo('');
+    setResponsable(fullName);
+  }
 
   if (!delivery) return null;
 
   async function handleConfirm() {
-    if (!delivery || !empresaId) return;
+    if (!delivery || !empresaId || !idempotencyKey) return;
     if (!motivo.trim()) {
       toast.error('El motivo de la reprogramación es obligatorio.');
       return;
@@ -54,7 +66,7 @@ export const ReprogramarModal: FC<ReprogramarModalProps> = ({ isOpen, onClose, d
 
     setIsSaving(true);
     try {
-      const result = await reprogramDelivery(empresaId, delivery.id, {
+      const result = await reprogramDelivery(empresaId, idempotencyKey, delivery.id, {
         fechaNueva,
         motivo: motivo.trim(),
         responsable: responsable.trim() || fullName,

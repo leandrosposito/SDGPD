@@ -96,6 +96,7 @@ export function orderFromDTO(dto: OrderDTO): Order {
     clientZone: dto.cliente.zona,
     sellerName: dto.vendedor,
     status: dto.estado,
+    comercial: dto.estado_comercial,
     source: dto.origen,
     paymentMethod: dto.forma_pago,
     subtotal: dto.importes.subtotal,
@@ -124,6 +125,7 @@ export function orderToDTO(order: Order): OrderDTO {
     },
     vendedor: order.sellerName,
     estado: order.status,
+    estado_comercial: order.comercial,
     origen: order.source,
     forma_pago: order.paymentMethod,
     importes: {

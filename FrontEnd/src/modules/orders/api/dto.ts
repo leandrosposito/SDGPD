@@ -1,4 +1,4 @@
-import type { OrderStatus, OrderSource, PaymentMethod } from '@/shared/types/order.types';
+import type { OrderStatus, OrderComercialStatus, OrderSource, PaymentMethod } from '@/shared/types/order.types';
 
 // ============================================================
 // dto.ts (orders) — Forma que tendría la respuesta de un backend
@@ -43,6 +43,9 @@ export interface OrderDTO {
   };
   vendedor: string;
   estado: OrderStatus;
+  // Tanda 9 (ADR-010 seccion 1): eje comercial real, independiente de
+  // `estado` (deprecado, ver order.types.ts).
+  estado_comercial: OrderComercialStatus;
   origen: OrderSource;
   forma_pago: PaymentMethod;
   importes: {

@@ -1,4 +1,4 @@
-import type { OrderId, OrderLineId, DeliveryId } from './ids.types';
+import type { OrderId, OrderLineId, DeliveryId, DeliveryNoteId } from './ids.types';
 
 // ============================================================
 // deliveryNote.types — Remitos (ADR-001, Tanda 8 de la corrida
@@ -21,11 +21,18 @@ export interface DeliveryNoteLine {
   cantidadOfrecida: number;
   cantidadEntregada: number;
   cantidadRechazada: number;
+  // Tanda 9 (ADR-010 seccion 5): motivoCodigo referencia
+  // MotivoCatalogItem.codigo (motivo.types.ts) — 'OTRO' incluido, es un
+  // codigo mas del catalogo. motivoRechazo pasa a ser el TEXTO
+  // resuelto (la descripcion del catalogo en el momento de elegirlo, o
+  // el texto libre cuando el codigo es 'OTRO') — se seguia llamando
+  // igual para no romper el render ya existente de DeliveryHistoryModal.
+  motivoCodigo?: string;
   motivoRechazo?: string;
 }
 
 export interface DeliveryNote {
-  id: string;
+  id: DeliveryNoteId; // Tanda 9, AUDIT_15#13: antes string plano.
   orderId: OrderId;
   deliveryId: DeliveryId;
   fecha: string; // ISO datetime de creacion del remito

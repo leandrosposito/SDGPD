@@ -12,7 +12,30 @@
 
 import type { OrderId, OrderLineId, ClientId } from './ids.types';
 
+// DEPRECADO (Tanda 9, ADR-010 seccion 1/8): mezcla estado comercial
+// (pending/cancelled), logistico (preparing/dispatched/delivered) y
+// financiero (invoiced) en una sola columna — AUDIT_15 hallazgo #2.
+// Se mantiene de solo lectura (nadie nuevo debe escribirlo) mientras
+// convive con `comercial` y las proyecciones derivadas de
+// `shared/utils/orderLogistics.ts` — `advanceOrderStatus`/su boton en
+// OrdersPage siguen escribiendolo por ahora (ADR-010 seccion 8, punto
+// 4: el boton se retira recien cuando TODA la UI que lee `status` haya
+// migrado, no antes — esta tanda no migra `OrdersPage`/exports
+// todavia, ver el informe de Fase 2).
 export type OrderStatus = 'pending' | 'preparing' | 'dispatched' | 'delivered' | 'invoiced' | 'cancelled';
+
+// Eje comercial (ADR-010 seccion 1, Tanda 9): campo REAL, escribible —
+// a diferencia del logistico (derivado de Delivery, ver
+// shared/utils/orderLogistics.ts#deriveOrderLogisticStatus) y el
+// financiero (proyeccion de solo lectura, ver
+// deriveOrderFinancialStatus en el mismo archivo), este eje SI se
+// persiste porque es un hecho comercial real, no algo que se pueda
+// recalcular de otra entidad. Hoy ningun flujo de UI crea pedidos en
+// 'Borrador' (CreateOrderModal los crea confirmados) — el valor existe
+// en el tipo para cuando haga falta, no es especulativo: ADR-010 lo
+// pide explicitamente como uno de los 3 valores del eje.
+export type OrderComercialStatus = 'Borrador' | 'Confirmado' | 'Cancelado';
+
 export type OrderSource = 'mobile' | 'manual';
 export type PaymentMethod = 'Cuenta Corriente' | 'Efectivo' | 'Transferencia';
 
@@ -49,7 +72,8 @@ export interface Order {
   clientAddress: string;
   clientZone: string;
   sellerName: string;
-  status: OrderStatus;
+  status: OrderStatus; // deprecado, ver comentario arriba del tipo
+  comercial: OrderComercialStatus; // Tanda 9, ADR-010 seccion 1
   source: OrderSource;
   paymentMethod: PaymentMethod;
   subtotal: number;
