@@ -123,6 +123,8 @@ export const OrderDetailPanel: FC<OrderDetailPanelProps> = ({
   // mientras el panel esta abierto.
   const {
     data: orderDeliveries,
+    isLoading: isLoadingDeliveries,
+    error: orderDeliveriesError,
     refetch: refetchOrderDeliveries,
   } = useCachedQuery(
     'order-deliveries',
@@ -140,7 +142,28 @@ export const OrderDetailPanel: FC<OrderDetailPanelProps> = ({
   if (!order) return null;
 
   const advanceLabel = ADVANCE_LABEL[order.status];
-  const canCancel = order.status !== 'delivered' && order.status !== 'invoiced' && order.status !== 'cancelled';
+  // Fix del hallazgo ALTO de Fase 3 (Tanda 9): cancelar tambien se
+  // bloquea si el pedido tiene una entrega en CREADO/EN_TRANSITO —
+  // mismo criterio de "activa" que orders.service.ts#cancelOrder
+  // (que vuelve a validar esto server-side, este chequeo del cliente
+  // es solo para no mostrar un boton que el servidor va a rechazar).
+  // Mientras `orderDeliveries` todavia esta cargando O si el fetch
+  // termino en error se trata como bloqueado (conservador, mismo
+  // criterio que el resto de los guards de este panel) — sin el chequeo
+  // de error, un fetch fallido deja `orderDeliveries` en `undefined`
+  // (no en `[]`), `deliveries` cae al fallback `EMPTY_DELIVERIES` via
+  // `??`, y `hasActiveDeliveries` da `false` por una lista vacia que en
+  // realidad significa "no sabemos", no "no hay" — habilitaria Cancelar
+  // sin haber podido confirmar que no hay una entrega activa (hallazgo
+  // propio, autoauditoria de este mismo fix).
+  const hasActiveDeliveries = deliveries.some((d) => d.status === 'CREADO' || d.status === 'EN_TRANSITO');
+  const canCancel =
+    order.status !== 'delivered' &&
+    order.status !== 'invoiced' &&
+    order.status !== 'cancelled' &&
+    !isLoadingDeliveries &&
+    !orderDeliveriesError &&
+    !hasActiveDeliveries;
 
   const fulfillmentStatus = deriveOrderFulfillmentStatus(order.items);
   // undefined si el cliente fue borrado o el catalogo todavia no cargo

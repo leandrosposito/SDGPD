@@ -9,6 +9,7 @@ import { ApiError } from '@/shared/api/ApiError';
 import type { OrderDTO, OrdersPageDTO, OrdersAggregatesDTO } from './dto';
 import { orderFromDTO, orderToDTO, orderFormInputToDTO, type OrderFormInput } from './mapper';
 import type { OrderProjectionForAggregation } from '@/modules/dashboard/api/dashboardAggregates';
+import { getActiveDeliveriesForOrder } from '@/modules/logistics/services/deliveries.service';
 
 export type { OrderFormInput };
 
@@ -319,7 +320,11 @@ const ORDER_STATUS_FLOW: Partial<Record<OrderStatus, OrderStatus>> = {
   delivered: 'invoiced',
 };
 
-export type OrderStatusTransitionReason = 'not-found' | 'terminal-status';
+// 'has-active-deliveries' solo lo produce cancelOrder — advanceOrderStatus
+// nunca lo devuelve, pero comparten el mismo tipo de resultado
+// (OrderStatusTransitionResult) desde antes de este fix, no vale la
+// pena partirlo en dos tipos para una sola razon nueva.
+export type OrderStatusTransitionReason = 'not-found' | 'terminal-status' | 'has-active-deliveries';
 
 export interface OrderStatusTransitionResult {
   success: boolean;
@@ -350,10 +355,15 @@ export async function advanceOrderStatus(empresaId: string, orderId: string): Pr
   });
 }
 
-// Cancela desde CUALQUIER estado, sin restriccion — mismo
-// comportamiento que handleCancel en OrdersPage.tsx antes de esta
-// tanda (a diferencia de purchaseOrders, que sí valida transiciones
-// válidas para cancelar).
+// Cancela desde CUALQUIER estado, sin restriccion de `estado`/
+// `estado_comercial` — mismo comportamiento que handleCancel en
+// OrdersPage.tsx antes de esta tanda (a diferencia de purchaseOrders,
+// que sí valida transiciones válidas para cancelar). La UNICA
+// restriccion real es que no tenga una entrega activa (fix del
+// hallazgo ALTO de Fase 3, Tanda 9: antes esta funcion no consultaba
+// deliveriesStore para nada, un pedido con una entrega en curso podia
+// quedar Cancelado mientras la entrega seguia y cobraba
+// collectionAmount).
 export async function cancelOrder(empresaId: string, orderId: string): Promise<OrderStatusTransitionResult> {
   return httpClient.request<OrderStatusTransitionResult>({
     method: 'PUT',
@@ -363,6 +373,9 @@ export async function cancelOrder(empresaId: string, orderId: string): Promise<O
       const existing = ordersDTOStore.find((dto) => dto.id === orderId);
       if (!existing) {
         return { success: false, orderId, reason: 'not-found' };
+      }
+      if (getActiveDeliveriesForOrder(asOrderId(orderId)).length > 0) {
+        return { success: false, orderId, previousStatus: existing.estado, reason: 'has-active-deliveries' };
       }
       const previousStatus = existing.estado;
       // Tanda 9 (ADR-010 seccion 1): cancelar SI es un evento del eje

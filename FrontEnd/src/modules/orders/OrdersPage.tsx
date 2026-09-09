@@ -186,7 +186,15 @@ export const OrdersPage: FC = () => {
     }
     const result = await cancelOrder(empresaId, order.id);
     if (!result.success) {
-      toast.error('No se pudo cancelar el pedido.');
+      // Fix del hallazgo ALTO de Fase 3 (Tanda 9): mensaje especifico
+      // para el unico motivo nuevo — el resto (ej. 'not-found') sigue
+      // con el mensaje generico de siempre, sin tocar nada mas de este
+      // archivo.
+      toast.error(
+        result.reason === 'has-active-deliveries'
+          ? 'No se puede cancelar: el pedido tiene una entrega activa. Reprogramá o resolvé la entrega antes de cancelar.'
+          : 'No se pudo cancelar el pedido.'
+      );
       return;
     }
     toast.success(`Pedido ${order.orderNumber} cancelado.`);

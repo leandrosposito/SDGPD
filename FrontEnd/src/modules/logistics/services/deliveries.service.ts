@@ -100,6 +100,30 @@ export function getOrderBranchLinksForAggregation(): { orderId: OrderId; branchI
   return deliveriesStore.map((d) => ({ orderId: d.orderId, branchId: d.branchId }));
 }
 
+// ------------------------------------------------------------
+// getActiveDeliveriesForOrder — Fix del hallazgo ALTO de Fase 3
+// (VERIFICACION_TANDA_9.md): orders.service.ts#cancelOrder necesita
+// saber, ANTES de cancelar, si el pedido tiene alguna entrega en curso.
+// "Activa" = CREADO o EN_TRANSITO (las mismas que dejan botones de
+// accion en DeliveriesTable) — REPROGRAMADO no aplica porque
+// reprogramDelivery lo resuelve a CREADO en la misma llamada, nunca
+// queda "parado" ahi (deliveryStatus.types.ts); FINALIZADO/CANCELADO
+// son terminales, no bloquean cancelar el pedido.
+//
+// Llamada "servidor a servidor" en la direccion CONTRARIA a la ya
+// documentada en este archivo (applyDeliveryToOrderLines/getOrderById
+// van deliveries -> orders): a partir de este fix, orders.service.ts
+// importa de este archivo tambien. Es segura — ninguno de los dos
+// lados consume el import a nivel de MODULO, solo dentro del cuerpo de
+// una funcion (misma razon por la que un ciclo de imports de solo
+// funciones no rompe con ESM/Vite) — pero es una desviacion real de
+// "una sola direccion" que no se pudo evitar sin duplicar acá el
+// criterio de "que es una entrega activa" dentro de orders.service.ts.
+// ------------------------------------------------------------
+export function getActiveDeliveriesForOrder(orderId: OrderId): Delivery[] {
+  return deliveriesStore.filter((d) => d.orderId === orderId && (d.status === 'CREADO' || d.status === 'EN_TRANSITO'));
+}
+
 export function toISODate(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
