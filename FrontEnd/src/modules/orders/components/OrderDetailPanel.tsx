@@ -1,4 +1,4 @@
-import { type FC } from 'react';
+import { useState, type FC } from 'react';
 import { SidePanel } from '@/shared/components/ui/SidePanel';
 import { Table } from '@/shared/components/ui/Table';
 import { Badge } from '@/shared/components/ui/Badge';
@@ -6,9 +6,14 @@ import { useCachedQuery, CACHE_STALE_TIME } from '@/shared/hooks/useCachedQuery'
 import { useSessionStore } from '@/shared/state/useSessionStore';
 import type { Order, OrderStatus } from '@/shared/types/order.types';
 import type { ClientAccount } from '@/shared/types/client.types';
+import type { Delivery } from '@/shared/types/logistics.types';
 import { fetchClientsCatalog } from '@/modules/clients/api/clients.service';
+import { getDeliveriesForOrder } from '@/modules/logistics/services/deliveries.service';
+import { DELIVERY_STATUS_LABEL, DELIVERY_STATUS_VARIANT } from '@/modules/logistics/deliveryStatusLabels';
 import { deriveOrderFulfillmentStatus, derivePendingQuantity, type OrderFulfillmentStatus } from '@/shared/utils/orderFulfillment';
+import { deriveOrderLogisticStatus, deriveOrderFinancialStatus } from '@/shared/utils/orderLogistics';
 import { resolveOrderClient } from '@/shared/utils/resolveOrderClient';
+import { CreateDeliveryModal } from './CreateDeliveryModal';
 import './OrderDetailPanel.css';
 
 // ============================================================
@@ -18,11 +23,20 @@ import './OrderDetailPanel.css';
 // AUDIT_4_IDS_RELACIONES.md hallazgo ALTO #1) conectados acá — antes
 // solo los ejercitaba su propio smoke script (Tandas 5/8), ver
 // docs/auditorias/AUDIT_2026-09-07_conexion-export-3fg.md.
+//
+// Tanda 9 (ADR-010 secciones 1/8, hallazgo A15#3): logisticoResumen/
+// estadoFinancieroResumen se leen SIEMPRE de las Delivery reales del
+// pedido (getDeliveriesForOrder + shared/utils/orderLogistics.ts) —
+// nunca de un campo propio en Order que pudiera desalinearse. Por eso
+// no hay riesgo de que este panel muestre un estado logistico viejo:
+// no existe una copia que dejar vieja, se recalcula en cada render con
+// los datos que ya llegaron.
 // ============================================================
 
 // Referencia estable: mismo criterio que EMPTY_PRODUCTS en
 // CreateOrderModal.tsx.
 const EMPTY_CLIENTS: ClientAccount[] = [];
+const EMPTY_DELIVERIES: Delivery[] = [];
 
 const FULFILLMENT_LABEL: Record<OrderFulfillmentStatus, string> = {
   pendiente: 'Sin entregar',
@@ -35,6 +49,8 @@ const FULFILLMENT_VARIANT: Record<OrderFulfillmentStatus, 'neutral' | 'warning' 
   parcial: 'warning',
   completo: 'success',
 };
+
+const LOGISTICO_PENDIENTE_VARIANT = 'neutral' as const;
 
 interface OrderDetailPanelProps {
   order: Order | null;
@@ -99,6 +115,28 @@ export const OrderDetailPanel: FC<OrderDetailPanelProps> = ({
   );
   const clients = clientsData ?? EMPTY_CLIENTS;
 
+  // Entregas del pedido (Tanda 9, hallazgo A15#4): getDeliveriesForOrder
+  // vive en logistics.service, llamado directo (regla R2: servicio
+  // publico de otro modulo, no un componente interno). keyParams =
+  // order.id para que abrir el panel de otro pedido no reuse cache
+  // ajena — OPERATIONAL porque una entrega puede cambiar de estado
+  // mientras el panel esta abierto.
+  const {
+    data: orderDeliveries,
+    refetch: refetchOrderDeliveries,
+  } = useCachedQuery(
+    'order-deliveries',
+    order?.id ?? null,
+    (signal) => {
+      if (!order || !empresaId) throw new Error('OrderDetailPanel: fetch de entregas sin order/empresaId.');
+      return getDeliveriesForOrder(empresaId, order.id, signal);
+    },
+    { enabled: isOpen && Boolean(order) && Boolean(empresaId), staleTime: CACHE_STALE_TIME.OPERATIONAL }
+  );
+  const deliveries = orderDeliveries ?? EMPTY_DELIVERIES;
+
+  const [createDeliveryOpen, setCreateDeliveryOpen] = useState(false);
+
   if (!order) return null;
 
   const advanceLabel = ADVANCE_LABEL[order.status];
@@ -110,6 +148,12 @@ export const OrderDetailPanel: FC<OrderDetailPanelProps> = ({
   // seccion extra (resolveOrderClient.ts, Tanda 5).
   const realClient = resolveOrderClient(order, clients);
   const clientOverLimit = realClient ? realClient.currentBalance > realClient.creditLimit : false;
+
+  // Tanda 9 (ADR-010 seccion 1): ejes logistico/financiero derivados,
+  // nunca leidos de un campo de Order.
+  const logisticoResumen = deriveOrderLogisticStatus(deliveries);
+  const estadoFinancieroResumen = deriveOrderFinancialStatus(order);
+  const puedeCrearEntrega = order.comercial === 'Confirmado';
 
   return (
     <SidePanel
@@ -144,6 +188,18 @@ export const OrderDetailPanel: FC<OrderDetailPanelProps> = ({
           <div className="order-detail__meta-field">
             <span className="order-detail__meta-label">Entrega (ADR-001)</span>
             <Badge label={FULFILLMENT_LABEL[fulfillmentStatus]} variant={FULFILLMENT_VARIANT[fulfillmentStatus]} />
+          </div>
+          <div className="order-detail__meta-field">
+            <span className="order-detail__meta-label">Estado logístico (ADR-010)</span>
+            {logisticoResumen === 'Pendiente' ? (
+              <Badge label="Pendiente" variant={LOGISTICO_PENDIENTE_VARIANT} />
+            ) : (
+              <Badge label={DELIVERY_STATUS_LABEL[logisticoResumen]} variant={DELIVERY_STATUS_VARIANT[logisticoResumen]} />
+            )}
+          </div>
+          <div className="order-detail__meta-field">
+            <span className="order-detail__meta-label">Estado financiero (ADR-010, proyección)</span>
+            <Badge label={estadoFinancieroResumen} variant="neutral" />
           </div>
           {realClient && (
             <div className="order-detail__meta-field">
@@ -185,6 +241,40 @@ export const OrderDetailPanel: FC<OrderDetailPanelProps> = ({
               )},
             ]}
           />
+        </div>
+
+        {/* Entregas (Tanda 9, hallazgo A15#1/A15#4) */}
+        <div className="order-detail__deliveries">
+          <div className="order-detail__deliveries-header">
+            <h4 className="order-detail__section-title">Entregas</h4>
+            <button
+              type="button"
+              className="order-detail__btn-create-delivery"
+              onClick={() => setCreateDeliveryOpen(true)}
+              disabled={!puedeCrearEntrega}
+              title={puedeCrearEntrega ? undefined : 'Solo un pedido confirmado puede generar una entrega.'}
+            >
+              Nueva entrega
+            </button>
+          </div>
+          {deliveries.length === 0 ? (
+            <p className="order-detail__deliveries-empty">Este pedido todavía no tiene entregas generadas.</p>
+          ) : (
+            <Table
+              data={deliveries}
+              keyExtractor={(d) => d.id}
+              columns={[
+                { header: 'Código', accessor: (d) => <span className="font-mono text-xs">{d.id}</span> },
+                { header: 'Fecha', accessor: (d) => d.date },
+                { header: 'Zona', accessor: (d) => d.zone },
+                {
+                  header: 'Estado',
+                  align: 'center',
+                  accessor: (d) => <Badge label={DELIVERY_STATUS_LABEL[d.status]} variant={DELIVERY_STATUS_VARIANT[d.status]} />,
+                },
+              ]}
+            />
+          )}
         </div>
 
         <div className="order-detail__footer">
@@ -253,6 +343,13 @@ export const OrderDetailPanel: FC<OrderDetailPanelProps> = ({
           </div>
         )}
       </div>
+
+      <CreateDeliveryModal
+        isOpen={createDeliveryOpen}
+        onClose={() => setCreateDeliveryOpen(false)}
+        order={order}
+        onCreated={() => refetchOrderDeliveries()}
+      />
     </SidePanel>
   );
 };

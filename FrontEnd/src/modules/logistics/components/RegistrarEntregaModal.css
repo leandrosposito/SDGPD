@@ -25,6 +25,13 @@
   width: 100%;
 }
 
+.registrar-entrega__motivo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 10rem;
+}
+
 .registrar-entrega__cancel,
 .registrar-entrega__confirm {
   padding: 0.5rem 1rem;

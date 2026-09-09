@@ -278,6 +278,9 @@ export async function createOrder(empresaId: string, input: OrderFormInput): Pro
         },
         vendedor: input.sellerName,
         estado: 'pending',
+        // Tanda 9 (ADR-010 seccion 1): ningun flujo de UI crea pedidos
+        // en 'Borrador' hoy — CreateOrderModal siempre confirma directo.
+        estado_comercial: 'Confirmado',
         origen: 'manual',
         forma_pago: input.paymentMethod,
         importes: {
@@ -362,7 +365,15 @@ export async function cancelOrder(empresaId: string, orderId: string): Promise<O
         return { success: false, orderId, reason: 'not-found' };
       }
       const previousStatus = existing.estado;
-      ordersDTOStore = ordersDTOStore.map((dto) => (dto.id === orderId ? { ...dto, estado: 'cancelled' } : dto));
+      // Tanda 9 (ADR-010 seccion 1): cancelar SI es un evento del eje
+      // comercial real — a diferencia de advanceOrderStatus (que sigue
+      // escribiendo solo el `estado` legado, ver order.types.ts), esta
+      // mutacion escribe los dos: `estado` porque el resto de la UI
+      // todavia lo lee (no migro esta tanda), `estado_comercial` porque
+      // es, genuinamente, la fuente nueva para este hecho.
+      ordersDTOStore = ordersDTOStore.map((dto) =>
+        dto.id === orderId ? { ...dto, estado: 'cancelled', estado_comercial: 'Cancelado' } : dto
+      );
       return { success: true, orderId, previousStatus, newStatus: 'cancelled' };
     },
   });

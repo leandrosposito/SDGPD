@@ -13,6 +13,10 @@ import './ReprogramarModal.css';
 // de sesion, editable). Al confirmar, la entrega vuelve a CREADO con
 // la fecha nueva (deliveries.service.ts#reprogramDelivery se encarga
 // de los 2 pasos de transicion internos).
+//
+// Tanda 9 (ADR-010 seccion 4): idempotente — la clave se genera al
+// abrir el modal (la intencion de reprogramar esta entrega), no al
+// confirmar, mismo criterio que RegistrarEntregaModal.
 // ============================================================
 
 interface ReprogramarModalProps {
@@ -29,6 +33,7 @@ export const ReprogramarModal: FC<ReprogramarModalProps> = ({ isOpen, onClose, d
   const [motivo, setMotivo] = useState('');
   const [responsable, setResponsable] = useState(fullName);
   const [isSaving, setIsSaving] = useState(false);
+  const [idempotencyKey, setIdempotencyKey] = useState('');
 
   useEffect(() => {
     // Microtask (mismo patron que RegistrarEntregaModal/AlertsBell,
@@ -43,10 +48,20 @@ export const ReprogramarModal: FC<ReprogramarModalProps> = ({ isOpen, onClose, d
     });
   }, [isOpen, fullName]);
 
+  // Idempotencia (ADR-010 seccion 4): una clave por intento de
+  // reprogramar, formada al abrir el modal — no en handleConfirm.
+  // Microtask (mismo patron que el efecto de arriba) para no llamar
+  // setState sincronico dentro del cuerpo del efecto.
+  useEffect(() => {
+    Promise.resolve().then(() => {
+      if (isOpen) setIdempotencyKey(crypto.randomUUID());
+    });
+  }, [isOpen, delivery?.id]);
+
   if (!delivery) return null;
 
   async function handleConfirm() {
-    if (!delivery || !empresaId) return;
+    if (!delivery || !empresaId || !idempotencyKey) return;
     if (!motivo.trim()) {
       toast.error('El motivo de la reprogramación es obligatorio.');
       return;
@@ -54,7 +69,7 @@ export const ReprogramarModal: FC<ReprogramarModalProps> = ({ isOpen, onClose, d
 
     setIsSaving(true);
     try {
-      const result = await reprogramDelivery(empresaId, delivery.id, {
+      const result = await reprogramDelivery(empresaId, idempotencyKey, delivery.id, {
         fechaNueva,
         motivo: motivo.trim(),
         responsable: responsable.trim() || fullName,

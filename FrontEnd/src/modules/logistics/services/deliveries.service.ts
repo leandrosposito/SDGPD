@@ -1,13 +1,35 @@
 import type { Delivery, DeliveryStatus, DeliveryHistoryEvent, ReprogramacionEvent } from '@/shared/types/logistics.types';
 import type { Branch } from '@/shared/types/session.types';
 import type { DeliveryId, OrderLineId, OrderId, BranchId } from '@/shared/types/ids.types';
+import { asDeliveryId, asDeliveryNoteId, asDeliveryHistoryEventId } from '@/shared/types/ids.types';
 import type { DeliveryNote, DeliveryNoteLine } from '@/shared/types/deliveryNote.types';
-import { puedeTransicionar } from '@/shared/types/deliveryStatus.types';
+import { puedeTransicionar, computeAllowedTransitions } from '@/shared/types/deliveryStatus.types';
+import { getMotivoCatalog } from '@/shared/api/motivos/motivos.service';
+import { MOTIVO_OTRO_CODIGO } from '@/shared/types/motivo.types';
 import type { PageQuery, PageResult, DateRangeQueryFilters, ExportResult } from '@/shared/types/pagination.types';
 import { MAX_EXPORT_ROWS } from '@/shared/types/pagination.types';
 import { LOGISTICS_MOCK_DATA } from '@/data/mock/logistics.data';
 import { httpClient } from '@/shared/api/httpClient';
-import { applyDeliveryToOrderLines } from '@/modules/orders/api/orders.service';
+import { applyDeliveryToOrderLines, getOrderById } from '@/modules/orders/api/orders.service';
+
+// ------------------------------------------------------------
+// Idempotencia (Tanda 9, ADR-010 seccion 4): mapa clave->resultado,
+// compartido por transitionDelivery/reprogramDelivery/registrarEntrega/
+// createDelivery. Ante una clave ya vista, el efecto NO se reaplica —
+// se devuelve el resultado guardado de la primera vez, tal cual
+// (nunca un error). Sin expiracion en este mock (un backend real
+// necesitaria una, ver ADR-010 seccion 4 — 24-48hs sugeridas).
+// ------------------------------------------------------------
+const idempotencyStore = new Map<string, unknown>();
+
+function withIdempotency<T>(idempotencyKey: string, compute: () => T): T {
+  if (idempotencyStore.has(idempotencyKey)) {
+    return idempotencyStore.get(idempotencyKey) as T;
+  }
+  const result = compute();
+  idempotencyStore.set(idempotencyKey, result);
+  return result;
+}
 
 // ============================================================
 // deliveries.service — Acceso a datos de entregas (P1,
@@ -203,7 +225,14 @@ export async function getDeliveriesPage(
       // vacio — quien consume el contrato se realinea con `result.page`.
       const safePage = Math.min(Math.max(1, page), totalPages);
       const start = (safePage - 1) * pageSize;
-      const items = sorted.slice(start, start + pageSize);
+      // allowedTransitions (Tanda 9, ADR-010 seccion 3): calculado acá,
+      // en la respuesta — nunca persistido en deliveriesStore. El
+      // cliente (DeliveriesTable.tsx) lee este array, no vuelve a
+      // llamar puedeTransicionar/computeAllowedTransitions por su
+      // cuenta.
+      const items = sorted
+        .slice(start, start + pageSize)
+        .map((d) => ({ ...d, allowedTransitions: computeAllowedTransitions(d.status) }));
 
       return {
         items: structuredClone(items),
@@ -267,12 +296,19 @@ export interface DeliveryTransitionResult {
 }
 
 function appendHistoryEvent(delivery: Delivery, hasta: DeliveryStatus, quien: string, cuando: string): Delivery {
-  const event: DeliveryHistoryEvent = { id: `dh-${Date.now()}-${delivery.historial.length}`, desde: delivery.status, hasta, quien, cuando };
+  const event: DeliveryHistoryEvent = {
+    id: asDeliveryHistoryEventId(`dh-${Date.now()}-${delivery.historial.length}`),
+    desde: delivery.status,
+    hasta,
+    quien,
+    cuando,
+  };
   return { ...delivery, status: hasta, historial: [...delivery.historial, event] };
 }
 
 export async function transitionDelivery(
   empresaId: string,
+  idempotencyKey: string,
   deliveryId: DeliveryId,
   hasta: DeliveryStatus,
   quien: string
@@ -280,22 +316,23 @@ export async function transitionDelivery(
   return httpClient.request<DeliveryTransitionResult>({
     method: 'PUT',
     path: `/deliveries/${deliveryId}/transition`,
-    body: { empresaId, hasta, quien },
-    mock: () => {
-      const delivery = deliveriesStore.find((d) => d.id === deliveryId);
-      if (!delivery) {
-        return { success: false, deliveryId, reason: 'not-found' };
-      }
-      if (!puedeTransicionar(delivery.status, hasta)) {
-        return { success: false, deliveryId, previousStatus: delivery.status, reason: 'invalid-transition' };
-      }
+    body: { empresaId, idempotencyKey, hasta, quien },
+    mock: () =>
+      withIdempotency(idempotencyKey, () => {
+        const delivery = deliveriesStore.find((d) => d.id === deliveryId);
+        if (!delivery) {
+          return { success: false, deliveryId, reason: 'not-found' };
+        }
+        if (!puedeTransicionar(delivery.status, hasta)) {
+          return { success: false, deliveryId, previousStatus: delivery.status, reason: 'invalid-transition' };
+        }
 
-      const previousStatus = delivery.status;
-      const now = new Date().toISOString();
-      deliveriesStore = deliveriesStore.map((d) => (d.id === deliveryId ? appendHistoryEvent(d, hasta, quien, now) : d));
+        const previousStatus = delivery.status;
+        const now = new Date().toISOString();
+        deliveriesStore = deliveriesStore.map((d) => (d.id === deliveryId ? appendHistoryEvent(d, hasta, quien, now) : d));
 
-      return { success: true, deliveryId, previousStatus, newStatus: hasta };
-    },
+        return { success: true, deliveryId, previousStatus, newStatus: hasta };
+      }),
   });
 }
 
@@ -325,40 +362,42 @@ export interface ReprogramDeliveryResult {
 
 export async function reprogramDelivery(
   empresaId: string,
+  idempotencyKey: string,
   deliveryId: DeliveryId,
   input: ReprogramDeliveryInput
 ): Promise<ReprogramDeliveryResult> {
   return httpClient.request<ReprogramDeliveryResult>({
     method: 'PUT',
     path: `/deliveries/${deliveryId}/reprogram`,
-    body: { empresaId, ...input },
-    mock: () => {
-      const delivery = deliveriesStore.find((d) => d.id === deliveryId);
-      if (!delivery) {
-        return { success: false, deliveryId, reason: 'not-found' };
-      }
-      if (!puedeTransicionar(delivery.status, 'REPROGRAMADO')) {
-        return { success: false, deliveryId, reason: 'invalid-transition' };
-      }
+    body: { empresaId, idempotencyKey, ...input },
+    mock: () =>
+      withIdempotency(idempotencyKey, () => {
+        const delivery = deliveriesStore.find((d) => d.id === deliveryId);
+        if (!delivery) {
+          return { success: false, deliveryId, reason: 'not-found' };
+        }
+        if (!puedeTransicionar(delivery.status, 'REPROGRAMADO')) {
+          return { success: false, deliveryId, reason: 'invalid-transition' };
+        }
 
-      const now = new Date().toISOString();
-      const reprogEvent: ReprogramacionEvent = {
-        fechaAnterior: delivery.date,
-        fechaNueva: input.fechaNueva,
-        motivo: input.motivo,
-        responsable: input.responsable,
-        timestamp: now,
-      };
+        const now = new Date().toISOString();
+        const reprogEvent: ReprogramacionEvent = {
+          fechaAnterior: delivery.date,
+          fechaNueva: input.fechaNueva,
+          motivo: input.motivo,
+          responsable: input.responsable,
+          timestamp: now,
+        };
 
-      deliveriesStore = deliveriesStore.map((d) => {
-        if (d.id !== deliveryId) return d;
-        const withReprogramado = appendHistoryEvent(d, 'REPROGRAMADO', input.responsable, now);
-        const withCreado = appendHistoryEvent(withReprogramado, 'CREADO', input.responsable, now);
-        return { ...withCreado, date: input.fechaNueva, reprogramaciones: [...d.reprogramaciones, reprogEvent] };
-      });
+        deliveriesStore = deliveriesStore.map((d) => {
+          if (d.id !== deliveryId) return d;
+          const withReprogramado = appendHistoryEvent(d, 'REPROGRAMADO', input.responsable, now);
+          const withCreado = appendHistoryEvent(withReprogramado, 'CREADO', input.responsable, now);
+          return { ...withCreado, date: input.fechaNueva, reprogramaciones: [...d.reprogramaciones, reprogEvent] };
+        });
 
-      return { success: true, deliveryId };
-    },
+        return { success: true, deliveryId };
+      }),
   });
 }
 
@@ -373,10 +412,15 @@ export interface RegistrarEntregaLineInput {
   orderLineId: OrderLineId;
   cantidadEntregada: number;
   cantidadRechazada: number;
-  motivoRechazo?: string;
+  // Tanda 9 (ADR-010 seccion 5): reemplaza al motivoRechazo de texto
+  // libre — motivoCodigo referencia MotivoCatalogItem.codigo ('OTRO'
+  // incluido). motivoOtroTexto solo se usa/exige cuando el codigo es
+  // 'OTRO'.
+  motivoCodigo?: string;
+  motivoOtroTexto?: string;
 }
 
-export type RegistrarEntregaReason = 'not-found' | 'invalid-transition' | 'no-lines';
+export type RegistrarEntregaReason = 'not-found' | 'invalid-transition' | 'no-lines' | 'motivo-invalido';
 
 export interface RegistrarEntregaResult {
   success: boolean;
@@ -386,6 +430,7 @@ export interface RegistrarEntregaResult {
 
 export async function registrarEntrega(
   empresaId: string,
+  idempotencyKey: string,
   deliveryId: DeliveryId,
   lines: RegistrarEntregaLineInput[],
   evidenciaIds: string[],
@@ -394,7 +439,7 @@ export async function registrarEntrega(
   return httpClient.request<RegistrarEntregaResult>({
     method: 'POST',
     path: `/deliveries/${deliveryId}/notes`,
-    body: { empresaId, lines, evidenciaIds, creadoPor },
+    body: { empresaId, idempotencyKey, lines, evidenciaIds, creadoPor },
     mock: async () => {
       const delivery = deliveriesStore.find((d) => d.id === deliveryId);
       if (!delivery) {
@@ -407,37 +452,63 @@ export async function registrarEntrega(
         return { success: false, reason: 'no-lines' as const };
       }
 
-      const now = new Date().toISOString();
-      const noteLines: DeliveryNoteLine[] = lines.map((line) => ({
-        orderLineId: line.orderLineId,
-        cantidadOfrecida: line.cantidadEntregada + line.cantidadRechazada,
-        cantidadEntregada: line.cantidadEntregada,
-        cantidadRechazada: line.cantidadRechazada,
-        motivoRechazo: line.motivoRechazo,
-      }));
+      // Resuelve motivoCodigo -> texto server-side (catalogo real, no
+      // lo que mande el cliente) — 'OTRO' usa motivoOtroTexto, siempre
+      // que venga cargado (ADR-010 seccion 5: el texto libre bajo
+      // 'OTRO' queda guardado en la linea, no se descarta).
+      const catalogoRechazo = await getMotivoCatalog(empresaId, 'rechazo');
+      for (const line of lines) {
+        if (line.cantidadRechazada > 0 && !line.motivoCodigo) {
+          return { success: false, reason: 'motivo-invalido' as const };
+        }
+        if (line.motivoCodigo === MOTIVO_OTRO_CODIGO && !line.motivoOtroTexto?.trim()) {
+          return { success: false, reason: 'motivo-invalido' as const };
+        }
+      }
 
-      const note: DeliveryNote = {
-        id: `remito-${Date.now()}`,
-        orderId: delivery.orderId,
-        deliveryId,
-        fecha: now,
-        lines: noteLines,
-        evidenciaIds,
-        creadoEn: now,
-        creadoPor,
-      };
+      return withIdempotency(idempotencyKey, () => {
+        const now = new Date().toISOString();
+        const noteLines: DeliveryNoteLine[] = lines.map((line) => {
+          const motivoTexto =
+            line.motivoCodigo === MOTIVO_OTRO_CODIGO
+              ? line.motivoOtroTexto
+              : catalogoRechazo.find((m) => m.codigo === line.motivoCodigo)?.descripcion;
+          return {
+            orderLineId: line.orderLineId,
+            cantidadOfrecida: line.cantidadEntregada + line.cantidadRechazada,
+            cantidadEntregada: line.cantidadEntregada,
+            cantidadRechazada: line.cantidadRechazada,
+            motivoCodigo: line.motivoCodigo,
+            motivoRechazo: motivoTexto,
+          };
+        });
 
-      // Solo lo ACEPTADO (cantidadEntregada) acumula en las lineas del
-      // pedido — lo rechazado nunca cuenta como entregado.
-      await applyDeliveryToOrderLines(
-        delivery.orderId,
-        lines.filter((l) => l.cantidadEntregada > 0).map((l) => ({ orderLineId: l.orderLineId, cantidadEntregada: l.cantidadEntregada }))
-      );
+        const note: DeliveryNote = {
+          id: asDeliveryNoteId(`remito-${Date.now()}`),
+          orderId: delivery.orderId,
+          deliveryId,
+          fecha: now,
+          lines: noteLines,
+          evidenciaIds,
+          creadoEn: now,
+          creadoPor,
+        };
 
-      deliveryNotesStore = [...deliveryNotesStore, note];
-      deliveriesStore = deliveriesStore.map((d) => (d.id === deliveryId ? appendHistoryEvent(d, 'FINALIZADO', creadoPor, now) : d));
+        deliveryNotesStore = [...deliveryNotesStore, note];
+        deliveriesStore = deliveriesStore.map((d) => (d.id === deliveryId ? appendHistoryEvent(d, 'FINALIZADO', creadoPor, now) : d));
 
-      return { success: true, note };
+        // Solo lo ACEPTADO (cantidadEntregada) acumula en las lineas del
+        // pedido — lo rechazado nunca cuenta como entregado. Se dispara
+        // DESPUES de decidir el resultado de la idempotencia (si esta
+        // clave ya se proceso, no se vuelve a acumular — withIdempotency
+        // no vuelve a ejecutar este callback en un duplicado).
+        void applyDeliveryToOrderLines(
+          delivery.orderId,
+          lines.filter((l) => l.cantidadEntregada > 0).map((l) => ({ orderLineId: l.orderLineId, cantidadEntregada: l.cantidadEntregada }))
+        );
+
+        return { success: true, note };
+      });
     },
   });
 }
@@ -457,4 +528,118 @@ export async function registrarEntrega(
 export function getDeliveryNotesForDelivery(empresaId: string, deliveryId: DeliveryId): DeliveryNote[] {
   void empresaId;
   return deliveryNotesStore.filter((note) => note.deliveryId === deliveryId);
+}
+
+// ============================================================
+// Alta de Delivery desde un pedido (Tanda 9, hallazgo A15#1 — el item
+// mas importante de esta tanda: hasta ahora no existia ninguna forma
+// de que un pedido generara una entrega, las 18 del mock eran
+// estaticas). Llamada "servidor a servidor" hacia
+// orders.service.ts#getOrderById (misma direccion ya establecida,
+// deliveries -> orders, nunca al reves — ver applyDeliveryToOrderLines
+// mas arriba) para tomar clientName/direccion del pedido en vez de que
+// el formulario los vuelva a tipear.
+//
+// collectionAmount/date/estimatedTime/zone/priority/branchId quedan a
+// cargo de quien crea la entrega (formulario): no se derivan del
+// pedido porque un pedido puede repartirse en mas de una entrega
+// (hallazgo A15#4) y el monto a cobrar por CADA una no es un dato que
+// el pedido tenga partido por entrega — inventar esa division esta
+// fuera del alcance de esta tanda (eje financiero, ADR-010 seccion 1).
+// ============================================================
+
+export interface CreateDeliveryInput {
+  branchId: Branch['id'];
+  date: string; // ISO date (yyyy-MM-dd)
+  estimatedTime: string;
+  zone: 'Norte' | 'Centro' | 'Sur';
+  priority: 'high' | 'medium' | 'low';
+  collectionAmount: number;
+}
+
+export type CreateDeliveryReason = 'order-not-found' | 'order-not-confirmado';
+
+export interface CreateDeliveryResult {
+  success: boolean;
+  delivery?: Delivery;
+  reason?: CreateDeliveryReason;
+}
+
+export async function createDelivery(
+  empresaId: string,
+  idempotencyKey: string,
+  orderId: OrderId,
+  input: CreateDeliveryInput,
+  quien: string
+): Promise<CreateDeliveryResult> {
+  return httpClient.request<CreateDeliveryResult>({
+    method: 'POST',
+    path: '/deliveries',
+    body: { empresaId, idempotencyKey, orderId, ...input },
+    mock: async () => {
+      const order = await getOrderById(empresaId, orderId);
+      if (!order) {
+        return { success: false, reason: 'order-not-found' as const };
+      }
+      // Solo un pedido con el eje comercial en 'Confirmado' genera
+      // entrega — 'Borrador'/'Cancelado' no salen a reparto (ADR-010
+      // seccion 1: se valida contra `comercial`, el campo real, nunca
+      // contra el `status` deprecado).
+      if (order.comercial !== 'Confirmado') {
+        return { success: false, reason: 'order-not-confirmado' as const };
+      }
+
+      return withIdempotency(idempotencyKey, () => {
+        const now = new Date().toISOString();
+        const firstEvent: DeliveryHistoryEvent = {
+          id: asDeliveryHistoryEventId(`dh-${Date.now()}-0`),
+          desde: null,
+          hasta: 'CREADO',
+          quien,
+          cuando: now,
+        };
+        const delivery: Delivery = {
+          id: asDeliveryId(`del-${Date.now()}`),
+          orderId,
+          branchId: input.branchId,
+          clientName: order.clientName,
+          address: order.clientAddress,
+          date: input.date,
+          estimatedTime: input.estimatedTime,
+          status: 'CREADO',
+          zone: input.zone,
+          priority: input.priority,
+          collectionAmount: input.collectionAmount,
+          historial: [firstEvent],
+          reprogramaciones: [],
+        };
+
+        deliveriesStore = [...deliveriesStore, delivery];
+        return { success: true, delivery: { ...delivery, allowedTransitions: computeAllowedTransitions(delivery.status) } };
+      });
+    },
+  });
+}
+
+// ------------------------------------------------------------
+// getDeliveriesForOrder — todas las Delivery de UN pedido puntual
+// (hallazgo A15#4: un pedido puede repartirse en 2-3 entregas, incluso
+// en sucursales distintas). Consumida por OrderDetailPanel.tsx para
+// derivar logisticoResumen/estadoFinancieroResumen
+// (shared/utils/orderLogistics.ts) — sincroniza la vista del pedido
+// sin que exista un campo duplicado que pueda desalinearse (hallazgo
+// A15#3): siempre lee las Delivery reales, nunca una copia.
+//
+// No pagina server-side: el universo es "las entregas de este pedido",
+// no la coleccion completa de la empresa — mismo criterio que
+// getDeliveryNotesForDelivery, no el de getDeliveriesPage.
+// ------------------------------------------------------------
+export async function getDeliveriesForOrder(empresaId: string, orderId: OrderId, signal?: AbortSignal): Promise<Delivery[]> {
+  return httpClient.request<Delivery[]>({
+    method: 'GET',
+    path: `/orders/${orderId}/deliveries`,
+    params: { empresaId },
+    signal,
+    mock: () => structuredClone(deliveriesStore.filter((d) => d.orderId === orderId)),
+  });
 }

@@ -1,13 +1,13 @@
 # Arquitectura — SDGPD Frontend
 
-**Verificado contra el filesystem real el 2026-09-08** (rama `sesion-docs-verificadas`, derivada de `lean` en `b5d1ea4`). Reemplaza a `ESTRUCTURA_Y_ARQUITECTURA.md`, `RUTAS_Y_MODULOS.md` y `COMPONENTES_Y_LAYOUTS.md` (borrados, describían una estructura aspiracional que nunca se construyó). Es un mapa, no un tratado — si algo de acá no coincide con lo que ves en disco, confiá en el disco y corregí este archivo.
+**Verificado contra el filesystem real el 2026-09-08** (rama `sesion-docs-verificadas`, derivada de `lean` en `b5d1ea4`); **conteos de `data/mock/`, `shared/types/` y `shared/api/` re-verificados el 2026-09-09 tras Tanda 9** (rama `sesion-tanda9-logistica`, ver gate de arquitectura de esa tanda). Reemplaza a `ESTRUCTURA_Y_ARQUITECTURA.md`, `RUTAS_Y_MODULOS.md` y `COMPONENTES_Y_LAYOUTS.md` (borrados, describían una estructura aspiracional que nunca se construyó). Es un mapa, no un tratado — si algo de acá no coincide con lo que ves en disco, confiá en el disco y corregí este archivo.
 
 ## Árbol real de `src/` (2 niveles)
 
 ```
 src/
 ├── App.tsx, main.tsx
-├── data/mock/          13 archivos *.data.ts, uno por dominio (+ session.mock.ts)
+├── data/mock/          13 archivos *.data.ts, uno por dominio (+ session.mock.ts) — Tanda 9 agregó motivos.data.ts
 ├── modules/             9 módulos de negocio (ver abajo)
 ├── services/mock/       3 services que TODAVÍA no migraron a modules/<x>/api/
 ├── shared/
@@ -17,8 +17,8 @@ src/
 │   ├── layouts/          5 layouts (AppShell, Header, Sidebar, BranchSelector, AlertsBell)
 │   ├── routes/           AppRoutes.tsx — ÚNICO lugar donde se declaran rutas
 │   ├── state/            2 stores de Zustand (useSessionStore, resettableStores)
-│   ├── types/           16 archivos *.types.ts, uno por dominio + pagination/session/ids
-│   └── utils/            5 utilidades (date, logError, money, orderFulfillment, resolveOrderClient)
+│   ├── types/           17 archivos *.types.ts, uno por dominio + pagination/session/ids — Tanda 9 agregó motivo.types.ts
+│   └── utils/            6 utilidades (date, logError, money, orderFulfillment, orderLogistics, resolveOrderClient) — Tanda 9 agregó orderLogistics.ts
 └── styles/              variables.css, reset.css, global.css, typography.css
 ```
 
@@ -48,6 +48,8 @@ modules/suppliers/
 
 **No existe ningún `views/` ni ningún `index.ts` barrel en ningún módulo** (`find src/modules -iname index.ts` → 0 resultados) — cada componente se importa por su ruta completa con el alias `@/`.
 
+**Llamada cross-módulo directa (Tanda 9):** `orders/components/CreateDeliveryModal.tsx` (abierto desde `OrderDetailPanel.tsx`) llama directo a `logistics/services/deliveries.service.ts#createDelivery`/`#getDeliveriesForOrder` — regla ya vigente del protocolo: un módulo puede llamar la función de **servicio** pública de otro módulo, lo que no puede es importar un **componente** interno ajeno. `logistics` no importa nada de `orders/components` (la dirección ya existente `deliveries.service.ts -> orders.service.ts`, ver `applyDeliveryToOrderLines`/`getOrderById`, sigue siendo de un solo sentido) — no hay ciclo.
+
 ## Componentes compartidos y layouts
 
 - **Componentes de UI reutilizables:** `src/shared/components/ui/` — únicamente acá, ninguna otra ubicación es válida. Lista real (15): `Badge`, `DateRangeFilter`, `ErrorBoundary`, `ErrorState`, `EvidenceUploader`, `ExportButton`, `FetchingOverlay`, `LoadingState`, `Modal`, `Pagination`, `SidePanel`, `SkeletonLoader`, `StatCard`, `Table`, `Tabs` — cada uno con su `.css` co-ubicado.
@@ -60,7 +62,7 @@ Se declaran en un único archivo: **`src/shared/routes/AppRoutes.tsx`** (no `App
 
 ## Capa `api/` — el patrón dto/mapper/service
 
-Donde existe (ver tabla arriba), son 3 archivos: `dto.ts` (forma de datos "del backend"), `mapper.ts` (dto↔dominio) y `<módulo>.service.ts` (llama a `httpClient`, con un `mock:` que resuelve contra `data/mock/`). El único dominio **transversal** (consumido por más de un módulo) es **productos**, y por eso NO vive dentro de ningún módulo: **`src/shared/api/products/`** (`dto.ts`, `mapper.ts`, `products.service.ts`). `shared/api/` también aloja: `httpClient.ts`/`ApiError.ts` (infraestructura de fetch mock), `queryClient.ts`/`queryKeys.ts` (TanStack Query), y 3 sub-dominios más chicos sin módulo propio: `alerts/`, `exports/`, `uploads/`.
+Donde existe (ver tabla arriba), son 3 archivos: `dto.ts` (forma de datos "del backend"), `mapper.ts` (dto↔dominio) y `<módulo>.service.ts` (llama a `httpClient`, con un `mock:` que resuelve contra `data/mock/`). El único dominio **transversal** (consumido por más de un módulo) es **productos**, y por eso NO vive dentro de ningún módulo: **`src/shared/api/products/`** (`dto.ts`, `mapper.ts`, `products.service.ts`). `shared/api/` también aloja: `httpClient.ts`/`ApiError.ts` (infraestructura de fetch mock), `queryClient.ts`/`queryKeys.ts` (TanStack Query), y 4 sub-dominios más chicos sin módulo propio (sin `dto.ts`/`mapper.ts`, solo un `.service.ts`): `alerts/`, `exports/`, `uploads/`, y `motivos/` (Tanda 9, ADR-010 sección 5 — catálogo de motivos de rechazo, hoy consumido solo por `logistics`, transversal por diseño para cuando otro módulo lo necesite).
 
 ## Qué NO existe — no lo busques, no lo inventes
 

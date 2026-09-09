@@ -8,6 +8,8 @@ import { useSessionStore } from '@/shared/state/useSessionStore';
 import type { Delivery } from '@/shared/types/logistics.types';
 import { derivePendingQuantity } from '@/shared/utils/orderFulfillment';
 import { getOrderById } from '@/modules/orders/api/orders.service';
+import { getMotivoCatalog } from '@/shared/api/motivos/motivos.service';
+import { MOTIVO_OTRO_CODIGO } from '@/shared/types/motivo.types';
 import { registrarEntrega, type RegistrarEntregaLineInput } from '../services/deliveries.service';
 import './RegistrarEntregaModal.css';
 
@@ -25,12 +27,21 @@ import './RegistrarEntregaModal.css';
 // dedupe/staleTime que el resto del proyecto, keyParams = orderId asi
 // que abrir el modal dos veces para el mismo pedido no repite el
 // fetch mientras siga fresco.
+//
+// Tanda 9 (ADR-010 seccion 4/5): el motivo de rechazo pasa de texto
+// libre a un dropdown contra el catalogo real (motivoCodigo), con
+// 'Otro' pidiendo texto aparte — y la mutacion es idempotente: la
+// clave se genera UNA vez, cuando el modal se abre (la "intencion" de
+// registrar esta entrega), no en cada click de "Confirmar" — asi un
+// reintento automatico de httpClient (o un doble click mientras
+// isSaving todavia no desactivo el boton) reusa la misma clave.
 // ============================================================
 
 interface LineDraft {
   entregar: number;
   rechazar: number;
-  motivo: string;
+  motivoCodigo: string;
+  motivoOtroTexto: string;
 }
 
 interface RegistrarEntregaModalProps {
@@ -45,6 +56,7 @@ export const RegistrarEntregaModal: FC<RegistrarEntregaModalProps> = ({ isOpen, 
   const empresaId = useSessionStore((s) => s.session?.company.id);
   const [drafts, setDrafts] = useState<Record<string, LineDraft>>({});
   const [isSaving, setIsSaving] = useState(false);
+  const [idempotencyKey, setIdempotencyKey] = useState('');
   const evidence = useEvidenceUpload();
 
   const {
@@ -64,9 +76,34 @@ export const RegistrarEntregaModal: FC<RegistrarEntregaModalProps> = ({ isOpen, 
     { enabled: isOpen && Boolean(delivery) && Boolean(empresaId), staleTime: CACHE_STALE_TIME.OPERATIONAL }
   );
 
+  const {
+    data: motivoCatalog = [],
+    error: motivoCatalogError,
+  } = useCachedQuery(
+    'motivo-catalog',
+    'rechazo',
+    (signal) => {
+      if (!empresaId) throw new Error('RegistrarEntregaModal: fetch de catalogo de motivos sin empresaId.');
+      return getMotivoCatalog(empresaId, 'rechazo', signal);
+    },
+    { enabled: isOpen && Boolean(empresaId), staleTime: CACHE_STALE_TIME.CATALOG }
+  );
+
   useEffect(() => {
     if (orderError) toast.error('No se pudo cargar el pedido de esta entrega.');
-  }, [orderError]);
+    if (motivoCatalogError) toast.error('No se pudo cargar el catálogo de motivos de rechazo.');
+  }, [orderError, motivoCatalogError]);
+
+  // Idempotencia (ADR-010 seccion 4): la clave se forma UNA vez por
+  // intento de registrar esta entrega — al abrir el modal, no al
+  // confirmar. Se regenera si se vuelve a abrir (nuevo intento).
+  // Microtask (mismo patron que el resto de este archivo) para no
+  // llamar setState sincronico dentro del cuerpo del efecto.
+  useEffect(() => {
+    Promise.resolve().then(() => {
+      if (isOpen) setIdempotencyKey(crypto.randomUUID());
+    });
+  }, [isOpen, delivery?.id]);
 
   // Seedea los drafts editables a partir del pedido YA TRAIDO por
   // useCachedQuery (no dispara ningun fetch — reacciona a datos que
@@ -85,7 +122,7 @@ export const RegistrarEntregaModal: FC<RegistrarEntregaModalProps> = ({ isOpen, 
       const initial: Record<string, LineDraft> = {};
       for (const item of order.items) {
         const pending = derivePendingQuantity(item);
-        initial[item.id] = { entregar: pending, rechazar: 0, motivo: '' };
+        initial[item.id] = { entregar: pending, rechazar: 0, motivoCodigo: '', motivoOtroTexto: '' };
       }
       setDrafts(initial);
     });
@@ -110,7 +147,8 @@ export const RegistrarEntregaModal: FC<RegistrarEntregaModalProps> = ({ isOpen, 
           orderLineId: item.id,
           cantidadEntregada: draft?.entregar ?? 0,
           cantidadRechazada: draft?.rechazar ?? 0,
-          motivoRechazo: draft?.rechazar > 0 ? draft.motivo || undefined : undefined,
+          motivoCodigo: draft?.rechazar > 0 ? draft.motivoCodigo || undefined : undefined,
+          motivoOtroTexto: draft?.motivoCodigo === MOTIVO_OTRO_CODIGO ? draft.motivoOtroTexto || undefined : undefined,
         };
       })
       .filter((l) => l.cantidadEntregada > 0 || l.cantidadRechazada > 0);
@@ -119,8 +157,12 @@ export const RegistrarEntregaModal: FC<RegistrarEntregaModalProps> = ({ isOpen, 
       toast.error('Cargá al menos una cantidad entregada o rechazada.');
       return;
     }
-    if (lines.some((l) => l.cantidadRechazada > 0 && !l.motivoRechazo)) {
+    if (lines.some((l) => l.cantidadRechazada > 0 && !l.motivoCodigo)) {
       toast.error('Toda cantidad rechazada necesita un motivo.');
+      return;
+    }
+    if (lines.some((l) => l.motivoCodigo === MOTIVO_OTRO_CODIGO && !l.motivoOtroTexto?.trim())) {
+      toast.error('El motivo "Otro" necesita una aclaración.');
       return;
     }
     if (evidence.isUploading) {
@@ -131,10 +173,11 @@ export const RegistrarEntregaModal: FC<RegistrarEntregaModalProps> = ({ isOpen, 
       toast.error('Hay archivos de evidencia con error — reintentalos o quitalos antes de confirmar.');
       return;
     }
+    if (!idempotencyKey) return;
 
     setIsSaving(true);
     try {
-      const result = await registrarEntrega(empresaId, delivery.id, lines, evidence.uploadedFileIds, fullName);
+      const result = await registrarEntrega(empresaId, idempotencyKey, delivery.id, lines, evidence.uploadedFileIds, fullName);
       if (result.success) {
         toast.success('Entrega registrada correctamente.');
         onRegistered();
@@ -146,7 +189,9 @@ export const RegistrarEntregaModal: FC<RegistrarEntregaModalProps> = ({ isOpen, 
           ? 'Esta entrega ya no admite registrar una entrega (estado actual no lo permite).'
           : result.reason === 'no-lines'
             ? 'No se cargó ninguna línea.'
-            : 'No se encontró la entrega.';
+            : result.reason === 'motivo-invalido'
+              ? 'Revisá los motivos de rechazo cargados.'
+              : 'No se encontró la entrega.';
       toast.error(message);
     } catch {
       toast.error('No se pudo registrar la entrega.');
@@ -191,7 +236,7 @@ export const RegistrarEntregaModal: FC<RegistrarEntregaModalProps> = ({ isOpen, 
             <tbody>
               {order.items.map((item) => {
                 const pending = derivePendingQuantity(item);
-                const draft = drafts[item.id] ?? { entregar: pending, rechazar: 0, motivo: '' };
+                const draft = drafts[item.id] ?? { entregar: pending, rechazar: 0, motivoCodigo: '', motivoOtroTexto: '' };
                 return (
                   <tr key={item.id}>
                     <td>{item.name}</td>
@@ -218,12 +263,27 @@ export const RegistrarEntregaModal: FC<RegistrarEntregaModalProps> = ({ isOpen, 
                     </td>
                     <td>
                       {draft.rechazar > 0 && (
-                        <input
-                          type="text"
-                          placeholder="Motivo"
-                          value={draft.motivo}
-                          onChange={(e) => updateDraft(item.id, { motivo: e.target.value })}
-                        />
+                        <div className="registrar-entrega__motivo">
+                          <select
+                            value={draft.motivoCodigo}
+                            onChange={(e) => updateDraft(item.id, { motivoCodigo: e.target.value, motivoOtroTexto: '' })}
+                          >
+                            <option value="">Seleccioná un motivo…</option>
+                            {motivoCatalog.map((m) => (
+                              <option key={m.codigo} value={m.codigo}>
+                                {m.descripcion}
+                              </option>
+                            ))}
+                          </select>
+                          {draft.motivoCodigo === MOTIVO_OTRO_CODIGO && (
+                            <input
+                              type="text"
+                              placeholder="Especificar…"
+                              value={draft.motivoOtroTexto}
+                              onChange={(e) => updateDraft(item.id, { motivoOtroTexto: e.target.value })}
+                            />
+                          )}
+                        </div>
                       )}
                     </td>
                   </tr>
