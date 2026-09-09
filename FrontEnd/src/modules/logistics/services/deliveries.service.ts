@@ -19,15 +19,33 @@ import { applyDeliveryToOrderLines, getOrderById } from '@/modules/orders/api/or
 // se devuelve el resultado guardado de la primera vez, tal cual
 // (nunca un error). Sin expiracion en este mock (un backend real
 // necesitaria una, ver ADR-010 seccion 4 — 24-48hs sugeridas).
+//
+// Fix post-Fase 2: solo se cachea un resultado con `success: true`. La
+// clave se genera al ABRIR el modal (antes de saber si la operacion va
+// a poder aplicarse) y sobrevive a los reintentos del usuario dentro
+// de esa misma apertura — si el primer intento fallo por una razon
+// transitoria (`not-found`/`invalid-transition`/etc.), cachear ESE
+// resultado dejaba la clave "congelada" en el fallo para siempre: un
+// segundo intento legitimo (ej. la entrega ya paso a un estado valido)
+// recibia de vuelta el mismo fallo viejo en lugar de ejecutarse. Un
+// resultado con `success: false` nunca representa un efecto aplicado,
+// asi que no hay nada que proteger de un reintento — se recalcula
+// siempre. `compute` puede ser async (registrarEntrega espera la
+// propagacion al pedido antes de decidir si cachea, ver mas abajo).
 // ------------------------------------------------------------
 const idempotencyStore = new Map<string, unknown>();
 
-function withIdempotency<T>(idempotencyKey: string, compute: () => T): T {
+async function withIdempotency<T extends { success: boolean }>(
+  idempotencyKey: string,
+  compute: () => T | Promise<T>
+): Promise<T> {
   if (idempotencyStore.has(idempotencyKey)) {
     return idempotencyStore.get(idempotencyKey) as T;
   }
-  const result = compute();
-  idempotencyStore.set(idempotencyKey, result);
+  const result = await compute();
+  if (result.success) {
+    idempotencyStore.set(idempotencyKey, result);
+  }
   return result;
 }
 
@@ -420,7 +438,7 @@ export interface RegistrarEntregaLineInput {
   motivoOtroTexto?: string;
 }
 
-export type RegistrarEntregaReason = 'not-found' | 'invalid-transition' | 'no-lines' | 'motivo-invalido';
+export type RegistrarEntregaReason = 'not-found' | 'invalid-transition' | 'no-lines' | 'motivo-invalido' | 'propagation-failed';
 
 export interface RegistrarEntregaResult {
   success: boolean;
@@ -466,7 +484,7 @@ export async function registrarEntrega(
         }
       }
 
-      return withIdempotency(idempotencyKey, () => {
+      return withIdempotency(idempotencyKey, async () => {
         const now = new Date().toISOString();
         const noteLines: DeliveryNoteLine[] = lines.map((line) => {
           const motivoTexto =
@@ -497,15 +515,31 @@ export async function registrarEntrega(
         deliveryNotesStore = [...deliveryNotesStore, note];
         deliveriesStore = deliveriesStore.map((d) => (d.id === deliveryId ? appendHistoryEvent(d, 'FINALIZADO', creadoPor, now) : d));
 
-        // Solo lo ACEPTADO (cantidadEntregada) acumula en las lineas del
-        // pedido — lo rechazado nunca cuenta como entregado. Se dispara
-        // DESPUES de decidir el resultado de la idempotencia (si esta
-        // clave ya se proceso, no se vuelve a acumular — withIdempotency
-        // no vuelve a ejecutar este callback en un duplicado).
-        void applyDeliveryToOrderLines(
-          delivery.orderId,
-          lines.filter((l) => l.cantidadEntregada > 0).map((l) => ({ orderLineId: l.orderLineId, cantidadEntregada: l.cantidadEntregada }))
-        );
+        // Fix post-Fase 2 (hallazgo A15#3 reintroducido): antes era
+        // `void applyDeliveryToOrderLines(...)`, sin await ni catch —
+        // la funcion devolvia `success: true` sin esperar a que la
+        // propagacion terminara, asi que un fallo ahi (ej. el pedido ya
+        // no existe) quedaba silencioso: el usuario veia "Entrega
+        // registrada correctamente" con las lineas del pedido sin
+        // actualizar. Ahora se espera, y si falla, el resultado lo dice
+        // (`propagation-failed`) en vez de mentir un exito.
+        //
+        // El remito y la transicion a FINALIZADO de arriba NO se
+        // deshacen si esto falla: son el hecho fisico ya ocurrido (la
+        // entrega paso, el remito se emitio) — revertirlos simularia
+        // que nunca pasaron. Lo que falla es la contabilidad derivada
+        // (cuanto quedo pendiente en el pedido), que necesita
+        // corregirse — quien llama a esta funcion ve
+        // `reason: 'propagation-failed'` y puede avisar/reintentar en
+        // vez de cerrar el flujo como si nada hubiera fallado.
+        try {
+          await applyDeliveryToOrderLines(
+            delivery.orderId,
+            lines.filter((l) => l.cantidadEntregada > 0).map((l) => ({ orderLineId: l.orderLineId, cantidadEntregada: l.cantidadEntregada }))
+          );
+        } catch {
+          return { success: false, note, reason: 'propagation-failed' as const };
+        }
 
         return { success: true, note };
       });

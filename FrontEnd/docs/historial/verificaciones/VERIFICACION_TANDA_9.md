@@ -2,6 +2,8 @@
 
 **Fecha:** 2026-09-09. Implementa ADR-010 (Aceptado, con correcciones 2026-09-09) y ADR-011 (Aceptado, con correcciones 2026-09-09) — solo el modelo y el circuito de datos: NO incluye vehículos, choferes, viajes, motor de asignación, mapas ni POD (esos son la tanda siguiente, ADR-011). Alcance: módulo Logística (`/logistica`) + panel de detalle de Pedidos (`/pedidos`).
 
+**Actualizado 2026-09-09 (sesión de recuperación):** dos correcciones sobre el código de la Fase 2 original — ver puntos 8 y 9 más abajo, agregados en esta pasada.
+
 ## Qué verificar en el navegador
 
 1. **Crear una entrega desde un pedido (hallazgo A15#1 — lo más importante de esta tanda).** Ir a `/pedidos`, abrir el detalle de un pedido con `comercial = Confirmado` (cualquiera de los 6 del mock salvo el cancelado). En la nueva sección "Entregas" del panel, click en "Nueva entrega". Se abre un modal: elegir sucursal, fecha, horario estimado, zona, prioridad y monto a cobrar, confirmar. Debe aparecer un toast de éxito con el código de la entrega nueva (`del-...`) y la tabla de "Entregas" del panel debe listarla en estado "Creada" sin recargar la página.
@@ -18,11 +20,19 @@
 
 7. **Motivo explicado en cada transición no disponible.** Sobre una entrega "Finalizada" o "Cancelada", no debe haber ningún botón de acción salvo "Ver historial" (igual que Tanda 8) — la ausencia de botones ahora viene de `allowedTransitions` en la respuesta del servidor, no de una regla calculada en el componente.
 
+8. **Fix — fallo de propagación al pedido ya no se reporta como éxito (hallazgo A15#3, había vuelto a aparecer en la Fase 2 original).** No hay forma de simular a mano el fallo real de `applyDeliveryToOrderLines` desde el navegador (haría falta borrar el pedido de `ordersDTOStore` en pleno vuelo, algo que ninguna pantalla permite) — este punto quedó verificado por lectura de código + gates (`tsc`/build), no en el navegador. Lo que Leandro SÍ puede confirmar: el flujo normal de "Registrar entrega" (verificación 1/paso 2 de `VERIFICACION_TANDA_8.md`) sigue funcionando idéntico — la corrección solo agrega un `await`+`catch` alrededor de la propagación, no cambia el camino feliz.
+
+9. **Fix — reintentar tras un fallo transitorio ya no queda "congelado".** Este tampoco es ejercitable a mano de forma simple (requiere provocar un fallo real de red o de negocio y después reintentar con la misma sesión de modal abierta) — verificado por lectura de código (`withIdempotency` ahora solo cachea `success: true`). Si en algún momento se ve que reabrir "Registrar entrega"/"Reprogramar"/"Nueva entrega" sobre la MISMA entrega/pedido después de un error devuelve siempre el mismo error viejo sin importar qué se cambie, eso sería indicio de que esta corrección no está funcionando — avisar.
+
 ## Qué NO se verificó (queda para Leandro)
 
 - `DeliveryHistoryModal` (panel de historial) no cambió en esta tanda: sigue mostrando solo la cantidad de líneas y el badge "Rechazo total" de cada remito, no el texto de motivo resuelto por línea — el dato (`motivoCodigo`/`motivoRechazo` ya resuelto) queda guardado y accesible en `deliveryNotesStore`, pero no hay una vista que lo despliegue línea por línea todavía. No es una regresión de esta tanda (el modal nunca mostró ese detalle), se anota como hallazgo.
 - El corte real de idempotencia ante un reintento de red (respuesta duplicada del mismo `idempotencyKey` con latencia/fallos simulados de `httpClient`) — cubierto por smoke script y lectura de código (`withIdempotency`), no ejercitado a mano con DevTools throttling en esta sesión.
 - La proyección financiera (`estadoFinancieroResumen`) es un stub explícito sobre el `status` legado (no existe dominio de Facturación todavía) — el valor mostrado hoy solo puede ser "Facturado" o "Sin facturar", nunca "Cobrado" ni "Con nota de crédito" (esos dos valores del tipo están definidos pero ningún dato del mock los produce todavía).
+
+## Hallazgo ALTO abierto (Fase 3, sesión de recuperación 2026-09-09) — bloquea el merge a `lean`
+
+**Cancelar un pedido no toca sus entregas ya creadas.** `cancelOrder` (`orders.service.ts`) solo escribe `ordersDTOStore` — nunca mira `deliveriesStore`. Si un pedido tiene una entrega en `CREADO` o `EN_TRANSITO` y se cancela el pedido, la entrega sigue su curso normal (puede marcarse "En ruta", registrarse su entrega, cobrarse `collectionAmount`) sin ningún aviso ni bloqueo — el pedido queda "Cancelado" mientras su entrega dice "Finalizada". El botón "Cancelar" del panel de pedido tampoco chequea si hay una entrega activa (`canCancel` mira el `status` legado, no las `Delivery` reales). Repro: pedido confirmado con una entrega en `CREADO` → cancelar el pedido → la entrega sigue apareciendo con todas sus acciones habilitadas en `/logistica`. No se corrigió en esta sesión (no estaba en el alcance del PASO 2, y una solución real — ¿cascada automática? ¿bloqueo del botón Cancelar?) es una decisión de producto que no está en ningún ADR todavía.
 
 ## Qué queda fuera de esta tanda (documentado, no implementado)
 

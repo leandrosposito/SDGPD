@@ -56,8 +56,25 @@ export const RegistrarEntregaModal: FC<RegistrarEntregaModalProps> = ({ isOpen, 
   const empresaId = useSessionStore((s) => s.session?.company.id);
   const [drafts, setDrafts] = useState<Record<string, LineDraft>>({});
   const [isSaving, setIsSaving] = useState(false);
-  const [idempotencyKey, setIdempotencyKey] = useState('');
   const evidence = useEvidenceUpload();
+
+  // Idempotencia (ADR-010 seccion 4): la clave se forma UNA vez por
+  // intento de registrar esta entrega — al abrir el modal, no al
+  // confirmar. Ajustada DURANTE el render (patron de React para
+  // "resetear estado cuando cambia una prop", react.dev/learn/
+  // you-might-not-need-an-effect), no dentro de un useEffect: la
+  // trampa conocida de este proyecto (PROTOCOLO.md seccion 6, #5) es
+  // envolver el setState de un efecto en un microtask para acallar el
+  // lint — "la regla se calla, el problema queda". `openTrigger` nulo
+  // mientras el modal esta cerrado evita generar una clave que nadie
+  // va a usar.
+  const openTrigger = isOpen ? (delivery?.id ?? '') : null;
+  const [idempotencyKey, setIdempotencyKey] = useState('');
+  const [lastKeyTrigger, setLastKeyTrigger] = useState<string | null>(null);
+  if (openTrigger !== null && openTrigger !== lastKeyTrigger) {
+    setLastKeyTrigger(openTrigger);
+    setIdempotencyKey(crypto.randomUUID());
+  }
 
   const {
     data: order,
@@ -93,17 +110,6 @@ export const RegistrarEntregaModal: FC<RegistrarEntregaModalProps> = ({ isOpen, 
     if (orderError) toast.error('No se pudo cargar el pedido de esta entrega.');
     if (motivoCatalogError) toast.error('No se pudo cargar el catálogo de motivos de rechazo.');
   }, [orderError, motivoCatalogError]);
-
-  // Idempotencia (ADR-010 seccion 4): la clave se forma UNA vez por
-  // intento de registrar esta entrega — al abrir el modal, no al
-  // confirmar. Se regenera si se vuelve a abrir (nuevo intento).
-  // Microtask (mismo patron que el resto de este archivo) para no
-  // llamar setState sincronico dentro del cuerpo del efecto.
-  useEffect(() => {
-    Promise.resolve().then(() => {
-      if (isOpen) setIdempotencyKey(crypto.randomUUID());
-    });
-  }, [isOpen, delivery?.id]);
 
   // Seedea los drafts editables a partir del pedido YA TRAIDO por
   // useCachedQuery (no dispara ningun fetch — reacciona a datos que
@@ -180,6 +186,20 @@ export const RegistrarEntregaModal: FC<RegistrarEntregaModalProps> = ({ isOpen, 
       const result = await registrarEntrega(empresaId, idempotencyKey, delivery.id, lines, evidence.uploadedFileIds, fullName);
       if (result.success) {
         toast.success('Entrega registrada correctamente.');
+        onRegistered();
+        onClose();
+        return;
+      }
+      if (result.reason === 'propagation-failed') {
+        // El remito quedo escrito y la entrega ya paso a Finalizada
+        // (el hecho fisico ocurrio) — lo que fallo es la actualizacion
+        // de las cantidades del pedido. Se cierra igual (reintentar con
+        // la misma entrega ya no es una transicion valida) pero con una
+        // advertencia distinta, no el error generico: hay que corregir
+        // el pedido a mano.
+        toast.error(`Se registró el remito de ${delivery.id}, pero no se pudo actualizar el pedido — avisá para corregirlo a mano.`, {
+          duration: 10000,
+        });
         onRegistered();
         onClose();
         return;

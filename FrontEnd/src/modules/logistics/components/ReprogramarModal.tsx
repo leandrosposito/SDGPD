@@ -1,4 +1,4 @@
-import { useEffect, useState, type FC } from 'react';
+import { useState, type FC } from 'react';
 import { toast } from 'sonner';
 import { Modal } from '@/shared/components/ui/Modal';
 import { useSessionStore } from '@/shared/state/useSessionStore';
@@ -16,7 +16,12 @@ import './ReprogramarModal.css';
 //
 // Tanda 9 (ADR-010 seccion 4): idempotente — la clave se genera al
 // abrir el modal (la intencion de reprogramar esta entrega), no al
-// confirmar, mismo criterio que RegistrarEntregaModal.
+// confirmar, mismo criterio que RegistrarEntregaModal. El reseteo de
+// campos y la clave comparten el mismo disparador (isOpen pasa a
+// true) asi que se ajustan juntos, durante el render — no en un
+// useEffect con un microtask envolviendo el setState: esa es la
+// trampa conocida de este proyecto (PROTOCOLO.md seccion 6, #5),
+// "la regla se calla, el problema queda".
 // ============================================================
 
 interface ReprogramarModalProps {
@@ -35,28 +40,20 @@ export const ReprogramarModal: FC<ReprogramarModalProps> = ({ isOpen, onClose, d
   const [isSaving, setIsSaving] = useState(false);
   const [idempotencyKey, setIdempotencyKey] = useState('');
 
-  useEffect(() => {
-    // Microtask (mismo patron que RegistrarEntregaModal/AlertsBell,
-    // Tanda 7/8) para no disparar setState sincronico en el cuerpo del
-    // efecto.
-    Promise.resolve().then(() => {
-      if (isOpen) {
-        setFechaNueva(todayLocalDateString());
-        setMotivo('');
-        setResponsable(fullName);
-      }
-    });
-  }, [isOpen, fullName]);
-
-  // Idempotencia (ADR-010 seccion 4): una clave por intento de
-  // reprogramar, formada al abrir el modal — no en handleConfirm.
-  // Microtask (mismo patron que el efecto de arriba) para no llamar
-  // setState sincronico dentro del cuerpo del efecto.
-  useEffect(() => {
-    Promise.resolve().then(() => {
-      if (isOpen) setIdempotencyKey(crypto.randomUUID());
-    });
-  }, [isOpen, delivery?.id]);
+  // Ajuste de estado durante el render (react.dev/learn/you-might-not-
+  // need-an-effect): cuando `openTrigger` cambia (el modal pasa a
+  // abierto, para esta entrega u otra), se resetean campos + clave en
+  // el mismo render extra que React descarta antes de pintar — no hay
+  // useEffect involucrado.
+  const openTrigger = isOpen ? (delivery?.id ?? '') : null;
+  const [lastOpenTrigger, setLastOpenTrigger] = useState<string | null>(null);
+  if (openTrigger !== null && openTrigger !== lastOpenTrigger) {
+    setLastOpenTrigger(openTrigger);
+    setIdempotencyKey(crypto.randomUUID());
+    setFechaNueva(todayLocalDateString());
+    setMotivo('');
+    setResponsable(fullName);
+  }
 
   if (!delivery) return null;
 

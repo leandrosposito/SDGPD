@@ -1,4 +1,4 @@
-import { useEffect, useState, type FC } from 'react';
+import { useState, type FC } from 'react';
 import { toast } from 'sonner';
 import { Modal } from '@/shared/components/ui/Modal';
 import { useSessionStore } from '@/shared/state/useSessionStore';
@@ -26,7 +26,10 @@ import './CreateDeliveryModal.css';
 // de negocio que no existe todavia).
 //
 // Idempotente (ADR-010 seccion 4): la clave se genera al abrir el
-// modal, mismo criterio que RegistrarEntregaModal/ReprogramarModal.
+// modal, mismo criterio que RegistrarEntregaModal/ReprogramarModal —
+// junto con el reseteo de campos, ajustados durante el render (no en
+// un useEffect con microtask: esa es la trampa conocida de este
+// proyecto, PROTOCOLO.md seccion 6, #5).
 // ============================================================
 
 interface CreateDeliveryModalProps {
@@ -55,31 +58,26 @@ export const CreateDeliveryModal: FC<CreateDeliveryModalProps> = ({ isOpen, onCl
   const [isSaving, setIsSaving] = useState(false);
   const [idempotencyKey, setIdempotencyKey] = useState('');
 
-  useEffect(() => {
-    // Microtask (mismo patron que RegistrarEntregaModal/ReprogramarModal)
-    // para no disparar setState sincronico en el cuerpo del efecto.
-    Promise.resolve().then(() => {
-      if (isOpen && order) {
-        setBranchId(activeBranchId ?? branches[0]?.id ?? '');
-        setDate(todayLocalDateString());
-        setEstimatedTime('09:00 - 11:00');
-        setZone('Centro');
-        setPriority('medium');
-        setCollectionAmount(order.paymentMethod === 'Cuenta Corriente' ? 0 : order.totalAmount);
-      }
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo debe re-seedear al abrir/cambiar de pedido
-  }, [isOpen, order?.id]);
-
-  // Idempotencia (ADR-010 seccion 4): una clave por intento de crear
-  // esta entrega, formada al abrir el modal. Microtask (mismo patron
-  // que el efecto de arriba) para no llamar setState sincronico dentro
-  // del cuerpo del efecto.
-  useEffect(() => {
-    Promise.resolve().then(() => {
-      if (isOpen) setIdempotencyKey(crypto.randomUUID());
-    });
-  }, [isOpen, order?.id]);
+  // Ajuste de estado durante el render (react.dev/learn/you-might-not-
+  // need-an-effect): cuando `openTrigger` cambia (el modal pasa a
+  // abierto, para este pedido u otro), se resetean campos + clave en
+  // el mismo render extra que React descarta antes de pintar.
+  // Depende de `order` (no solo de `order?.id`) porque
+  // `collectionAmount` se precarga del pedido — sigue disparando una
+  // sola vez por apertura porque `openTrigger` solo cambia con
+  // isOpen/order.id, no con cada render.
+  const openTrigger = isOpen ? (order?.id ?? '') : null;
+  const [lastOpenTrigger, setLastOpenTrigger] = useState<string | null>(null);
+  if (openTrigger !== null && openTrigger !== lastOpenTrigger && order) {
+    setLastOpenTrigger(openTrigger);
+    setIdempotencyKey(crypto.randomUUID());
+    setBranchId(activeBranchId ?? branches[0]?.id ?? '');
+    setDate(todayLocalDateString());
+    setEstimatedTime('09:00 - 11:00');
+    setZone('Centro');
+    setPriority('medium');
+    setCollectionAmount(order.paymentMethod === 'Cuenta Corriente' ? 0 : order.totalAmount);
+  }
 
   if (!order) return null;
 
