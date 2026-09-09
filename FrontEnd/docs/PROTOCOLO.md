@@ -15,7 +15,8 @@ Todo lo demás (cómo auditar, cómo implementar, cómo verificar, cuándo merge
 - No hay backend. Todo se apoya en contratos de API tipados + adaptadores mock. Cuando exista el backend real se cambia el adaptador, no la UI.
 - Rama base de trabajo: `lean`. Nunca se toca `main`.
 - Alcance de dominio: productos, proveedores, clientes, pedidos, caja y settings son alcance EMPRESA. Stock, reposición y logística son alcance SUCURSAL. Products es transversal (`shared/api/products/`).
-- Antes de empezar cualquier tarea, leer: `docs/historial/auditorias/AUDIT_00_RESUMEN.md`, los `docs/adr/ADR-*.md` y `docs/historial/verificaciones/VERIFICACION_CORRIDA_COMPLETA.md`. Los hallazgos y decisiones que ya están ahí no se re-discuten ni se re-auditan.
+- Antes de empezar cualquier tarea, leer: `docs/ESTADO.md`, los `docs/adr/ADR-*.md` y `docs/historial/verificaciones/VERIFICACION_CORRIDA_COMPLETA.md`. Los hallazgos y decisiones que ya están ahí no se re-discuten ni se re-auditan.
+- `docs/historial/` no se lee al arrancar; solo se consulta si una tarea puntual lo pide (por ejemplo, para citar la evidencia original de un hallazgo ya resuelto). `docs/ESTADO.md` ya dice qué de ahí sigue vigente.
 
 ## 2. REGLAS PERMANENTES
 
@@ -152,3 +153,5 @@ Nunca mergear a `main`. Nunca mergear con un CRÍTICO o un ALTO abierto. Si no s
 ```
 
 La sección de qué no se verificó y qué queda para el navegador no es opcional y no se adorna. Los gates prueban que el código es coherente consigo mismo. No prueban que la aplicación funcione.
+
+**Al cerrar la sesión también hay que reescribir `docs/ESTADO.md`** (tandas cerradas, hallazgos de `docs/historial/` que siguen abiertos, checklists sin ejecutar, deuda viva) — dejar solo el `REPORTE_<fecha>.md` no alcanza: ese documenta lo que se hizo esta sesión, `ESTADO.md` tiene que seguir siendo la foto de dónde está el proyecto ahora, y solo se mantiene así si cada sesión la actualiza.

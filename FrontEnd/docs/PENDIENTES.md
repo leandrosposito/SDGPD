@@ -47,18 +47,26 @@ nada — es una inconsistencia de nomenclatura, no un bug.
 
 ### 4. Archivos `.docx`/`.pdf` trackeados en `Documentacion/` pese al `.gitignore` — Severidad: Baja
 
-**Corrección de conteo:** son **4** archivos, no 45 — verificado con
-`git ls-files Documentacion/ | grep -E '\.(docx|pdf)$'`:
-- `Documentacion/negocio/01. Product Vision SDGPD.docx` / `.pdf`
-- `Documentacion/Product Vision SDGPD.docx` / `.pdf`
+**Corrección de conteo (2026-09-09):** son **43** archivos, no 4 (la corrección
+anterior de este ítem estaba mal — nunca se reverificó contra el filesystem real
+tras la reorganización de `Documentacion/`) — verificado con
+`git -c core.quotepath=off ls-files Documentacion/ | grep -E '\.(docx|pdf)$' | wc -l`
+el mismo día que esta corrección. Están repartidos en `Documentacion/negocio/`
+(la serie de capítulos "02 a".."02 s"/L/ñ + Product Vision 01 + Modelo Funcional,
+41 archivos), `Documentacion/_archivo/` (el "Documento 02" viejo, 2 archivos) y
+1 archivo suelto en la raíz (`03— Modelo Funcional del Dominio (1).docx`,
+pendiente de una decisión manual — ver el informe de la sesión de reorganización).
+`Documentacion/Product Vision SDGPD.docx`/`.pdf` (sin prefijo "01.", los que
+este ítem citaba antes) ya no existen: se borraron en esa misma reorganización
+por ser la versión vieja del Product Vision.
 
-Causa confirmada: los 4 archivos se agregaron en el commit `4d1e8a2` (25/08/2026);
-la regla `Documentacion/**/*.docx` / `**/*.pdf` en `.gitignore` (líneas 6-7) recién
-se agregó en `b014ff2` (28/08/2026), 3 días después. `.gitignore` no desengancha
+Causa de fondo (sigue vigente, no cambió): estos archivos se agregaron al repo
+antes de que existiera la regla `Documentacion/**/*.docx` / `**/*.pdf` en
+`.gitignore` (agregada en `b014ff2`, 28/08/2026). `.gitignore` no desengancha
 retroactivamente archivos ya trackeados — haría falta un `git rm --cached`
-explícito, que nunca se hizo. No es urgente (son 4 archivos, no un problema de
-tamaño de repo), pero conviene resolver la inconsistencia entre "estos archivos
-están en `.gitignore`" y "estos archivos están commiteados" en algún momento.
+explícito, que nunca se hizo. No es urgente (no es un problema de tamaño de
+repo grave), pero conviene resolver la inconsistencia entre "están en
+`.gitignore`" y "están commiteados" en algún momento.
 
 ### 5. Verificación funcional pendiente de Tandas 0 y 1 — Severidad: Media-Alta
 
