@@ -40,3 +40,5 @@ Este archivo es un ÍNDICE, no el log. El detalle completo de cada decisión (co
 | Alcance y ciclo de vida de las alertas del tablero | 07/09/2026 | `docs/adr/ADR-007-alertas.md` |
 | Dinero y cantidades (módulo `Money`, centavos enteros) | 07/09/2026 | `docs/adr/ADR-008-dinero-cantidades.md` |
 | Alcance del dashboard: empresa vs. sucursal, elegido por el usuario | 07/09/2026 | `docs/adr/ADR-009-alcance-dashboard.md` |
+| Modelo logístico: 3 ejes de estado (comercial/logístico/financiero), jerarquía Viaje→Parada→Entrega→Línea, idempotencia, catálogo de motivos, logística inversa, POD — **Propuesto, sin aprobar** | 09/09/2026 | `docs/adr/ADR-010-modelo-logistico.md` |
+| Viajes, capacidad multidimensional y motor de asignación por filtro — **Propuesto, sin aprobar** | 09/09/2026 | `docs/adr/ADR-011-viajes-y-asignacion.md` |
