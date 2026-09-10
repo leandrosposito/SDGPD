@@ -172,6 +172,24 @@ export async function fetchSuppliers(empresaId: string, signal?: AbortSignal): P
   return dtos.map(supplierFromDTO);
 }
 
+// Tanda 12 (hallazgo propio): CUIT unico por empresa, validado
+// server-side — antes no habia ningun chequeo, dos proveedores podian
+// cargarse con el mismo CUIT. Normaliza SOLO para comparar (deja
+// afuera guiones/espacios — "30712345678" y "30-71234567-8" son el
+// mismo CUIT) sin normalizar lo GUARDADO: a diferencia de la patente
+// de vehiculos (Tanda 11, formato canonico sin separadores en la
+// practica), el CUIT del proyecto se muestra siempre con guiones
+// (XX-XXXXXXXX-X, ver el mock semilla) y forzar el formato de entrada
+// del usuario no es lo que se pidio.
+function normalizeCuitForComparison(raw: string): string {
+  return raw.replace(/[^0-9]/g, '');
+}
+
+function isCuitDuplicado(cuit: string, excludeSupplierId?: string): boolean {
+  const normalizado = normalizeCuitForComparison(cuit);
+  return suppliersDTOStore.some((s) => s.id !== excludeSupplierId && normalizeCuitForComparison(s.cuit) === normalizado);
+}
+
 export async function createSupplier(empresaId: string, input: SupplierFormInput): Promise<Supplier> {
   const dto = await httpClient.request<SupplierDTO>({
     method: 'POST',
@@ -180,6 +198,9 @@ export async function createSupplier(empresaId: string, input: SupplierFormInput
     mock: () => {
       if (!input.name || !input.cuit) {
         throw new ApiError(400, 'CLIENT_ERROR', 'Razon Social y CUIT son obligatorios.');
+      }
+      if (isCuitDuplicado(input.cuit)) {
+        throw new ApiError(400, 'CLIENT_ERROR', 'Ya existe un proveedor con ese CUIT.');
       }
       const newDTO: SupplierDTO = {
         id: `sup-${Date.now()}`,
@@ -217,6 +238,9 @@ export async function updateSupplier(empresaId: string, id: string, input: Suppl
       const existing = suppliersDTOStore.find((s) => s.id === id);
       if (!existing) {
         throw new ApiError(404, 'CLIENT_ERROR', 'El proveedor que intenta editar ya no existe.');
+      }
+      if (isCuitDuplicado(input.cuit, id)) {
+        throw new ApiError(400, 'CLIENT_ERROR', 'Ya existe un proveedor con ese CUIT.');
       }
       const updated: SupplierDTO = {
         ...existing,
