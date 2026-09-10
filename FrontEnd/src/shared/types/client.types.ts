@@ -57,6 +57,17 @@ export interface ClientAccount {
   zone: string;
   sellerName: string;
   creditLimit: number;
+  // Tanda 12 (hallazgo propio): CreateClientModal ya tenia una tab
+  // "Configuracion Comercial" con estos dos campos (ClientCommercialTab)
+  // desde antes de esta tanda, pero buildClientInput() nunca los incluia
+  // en el payload real — el usuario los cargaba, el modal los
+  // descartaba en silencio al guardar. Campos reales ahora, mismo
+  // criterio de string plano que `zone`/`sellerName` (un catalogo
+  // fijo de opciones en el formulario, sin entidad de dominio propia
+  // detras — "lista de precios" en este proyecto son margenes por
+  // tramo, TabPriceLists.tsx, no entidades con id).
+  priceList: string;
+  saleCondition: string;
   totalDebit: number;
   totalCredit: number;
   currentBalance: number;
