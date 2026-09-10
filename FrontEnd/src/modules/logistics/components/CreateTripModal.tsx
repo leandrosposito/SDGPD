@@ -7,6 +7,7 @@ import { todayLocalDateString } from '@/shared/utils/date';
 import type { Vehicle } from '@/shared/types/vehicle.types';
 import type { Driver } from '@/shared/types/driver.types';
 import type { BranchId, VehicleId, DriverId, DeliveryId, StopId, TripId } from '@/shared/types/ids.types';
+import { asVehicleId, asDriverId } from '@/shared/types/ids.types';
 import type { Delivery } from '@/shared/types/logistics.types';
 import { getDeliveriesPage } from '../services/deliveries.service';
 import { createTrip, assignDeliveriesToStop, MAX_TRIP_ASSIGNMENT, type CreateTripStopInput } from '../services/trips.service';
@@ -294,7 +295,7 @@ export const CreateTripModal: FC<CreateTripModalProps> = ({ isOpen, onClose, bra
           <div className="create-trip__grid">
             <div className="create-trip__field">
               <label>Vehículo</label>
-              <select value={vehicleId} onChange={(e) => setVehicleId(e.target.value as VehicleId)}>
+              <select value={vehicleId} onChange={(e) => setVehicleId(e.target.value ? asVehicleId(e.target.value) : '')}>
                 <option value="">Elegí un vehículo…</option>
                 {vehicles.map((v) => (
                   <option key={v.id} value={v.id}>
@@ -305,7 +306,7 @@ export const CreateTripModal: FC<CreateTripModalProps> = ({ isOpen, onClose, bra
             </div>
             <div className="create-trip__field">
               <label>Chofer</label>
-              <select value={driverId} onChange={(e) => setDriverId(e.target.value as DriverId)}>
+              <select value={driverId} onChange={(e) => setDriverId(e.target.value ? asDriverId(e.target.value) : '')}>
                 <option value="">Elegí un chofer…</option>
                 {drivers.map((d) => (
                   <option key={d.id} value={d.id}>
