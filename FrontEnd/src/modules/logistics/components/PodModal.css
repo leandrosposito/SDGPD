@@ -1,0 +1,78 @@
+.pod-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.pod-modal__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.pod-modal__field label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary, #555);
+}
+
+.pod-modal__field input[type='text'],
+.pod-modal__field textarea {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border-color, #ddd);
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.pod-modal__canvas {
+  border: 1px dashed var(--border-color, #ccc);
+  border-radius: 6px;
+  touch-action: none;
+  background: #fff;
+  cursor: crosshair;
+}
+
+.pod-modal__signature-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.8rem;
+}
+
+.pod-modal__alt-signature-label {
+  position: relative;
+  cursor: pointer;
+  color: var(--accent, #7c3aed);
+}
+
+.pod-modal__alt-signature-label input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.pod-modal__cancel,
+.pod-modal__confirm {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.pod-modal__cancel {
+  background: transparent;
+  border: 1px solid var(--border-color, #ddd);
+}
+
+.pod-modal__confirm {
+  background: var(--accent, #7c3aed);
+  color: white;
+  border: none;
+}
+
+.pod-modal__cancel:disabled,
+.pod-modal__confirm:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

@@ -11,43 +11,12 @@ import { MAX_EXPORT_ROWS } from '@/shared/types/pagination.types';
 import { LOGISTICS_MOCK_DATA } from '@/data/mock/logistics.data';
 import { httpClient } from '@/shared/api/httpClient';
 import { applyDeliveryToOrderLines, getOrderById } from '@/modules/orders/api/orders.service';
-
-// ------------------------------------------------------------
-// Idempotencia (Tanda 9, ADR-010 seccion 4): mapa clave->resultado,
-// compartido por transitionDelivery/reprogramDelivery/registrarEntrega/
-// createDelivery. Ante una clave ya vista, el efecto NO se reaplica —
-// se devuelve el resultado guardado de la primera vez, tal cual
-// (nunca un error). Sin expiracion en este mock (un backend real
-// necesitaria una, ver ADR-010 seccion 4 — 24-48hs sugeridas).
-//
-// Fix post-Fase 2: solo se cachea un resultado con `success: true`. La
-// clave se genera al ABRIR el modal (antes de saber si la operacion va
-// a poder aplicarse) y sobrevive a los reintentos del usuario dentro
-// de esa misma apertura — si el primer intento fallo por una razon
-// transitoria (`not-found`/`invalid-transition`/etc.), cachear ESE
-// resultado dejaba la clave "congelada" en el fallo para siempre: un
-// segundo intento legitimo (ej. la entrega ya paso a un estado valido)
-// recibia de vuelta el mismo fallo viejo en lugar de ejecutarse. Un
-// resultado con `success: false` nunca representa un efecto aplicado,
-// asi que no hay nada que proteger de un reintento — se recalcula
-// siempre. `compute` puede ser async (registrarEntrega espera la
-// propagacion al pedido antes de decidir si cachea, ver mas abajo).
-// ------------------------------------------------------------
-const idempotencyStore = new Map<string, unknown>();
-
-async function withIdempotency<T extends { success: boolean }>(
-  idempotencyKey: string,
-  compute: () => T | Promise<T>
-): Promise<T> {
-  if (idempotencyStore.has(idempotencyKey)) {
-    return idempotencyStore.get(idempotencyKey) as T;
-  }
-  const result = await compute();
-  if (result.success) {
-    idempotencyStore.set(idempotencyKey, result);
-  }
-  return result;
-}
+// Tanda 10B: withIdempotency se extrajo a shared/utils/idempotency.ts
+// (antes vivia solo aca) para que trips.service.ts#registerPod pueda
+// usar el mismo mecanismo sin duplicar el mapa clave->resultado — ver
+// ese archivo para el razonamiento completo (sin cambios de
+// comportamiento, mismo codigo, otro archivo).
+import { withIdempotency } from '@/shared/utils/idempotency';
 
 // ============================================================
 // deliveries.service — Acceso a datos de entregas (P1,
@@ -122,6 +91,26 @@ export function getOrderBranchLinksForAggregation(): { orderId: OrderId; branchI
 // ------------------------------------------------------------
 export function getActiveDeliveriesForOrder(orderId: OrderId): Delivery[] {
   return deliveriesStore.filter((d) => d.orderId === orderId && (d.status === 'CREADO' || d.status === 'EN_TRANSITO'));
+}
+
+// ------------------------------------------------------------
+// getDeliveryById / getDeliveryIdsMatchingFilter — Tanda 10B: llamadas
+// "servidor a servidor" (mismo criterio que getActiveDeliveriesForOrder
+// y getOrderBranchLinksForAggregation) que trips.service.ts necesita:
+// - getDeliveryById: registerPod confirma el estado actual de la
+//   Delivery antes de finalizarla.
+// - getDeliveryIdsMatchingFilter: assignDeliveriesToStop, modo
+//   'filtro' (ADR-011 seccion 1) — reusa el MISMO matchesScope que
+//   getDeliveriesPage en vez de reinterpretar el filtro en
+//   trips.service.ts, y ademas exige status CREADO (solo lo que
+//   todavia no salio a reparto es candidato a asignarse a un viaje).
+// ------------------------------------------------------------
+export function getDeliveryById(deliveryId: DeliveryId): Delivery | undefined {
+  return deliveriesStore.find((d) => d.id === deliveryId);
+}
+
+export function getDeliveryIdsMatchingFilter(filters: DeliveryQueryFilters): DeliveryId[] {
+  return deliveriesStore.filter((d) => matchesScope(d, filters) && d.status === 'CREADO').map((d) => d.id);
 }
 
 export function toISODate(date: Date): string {
@@ -510,11 +499,19 @@ export async function registrarEntrega(
 
       return withIdempotency(idempotencyKey, async () => {
         const now = new Date().toISOString();
+        // Tanda 10B (ADR-010 seccion 6, hallazgo de Fase A: conecta el
+        // flag que Tanda 9 dejo declarado sin consumidor): si el motivo
+        // elegido tiene disparaLogisticaInversa=true, la porcion
+        // rechazada de la linea queda registrada como cantidad "en
+        // transito de retorno" — el camion todavia no volvio al
+        // deposito, asi que no es stock disponible todavia (eso lo
+        // resuelve confirmarRecepcionDevolucion, fuera de alcance de
+        // esta tanda), pero tampoco es invisible: existe como dato
+        // propio en vez de perderse hasta que el camion vuelva.
         const noteLines: DeliveryNoteLine[] = lines.map((line) => {
-          const motivoTexto =
-            line.motivoCodigo === MOTIVO_OTRO_CODIGO
-              ? line.motivoOtroTexto
-              : catalogoRechazo.find((m) => m.codigo === line.motivoCodigo)?.descripcion;
+          const motivoItem = catalogoRechazo.find((m) => m.codigo === line.motivoCodigo);
+          const motivoTexto = line.motivoCodigo === MOTIVO_OTRO_CODIGO ? line.motivoOtroTexto : motivoItem?.descripcion;
+          const disparaRetorno = line.cantidadRechazada > 0 && (motivoItem?.disparaLogisticaInversa ?? false);
           return {
             orderLineId: line.orderLineId,
             cantidadOfrecida: line.cantidadEntregada + line.cantidadRechazada,
@@ -522,6 +519,7 @@ export async function registrarEntrega(
             cantidadRechazada: line.cantidadRechazada,
             motivoCodigo: line.motivoCodigo,
             motivoRechazo: motivoTexto,
+            cantidadEnTransitoDeRetorno: disparaRetorno ? line.cantidadRechazada : 0,
           };
         });
 
@@ -699,5 +697,24 @@ export async function getDeliveriesForOrder(empresaId: string, orderId: OrderId,
     params: { empresaId },
     signal,
     mock: () => structuredClone(deliveriesStore.filter((d) => d.orderId === orderId)),
+  });
+}
+
+// ------------------------------------------------------------
+// getDeliveriesByIds — Tanda 10B: TripDetailPanel.tsx necesita el
+// detalle (cliente, direccion, estado, monto a cobrar) de las Delivery
+// que cada Parada referencia por id — Stop solo guarda `deliveryIds`
+// (ver trip.types.ts), nunca una copia de la Delivery. Universo
+// acotado (las entregas de las paradas de UN viaje abierto en el
+// panel, nunca la coleccion completa), mismo criterio que
+// getDeliveriesForOrder.
+// ------------------------------------------------------------
+export async function getDeliveriesByIds(empresaId: string, deliveryIds: DeliveryId[], signal?: AbortSignal): Promise<Delivery[]> {
+  return httpClient.request<Delivery[]>({
+    method: 'GET',
+    path: '/deliveries/by-ids',
+    params: { empresaId, ids: deliveryIds.join(',') },
+    signal,
+    mock: () => structuredClone(deliveriesStore.filter((d) => deliveryIds.includes(d.id))),
   });
 }

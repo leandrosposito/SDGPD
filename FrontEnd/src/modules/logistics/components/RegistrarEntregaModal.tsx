@@ -137,6 +137,20 @@ export const RegistrarEntregaModal: FC<RegistrarEntregaModalProps> = ({ isOpen, 
 
   const hasAnyRejection = useMemo(() => Object.values(drafts).some((d) => d.rechazar > 0), [drafts]);
 
+  // Tanda 10B (hallazgo de Fase A: conecta requiereEvidencia, declarado
+  // en el catalogo desde Tanda 9 sin consumidor de comportamiento).
+  // Hasta ahora la validacion era pareja para todos los rechazos (0
+  // archivos exigidos) — con esto, si ALGUNA linea rechazada eligio un
+  // motivo con requiereEvidencia=true, el boton "Confirmar" queda
+  // deshabilitado hasta que haya al menos 1 archivo subido para este
+  // evento (no por linea: mismo criterio que evidenciaIds hoy, un solo
+  // array a nivel de remito, no por linea de detalle).
+  const needsEvidence = useMemo(
+    () => Object.values(drafts).some((d) => d.rechazar > 0 && motivoCatalog.find((m) => m.codigo === d.motivoCodigo)?.requiereEvidencia),
+    [drafts, motivoCatalog]
+  );
+  const evidenceMissing = needsEvidence && evidence.uploadedFileIds.length === 0;
+
   if (!delivery) return null;
 
   function updateDraft(lineId: string, patch: Partial<LineDraft>) {
@@ -177,6 +191,10 @@ export const RegistrarEntregaModal: FC<RegistrarEntregaModalProps> = ({ isOpen, 
     }
     if (hasAnyRejection && evidence.hasErrors) {
       toast.error('Hay archivos de evidencia con error — reintentalos o quitalos antes de confirmar.');
+      return;
+    }
+    if (evidenceMissing) {
+      toast.error('Al menos un motivo de rechazo exige evidencia adjunta — subí un archivo antes de confirmar.');
       return;
     }
     if (!idempotencyKey) return;
@@ -231,7 +249,13 @@ export const RegistrarEntregaModal: FC<RegistrarEntregaModalProps> = ({ isOpen, 
           <button type="button" className="registrar-entrega__cancel" onClick={onClose} disabled={isSaving}>
             Cancelar
           </button>
-          <button type="button" className="registrar-entrega__confirm" onClick={handleConfirm} disabled={isSaving || isLoadingOrder || !order}>
+          <button
+            type="button"
+            className="registrar-entrega__confirm"
+            onClick={handleConfirm}
+            disabled={isSaving || isLoadingOrder || !order || evidenceMissing}
+            title={evidenceMissing ? 'Este rechazo exige evidencia adjunta antes de confirmar.' : undefined}
+          >
             {isSaving ? 'Guardando...' : 'Confirmar entrega'}
           </button>
         </>

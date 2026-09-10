@@ -26,6 +26,17 @@ const InventoryPage = lazy(() =>
 const LogisticsPage = lazy(() =>
   import('@/modules/logistics/LogisticsPage').then(m => ({ default: m.LogisticsPage }))
 );
+// Tanda 10B (ADR-011): capa operativa de logistica — chunks propios,
+// mismo criterio de code-splitting por ruta que el resto (ADR-012).
+const TripsPage = lazy(() =>
+  import('@/modules/logistics/TripsPage').then(m => ({ default: m.TripsPage }))
+);
+const VehiclesPage = lazy(() =>
+  import('@/modules/logistics/VehiclesPage').then(m => ({ default: m.VehiclesPage }))
+);
+const DriversPage = lazy(() =>
+  import('@/modules/logistics/DriversPage').then(m => ({ default: m.DriversPage }))
+);
 const CashPage = lazy(() =>
   import('@/modules/cash/CashPage').then(m => ({ default: m.CashPage }))
 );
@@ -106,6 +117,18 @@ export function AppRoutes() {
               <Route
                 path="logistica"
                 element={<LogisticsPage />}
+              />
+              <Route
+                path="logistica/viajes"
+                element={<TripsPage />}
+              />
+              <Route
+                path="logistica/vehiculos"
+                element={<VehiclesPage />}
+              />
+              <Route
+                path="logistica/choferes"
+                element={<DriversPage />}
               />
 
               {/* Caja */}

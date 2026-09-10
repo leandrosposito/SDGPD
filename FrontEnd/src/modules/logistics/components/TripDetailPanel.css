@@ -1,0 +1,145 @@
+.trip-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.trip-detail__meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+}
+
+.trip-detail__meta-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.trip-detail__meta-field--full {
+  grid-column: 1 / -1;
+}
+
+.trip-detail__meta-label {
+  font-size: 0.75rem;
+  color: var(--text-tertiary, #888);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.trip-detail__meta-value {
+  font-size: 0.95rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.trip-detail__actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.trip-detail__btn-transition {
+  padding: 0.5rem 0.9rem;
+  border-radius: 6px;
+  border: 1px solid var(--accent, #7c3aed);
+  background: transparent;
+  color: var(--accent, #7c3aed);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.trip-detail__section-title {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.trip-detail__stops {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.trip-detail__stop {
+  border: 1px solid var(--border-color, #eee);
+  border-radius: 8px;
+  padding: 0.75rem;
+}
+
+.trip-detail__stop-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.trip-detail__stop-order {
+  font-weight: 700;
+  color: var(--text-tertiary, #888);
+}
+
+.trip-detail__stop-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.trip-detail__stop-info span {
+  font-size: 0.8rem;
+  color: var(--text-secondary, #666);
+}
+
+.trip-detail__stop-move {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.trip-detail__stop-move button {
+  border: 1px solid var(--border-color, #ddd);
+  background: transparent;
+  border-radius: 4px;
+  padding: 0.2rem 0.35rem;
+  cursor: pointer;
+}
+
+.trip-detail__stop-move button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.trip-detail__stop-deliveries {
+  list-style: none;
+  margin: 0.6rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.trip-detail__delivery-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+}
+
+.trip-detail__delivery-id {
+  font-family: monospace;
+}
+
+.trip-detail__btn-pod {
+  margin-left: auto;
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-color, #ddd);
+  background: transparent;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.trip-detail__btn-pod:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
