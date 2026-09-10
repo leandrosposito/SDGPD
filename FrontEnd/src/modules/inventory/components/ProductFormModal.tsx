@@ -99,10 +99,10 @@ export const ProductFormModal: FC<ProductFormModalProps> = ({
     setIsDeleting(true);
     try {
       await onDelete(product.id);
-      toast.success('Producto eliminado correctamente.');
+      toast.success('Producto marcado como Inactivo.');
       onClose();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'No se pudo eliminar el producto.');
+      toast.error(err instanceof Error ? err.message : 'No se pudo desactivar el producto.');
     } finally {
       setIsDeleting(false);
       setConfirmingDelete(false);
@@ -118,7 +118,8 @@ export const ProductFormModal: FC<ProductFormModalProps> = ({
         confirmingDelete ? (
           <div className="product-delete-confirm">
             <span className="product-delete-confirm__text">
-              ¿Confirmar eliminacion de este producto? Esta accion no se puede deshacer.
+              ¿Marcar este producto como Inactivo? No se borra del catálogo — vas a poder reactivarlo después
+              editándolo y cambiando su Estado a Activo.
             </span>
             <div className="product-modal-footer__actions">
               <button
@@ -135,7 +136,7 @@ export const ProductFormModal: FC<ProductFormModalProps> = ({
                 onClick={handleConfirmDelete}
                 disabled={isDeleting}
               >
-                {isDeleting ? 'Eliminando...' : 'Si, eliminar'}
+                {isDeleting ? 'Desactivando...' : 'Sí, desactivar'}
               </button>
             </div>
           </div>
