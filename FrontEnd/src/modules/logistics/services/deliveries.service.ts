@@ -5,7 +5,7 @@ import { asDeliveryId, asDeliveryNoteId, asDeliveryHistoryEventId } from '@/shar
 import type { DeliveryNote, DeliveryNoteLine } from '@/shared/types/deliveryNote.types';
 import { puedeTransicionar, computeAllowedTransitions } from '@/shared/types/deliveryStatus.types';
 import { getMotivoCatalog } from '@/shared/api/motivos/motivos.service';
-import { MOTIVO_OTRO_CODIGO } from '@/shared/types/motivo.types';
+import { MOTIVO_OTRO_CODIGO, type MotivoTipo } from '@/shared/types/motivo.types';
 import type { PageQuery, PageResult, DateRangeQueryFilters, ExportResult } from '@/shared/types/pagination.types';
 import { MAX_EXPORT_ROWS } from '@/shared/types/pagination.types';
 import { LOGISTICS_MOCK_DATA } from '@/data/mock/logistics.data';
@@ -17,6 +17,15 @@ import { applyDeliveryToOrderLines, getOrderById } from '@/modules/orders/api/or
 // ese archivo para el razonamiento completo (sin cambios de
 // comportamiento, mismo codigo, otro archivo).
 import { withIdempotency } from '@/shared/utils/idempotency';
+// Tanda 11 (ADR-013): dependencia de import EN LA DIRECCION CONTRARIA a
+// la que ya existe en este archivo hacia deliveries<-orders (arriba) y
+// a la que trips.service.ts ya tiene hacia este mismo archivo
+// (getDeliveryById/getDeliveryIdsMatchingFilter/transitionDelivery) —
+// mismo patron ya verificado seguro en Tanda 9 para
+// orders.service.ts<->deliveries.service.ts: ninguno de los dos lados
+// consume el import a nivel de MODULO, solo dentro del cuerpo de una
+// funcion invocada despues de que ambos modulos terminaron de cargar.
+import { releaseDeliveryFromTrip } from './trips.service';
 
 // ============================================================
 // deliveries.service — Acceso a datos de entregas (P1,
@@ -379,11 +388,18 @@ export async function transitionDelivery(
 
 export interface ReprogramDeliveryInput {
   fechaNueva: string; // ISO date (yyyy-MM-dd)
-  motivo: string;
+  // Tanda 11 (ADR-013): motivo de texto libre -> catalogo, mismo
+  // patron que RegistrarEntregaLineInput/'rechazo'. motivoTipo decide
+  // contra que catalogo se resuelve — la misma funcion sirve tanto a
+  // ReprogramarModal ('reprogramacion') como al flujo de "entrega no
+  // realizada" de trips.service.ts#markStopNoVisitada ('no-entrega').
+  motivoCodigo: string;
+  motivoOtroTexto?: string;
+  motivoTipo: MotivoTipo;
   responsable: string;
 }
 
-export type ReprogramDeliveryReason = 'not-found' | 'invalid-transition';
+export type ReprogramDeliveryReason = 'not-found' | 'invalid-transition' | 'motivo-invalido';
 
 export interface ReprogramDeliveryResult {
   success: boolean;
@@ -401,21 +417,39 @@ export async function reprogramDelivery(
     method: 'PUT',
     path: `/deliveries/${deliveryId}/reprogram`,
     body: { empresaId, idempotencyKey, ...input },
-    mock: () =>
-      withIdempotency(idempotencyKey, () => {
-        const delivery = deliveriesStore.find((d) => d.id === deliveryId);
-        if (!delivery) {
-          return { success: false, deliveryId, reason: 'not-found' };
-        }
-        if (!puedeTransicionar(delivery.status, 'REPROGRAMADO')) {
-          return { success: false, deliveryId, reason: 'invalid-transition' };
-        }
+    mock: async () => {
+      const delivery = deliveriesStore.find((d) => d.id === deliveryId);
+      if (!delivery) {
+        return { success: false, deliveryId, reason: 'not-found' as const };
+      }
+      if (!puedeTransicionar(delivery.status, 'REPROGRAMADO')) {
+        return { success: false, deliveryId, reason: 'invalid-transition' as const };
+      }
+      if (!input.motivoCodigo) {
+        return { success: false, deliveryId, reason: 'motivo-invalido' as const };
+      }
+      if (input.motivoCodigo === MOTIVO_OTRO_CODIGO && !input.motivoOtroTexto?.trim()) {
+        return { success: false, deliveryId, reason: 'motivo-invalido' as const };
+      }
 
+      // Resuelve motivoCodigo -> texto server-side, mismo criterio que
+      // registrarEntrega (nunca confia en texto que mande el cliente).
+      const catalogo = await getMotivoCatalog(empresaId, input.motivoTipo);
+      const motivoTexto =
+        input.motivoCodigo === MOTIVO_OTRO_CODIGO
+          ? input.motivoOtroTexto!.trim()
+          : catalogo.find((m) => m.codigo === input.motivoCodigo)?.descripcion;
+      if (!motivoTexto) {
+        return { success: false, deliveryId, reason: 'motivo-invalido' as const };
+      }
+
+      return withIdempotency(idempotencyKey, () => {
         const now = new Date().toISOString();
         const reprogEvent: ReprogramacionEvent = {
           fechaAnterior: delivery.date,
           fechaNueva: input.fechaNueva,
-          motivo: input.motivo,
+          motivo: motivoTexto,
+          motivoCodigo: input.motivoCodigo,
           responsable: input.responsable,
           timestamp: now,
         };
@@ -427,8 +461,20 @@ export async function reprogramDelivery(
           return { ...withCreado, date: input.fechaNueva, reprogramaciones: [...d.reprogramaciones, reprogEvent] };
         });
 
+        // ADR-013 seccion 1: si esta entrega estaba asignada a la
+        // Parada de algun viaje, la libera (recalcula capacidadUsada/
+        // sobrecargado, incrementa version) — sin esto quedaba
+        // "fantasma" en el viaje pese a tener fecha/estado nuevos.
+        // "Volver a la cola de pendientes" no es una cola nueva: con la
+        // entrega en CREADO (arriba) y sin ningun viaje que la
+        // referencie (aca), ya vuelve a cumplir las dos condiciones que
+        // CreateTripModal/getDeliveryIdsMatchingFilter usan para
+        // considerarla candidata.
+        releaseDeliveryFromTrip(deliveryId);
+
         return { success: true, deliveryId };
-      }),
+      });
+    },
   });
 }
 

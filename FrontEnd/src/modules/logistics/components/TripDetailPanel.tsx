@@ -25,6 +25,7 @@ import { getPodForDelivery } from '../services/pod.service';
 import { DELIVERY_STATUS_LABEL, DELIVERY_STATUS_VARIANT } from '../deliveryStatusLabels';
 import { TRIP_STATUS_LABEL, TRIP_STATUS_VARIANT } from '../tripStatusLabels';
 import { PodModal } from './PodModal';
+import { NoEntregaModal } from './NoEntregaModal';
 import './TripDetailPanel.css';
 
 // ============================================================
@@ -122,6 +123,7 @@ export const TripDetailPanel: FC<TripDetailPanelProps> = ({ trip, isOpen, onClos
   const livePosition = positionItems[0] as TripPosition | undefined;
 
   const [podTarget, setPodTarget] = useState<{ deliveryId: DeliveryId; stopId: StopId } | null>(null);
+  const [noEntregaTarget, setNoEntregaTarget] = useState<{ stopId: StopId; label: string } | null>(null);
   const [route, setRoute] = useState<TripPosition[]>(EMPTY_ROUTE);
   const [isLoadingRoute, setIsLoadingRoute] = useState(false);
 
@@ -162,6 +164,12 @@ export const TripDetailPanel: FC<TripDetailPanelProps> = ({ trip, isOpen, onClos
     refetchTripDetail();
     refetchDeliveries();
     refetchPods();
+    onChanged();
+  }
+
+  function handleNoEntregaRegistered() {
+    refetchTripDetail();
+    refetchDeliveries();
     onChanged();
   }
 
@@ -257,6 +265,21 @@ export const TripDetailPanel: FC<TripDetailPanelProps> = ({ trip, isOpen, onClos
                   <span>{stop.address}</span>
                 </div>
                 <Badge label={stop.estado} variant={stop.estado === 'Visitada' ? 'success' : stop.estado === 'NoVisitada' ? 'danger' : 'neutral'} />
+                <button
+                  type="button"
+                  className="trip-detail__btn-pod"
+                  disabled={stop.estado === 'NoVisitada' || stop.deliveryIds.length === 0}
+                  title={
+                    stop.estado === 'NoVisitada'
+                      ? 'Esta parada ya está marcada como no visitada.'
+                      : stop.deliveryIds.length === 0
+                        ? 'Esta parada no tiene entregas.'
+                        : undefined
+                  }
+                  onClick={() => setNoEntregaTarget({ stopId: stop.id, label: `${stop.clientName} (parada ${stop.orden})` })}
+                >
+                  Entrega no realizada
+                </button>
                 <div className="trip-detail__stop-move">
                   <button type="button" disabled={index === 0} onClick={() => handleMove(stop.id, -1)} aria-label={`Subir parada ${stop.orden}`}>
                     <ArrowUp size={14} />
@@ -310,6 +333,15 @@ export const TripDetailPanel: FC<TripDetailPanelProps> = ({ trip, isOpen, onClos
         stopId={podTarget?.stopId ?? null}
         fullName={fullName}
         onRegistered={handlePodRegistered}
+      />
+      <NoEntregaModal
+        isOpen={noEntregaTarget !== null}
+        onClose={() => setNoEntregaTarget(null)}
+        tripId={localTrip.id}
+        stopId={noEntregaTarget?.stopId ?? null}
+        stopLabel={noEntregaTarget?.label ?? ''}
+        fullName={fullName}
+        onRegistered={handleNoEntregaRegistered}
       />
     </SidePanel>
   );

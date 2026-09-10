@@ -43,7 +43,15 @@ export interface AllowedTransition {
 export interface ReprogramacionEvent {
   fechaAnterior: string; // ISO date (yyyy-MM-dd)
   fechaNueva: string; // ISO date (yyyy-MM-dd)
+  // Tanda 11 (ADR-013): motivo pasa a resolverse contra el catalogo
+  // ('reprogramacion' o 'no-entrega', MotivoTipo) en vez de texto
+  // libre. motivo sigue siendo el TEXTO ya resuelto (compatibilidad
+  // con DeliveryHistoryModal.tsx, que lo pinta tal cual); motivoCodigo
+  // es nuevo y opcional — mismo criterio que
+  // DeliveryNoteLine.motivoCodigo/motivoRechazo (ADR-010 seccion 5):
+  // el codigo queda consultable, ningun evento viejo se migra.
   motivo: string;
+  motivoCodigo?: string;
   responsable: string;
   timestamp: string; // ISO datetime
 }
