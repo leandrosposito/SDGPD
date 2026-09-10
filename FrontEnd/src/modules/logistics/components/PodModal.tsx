@@ -6,7 +6,6 @@ import { useEvidenceUpload } from '@/shared/hooks/useEvidenceUpload';
 import { useSessionStore } from '@/shared/state/useSessionStore';
 import { signUpload, confirmUpload } from '@/shared/api/uploads/uploads.service';
 import type { TripId, DeliveryId, StopId } from '@/shared/types/ids.types';
-import type { Trip } from '@/shared/types/trip.types';
 import type { PodUbicacion } from '@/shared/types/pod.types';
 import { registerPod } from '../services/trips.service';
 import './PodModal.css';
@@ -44,7 +43,7 @@ interface PodModalProps {
   deliveryId: DeliveryId | null;
   stopId: StopId | null;
   fullName: string;
-  onRegistered: (updatedTrip: Trip) => void;
+  onRegistered: () => void;
 }
 
 export const PodModal: FC<PodModalProps> = ({ isOpen, onClose, tripId, deliveryId, stopId, fullName, onRegistered }) => {
@@ -216,8 +215,18 @@ export const PodModal: FC<PodModalProps> = ({ isOpen, onClose, tripId, deliveryI
       );
 
       if (result.success && result.trip) {
-        toast.success('POD registrado correctamente.');
-        onRegistered(result.trip);
+        if (result.deliveryFinalized) {
+          toast.success('POD registrado correctamente.');
+        } else {
+          // Fase C: el POD quedo guardado (hecho fisico ya ocurrido),
+          // pero la entrega no se pudo marcar Finalizada automaticamente
+          // (ej. todavia esta en Creada, nunca salio En Ruta) — se avisa
+          // en vez de reportar exito completo en silencio.
+          toast.warning(`POD registrado, pero la entrega ${deliveryId} no se pudo marcar Finalizada automáticamente — revisala en Logística.`, {
+            duration: 8000,
+          });
+        }
+        onRegistered();
         onClose();
         return;
       }

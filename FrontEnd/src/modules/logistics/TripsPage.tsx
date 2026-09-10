@@ -54,14 +54,23 @@ export const TripsPage: FC = () => {
   const vehiclesById = useMemo(() => new Map(vehicles.map((v) => [v.id as string, v])), [vehicles]);
   const driversById = useMemo(() => new Map(drivers.map((d) => [d.id as string, d])), [drivers]);
 
-  const filters = useMemo(
+  // Fase C (hallazgo propio corregido en la misma sesion): empresaId y
+  // branchId viven DENTRO de `filters`, no como parametros sueltos de
+  // fetchPage — usePagedQuery arma la query key de TanStack Query a
+  // partir de este objeto (mas el empresaId que lee de la sesion), asi
+  // que un branchId fuera de aca queda invisible para la key y un
+  // cambio de sucursal activa no dispara refetch (regla 3.4 del
+  // protocolo). Ver el comentario de getTripsPage en trips.service.ts.
+  const filters: TripQueryFilters = useMemo(
     () => ({
+      empresaId: empresaId ?? '',
+      branchId: activeBranchId,
       estado: (urlState.filters.estado as TripStatus | undefined) ?? undefined,
       fecha: urlState.filters.fecha,
       vehicleId: urlState.filters.vehicleId as VehicleId | undefined,
       driverId: urlState.filters.driverId as DriverId | undefined,
     }),
-    [urlState.filters.estado, urlState.filters.fecha, urlState.filters.vehicleId, urlState.filters.driverId]
+    [empresaId, activeBranchId, urlState.filters.estado, urlState.filters.fecha, urlState.filters.vehicleId, urlState.filters.driverId]
   );
 
   const {
@@ -76,11 +85,11 @@ export const TripsPage: FC = () => {
     setPage,
     setPageSize,
     refetch,
-  } = usePagedQuery<Trip, Omit<TripQueryFilters, 'empresaId' | 'branchId'>, TripSortField, undefined>(
-    (query, signal) => getTripsPage(empresaId ?? '', activeBranchId, query, signal),
-    filters,
-    { enabled: Boolean(empresaId) && activeBranchId !== null, page: urlState.page, onPageChange: urlState.setPage }
-  );
+  } = usePagedQuery<Trip, TripQueryFilters, TripSortField, undefined>(getTripsPage, filters, {
+    enabled: Boolean(empresaId) && activeBranchId !== null,
+    page: urlState.page,
+    onPageChange: urlState.setPage,
+  });
 
   const [selectedTrip, setSelectedTrip] = useState<Trip | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
@@ -168,10 +177,7 @@ export const TripsPage: FC = () => {
         vehicle={selectedTrip ? vehiclesById.get(selectedTrip.vehicleId) : undefined}
         driver={selectedTrip ? driversById.get(selectedTrip.driverId) : undefined}
         fullName={fullName}
-        onChanged={(updated) => {
-          setSelectedTrip(updated);
-          refetch();
-        }}
+        onChanged={refetch}
       />
 
       <CreateTripModal

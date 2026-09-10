@@ -54,7 +54,7 @@ export const VehiclesPage: FC = () => {
     setPage,
     setPageSize,
     refetch,
-  } = usePagedQuery<Vehicle, VehiclesQueryFilters, VehiclesSortField, undefined>((query, signal) => getVehiclesPage(empresaId ?? '', query, signal), filters, {
+  } = usePagedQuery<Vehicle, VehiclesQueryFilters, VehiclesSortField, undefined>(getVehiclesPage, filters, {
     enabled: Boolean(empresaId),
     page: urlState.page,
     onPageChange: urlState.setPage,

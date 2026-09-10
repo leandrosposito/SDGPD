@@ -53,7 +53,7 @@ export const DriversPage: FC = () => {
     setPage,
     setPageSize,
     refetch,
-  } = usePagedQuery<Driver, DriversQueryFilters, DriversSortField, undefined>((query, signal) => getDriversPage(empresaId ?? '', query, signal), filters, {
+  } = usePagedQuery<Driver, DriversQueryFilters, DriversSortField, undefined>(getDriversPage, filters, {
     enabled: Boolean(empresaId),
     page: urlState.page,
     onPageChange: urlState.setPage,

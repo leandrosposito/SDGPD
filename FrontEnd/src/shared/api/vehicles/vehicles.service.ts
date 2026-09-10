@@ -41,8 +41,15 @@ function compareVehicles(a: Vehicle, b: Vehicle, field: VehiclesSortField): numb
   }
 }
 
+// query.filters (no un empresaId suelto): Fase C, hallazgo propio —
+// ver el comentario de trips.service.ts#getTripsPage, mismo motivo
+// exacto (usePagedQuery exige `fetchPage` como referencia ESTABLE
+// exportada del service; envolverla en un arrow inline en
+// VehiclesPage.tsx le daba `.name === ''`, y dos listados con
+// `filters` de la misma forma — ej. Vehiculos y Choferes, ambos
+// {empresaId, search} — terminaban compartiendo la MISMA query key de
+// TanStack Query).
 export async function getVehiclesPage(
-  empresaId: string,
   query: PageQuery<VehiclesQueryFilters, VehiclesSortField>,
   signal?: AbortSignal
 ): Promise<PageResult<Vehicle, undefined>> {
@@ -50,7 +57,7 @@ export async function getVehiclesPage(
     method: 'GET',
     path: '/vehicles',
     params: {
-      empresaId,
+      empresaId: query.filters.empresaId,
       search: query.filters.search,
       soloActivos: query.filters.soloActivos,
       page: query.page,

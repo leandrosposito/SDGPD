@@ -1,6 +1,6 @@
 import { useMemo, useState, type FC } from 'react';
 import { toast } from 'sonner';
-import { ArrowUp, ArrowDown } from 'lucide-react';
+import { ArrowUp, ArrowDown, Route as RouteIcon } from 'lucide-react';
 import { SidePanel } from '@/shared/components/ui/SidePanel';
 import { Badge } from '@/shared/components/ui/Badge';
 import { useCachedQuery, CACHE_STALE_TIME } from '@/shared/hooks/useCachedQuery';
@@ -10,9 +10,18 @@ import type { Trip, TripStatus, TripPosition } from '@/shared/types/trip.types';
 import type { Vehicle } from '@/shared/types/vehicle.types';
 import type { Driver } from '@/shared/types/driver.types';
 import type { Delivery } from '@/shared/types/logistics.types';
+import type { Pod } from '@/shared/types/pod.types';
 import type { DeliveryId, StopId } from '@/shared/types/ids.types';
-import { transitionTrip, updateStopOrder, getTripPosition, type TripPositionQueryFilters } from '../services/trips.service';
+import {
+  getTripById,
+  transitionTrip,
+  updateStopOrder,
+  getTripPosition,
+  getTripRoute,
+  type TripPositionQueryFilters,
+} from '../services/trips.service';
 import { getDeliveriesByIds } from '../services/deliveries.service';
+import { getPodForDelivery } from '../services/pod.service';
 import { DELIVERY_STATUS_LABEL, DELIVERY_STATUS_VARIANT } from '../deliveryStatusLabels';
 import { TRIP_STATUS_LABEL, TRIP_STATUS_VARIANT } from '../tripStatusLabels';
 import { PodModal } from './PodModal';
@@ -25,9 +34,18 @@ import './TripDetailPanel.css';
 // drag-and-drop (requeriria dependencia nueva, prohibido — ADR-011
 // seccion 5). Posicion: texto, nunca mapa (fuera de alcance
 // explicito de esta tanda).
+//
+// Fase C (gate 5, "conexion"): getTripById/getTripRoute/
+// getPodForDelivery quedaban exportados sin call-site real — este
+// panel es su unico consumidor. getTripById reemplaza el patron previo
+// de parchear `localTrip` a mano tras cada mutacion: ahora cada accion
+// exitosa solo pide `refetchTripDetail()` (P10, mismo criterio que el
+// resto del proyecto — "refetchear la pagina vigente" en vez de
+// reconstruir el objeto en el cliente).
 // ============================================================
 
 const EMPTY_DELIVERIES: Delivery[] = [];
+const EMPTY_ROUTE: TripPosition[] = [];
 const TRIP_LIVE_INTERVAL_MS = 12_000; // ADR-011 seccion 4 / enmienda ADR-003: rango 10-15s
 
 function isTripTransitionPermitida(trip: Trip, transicion: TripStatus): boolean {
@@ -47,23 +65,29 @@ interface TripDetailPanelProps {
   vehicle: Vehicle | undefined;
   driver: Driver | undefined;
   fullName: string;
-  onChanged: (updated: Trip) => void;
+  onChanged: () => void;
 }
 
 export const TripDetailPanel: FC<TripDetailPanelProps> = ({ trip, isOpen, onClose, vehicle, driver, fullName, onChanged }) => {
   const empresaId = useSessionStore((s) => s.session?.company.id) ?? '';
 
-  // Sincroniza el estado local cuando cambia el viaje seleccionado —
-  // ajustado DURANTE el render (mismo patron que la clave de
-  // idempotencia de RegistrarEntregaModal.tsx), no dentro de un
-  // useEffect.
-  const [lastTripId, setLastTripId] = useState<string | null>(null);
-  const [localTrip, setLocalTrip] = useState<Trip | null>(null);
-  const triggerId = trip?.id ?? null;
-  if (triggerId !== lastTripId) {
-    setLastTripId(triggerId);
-    setLocalTrip(trip);
-  }
+  // getTripById es la fuente autoritativa mientras el panel esta
+  // abierto — `trip` (la fila que vino de la pagina de TripsPage)
+  // solo sirve de placeholder para el primer render, mientras este
+  // fetch todavia no resolvio (evita un parpadeo a vacio).
+  const {
+    data: tripDetail,
+    refetch: refetchTripDetail,
+  } = useCachedQuery(
+    'trip-detail',
+    trip?.id ?? null,
+    (signal) => {
+      if (!trip) throw new Error('TripDetailPanel: fetch de detalle sin trip.');
+      return getTripById(empresaId, trip.id, signal);
+    },
+    { enabled: isOpen && Boolean(trip) && Boolean(empresaId), staleTime: CACHE_STALE_TIME.OPERATIONAL }
+  );
+  const localTrip = tripDetail ?? trip;
 
   const allDeliveryIds = useMemo(() => (localTrip ? localTrip.paradas.flatMap((s) => s.deliveryIds) : []), [localTrip]);
 
@@ -76,6 +100,20 @@ export const TripDetailPanel: FC<TripDetailPanelProps> = ({ trip, isOpen, onClos
   const deliveries = deliveriesData ?? EMPTY_DELIVERIES;
   const deliveriesById = useMemo(() => new Map(deliveries.map((d) => [d.id as string, d])), [deliveries]);
 
+  // POD ya registrado por entrega (D1: evita que "Registrar POD" quede
+  // habilitado para una entrega que ya tiene evidencia — mismo criterio
+  // que el resto del proyecto, un hecho append-only no se sobreescribe).
+  const { data: podsData, refetch: refetchPods } = useCachedQuery(
+    'trip-pods',
+    localTrip?.id ?? null,
+    async (signal) => {
+      const entries = await Promise.all(allDeliveryIds.map(async (id) => [id as string, await getPodForDelivery(empresaId, id, signal)] as const));
+      return new Map(entries);
+    },
+    { enabled: isOpen && Boolean(localTrip) && Boolean(empresaId), staleTime: CACHE_STALE_TIME.OPERATIONAL }
+  );
+  const podsByDeliveryId = podsData ?? new Map<string, Pod | null>();
+
   const positionFilters: TripPositionQueryFilters = useMemo(() => ({ empresaId, tripId: localTrip?.id ?? ('' as Trip['id']) }), [empresaId, localTrip?.id]);
   const { items: positionItems } = useLiveQuery(getTripPosition, positionFilters, {
     enabled: isOpen && localTrip?.estado === 'EnTransito' && Boolean(localTrip),
@@ -84,6 +122,8 @@ export const TripDetailPanel: FC<TripDetailPanelProps> = ({ trip, isOpen, onClos
   const livePosition = positionItems[0] as TripPosition | undefined;
 
   const [podTarget, setPodTarget] = useState<{ deliveryId: DeliveryId; stopId: StopId } | null>(null);
+  const [route, setRoute] = useState<TripPosition[]>(EMPTY_ROUTE);
+  const [isLoadingRoute, setIsLoadingRoute] = useState(false);
 
   if (!localTrip) return null;
 
@@ -93,9 +133,8 @@ export const TripDetailPanel: FC<TripDetailPanelProps> = ({ trip, isOpen, onClos
     const result = await transitionTrip(empresaId, idempotencyKey, localTrip.id, hasta, fullName);
     if (result.success && result.newStatus) {
       toast.success(`Viaje ${localTrip.id} actualizado a "${TRIP_STATUS_LABEL[result.newStatus]}".`);
-      const updated: Trip = { ...localTrip, estado: result.newStatus };
-      setLocalTrip(updated);
-      onChanged(updated);
+      refetchTripDetail();
+      onChanged();
       return;
     }
     toast.error('No se pudo actualizar el estado del viaje.');
@@ -111,18 +150,31 @@ export const TripDetailPanel: FC<TripDetailPanelProps> = ({ trip, isOpen, onClos
     [reordered[index], reordered[swapWith]] = [reordered[swapWith], reordered[index]];
 
     const result = await updateStopOrder(empresaId, localTrip.id, reordered.map((s) => s.id));
-    if (result.success && result.trip) {
-      setLocalTrip(result.trip);
-      onChanged(result.trip);
+    if (result.success) {
+      refetchTripDetail();
+      onChanged();
       return;
     }
     toast.error('No se pudo reordenar las paradas.');
   }
 
-  function handlePodRegistered(updatedTrip: Trip) {
-    setLocalTrip(updatedTrip);
-    onChanged(updatedTrip);
+  function handlePodRegistered() {
+    refetchTripDetail();
     refetchDeliveries();
+    refetchPods();
+    onChanged();
+  }
+
+  async function handleViewRoute() {
+    if (!localTrip) return;
+    setIsLoadingRoute(true);
+    try {
+      const points = await getTripRoute(empresaId, localTrip.id);
+      setRoute(points);
+      if (points.length === 0) toast.error('Este viaje todavía no tiene recorrido registrado.');
+    } finally {
+      setIsLoadingRoute(false);
+    }
   }
 
   const paradasOrdenadas = [...localTrip.paradas].sort((a, b) => a.orden - b.orden);
@@ -173,7 +225,26 @@ export const TripDetailPanel: FC<TripDetailPanelProps> = ({ trip, isOpen, onClos
                 {t === 'Cancelado' && 'Cancelar viaje'}
               </button>
             ))}
+          {(localTrip.estado === 'EnTransito' || localTrip.estado === 'Rendido') && (
+            <button type="button" className="trip-detail__btn-transition" onClick={handleViewRoute} disabled={isLoadingRoute}>
+              <RouteIcon size={14} aria-hidden="true" />
+              {isLoadingRoute ? 'Cargando recorrido…' : 'Ver recorrido'}
+            </button>
+          )}
         </div>
+
+        {route.length > 0 && (
+          <div className="trip-detail__route">
+            <h4 className="trip-detail__section-title">
+              Recorrido (últimos {route.length} puntos — bajo demanda, sin mapa, ver ADR-011 sección 4)
+            </h4>
+            <ul className="trip-detail__route-list">
+              {route.map((point, i) => (
+                <li key={i}>{formatPosition(point)}</li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         <h4 className="trip-detail__section-title">Paradas</h4>
         <div className="trip-detail__stops">
@@ -203,7 +274,12 @@ export const TripDetailPanel: FC<TripDetailPanelProps> = ({ trip, isOpen, onClos
               <ul className="trip-detail__stop-deliveries">
                 {stop.deliveryIds.map((deliveryId) => {
                   const delivery = deliveriesById.get(deliveryId as string);
-                  const yaFinalizada = delivery?.status === 'FINALIZADO';
+                  // D1 (Fase C): el gate real es "ya tiene POD registrado"
+                  // (getPodForDelivery, hecho append-only), no un proxy
+                  // sobre delivery.status — una Delivery puede llegar a
+                  // FINALIZADO por el camino del remito completo
+                  // (registrarEntrega) sin pasar nunca por POD.
+                  const yaTienePod = podsByDeliveryId.get(deliveryId as string) != null;
                   return (
                     <li key={deliveryId} className="trip-detail__delivery-row">
                       <span className="trip-detail__delivery-id">{deliveryId}</span>
@@ -211,11 +287,11 @@ export const TripDetailPanel: FC<TripDetailPanelProps> = ({ trip, isOpen, onClos
                       <button
                         type="button"
                         className="trip-detail__btn-pod"
-                        disabled={yaFinalizada}
-                        title={yaFinalizada ? 'Esta entrega ya está finalizada.' : undefined}
+                        disabled={yaTienePod}
+                        title={yaTienePod ? 'Esta entrega ya tiene POD registrado.' : undefined}
                         onClick={() => setPodTarget({ deliveryId, stopId: stop.id })}
                       >
-                        Registrar POD
+                        {yaTienePod ? 'POD registrado' : 'Registrar POD'}
                       </button>
                     </li>
                   );

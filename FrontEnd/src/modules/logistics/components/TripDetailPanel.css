@@ -143,3 +143,16 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+.trip-detail__route-list {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary, #666);
+  max-height: 160px;
+  overflow-y: auto;
+}

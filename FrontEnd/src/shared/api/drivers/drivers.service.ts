@@ -39,8 +39,9 @@ function compareDrivers(a: Driver, b: Driver, field: DriversSortField): number {
   }
 }
 
+// query.filters (no un empresaId suelto) — mismo hallazgo/motivo que
+// vehicles.service.ts#getVehiclesPage (Fase C).
 export async function getDriversPage(
-  empresaId: string,
   query: PageQuery<DriversQueryFilters, DriversSortField>,
   signal?: AbortSignal
 ): Promise<PageResult<Driver, undefined>> {
@@ -48,7 +49,7 @@ export async function getDriversPage(
     method: 'GET',
     path: '/drivers',
     params: {
-      empresaId,
+      empresaId: query.filters.empresaId,
       search: query.filters.search,
       soloActivos: query.filters.soloActivos,
       page: query.page,

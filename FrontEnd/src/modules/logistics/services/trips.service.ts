@@ -83,19 +83,27 @@ function compareTrips(a: Trip, b: Trip, field: TripSortField): number {
   }
 }
 
+// Firma alineada con deliveries.service.ts#getDeliveriesPage a
+// proposito (Fase C, hallazgo propio corregido en la misma sesion):
+// la version anterior recibia branchId como parametro SUELTO en vez de
+// dentro de `query.filters` — usePagedQuery arma la query key de
+// TanStack Query solo a partir de `filters` (mas empresaId, que si lee
+// de la sesion), asi que un branchId pasado por fuera de `filters`
+// quedaba invisible para la key: cambiar de sucursal activa en
+// TripsPage.tsx NO iba a disparar un refetch, serviria del cache la
+// pagina de la sucursal VIEJA (regla 3.4 del protocolo, "toda query
+// key incluye... branchId si el dominio es de alcance sucursal").
 export async function getTripsPage(
-  empresaId: string,
-  branchId: BranchId | null,
-  query: PageQuery<Omit<TripQueryFilters, 'empresaId' | 'branchId'>, TripSortField>,
+  query: PageQuery<TripQueryFilters, TripSortField>,
   signal?: AbortSignal
 ): Promise<PageResult<Trip, undefined>> {
-  const filters: TripQueryFilters = { empresaId, branchId, ...query.filters };
+  const filters = query.filters;
   return httpClient.request<PageResult<Trip, undefined>>({
     method: 'GET',
     path: '/trips',
     params: {
-      empresaId,
-      branchId: branchId ?? undefined,
+      empresaId: filters.empresaId,
+      branchId: filters.branchId ?? undefined,
       estado: filters.estado,
       fecha: filters.fecha,
       vehicleId: filters.vehicleId,
@@ -462,6 +470,15 @@ export interface RegisterPodResult {
   success: boolean;
   trip?: Trip;
   reason?: RegisterPodReason;
+  // Fase C (hallazgo propio): el intento de marcar la Delivery
+  // FINALIZADO puede fallar (ej. todavia esta en CREADO, nunca salio a
+  // EN_TRANSITO — transitionDelivery no permite ese salto directo,
+  // deliveryStatus.types.ts). El POD en si (evidencia fisica) SI queda
+  // registrado igual — es un hecho ya ocurrido, no se descarta por
+  // esto (mismo criterio que 'propagation-failed' en
+  // deliveries.service.ts#registrarEntrega) — pero `success: true` sin
+  // este campo mentiria sobre un efecto que en realidad no se aplico.
+  deliveryFinalized: boolean;
 }
 
 export async function registerPod(
@@ -482,11 +499,11 @@ export async function registerPod(
         const trip = tripsStore.find((t) => t.id === tripId);
         const stop = trip?.paradas.find((s) => s.id === stopId);
         if (!trip || !stop || !stop.deliveryIds.includes(deliveryId)) {
-          return { success: false, reason: 'not-found' as const };
+          return { success: false, reason: 'not-found' as const, deliveryFinalized: false };
         }
         const delivery = getDeliveryById(deliveryId);
         if (!delivery) {
-          return { success: false, reason: 'delivery-not-found' as const };
+          return { success: false, reason: 'delivery-not-found' as const, deliveryFinalized: false };
         }
 
         await registerPodEvidence(empresaId, deliveryId, stopId, input, quien);
@@ -495,15 +512,25 @@ export async function registerPod(
         // registrarEntrega) no se reintenta — transitionDelivery con la
         // misma clave ya es idempotente igual, pero se evita el llamado
         // de mas cuando el estado actual ya no admite la transicion.
-        if (delivery.status !== 'FINALIZADO') {
-          await transitionDelivery(empresaId, `${idempotencyKey}-finalizar`, deliveryId, 'FINALIZADO', quien);
-        }
+        //
+        // Fase C (hallazgo propio): si la Delivery todavia esta CREADO
+        // (nunca salio a EN_TRANSITO), transitionDelivery a FINALIZADO
+        // no esta permitido (deliveryStatus.types.ts) y el intento
+        // falla — antes esto se ignoraba en silencio y el POD reportaba
+        // `success: true` sin aclarar que el efecto derivado (finalizar
+        // la entrega) no se aplico. El POD (evidencia fisica) se
+        // guarda igual — es un hecho ya ocurrido, mismo criterio que
+        // 'propagation-failed' en registrarEntrega — pero
+        // `deliveryFinalized` ahora dice la verdad sobre ese efecto.
+        const deliveryFinalized =
+          delivery.status === 'FINALIZADO' ||
+          (await transitionDelivery(empresaId, `${idempotencyKey}-finalizar`, deliveryId, 'FINALIZADO', quien)).success;
 
         const paradas = trip.paradas.map((s) => (s.id === stopId ? { ...s, estado: 'Visitada' as const } : s));
         const updated: Trip = { ...trip, paradas, updatedAt: nowISO() };
         tripsStore = tripsStore.map((t) => (t.id === tripId ? updated : t));
 
-        return { success: true, trip: structuredClone(withComputedFields(updated)) };
+        return { success: true, trip: structuredClone(withComputedFields(updated)), deliveryFinalized };
       }),
   });
 }
