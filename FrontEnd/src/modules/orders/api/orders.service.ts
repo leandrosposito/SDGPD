@@ -10,6 +10,7 @@ import type { OrderDTO, OrdersPageDTO, OrdersAggregatesDTO } from './dto';
 import { orderFromDTO, orderToDTO, orderFormInputToDTO, type OrderFormInput } from './mapper';
 import type { OrderProjectionForAggregation } from '@/modules/dashboard/api/dashboardAggregates';
 import { getActiveDeliveriesForOrder } from '@/modules/logistics/services/deliveries.service';
+import { maxOrderNumberSuffix, formatOrderNumber } from '@/shared/utils/orderNumber';
 
 export type { OrderFormInput };
 
@@ -243,8 +244,29 @@ function nextOrderId(): string {
   return `ord-${Date.now()}`;
 }
 
-function nextOrderNumber(): string {
-  return `PED-${Date.now().toString().slice(-5)}`;
+// Correlativo por empresa (Tanda 11, ADR-014) — reemplaza los ultimos
+// 5 digitos de Date.now() (ni correlativo, ni por empresa, y con
+// colision real posible: se repiten cada ~100 segundos). Mapa de
+// modulo, mismo criterio que deliveriesStore/tripsStore/vehiclesStore
+// (estado de "servidor" mock en memoria). Sembrado LAZY: la primera
+// vez que se pide un numero para un empresaId sin contador todavia, se
+// arranca desde el maximo sufijo numerico ya presente en el mock
+// semilla (391 hoy) — los pedidos nuevos nunca chocan con los
+// PED-00386..PED-00391 de orders.data.ts.
+//
+// Limitacion honesta (ver ADR-014): Order no tiene campo empresaId
+// (no existe en order.types.ts) — el mock de este proyecto es de una
+// sola empresa en todos los modulos ya migrados, asi que en la
+// practica esta Map tiene una sola clave hoy. Queda lista para
+// multi-empresa real el dia que Order tenga el campo.
+const orderNumberCounters = new Map<string, number>();
+const ORDER_NUMBER_DIGITS = 6;
+
+function nextOrderNumber(empresaId: string): string {
+  const current = orderNumberCounters.get(empresaId) ?? maxOrderNumberSuffix(ordersDTOStore.map((d) => d.numero_pedido));
+  const next = current + 1;
+  orderNumberCounters.set(empresaId, next);
+  return formatOrderNumber(next, ORDER_NUMBER_DIGITS);
 }
 
 // Id de linea (OrderLineId, Tanda 5/ADR-006) asignado por el service,
@@ -269,7 +291,7 @@ export async function createOrder(empresaId: string, input: OrderFormInput): Pro
       const now = new Date().toISOString();
       const newDTO: OrderDTO = {
         id: nextOrderId(),
-        numero_pedido: nextOrderNumber(),
+        numero_pedido: nextOrderNumber(empresaId),
         fecha: now,
         cliente: {
           id: input.clientId,

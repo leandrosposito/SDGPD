@@ -12,6 +12,7 @@ import {
   getDeliveryById,
   getDeliveryIdsMatchingFilter,
   transitionDelivery,
+  reprogramDelivery,
   type DeliveryQueryFilters,
 } from './deliveries.service';
 import { registerPodEvidence, type PodInput } from './pod.service';
@@ -42,6 +43,36 @@ function nowISO(): string {
 
 function findTripContainingDelivery(deliveryId: DeliveryId): Trip | undefined {
   return tripsStore.find((t) => t.paradas.some((s) => s.deliveryIds.includes(deliveryId)));
+}
+
+// ------------------------------------------------------------
+// releaseDeliveryFromTrip — ADR-013 seccion 1. Llamada "servidor a
+// servidor" (mismo criterio que getDeliveryById/getVehicleById — sin
+// pasar por httpClient, sin duplicar latencia simulada) desde
+// deliveries.service.ts#reprogramDelivery, en la direccion CONTRARIA a
+// la que este archivo ya usa hacia deliveries.service.ts — ver el
+// comentario en deliveries.service.ts sobre por que es seguro.
+//
+// No-op si la entrega no esta asignada a ninguna Parada hoy — no es un
+// error, la mayoria de las reprogramaciones son de entregas que
+// todavia no se asignaron a ningun viaje.
+// ------------------------------------------------------------
+export function releaseDeliveryFromTrip(deliveryId: DeliveryId): void {
+  const trip = findTripContainingDelivery(deliveryId);
+  if (!trip) return;
+
+  const paradas = trip.paradas.map((s) =>
+    s.deliveryIds.includes(deliveryId) ? { ...s, deliveryIds: s.deliveryIds.filter((id) => id !== deliveryId) } : s
+  );
+  const capacidadUsada = computeCapacidadUsada(paradas);
+  const vehicle = getVehicleById(trip.vehicleId);
+  // Liberar una entrega solo puede BAJAR capacidadUsada — pero si el
+  // viaje ya estaba sobrecargado por varias entregas, sacar una sola
+  // no necesariamente lo deja dentro del limite: se recalcula de
+  // verdad, nunca se asume `false` a secas.
+  const sobrecargado = vehicle !== undefined && excedeCapacidad(capacidadUsada, vehicle.capacidad);
+  const updated: Trip = { ...trip, paradas, capacidadUsada, sobrecargado, version: trip.version + 1, updatedAt: nowISO() };
+  tripsStore = tripsStore.map((t) => (t.id === trip.id ? updated : t));
 }
 
 function withComputedFields(trip: Trip): Trip {
@@ -531,6 +562,98 @@ export async function registerPod(
         tripsStore = tripsStore.map((t) => (t.id === tripId ? updated : t));
 
         return { success: true, trip: structuredClone(withComputedFields(updated)), deliveryFinalized };
+      }),
+  });
+}
+
+// ============================================================
+// "Entrega no realizada" (ADR-013 seccion 3): el chofer llego a la
+// direccion de la Parada y no pudo entregar nada — es un hecho de la
+// PARADA (ADR-010: "una visita fisica"), no de una Delivery aislada,
+// por eso el disparador vive en TripDetailPanel.tsx, no en
+// DeliveriesTable.tsx (que sigue siendo ReprogramarModal, una
+// reprogramacion "administrativa" sin viaje en curso).
+//
+// Reusa reprogramDelivery (motivoTipo 'no-entrega') por cada entrega de
+// la Parada en vez de duplicar la maquina de transiciones — eso ya
+// libera cada entrega de esta misma Parada como efecto secundario
+// (ADR-013 seccion 1), asi que no hace falta vaciar `deliveryIds` a
+// mano aca. Sin campo de motivo propio en Stop: el motivo real queda
+// en Delivery.reprogramaciones de cada entrega (ver ADR-013,
+// "alternativas descartadas" — duplicarlo en Stop seria una segunda
+// fuente de verdad para el mismo hecho).
+// ============================================================
+
+export interface MarkStopNoVisitadaInput {
+  motivoCodigo: string;
+  motivoOtroTexto?: string;
+  fechaNueva: string; // ISO date (yyyy-MM-dd) — proximo intento
+}
+
+export type MarkStopNoVisitadaReason = 'not-found' | 'no-deliveries';
+
+export interface MarkStopNoVisitadaDeliveryResult {
+  deliveryId: DeliveryId;
+  success: boolean;
+}
+
+export interface MarkStopNoVisitadaResult {
+  success: boolean;
+  trip?: Trip;
+  reason?: MarkStopNoVisitadaReason;
+  resultadosPorEntrega?: MarkStopNoVisitadaDeliveryResult[];
+}
+
+export async function markStopNoVisitada(
+  empresaId: string,
+  idempotencyKey: string,
+  tripId: TripId,
+  stopId: StopId,
+  input: MarkStopNoVisitadaInput,
+  quien: string
+): Promise<MarkStopNoVisitadaResult> {
+  return httpClient.request<MarkStopNoVisitadaResult>({
+    method: 'POST',
+    path: `/trips/${tripId}/stops/${stopId}/no-visitada`,
+    body: { empresaId, idempotencyKey, ...input },
+    mock: () =>
+      withIdempotency(idempotencyKey, async () => {
+        const trip = tripsStore.find((t) => t.id === tripId);
+        const stop = trip?.paradas.find((s) => s.id === stopId);
+        if (!trip || !stop) {
+          return { success: false, reason: 'not-found' as const };
+        }
+        if (stop.deliveryIds.length === 0) {
+          return { success: false, reason: 'no-deliveries' as const };
+        }
+
+        // Sub-clave por entrega, mismo criterio que registerPod
+        // (`${idempotencyKey}-finalizar`) — cada llamado a
+        // reprogramDelivery necesita su propia clave, la misma clave
+        // repetida N veces cachearia solo el primer resultado para las
+        // N entregas.
+        const resultadosPorEntrega: MarkStopNoVisitadaDeliveryResult[] = [];
+        for (const deliveryId of stop.deliveryIds) {
+          const result = await reprogramDelivery(empresaId, `${idempotencyKey}-${deliveryId}`, deliveryId, {
+            fechaNueva: input.fechaNueva,
+            motivoCodigo: input.motivoCodigo,
+            motivoOtroTexto: input.motivoOtroTexto,
+            motivoTipo: 'no-entrega',
+            responsable: quien,
+          });
+          resultadosPorEntrega.push({ deliveryId, success: result.success });
+        }
+
+        // trip pudo cambiar (capacidadUsada/version) por cada
+        // liberacion de entrega de arriba (releaseDeliveryFromTrip,
+        // ADR-013 seccion 1) — se relee de tripsStore, no se reusa la
+        // referencia `trip` de antes del loop.
+        const tripActualizado = tripsStore.find((t) => t.id === tripId)!;
+        const paradas = tripActualizado.paradas.map((s) => (s.id === stopId ? { ...s, estado: 'NoVisitada' as const } : s));
+        const updated: Trip = { ...tripActualizado, paradas, updatedAt: nowISO() };
+        tripsStore = tripsStore.map((t) => (t.id === tripId ? updated : t));
+
+        return { success: true, trip: structuredClone(withComputedFields(updated)), resultadosPorEntrega };
       }),
   });
 }

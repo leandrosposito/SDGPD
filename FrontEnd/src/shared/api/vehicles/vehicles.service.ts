@@ -5,6 +5,7 @@ import type { PageQuery, PageResult } from '@/shared/types/pagination.types';
 import { VEHICLES_MOCK_DATA } from '@/data/mock/vehicles.data';
 import { httpClient } from '@/shared/api/httpClient';
 import { withIdempotency } from '@/shared/utils/idempotency';
+import { normalizePatente } from '@/shared/utils/patente';
 
 // ============================================================
 // vehicles.service — Flota de vehiculos (Tanda 10B, ADR-011). Vive en
@@ -97,12 +98,19 @@ export interface VehicleFormInput {
   capacidad: VehicleCapacity;
 }
 
-export type VehicleMutationReason = 'not-found';
+export type VehicleMutationReason = 'not-found' | 'patente-duplicada';
 
 export interface VehicleMutationResult {
   success: boolean;
   vehicle?: Vehicle;
   reason?: VehicleMutationReason;
+}
+
+// Tanda 11: patente unica por empresa, normalizada — ver
+// shared/utils/patente.ts para el razonamiento completo (extraida ahi
+// para poder ejercitarse con un smoke script puro).
+function isPatenteDuplicada(patenteNormalizada: string, excludeVehicleId?: VehicleId): boolean {
+  return vehiclesStore.some((v) => v.id !== excludeVehicleId && normalizePatente(v.patente) === patenteNormalizada);
 }
 
 export async function createVehicle(
@@ -116,9 +124,13 @@ export async function createVehicle(
     body: { empresaId, idempotencyKey, ...input },
     mock: () =>
       withIdempotency(idempotencyKey, () => {
+        const patente = normalizePatente(input.patente);
+        if (isPatenteDuplicada(patente)) {
+          return { success: false, reason: 'patente-duplicada' as const };
+        }
         const vehicle: Vehicle = {
           id: asVehicleId(`veh-${Date.now()}`),
-          patente: input.patente,
+          patente,
           tipo: input.tipo,
           capacidad: input.capacidad,
           activo: true,
@@ -145,7 +157,11 @@ export async function updateVehicle(
         if (!existing) {
           return { success: false, reason: 'not-found' as const };
         }
-        const updated: Vehicle = { ...existing, patente: input.patente, tipo: input.tipo, capacidad: input.capacidad };
+        const patente = normalizePatente(input.patente);
+        if (isPatenteDuplicada(patente, vehicleId)) {
+          return { success: false, reason: 'patente-duplicada' as const };
+        }
+        const updated: Vehicle = { ...existing, patente, tipo: input.tipo, capacidad: input.capacidad };
         vehiclesStore = vehiclesStore.map((v) => (v.id === vehicleId ? updated : v));
         return { success: true, vehicle: updated };
       }),
