@@ -5,6 +5,7 @@ import type { PageQuery, PageResult } from '@/shared/types/pagination.types';
 import { VEHICLES_MOCK_DATA } from '@/data/mock/vehicles.data';
 import { httpClient } from '@/shared/api/httpClient';
 import { withIdempotency } from '@/shared/utils/idempotency';
+import { normalizePatente } from '@/shared/utils/patente';
 
 // ============================================================
 // vehicles.service — Flota de vehiculos (Tanda 10B, ADR-011). Vive en
@@ -105,20 +106,9 @@ export interface VehicleMutationResult {
   reason?: VehicleMutationReason;
 }
 
-// Tanda 11: patente unica por empresa, normalizada — mayusculas y sin
-// espacios (formatos reales varian: "AB123CD" Mercosur, "ABC123"
-// viejo — ambos alfanumericos, ninguno usa guiones, asi que no hace
-// falta stripear mas que espacios). Se normaliza tanto lo GUARDADO
-// como lo COMPARADO: a diferencia del SKU de ProductFormModal (que
-// preserva may/minuscula tal como lo tipeo el usuario y solo compara
-// case-insensitive), una patente es un identificador canonico con una
-// convencion real de escritura — guardar "ab123cd" y "AB123CD" como
-// si fueran dos vehiculos distintos seria el bug, no una eleccion de
-// estilo.
-function normalizePatente(raw: string): string {
-  return raw.toUpperCase().replace(/\s+/g, '');
-}
-
+// Tanda 11: patente unica por empresa, normalizada — ver
+// shared/utils/patente.ts para el razonamiento completo (extraida ahi
+// para poder ejercitarse con un smoke script puro).
 function isPatenteDuplicada(patenteNormalizada: string, excludeVehicleId?: VehicleId): boolean {
   return vehiclesStore.some((v) => v.id !== excludeVehicleId && normalizePatente(v.patente) === patenteNormalizada);
 }

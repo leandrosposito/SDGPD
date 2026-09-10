@@ -10,6 +10,7 @@ import type { OrderDTO, OrdersPageDTO, OrdersAggregatesDTO } from './dto';
 import { orderFromDTO, orderToDTO, orderFormInputToDTO, type OrderFormInput } from './mapper';
 import type { OrderProjectionForAggregation } from '@/modules/dashboard/api/dashboardAggregates';
 import { getActiveDeliveriesForOrder } from '@/modules/logistics/services/deliveries.service';
+import { maxOrderNumberSuffix, formatOrderNumber } from '@/shared/utils/orderNumber';
 
 export type { OrderFormInput };
 
@@ -261,20 +262,11 @@ function nextOrderId(): string {
 const orderNumberCounters = new Map<string, number>();
 const ORDER_NUMBER_DIGITS = 6;
 
-function seedOrderNumberCounter(): number {
-  let max = 0;
-  for (const dto of ordersDTOStore) {
-    const match = /^PED-(\d+)$/.exec(dto.numero_pedido);
-    if (match) max = Math.max(max, Number(match[1]));
-  }
-  return max;
-}
-
 function nextOrderNumber(empresaId: string): string {
-  const current = orderNumberCounters.get(empresaId) ?? seedOrderNumberCounter();
+  const current = orderNumberCounters.get(empresaId) ?? maxOrderNumberSuffix(ordersDTOStore.map((d) => d.numero_pedido));
   const next = current + 1;
   orderNumberCounters.set(empresaId, next);
-  return `PED-${String(next).padStart(ORDER_NUMBER_DIGITS, '0')}`;
+  return formatOrderNumber(next, ORDER_NUMBER_DIGITS);
 }
 
 // Id de linea (OrderLineId, Tanda 5/ADR-006) asignado por el service,
