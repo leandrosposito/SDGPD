@@ -1,0 +1,83 @@
+.vd-modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4, 1rem);
+}
+
+.vd-modal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--space-4, 1rem);
+}
+
+.vd-modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1, 0.25rem);
+}
+
+.vd-modal-field label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary, #555);
+}
+
+.vd-modal-field input[type='text'],
+.vd-modal-field input[type='number'],
+.vd-modal-field input[type='tel'] {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border-color, #ddd);
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.vd-modal__section-title {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-secondary, #555);
+}
+
+.vd-modal__checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.vd-modal__zone-checks {
+  display: flex;
+  gap: var(--space-4, 1rem);
+  flex-wrap: wrap;
+}
+
+.vd-modal__error {
+  color: var(--danger, #d9364f);
+  font-size: 0.75rem;
+}
+
+.vd-modal__cancel,
+.vd-modal__confirm {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.vd-modal__cancel {
+  background: transparent;
+  border: 1px solid var(--border-color, #ddd);
+}
+
+.vd-modal__confirm {
+  background: var(--accent, #7c3aed);
+  color: white;
+  border: none;
+}
+
+.vd-modal__confirm:disabled,
+.vd-modal__cancel:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

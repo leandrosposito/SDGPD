@@ -1,0 +1,27 @@
+.logistics-admin-page__filters {
+  margin: var(--space-4, 1rem) 0;
+}
+
+.logistics-admin-page__search {
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--border-color, #ddd);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  width: 100%;
+  max-width: 320px;
+}
+
+.logistics-admin-page__content {
+  margin-top: var(--space-4, 1rem);
+}
+
+.logistics-admin-page__btn-primary {
+  padding: 0.55rem 1.1rem;
+  background: var(--accent, #7c3aed);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}

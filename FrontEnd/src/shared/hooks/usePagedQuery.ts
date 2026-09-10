@@ -101,6 +101,13 @@ export interface UsePagedQueryOptions<TSort extends string> {
   // shared/hooks/useLiveQuery.ts, el wrapper que expone esta opcion
   // con un nombre que documenta la intencion en el call-site.
   live?: boolean;
+  // Enmienda 2026-09-09 de ADR-003 (Tanda 10B, ADR-011 seccion 4):
+  // intervalo propio por consumidor, solo tiene efecto con `live: true`.
+  // Default LIVE_REFETCH_INTERVAL_MS (30s) para TODOS los consumidores
+  // existentes que no lo pasan (LogisticsPage sigue igual) — la
+  // posicion del viaje es el unico consumidor que hoy pasa un valor
+  // distinto (10-15s).
+  intervalMs?: number;
 }
 
 // 30s por defecto (ADR-003) — constante nombrada, no un numero suelto
@@ -151,6 +158,7 @@ export function usePagedQuery<TItem, TFilters, TSort extends string = string, TA
     onPageChange,
     enabled = true,
     live = false,
+    intervalMs = LIVE_REFETCH_INTERVAL_MS,
   } = options;
 
   const empresaId = useSessionStore((s) => s.session?.company.id);
@@ -212,7 +220,7 @@ export function usePagedQuery<TItem, TFilters, TSort extends string = string, TA
     // false` es el default de TanStack Query, pero se deja explicito
     // (mismo criterio que el resto de defaultOptions de queryClient.ts)
     // para que quede documentado que es una decision, no un olvido.
-    ...(live ? { refetchInterval: LIVE_REFETCH_INTERVAL_MS, refetchIntervalInBackground: false } : {}),
+    ...(live ? { refetchInterval: intervalMs, refetchIntervalInBackground: false } : {}),
   });
 
   // Alinea la pagina local a la que realmente devolvio el servidor

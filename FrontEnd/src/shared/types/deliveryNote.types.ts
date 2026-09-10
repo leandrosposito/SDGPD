@@ -29,6 +29,18 @@ export interface DeliveryNoteLine {
   // igual para no romper el render ya existente de DeliveryHistoryModal.
   motivoCodigo?: string;
   motivoRechazo?: string;
+  // Tanda 10B (ADR-010 seccion 6, corregido en la revision 2026-09-09
+  // del ADR): cantidad propia, no solo un metadato de la linea — lo
+  // rechazado que todavia esta fisicamente en el camion, entre el
+  // momento del rechazo y la recepcion en deposito. La escribe
+  // registrarEntrega (deliveries.service.ts) cuando el motivo elegido
+  // tiene disparaLogisticaInversa=true; el circuito que la resuelve a 0
+  // (confirmarRecepcionDevolucion, movimiento real de stock) queda
+  // fuera de alcance de esta tanda (ADR-010 seccion 6, "impacto en
+  // stock... fuera de alcance de implementar en esta ADR") — el campo
+  // existe para que esa tanda futura tenga algo que leer/resolver, no
+  // se descarta la cantidad mientras tanto.
+  cantidadEnTransitoDeRetorno?: number;
 }
 
 export interface DeliveryNote {

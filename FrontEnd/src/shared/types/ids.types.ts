@@ -51,6 +51,12 @@ export type DeliveryId = string & { readonly __brand: 'DeliveryId' };
 // tenian el resto de sus relaciones tipadas.
 export type DeliveryNoteId = string & { readonly __brand: 'DeliveryNoteId' };
 export type DeliveryHistoryEventId = string & { readonly __brand: 'DeliveryHistoryEventId' };
+// Tanda 10B (capa operativa, ADR-011): vehiculos/choferes/viajes/paradas/POD.
+export type VehicleId = string & { readonly __brand: 'VehicleId' };
+export type DriverId = string & { readonly __brand: 'DriverId' };
+export type TripId = string & { readonly __brand: 'TripId' };
+export type StopId = string & { readonly __brand: 'StopId' };
+export type PodId = string & { readonly __brand: 'PodId' };
 
 const ORDER_ID_PATTERN = /^ord-/;
 const BRANCH_ID_PATTERN = /^branch-/;
@@ -59,6 +65,11 @@ const CLIENT_ID_PATTERN = /^cli-/;
 const DELIVERY_ID_PATTERN = /^del-/;
 const DELIVERY_NOTE_ID_PATTERN = /^remito-/;
 const DELIVERY_HISTORY_EVENT_ID_PATTERN = /^dh-/;
+const VEHICLE_ID_PATTERN = /^veh-/;
+const DRIVER_ID_PATTERN = /^drv-/;
+const TRIP_ID_PATTERN = /^trip-/;
+const STOP_ID_PATTERN = /^stop-/;
+const POD_ID_PATTERN = /^pod-/;
 
 export function isOrderId(raw: string): raw is OrderId {
   return ORDER_ID_PATTERN.test(raw);
@@ -120,5 +131,50 @@ export function isDeliveryHistoryEventId(raw: string): raw is DeliveryHistoryEve
 
 export function asDeliveryHistoryEventId(raw: string): DeliveryHistoryEventId {
   if (!isDeliveryHistoryEventId(raw)) throw new InvalidIdError('DeliveryHistoryEventId', raw);
+  return raw;
+}
+
+export function isVehicleId(raw: string): raw is VehicleId {
+  return VEHICLE_ID_PATTERN.test(raw);
+}
+
+export function asVehicleId(raw: string): VehicleId {
+  if (!isVehicleId(raw)) throw new InvalidIdError('VehicleId', raw);
+  return raw;
+}
+
+export function isDriverId(raw: string): raw is DriverId {
+  return DRIVER_ID_PATTERN.test(raw);
+}
+
+export function asDriverId(raw: string): DriverId {
+  if (!isDriverId(raw)) throw new InvalidIdError('DriverId', raw);
+  return raw;
+}
+
+export function isTripId(raw: string): raw is TripId {
+  return TRIP_ID_PATTERN.test(raw);
+}
+
+export function asTripId(raw: string): TripId {
+  if (!isTripId(raw)) throw new InvalidIdError('TripId', raw);
+  return raw;
+}
+
+export function isStopId(raw: string): raw is StopId {
+  return STOP_ID_PATTERN.test(raw);
+}
+
+export function asStopId(raw: string): StopId {
+  if (!isStopId(raw)) throw new InvalidIdError('StopId', raw);
+  return raw;
+}
+
+export function isPodId(raw: string): raw is PodId {
+  return POD_ID_PATTERN.test(raw);
+}
+
+export function asPodId(raw: string): PodId {
+  if (!isPodId(raw)) throw new InvalidIdError('PodId', raw);
   return raw;
 }

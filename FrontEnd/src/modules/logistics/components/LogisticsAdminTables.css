@@ -1,0 +1,18 @@
+.vd-table__actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.vd-table__action-btn {
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--border-color, #ddd);
+  border-radius: 6px;
+  background: transparent;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.vd-table__action-btn:hover {
+  background: var(--surface-hover, #f4f4f6);
+}

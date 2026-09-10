@@ -1,5 +1,6 @@
 import type { FC } from 'react';
 import { NavLink } from 'react-router-dom';
+import { Route as RouteIcon, Truck as TruckIcon, IdCard } from 'lucide-react';
 import './Sidebar.css';
 
 // ============================================================
@@ -82,6 +83,15 @@ const IconAnalytics: FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
+// Tanda 10B (ADR-011): items nuevos de la capa operativa de logistica.
+// Usan lucide-react (estandar del proyecto para iconos nuevos,
+// FrontEnd/CLAUDE.md) en vez de sumar 3 SVG inline mas — los iconos de
+// arriba son deuda pre-existente (de antes de que ese estandar se
+// fijara), no un patron a repetir.
+const IconTrips: FC<{ className?: string }> = ({ className }) => <RouteIcon className={className} aria-hidden="true" />;
+const IconVehicles: FC<{ className?: string }> = ({ className }) => <TruckIcon className={className} aria-hidden="true" />;
+const IconDrivers: FC<{ className?: string }> = ({ className }) => <IdCard className={className} aria-hidden="true" />;
+
 const IconCollapse: FC<{ className?: string }> = ({ className }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
     <path d="M11 19l-7-7 7-7M18 19l-7-7 7-7" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
@@ -95,7 +105,13 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'nav-clients',    label: 'Clientes',      path: '/clientes',   icon: IconClients },
   { id: 'nav-suppliers',  label: 'Proveedores',   path: '/proveedores',icon: IconSuppliers },
   { id: 'nav-purchases',  label: 'Compras',       path: '/compras',    icon: IconPurchases },
-  { id: 'nav-logistics',  label: 'Logistica',     path: '/logistica',  icon: IconLogistics },
+  // Tanda 10B (ADR-011): "Logistica" pasa a ser "Entregas" (el mismo
+  // /logistica de siempre — el listado de Delivery) y gana 3 hermanos
+  // nuevos para la capa operativa (viajes/vehiculos/choferes).
+  { id: 'nav-logistics',  label: 'Entregas',      path: '/logistica',  icon: IconLogistics },
+  { id: 'nav-trips',      label: 'Viajes',        path: '/logistica/viajes',    icon: IconTrips },
+  { id: 'nav-vehicles',   label: 'Vehiculos',     path: '/logistica/vehiculos', icon: IconVehicles },
+  { id: 'nav-drivers',    label: 'Choferes',      path: '/logistica/choferes',  icon: IconDrivers },
   { id: 'nav-cash',       label: 'Caja',          path: '/caja',       icon: IconCash },
   { id: 'nav-analytics',  label: 'Analitica',     path: '/analitica',  icon: IconAnalytics },
 ];
@@ -142,7 +158,12 @@ export const Sidebar: FC<SidebarProps> = ({ isCollapsed, onToggleCollapse }) => 
               <NavLink
                 id={item.id}
                 to={item.path}
-                end={item.path === '/'}
+                // Tanda 10B: '/logistica' ahora tiene hermanos con el
+                // mismo prefijo ('/logistica/viajes', etc.) — sin `end`,
+                // NavLink lo marcaria activo tambien en esas rutas
+                // (mismo motivo por el que el Dashboard ('/') ya lo
+                // necesitaba).
+                end={item.path === '/' || item.path === '/logistica'}
                 className={({ isActive }) =>
                   `sidebar__nav-link${isActive ? ' sidebar__nav-link--active' : ''}`
                 }
