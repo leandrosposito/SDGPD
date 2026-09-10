@@ -3,6 +3,7 @@ import { SidePanel } from '@/shared/components/ui/SidePanel';
 import { Table } from '@/shared/components/ui/Table';
 import { Badge } from '@/shared/components/ui/Badge';
 import type { InventoryItem } from '@/shared/types/inventory.types';
+import { isExpired, isExpiringSoon } from '@/shared/utils/lotExpiration';
 
 // ============================================================
 // ProductLotsPanel — Visualiza los lotes de un producto
@@ -20,20 +21,6 @@ function formatDate(isoString: string): string {
     month: 'short',
     year: 'numeric'
   });
-}
-
-function isExpiringSoon(expirationDate: string): boolean {
-  const exp = new Date(expirationDate);
-  const now = new Date();
-  const diffTime = Math.abs(exp.getTime() - now.getTime());
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  return diffDays <= 30;
-}
-
-function isExpired(expirationDate: string): boolean {
-  const exp = new Date(expirationDate);
-  const now = new Date();
-  return exp.getTime() < now.getTime();
 }
 
 export const ProductLotsPanel: FC<ProductLotsPanelProps> = ({ isOpen, onClose, product }) => {
