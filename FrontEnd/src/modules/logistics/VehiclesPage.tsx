@@ -69,7 +69,9 @@ export const VehiclesPage: FC = () => {
     const result = vehicleId
       ? await updateVehicle(empresaId, idempotencyKey, vehicleId, input)
       : await createVehicle(empresaId, idempotencyKey, input);
-    if (!result.success) throw new Error('No se pudo guardar el vehículo.');
+    if (!result.success) {
+      throw new Error(result.reason === 'patente-duplicada' ? 'Ya existe un vehículo con esa patente.' : 'No se pudo guardar el vehículo.');
+    }
     refetch();
   };
 
