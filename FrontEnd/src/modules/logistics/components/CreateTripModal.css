@@ -70,6 +70,56 @@
   margin-left: auto;
 }
 
+.create-trip__conflicts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.create-trip__conflict-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem;
+  border: 1px solid var(--warning, #d97706);
+  border-radius: 8px;
+  background: var(--warning-bg, #fffbeb);
+}
+
+.create-trip__conflict-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 140px;
+}
+
+.create-trip__conflict-info span {
+  font-size: 0.75rem;
+  color: var(--text-secondary, #666);
+}
+
+.create-trip__conflict-row input[type='text'] {
+  flex: 1;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border-color, #ddd);
+  border-radius: 6px;
+  font-size: 0.82rem;
+}
+
+.create-trip__conflict-row button {
+  padding: 0.4rem 0.7rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-color, #ddd);
+  background: white;
+  font-size: 0.78rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.create-trip__conflict-row button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .create-trip__cancel,
 .create-trip__confirm {
   padding: 0.5rem 1rem;
