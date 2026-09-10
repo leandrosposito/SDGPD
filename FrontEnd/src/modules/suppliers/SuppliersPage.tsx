@@ -175,6 +175,19 @@ export const SuppliersPage: FC = () => {
     navigate(`/compras?proveedor=${encodeURIComponent(selectedSupplier.id)}`);
   };
 
+  // PENDIENTES.md item 1 (hallazgo ya documentado, cerrado en esta
+  // tanda): la logica de edicion ya estaba completa en
+  // SupplierFormModal.tsx (precarga desde `supplier`, titulo
+  // condicional, onSave(input, supplier?.id)) — faltaba unicamente un
+  // boton que abriera el modal con un `supplier` no-nulo. El panel de
+  // detalle sigue abierto detras del modal de formulario (mismo patron
+  // que PodModal sobre TripDetailPanel, modulo logistica): al guardar,
+  // handleSaveSupplier ya actualiza `selectedSupplier` con el resultado.
+  const handleEditSelectedSupplier = () => {
+    if (!selectedSupplier) return;
+    setIsFormModalOpen(true);
+  };
+
   return (
     <div className="suppliers-page page-enter">
       <header className="page-header">
@@ -239,6 +252,7 @@ export const SuppliersPage: FC = () => {
         isOpen={isPanelOpen}
         onClose={() => setIsPanelOpen(false)}
         onNewOrder={handleNewOrderForSelectedSupplier}
+        onEdit={handleEditSelectedSupplier}
       />
 
       <SupplierFormModal

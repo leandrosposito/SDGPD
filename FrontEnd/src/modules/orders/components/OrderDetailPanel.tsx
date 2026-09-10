@@ -143,10 +143,13 @@ export const OrderDetailPanel: FC<OrderDetailPanelProps> = ({
 
   const advanceLabel = ADVANCE_LABEL[order.status];
   // Fix del hallazgo ALTO de Fase 3 (Tanda 9): cancelar tambien se
-  // bloquea si el pedido tiene una entrega en CREADO/EN_TRANSITO —
-  // mismo criterio de "activa" que orders.service.ts#cancelOrder
-  // (que vuelve a validar esto server-side, este chequeo del cliente
-  // es solo para no mostrar un boton que el servidor va a rechazar).
+  // bloquea si el pedido tiene una entrega en CREADO/EN_TRANSITO.
+  // Tanda 12: la restriccion de estado (delivered/invoiced/cancelled,
+  // lineas de abajo) TAMBIEN es ahora autoritativa server-side
+  // (orders.service.ts#cancelOrder, reason 'invalid-status-for-cancel')
+  // — antes solo vivia aca. Los dos chequeos de este componente son
+  // solo para no mostrar un boton que el servidor va a rechazar igual,
+  // nunca la unica barrera real.
   // Mientras `orderDeliveries` todavia esta cargando O si el fetch
   // termino en error se trata como bloqueado (conservador, mismo
   // criterio que el resto de los guards de este panel) — sin el chequeo

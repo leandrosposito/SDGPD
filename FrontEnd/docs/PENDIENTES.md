@@ -9,21 +9,13 @@ tal en vez de listado como pendiente.
 
 ## Vigentes
 
-### 1. Edición de proveedor: falta el disparador, no la lógica — Severidad: Media
+### 1. Edición de proveedor: falta el disparador, no la lógica — CERRADO (Tanda 12, 2026-09-10)
 
-No existe ningún botón "Editar" en la UI de `suppliers` — ni en `SuppliersTable.tsx`
-ni en `SupplierDetailPanel.tsx` (que hoy solo expone "Nueva OC" en sus acciones de
-header). Confirmado con `grep` de "Editar/onEdit/handleEdit" en todo el módulo: el
-único match es el título condicional del modal.
-
-La lógica de edición, sin embargo, **ya está completa** en
-`SupplierFormModal.tsx`: precarga los campos desde la prop `supplier` (líneas
-26-37), cambia el título a "Editar Proveedor" cuando `supplier` no es null (línea
-64), y llama a `onSave(input, supplier?.id)` (línea 51) — `SuppliersPage.tsx`
-(`handleSaveSupplier`) ya soporta el update. Falta únicamente un botón que abra el
-modal con un `supplier` no-nulo. Funcionalidad que nunca existió — no es una
-regresión de la migración a la capa `api/` (Tanda 1), ya documentado así en
-`VERIFICACION_TANDA_0_1.md`, punto 11.
+Resuelto: botón "Editar" agregado al header de `SupplierDetailPanel.tsx` (junto a
+"Nueva OC"), llama a `setIsFormModalOpen(true)` con `selectedSupplier` ya en
+contexto — reusa `SupplierFormModal.tsx` tal cual estaba (esa lógica ya estaba
+completa, ver `VERIFICACION_TANDA_0_1.md` punto 11). Ver
+`docs/historial/verificaciones/VERIFICACION_TANDA_12.md`.
 
 ### 2. Filtros de zona/vendedor/estado en `ClientAccountsTable` — no aplica, decisión de alcance ya documentada
 
@@ -268,6 +260,30 @@ menor:
 
 Queda registrado para cuando se decida si hace falta distinguir "sin stock
 cargado" de "agotado" en la UI.
+
+### 15. `CreateClientModal` sigue teniendo 9 campos "fantasma" además de los 2 que se conectaron en Tanda 12 — Severidad: Media
+
+Tanda 12 conectó `listaPrecios`/`condicionVenta` (ver
+`VERIFICACION_TANDA_12.md`) porque eran los 2 pedidos explícitamente, pero al
+auditar el archivo para esa tarea se confirmó que **otros 9 campos de estado del
+formulario tienen el mismo bug** — se cargan en la UI (con su propio `useState` y
+su tab correspondiente) pero `buildClientInput()` nunca los incluye en el payload
+real, así que se descartan en silencio al guardar (verificado comparando la lista
+completa de `useState` de `CreateClientModal.tsx:27-48` contra
+`buildClientInput()`, que solo arma `clientName/cuit/address/phone/zone/
+sellerName/creditLimit/priceList/saleCondition`):
+
+- `ClientGeneralTab`: `nombreFantasia`, `condicionIva`, `email`.
+- `ClientLogisticsTab`: `googleMapsLink`, `isEntregaIgualFiscal`, `direccionEntrega`,
+  `referenciasEntrega`.
+- `ClientSettingsTab`: `categoria`, `notas`, `isActive`.
+
+Ninguno de estos existe hoy en `ClientAccount`/`ClientFormInput`/`ClientAccountDTO`
+— conectarlos de verdad implica, para cada uno, la misma cadena de cambios que
+`priceList`/`saleCondition` (tipo + DTO + mapper + backfill del mock semilla de 30
+clientes). No se hizo en Tanda 12 porque no fue lo pedido — se deja registrado acá
+en vez de tocarlo por iniciativa propia, mismo criterio que el resto de este
+documento.
 
 ---
 

@@ -163,6 +163,9 @@ export const InventoryPage: FC = () => {
   };
 
   // RF-PRD-001: Baja de producto (ABM completo — antes el boton "Eliminar" solo cerraba el modal).
+  // Tanda 12: deleteProduct pasa a baja LOGICA (estado inactive, sin
+  // borrar del store) — ver el comentario completo en
+  // shared/api/products/products.service.ts#deleteProduct.
   const handleDeleteProduct = async (productId: string) => {
     if (!empresaId) throw new Error('Todavia no hay una sesion activa.');
     await deleteProduct(empresaId, productId);

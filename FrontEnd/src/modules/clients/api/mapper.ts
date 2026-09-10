@@ -16,7 +16,7 @@ import type { ClientAccountDTO, ClientFormPayloadDTO } from './dto';
 
 export type ClientFormInput = Pick<
   ClientAccount,
-  'clientName' | 'cuit' | 'address' | 'phone' | 'zone' | 'sellerName' | 'creditLimit'
+  'clientName' | 'cuit' | 'address' | 'phone' | 'zone' | 'sellerName' | 'creditLimit' | 'priceList' | 'saleCondition'
 >;
 
 export function clientFromDTO(dto: ClientAccountDTO): ClientAccount {
@@ -29,6 +29,8 @@ export function clientFromDTO(dto: ClientAccountDTO): ClientAccount {
     zone: dto.cliente.zona,
     sellerName: dto.cliente.vendedor,
     creditLimit: dto.cuenta.limite_credito,
+    priceList: dto.cuenta.lista_precios,
+    saleCondition: dto.cuenta.condicion_venta,
     totalDebit: dto.cuenta.total_debito,
     totalCredit: dto.cuenta.total_credito,
     currentBalance: dto.cuenta.saldo_actual,
@@ -57,6 +59,8 @@ export function clientToDTO(client: ClientAccount): ClientAccountDTO {
     },
     cuenta: {
       limite_credito: client.creditLimit,
+      lista_precios: client.priceList,
+      condicion_venta: client.saleCondition,
       total_debito: client.totalDebit,
       total_credito: client.totalCredit,
       saldo_actual: client.currentBalance,
@@ -76,5 +80,7 @@ export function clientFormInputToDTO(input: ClientFormInput): ClientFormPayloadD
     zona: input.zone,
     vendedor: input.sellerName,
     limite_credito: input.creditLimit,
+    lista_precios: input.priceList,
+    condicion_venta: input.saleCondition,
   };
 }

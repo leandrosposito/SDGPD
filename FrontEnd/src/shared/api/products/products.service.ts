@@ -145,6 +145,19 @@ export async function updateProduct(empresaId: string, id: string, input: Produc
   });
 }
 
+// Tanda 12 (hallazgo propio): baja LOGICA, no borrado del store — antes
+// esta funcion hacia `.filter(...)` (borrado real). Un producto puede
+// estar referenciado por pedidos/remitos/lotes/stock historico ya
+// existentes (ej. OrderItem.sku, InventoryMovement.sku) que nunca se
+// borran — sacarlo del catalogo de raiz dejaria esas referencias
+// apuntando a un SKU que "nunca existio" para cualquier pantalla que
+// intente resolverlo despues (mismo tipo de problema que ADR-006 evita
+// con ids tipados: una referencia que deja de resolver es peor que un
+// estado inactivo visible). Mismo patron ya establecido para
+// Vehicle/Driver (Tanda 10B, toggleVehicleActivo/toggleDriverActivo):
+// TabStockCurrent.tsx YA pinta un badge ACTIVO/INACTIVO por fila (no
+// hace falta agregar nada ahi), asi que el producto simplemente pasa a
+// mostrarse como INACTIVO en vez de desaparecer.
 export async function deleteProduct(empresaId: string, id: string): Promise<void> {
   return httpClient.request<void>({
     method: 'DELETE',
@@ -154,7 +167,7 @@ export async function deleteProduct(empresaId: string, id: string): Promise<void
       const exists = productsDTOStore.some((p) => p.id === id);
       if (!exists) throw new ApiError(404, 'CLIENT_ERROR', 'El producto que intenta eliminar ya no existe.');
 
-      productsDTOStore = productsDTOStore.filter((p) => p.id !== id);
+      productsDTOStore = productsDTOStore.map((p) => (p.id === id ? { ...p, estado: 'inactive' } : p));
     },
   });
 }

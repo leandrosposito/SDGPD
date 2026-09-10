@@ -71,6 +71,12 @@ export const CreateClientModal: FC<CreateClientModalProps> = ({ isOpen, onClose,
         setZona(client.zone);
         setVendedor(client.sellerName);
         setLimiteCredito(client.creditLimit);
+        // Tanda 12 (hallazgo propio): faltaban en el precargado de
+        // edicion, ademas de faltar en buildClientInput — los dos
+        // huecos del mismo bug (el modal editaba un cliente real y
+        // mostraba los defaults de un cliente nuevo en esta tab).
+        setListaPrecios(client.priceList);
+        setCondicionVenta(client.saleCondition);
       } else {
         resetForm();
       }
@@ -94,6 +100,13 @@ export const CreateClientModal: FC<CreateClientModalProps> = ({ isOpen, onClose,
     zone: zona,
     sellerName: vendedor,
     creditLimit: limiteCredito,
+    // Tanda 12 (hallazgo propio): listaPrecios/condicionVenta se
+    // cargaban en ClientCommercialTab pero nunca llegaban a este
+    // objeto — el usuario los completaba y el modal los descartaba en
+    // silencio al guardar. Conectados ahora de punta a punta (ver
+    // ClientFormInput/ClientAccount/ClientAccountDTO).
+    priceList: listaPrecios,
+    saleCondition: condicionVenta,
   });
 
   const handleSave = async () => {

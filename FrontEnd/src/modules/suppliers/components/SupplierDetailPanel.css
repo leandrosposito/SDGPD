@@ -86,3 +86,14 @@
   background: var(--color-accent);
   color: white;
 }
+
+.sp-btn-order--outline {
+  color: var(--color-text-secondary, var(--color-accent-light));
+  background: transparent;
+  border: 1px solid var(--color-border, var(--color-accent-muted));
+}
+
+.sp-btn-order--outline:hover {
+  background: var(--color-accent-muted);
+  color: var(--color-accent-light);
+}

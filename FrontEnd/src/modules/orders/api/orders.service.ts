@@ -342,11 +342,17 @@ const ORDER_STATUS_FLOW: Partial<Record<OrderStatus, OrderStatus>> = {
   delivered: 'invoiced',
 };
 
-// 'has-active-deliveries' solo lo produce cancelOrder — advanceOrderStatus
-// nunca lo devuelve, pero comparten el mismo tipo de resultado
-// (OrderStatusTransitionResult) desde antes de este fix, no vale la
-// pena partirlo en dos tipos para una sola razon nueva.
-export type OrderStatusTransitionReason = 'not-found' | 'terminal-status' | 'has-active-deliveries';
+// 'has-active-deliveries'/'invalid-status-for-cancel' solo los produce
+// cancelOrder — advanceOrderStatus nunca los devuelve, pero comparten
+// el mismo tipo de resultado (OrderStatusTransitionResult) desde antes
+// de este fix, no vale la pena partirlo en dos tipos. 'invalid-status-
+// for-cancel' es DISTINTO de 'terminal-status' (el que ya usa
+// advanceOrderStatus): 'terminal-status' significa "no hay siguiente
+// paso en ORDER_STATUS_FLOW" (invoiced/cancelled) — 'delivered' SI
+// tiene siguiente paso ahi (fluye a invoiced), pero igual esta
+// prohibido CANCELAR un pedido ya entregado (regla de negocio propia
+// de cancelar, no de avanzar).
+export type OrderStatusTransitionReason = 'not-found' | 'terminal-status' | 'has-active-deliveries' | 'invalid-status-for-cancel';
 
 export interface OrderStatusTransitionResult {
   success: boolean;
@@ -377,15 +383,23 @@ export async function advanceOrderStatus(empresaId: string, orderId: string): Pr
   });
 }
 
-// Cancela desde CUALQUIER estado, sin restriccion de `estado`/
-// `estado_comercial` — mismo comportamiento que handleCancel en
-// OrdersPage.tsx antes de esta tanda (a diferencia de purchaseOrders,
-// que sí valida transiciones válidas para cancelar). La UNICA
-// restriccion real es que no tenga una entrega activa (fix del
-// hallazgo ALTO de Fase 3, Tanda 9: antes esta funcion no consultaba
-// deliveriesStore para nada, un pedido con una entrega en curso podia
-// quedar Cancelado mientras la entrega seguia y cobraba
-// collectionAmount).
+// No cancela desde CUALQUIER estado (correccion de esta tanda — ver
+// mas abajo): rechaza delivered/invoiced/cancelled, y ademas rechaza
+// si tiene una entrega activa (fix del hallazgo ALTO de Fase 3, Tanda
+// 9: antes esta funcion no consultaba deliveriesStore para nada, un
+// pedido con una entrega en curso podia quedar Cancelado mientras la
+// entrega seguia y cobraba collectionAmount).
+//
+// Tanda 12 (hallazgo propio): la restriccion de estado
+// (delivered/invoiced/cancelled) vivia SOLO del lado del cliente
+// (OrderDetailPanel.tsx#canCancel) — el service la ignoraba por
+// completo, asi que cancelOrder llamado directo (bypaseando el boton,
+// ej. una mutacion manual o un bug de UI) podia cancelar un pedido ya
+// entregado/facturado. Movida aca, autoritativa — el cliente sigue
+// ocultando el boton para no mostrar una accion que el servidor va a
+// rechazar igual (mismo criterio que ya se aplicaba para
+// has-active-deliveries).
+const NON_CANCELLABLE_ORDER_STATUSES: readonly OrderStatus[] = ['delivered', 'invoiced', 'cancelled'];
 export async function cancelOrder(empresaId: string, orderId: string): Promise<OrderStatusTransitionResult> {
   return httpClient.request<OrderStatusTransitionResult>({
     method: 'PUT',
@@ -395,6 +409,9 @@ export async function cancelOrder(empresaId: string, orderId: string): Promise<O
       const existing = ordersDTOStore.find((dto) => dto.id === orderId);
       if (!existing) {
         return { success: false, orderId, reason: 'not-found' };
+      }
+      if (NON_CANCELLABLE_ORDER_STATUSES.includes(existing.estado)) {
+        return { success: false, orderId, previousStatus: existing.estado, reason: 'invalid-status-for-cancel' };
       }
       if (getActiveDeliveriesForOrder(asOrderId(orderId)).length > 0) {
         return { success: false, orderId, previousStatus: existing.estado, reason: 'has-active-deliveries' };

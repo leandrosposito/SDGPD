@@ -33,6 +33,10 @@ export interface ClientAccountDTO {
   };
   cuenta: {
     limite_credito: number;
+    // Tanda 12: lista_precios/condicion_venta agregados — ver el
+    // comentario completo en shared/types/client.types.ts.
+    lista_precios: string;
+    condicion_venta: string;
     total_debito: number;
     total_credito: number;
     saldo_actual: number;
@@ -61,4 +65,6 @@ export interface ClientFormPayloadDTO {
   zona: string;
   vendedor: string;
   limite_credito: number;
+  lista_precios: string;
+  condicion_venta: string;
 }

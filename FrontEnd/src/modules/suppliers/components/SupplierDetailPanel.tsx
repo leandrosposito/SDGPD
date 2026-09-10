@@ -29,6 +29,10 @@ interface SupplierDetailPanelProps {
   isOpen: boolean;
   onClose: () => void;
   onNewOrder: () => void;
+  // PENDIENTES.md item 1 (cerrado en Tanda 12): la logica de edicion
+  // ya existia en SupplierFormModal.tsx, faltaba el boton que la
+  // dispare con un `supplier` no-nulo.
+  onEdit: () => void;
 }
 
 function formatCurrency(value: number): string {
@@ -73,6 +77,7 @@ export const SupplierDetailPanel: FC<SupplierDetailPanelProps> = ({
   isOpen,
   onClose,
   onNewOrder,
+  onEdit,
 }) => {
   const [activeTab, setActiveTab] = useState('basics');
   const session = useSessionStore((s) => s.session);
@@ -235,9 +240,14 @@ export const SupplierDetailPanel: FC<SupplierDetailPanelProps> = ({
       title={supplier.name}
       subtitle={`CUIT: ${supplier.cuit}`}
       headerActions={
-        <button className="sp-btn-order" onClick={onNewOrder}>
-          Nueva OC
-        </button>
+        <>
+          <button className="sp-btn-order sp-btn-order--outline" onClick={onEdit}>
+            Editar
+          </button>
+          <button className="sp-btn-order" onClick={onNewOrder}>
+            Nueva OC
+          </button>
+        </>
       }
     >
       <Tabs tabs={tabs} activeTabId={activeTab} onChange={setActiveTab} />
