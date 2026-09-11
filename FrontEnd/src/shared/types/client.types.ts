@@ -68,6 +68,26 @@ export interface ClientAccount {
   // tramo, TabPriceLists.tsx, no entidades con id).
   priceList: string;
   saleCondition: string;
+  // Tanda 16 (PENDIENTES.md item 15): conecta los 10 campos "fantasma"
+  // de CreateClientModal que buildClientInput() descartaba en silencio
+  // al guardar — mismo bug que priceList/saleCondition (Tanda 12),
+  // mismo criterio de solucion: ya tenian UI real y funcional en
+  // ClientGeneralTab/ClientLogisticsTab/ClientSettingsTab (a diferencia
+  // de los 4 tabs de inventory del item 10 de PENDIENTES.md, que son UI
+  // sin logica detras), asi que se conectan de punta a punta en vez de
+  // quitarse del formulario. Todos requeridos (sin `?`), mismo criterio
+  // que `zone`/`sellerName`: son valores que siempre existen (select o
+  // checkbox con default), nunca "ausentes" a proposito.
+  tradeName: string;
+  ivaCondition: string;
+  email: string;
+  googleMapsLink: string;
+  deliveryAddressSameAsFiscal: boolean;
+  deliveryAddress: string;
+  deliveryReferences: string;
+  businessCategory: string;
+  notes: string;
+  isActive: boolean;
   totalDebit: number;
   totalCredit: number;
   currentBalance: number;

@@ -30,6 +30,15 @@ export interface ClientAccountDTO {
     telefono: string;
     zona: string;
     vendedor: string;
+    // Tanda 16 (PENDIENTES.md item 15) — ver el comentario completo en
+    // shared/types/client.types.ts.
+    nombre_fantasia: string;
+    condicion_iva: string;
+    email: string;
+    google_maps_link: string;
+    direccion_entrega_igual_fiscal: boolean;
+    direccion_entrega: string;
+    referencias_entrega: string;
   };
   cuenta: {
     limite_credito: number;
@@ -37,6 +46,10 @@ export interface ClientAccountDTO {
     // comentario completo en shared/types/client.types.ts.
     lista_precios: string;
     condicion_venta: string;
+    // Tanda 16 (PENDIENTES.md item 15).
+    categoria: string;
+    notas: string;
+    activo: boolean;
     total_debito: number;
     total_credito: number;
     saldo_actual: number;
@@ -67,4 +80,15 @@ export interface ClientFormPayloadDTO {
   limite_credito: number;
   lista_precios: string;
   condicion_venta: string;
+  // Tanda 16 (PENDIENTES.md item 15).
+  nombre_fantasia: string;
+  condicion_iva: string;
+  email: string;
+  google_maps_link: string;
+  direccion_entrega_igual_fiscal: boolean;
+  direccion_entrega: string;
+  referencias_entrega: string;
+  categoria: string;
+  notas: string;
+  activo: boolean;
 }

@@ -77,6 +77,19 @@ export const CreateClientModal: FC<CreateClientModalProps> = ({ isOpen, onClose,
         // mostraba los defaults de un cliente nuevo en esta tab).
         setListaPrecios(client.priceList);
         setCondicionVenta(client.saleCondition);
+        // Tanda 16 (PENDIENTES.md item 15): mismos dos huecos que
+        // arriba, para los otros 10 campos que buildClientInput
+        // tampoco incluia.
+        setNombreFantasia(client.tradeName);
+        setCondicionIva(client.ivaCondition);
+        setEmail(client.email);
+        setGoogleMapsLink(client.googleMapsLink);
+        setIsEntregaIgualFiscal(client.deliveryAddressSameAsFiscal);
+        setDireccionEntrega(client.deliveryAddress);
+        setReferenciasEntrega(client.deliveryReferences);
+        setCategoria(client.businessCategory);
+        setNotas(client.notes);
+        setIsActive(client.isActive);
       } else {
         resetForm();
       }
@@ -107,6 +120,22 @@ export const CreateClientModal: FC<CreateClientModalProps> = ({ isOpen, onClose,
     // ClientFormInput/ClientAccount/ClientAccountDTO).
     priceList: listaPrecios,
     saleCondition: condicionVenta,
+    // Tanda 16 (PENDIENTES.md item 15): los otros 10 campos "fantasma"
+    // de ClientGeneralTab/ClientLogisticsTab/ClientSettingsTab, mismo
+    // criterio que priceList/saleCondition arriba — conectados de
+    // punta a punta en vez de quitados del formulario, porque ya
+    // tenian UI real y funcional (ver ClientAccount en
+    // shared/types/client.types.ts para el razonamiento completo).
+    tradeName: nombreFantasia,
+    ivaCondition: condicionIva,
+    email,
+    googleMapsLink,
+    deliveryAddressSameAsFiscal: isEntregaIgualFiscal,
+    deliveryAddress: direccionEntrega,
+    deliveryReferences: referenciasEntrega,
+    businessCategory: categoria,
+    notes: notas,
+    isActive,
   });
 
   const handleSave = async () => {

@@ -71,6 +71,20 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
     creditLimit: 100000,
     priceList: 'Mayorista',
     saleCondition: 'Contado',
+    // Tanda 16 (PENDIENTES.md item 15): mismo criterio que el backfill
+    // de priceList/saleCondition en Tanda 12 — valores uniformes en
+    // los 30 registros semilla, iguales a los defaults del formulario
+    // (no hay dato de negocio real detras para variarlos).
+    tradeName: '',
+    ivaCondition: 'Responsable Inscripto',
+    email: '',
+    googleMapsLink: '',
+    deliveryAddressSameAsFiscal: true,
+    deliveryAddress: '',
+    deliveryReferences: '',
+    businessCategory: 'Kiosco',
+    notes: '',
+    isActive: true,
     totalDebit: 45000,
     totalCredit: 0,
     currentBalance: 45000,
@@ -102,6 +116,20 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
     creditLimit: 200000,
     priceList: 'Mayorista',
     saleCondition: 'Contado',
+    // Tanda 16 (PENDIENTES.md item 15): mismo criterio que el backfill
+    // de priceList/saleCondition en Tanda 12 — valores uniformes en
+    // los 30 registros semilla, iguales a los defaults del formulario
+    // (no hay dato de negocio real detras para variarlos).
+    tradeName: '',
+    ivaCondition: 'Responsable Inscripto',
+    email: '',
+    googleMapsLink: '',
+    deliveryAddressSameAsFiscal: true,
+    deliveryAddress: '',
+    deliveryReferences: '',
+    businessCategory: 'Kiosco',
+    notes: '',
+    isActive: true,
     totalDebit: 120000,
     totalCredit: 0,
     currentBalance: 120000,
@@ -133,6 +161,20 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
     creditLimit: 50000,
     priceList: 'Mayorista',
     saleCondition: 'Contado',
+    // Tanda 16 (PENDIENTES.md item 15): mismo criterio que el backfill
+    // de priceList/saleCondition en Tanda 12 — valores uniformes en
+    // los 30 registros semilla, iguales a los defaults del formulario
+    // (no hay dato de negocio real detras para variarlos).
+    tradeName: '',
+    ivaCondition: 'Responsable Inscripto',
+    email: '',
+    googleMapsLink: '',
+    deliveryAddressSameAsFiscal: true,
+    deliveryAddress: '',
+    deliveryReferences: '',
+    businessCategory: 'Kiosco',
+    notes: '',
+    isActive: true,
     totalDebit: 130000,
     totalCredit: 0,
     currentBalance: 130000,
@@ -164,6 +206,20 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
     creditLimit: 200000,
     priceList: 'Mayorista',
     saleCondition: 'Contado',
+    // Tanda 16 (PENDIENTES.md item 15): mismo criterio que el backfill
+    // de priceList/saleCondition en Tanda 12 — valores uniformes en
+    // los 30 registros semilla, iguales a los defaults del formulario
+    // (no hay dato de negocio real detras para variarlos).
+    tradeName: '',
+    ivaCondition: 'Responsable Inscripto',
+    email: '',
+    googleMapsLink: '',
+    deliveryAddressSameAsFiscal: true,
+    deliveryAddress: '',
+    deliveryReferences: '',
+    businessCategory: 'Kiosco',
+    notes: '',
+    isActive: true,
     totalDebit: 150000,
     totalCredit: 150000,
     currentBalance: 0,
@@ -205,6 +261,20 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
     creditLimit: 80000,
     priceList: 'Mayorista',
     saleCondition: 'Contado',
+    // Tanda 16 (PENDIENTES.md item 15): mismo criterio que el backfill
+    // de priceList/saleCondition en Tanda 12 — valores uniformes en
+    // los 30 registros semilla, iguales a los defaults del formulario
+    // (no hay dato de negocio real detras para variarlos).
+    tradeName: '',
+    ivaCondition: 'Responsable Inscripto',
+    email: '',
+    googleMapsLink: '',
+    deliveryAddressSameAsFiscal: true,
+    deliveryAddress: '',
+    deliveryReferences: '',
+    businessCategory: 'Kiosco',
+    notes: '',
+    isActive: true,
     totalDebit: 95000,
     totalCredit: 0,
     currentBalance: 95000,
@@ -236,6 +306,20 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
     creditLimit: 150000,
     priceList: 'Mayorista',
     saleCondition: 'Contado',
+    // Tanda 16 (PENDIENTES.md item 15): mismo criterio que el backfill
+    // de priceList/saleCondition en Tanda 12 — valores uniformes en
+    // los 30 registros semilla, iguales a los defaults del formulario
+    // (no hay dato de negocio real detras para variarlos).
+    tradeName: '',
+    ivaCondition: 'Responsable Inscripto',
+    email: '',
+    googleMapsLink: '',
+    deliveryAddressSameAsFiscal: true,
+    deliveryAddress: '',
+    deliveryReferences: '',
+    businessCategory: 'Kiosco',
+    notes: '',
+    isActive: true,
     totalDebit: 90000,
     totalCredit: 0,
     currentBalance: 90000,
@@ -278,6 +362,20 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
     creditLimit: 100000,
     priceList: 'Mayorista',
     saleCondition: 'Contado',
+    // Tanda 16 (PENDIENTES.md item 15): mismo criterio que el backfill
+    // de priceList/saleCondition en Tanda 12 — valores uniformes en
+    // los 30 registros semilla, iguales a los defaults del formulario
+    // (no hay dato de negocio real detras para variarlos).
+    tradeName: '',
+    ivaCondition: 'Responsable Inscripto',
+    email: '',
+    googleMapsLink: '',
+    deliveryAddressSameAsFiscal: true,
+    deliveryAddress: '',
+    deliveryReferences: '',
+    businessCategory: 'Kiosco',
+    notes: '',
+    isActive: true,
     totalDebit: 60000,
     totalCredit: 20000,
     currentBalance: 40000,
@@ -319,6 +417,20 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
     creditLimit: 100000,
     priceList: 'Mayorista',
     saleCondition: 'Contado',
+    // Tanda 16 (PENDIENTES.md item 15): mismo criterio que el backfill
+    // de priceList/saleCondition en Tanda 12 — valores uniformes en
+    // los 30 registros semilla, iguales a los defaults del formulario
+    // (no hay dato de negocio real detras para variarlos).
+    tradeName: '',
+    ivaCondition: 'Responsable Inscripto',
+    email: '',
+    googleMapsLink: '',
+    deliveryAddressSameAsFiscal: true,
+    deliveryAddress: '',
+    deliveryReferences: '',
+    businessCategory: 'Kiosco',
+    notes: '',
+    isActive: true,
     totalDebit: 40000,
     totalCredit: 55000,
     currentBalance: -15000,
@@ -360,6 +472,20 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
     creditLimit: 60000,
     priceList: 'Mayorista',
     saleCondition: 'Contado',
+    // Tanda 16 (PENDIENTES.md item 15): mismo criterio que el backfill
+    // de priceList/saleCondition en Tanda 12 — valores uniformes en
+    // los 30 registros semilla, iguales a los defaults del formulario
+    // (no hay dato de negocio real detras para variarlos).
+    tradeName: '',
+    ivaCondition: 'Responsable Inscripto',
+    email: '',
+    googleMapsLink: '',
+    deliveryAddressSameAsFiscal: true,
+    deliveryAddress: '',
+    deliveryReferences: '',
+    businessCategory: 'Kiosco',
+    notes: '',
+    isActive: true,
     totalDebit: 0,
     totalCredit: 0,
     currentBalance: 0,
@@ -379,6 +505,20 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
     creditLimit: 40000,
     priceList: 'Mayorista',
     saleCondition: 'Contado',
+    // Tanda 16 (PENDIENTES.md item 15): mismo criterio que el backfill
+    // de priceList/saleCondition en Tanda 12 — valores uniformes en
+    // los 30 registros semilla, iguales a los defaults del formulario
+    // (no hay dato de negocio real detras para variarlos).
+    tradeName: '',
+    ivaCondition: 'Responsable Inscripto',
+    email: '',
+    googleMapsLink: '',
+    deliveryAddressSameAsFiscal: true,
+    deliveryAddress: '',
+    deliveryReferences: '',
+    businessCategory: 'Kiosco',
+    notes: '',
+    isActive: true,
     totalDebit: 90000,
     totalCredit: 0,
     currentBalance: 90000,
@@ -410,6 +550,20 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
     creditLimit: 80000,
     priceList: 'Mayorista',
     saleCondition: 'Contado',
+    // Tanda 16 (PENDIENTES.md item 15): mismo criterio que el backfill
+    // de priceList/saleCondition en Tanda 12 — valores uniformes en
+    // los 30 registros semilla, iguales a los defaults del formulario
+    // (no hay dato de negocio real detras para variarlos).
+    tradeName: '',
+    ivaCondition: 'Responsable Inscripto',
+    email: '',
+    googleMapsLink: '',
+    deliveryAddressSameAsFiscal: true,
+    deliveryAddress: '',
+    deliveryReferences: '',
+    businessCategory: 'Kiosco',
+    notes: '',
+    isActive: true,
     totalDebit: 35000,
     totalCredit: 0,
     currentBalance: 35000,
@@ -441,6 +595,20 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
     creditLimit: 150000,
     priceList: 'Mayorista',
     saleCondition: 'Contado',
+    // Tanda 16 (PENDIENTES.md item 15): mismo criterio que el backfill
+    // de priceList/saleCondition en Tanda 12 — valores uniformes en
+    // los 30 registros semilla, iguales a los defaults del formulario
+    // (no hay dato de negocio real detras para variarlos).
+    tradeName: '',
+    ivaCondition: 'Responsable Inscripto',
+    email: '',
+    googleMapsLink: '',
+    deliveryAddressSameAsFiscal: true,
+    deliveryAddress: '',
+    deliveryReferences: '',
+    businessCategory: 'Kiosco',
+    notes: '',
+    isActive: true,
     totalDebit: 75000,
     totalCredit: 0,
     currentBalance: 75000,
@@ -472,6 +640,20 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
     creditLimit: 40000,
     priceList: 'Mayorista',
     saleCondition: 'Contado',
+    // Tanda 16 (PENDIENTES.md item 15): mismo criterio que el backfill
+    // de priceList/saleCondition en Tanda 12 — valores uniformes en
+    // los 30 registros semilla, iguales a los defaults del formulario
+    // (no hay dato de negocio real detras para variarlos).
+    tradeName: '',
+    ivaCondition: 'Responsable Inscripto',
+    email: '',
+    googleMapsLink: '',
+    deliveryAddressSameAsFiscal: true,
+    deliveryAddress: '',
+    deliveryReferences: '',
+    businessCategory: 'Kiosco',
+    notes: '',
+    isActive: true,
     totalDebit: 22000,
     totalCredit: 0,
     currentBalance: 22000,
@@ -503,6 +685,20 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
     creditLimit: 90000,
     priceList: 'Mayorista',
     saleCondition: 'Contado',
+    // Tanda 16 (PENDIENTES.md item 15): mismo criterio que el backfill
+    // de priceList/saleCondition en Tanda 12 — valores uniformes en
+    // los 30 registros semilla, iguales a los defaults del formulario
+    // (no hay dato de negocio real detras para variarlos).
+    tradeName: '',
+    ivaCondition: 'Responsable Inscripto',
+    email: '',
+    googleMapsLink: '',
+    deliveryAddressSameAsFiscal: true,
+    deliveryAddress: '',
+    deliveryReferences: '',
+    businessCategory: 'Kiosco',
+    notes: '',
+    isActive: true,
     totalDebit: 54000,
     totalCredit: 0,
     currentBalance: 54000,
@@ -534,6 +730,20 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
     creditLimit: 150000,
     priceList: 'Mayorista',
     saleCondition: 'Contado',
+    // Tanda 16 (PENDIENTES.md item 15): mismo criterio que el backfill
+    // de priceList/saleCondition en Tanda 12 — valores uniformes en
+    // los 30 registros semilla, iguales a los defaults del formulario
+    // (no hay dato de negocio real detras para variarlos).
+    tradeName: '',
+    ivaCondition: 'Responsable Inscripto',
+    email: '',
+    googleMapsLink: '',
+    deliveryAddressSameAsFiscal: true,
+    deliveryAddress: '',
+    deliveryReferences: '',
+    businessCategory: 'Kiosco',
+    notes: '',
+    isActive: true,
     totalDebit: 110000,
     totalCredit: 0,
     currentBalance: 110000,
@@ -576,6 +786,20 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
     creditLimit: 100000,
     priceList: 'Mayorista',
     saleCondition: 'Contado',
+    // Tanda 16 (PENDIENTES.md item 15): mismo criterio que el backfill
+    // de priceList/saleCondition en Tanda 12 — valores uniformes en
+    // los 30 registros semilla, iguales a los defaults del formulario
+    // (no hay dato de negocio real detras para variarlos).
+    tradeName: '',
+    ivaCondition: 'Responsable Inscripto',
+    email: '',
+    googleMapsLink: '',
+    deliveryAddressSameAsFiscal: true,
+    deliveryAddress: '',
+    deliveryReferences: '',
+    businessCategory: 'Kiosco',
+    notes: '',
+    isActive: true,
     totalDebit: 80000,
     totalCredit: 40000,
     currentBalance: 40000,
@@ -627,6 +851,20 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
     creditLimit: 70000,
     priceList: 'Mayorista',
     saleCondition: 'Contado',
+    // Tanda 16 (PENDIENTES.md item 15): mismo criterio que el backfill
+    // de priceList/saleCondition en Tanda 12 — valores uniformes en
+    // los 30 registros semilla, iguales a los defaults del formulario
+    // (no hay dato de negocio real detras para variarlos).
+    tradeName: '',
+    ivaCondition: 'Responsable Inscripto',
+    email: '',
+    googleMapsLink: '',
+    deliveryAddressSameAsFiscal: true,
+    deliveryAddress: '',
+    deliveryReferences: '',
+    businessCategory: 'Kiosco',
+    notes: '',
+    isActive: true,
     totalDebit: 60000,
     totalCredit: 60000,
     currentBalance: 0,
@@ -668,6 +906,20 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
     creditLimit: 120000,
     priceList: 'Mayorista',
     saleCondition: 'Contado',
+    // Tanda 16 (PENDIENTES.md item 15): mismo criterio que el backfill
+    // de priceList/saleCondition en Tanda 12 — valores uniformes en
+    // los 30 registros semilla, iguales a los defaults del formulario
+    // (no hay dato de negocio real detras para variarlos).
+    tradeName: '',
+    ivaCondition: 'Responsable Inscripto',
+    email: '',
+    googleMapsLink: '',
+    deliveryAddressSameAsFiscal: true,
+    deliveryAddress: '',
+    deliveryReferences: '',
+    businessCategory: 'Kiosco',
+    notes: '',
+    isActive: true,
     totalDebit: 38000,
     totalCredit: 0,
     currentBalance: 38000,
@@ -699,6 +951,20 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
     creditLimit: 100000,
     priceList: 'Mayorista',
     saleCondition: 'Contado',
+    // Tanda 16 (PENDIENTES.md item 15): mismo criterio que el backfill
+    // de priceList/saleCondition en Tanda 12 — valores uniformes en
+    // los 30 registros semilla, iguales a los defaults del formulario
+    // (no hay dato de negocio real detras para variarlos).
+    tradeName: '',
+    ivaCondition: 'Responsable Inscripto',
+    email: '',
+    googleMapsLink: '',
+    deliveryAddressSameAsFiscal: true,
+    deliveryAddress: '',
+    deliveryReferences: '',
+    businessCategory: 'Kiosco',
+    notes: '',
+    isActive: true,
     totalDebit: 75000,
     totalCredit: 0,
     currentBalance: 75000,
@@ -740,6 +1006,20 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
     creditLimit: 60000,
     priceList: 'Mayorista',
     saleCondition: 'Contado',
+    // Tanda 16 (PENDIENTES.md item 15): mismo criterio que el backfill
+    // de priceList/saleCondition en Tanda 12 — valores uniformes en
+    // los 30 registros semilla, iguales a los defaults del formulario
+    // (no hay dato de negocio real detras para variarlos).
+    tradeName: '',
+    ivaCondition: 'Responsable Inscripto',
+    email: '',
+    googleMapsLink: '',
+    deliveryAddressSameAsFiscal: true,
+    deliveryAddress: '',
+    deliveryReferences: '',
+    businessCategory: 'Kiosco',
+    notes: '',
+    isActive: true,
     totalDebit: 48000,
     totalCredit: 0,
     currentBalance: 48000,
@@ -771,6 +1051,20 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
     creditLimit: 300000,
     priceList: 'Mayorista',
     saleCondition: 'Contado',
+    // Tanda 16 (PENDIENTES.md item 15): mismo criterio que el backfill
+    // de priceList/saleCondition en Tanda 12 — valores uniformes en
+    // los 30 registros semilla, iguales a los defaults del formulario
+    // (no hay dato de negocio real detras para variarlos).
+    tradeName: '',
+    ivaCondition: 'Responsable Inscripto',
+    email: '',
+    googleMapsLink: '',
+    deliveryAddressSameAsFiscal: true,
+    deliveryAddress: '',
+    deliveryReferences: '',
+    businessCategory: 'Kiosco',
+    notes: '',
+    isActive: true,
     totalDebit: 250000,
     totalCredit: 0,
     currentBalance: 250000,
@@ -802,6 +1096,20 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
     creditLimit: 50000,
     priceList: 'Mayorista',
     saleCondition: 'Contado',
+    // Tanda 16 (PENDIENTES.md item 15): mismo criterio que el backfill
+    // de priceList/saleCondition en Tanda 12 — valores uniformes en
+    // los 30 registros semilla, iguales a los defaults del formulario
+    // (no hay dato de negocio real detras para variarlos).
+    tradeName: '',
+    ivaCondition: 'Responsable Inscripto',
+    email: '',
+    googleMapsLink: '',
+    deliveryAddressSameAsFiscal: true,
+    deliveryAddress: '',
+    deliveryReferences: '',
+    businessCategory: 'Kiosco',
+    notes: '',
+    isActive: true,
     totalDebit: 0,
     totalCredit: 0,
     currentBalance: 0,
@@ -821,6 +1129,20 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
     creditLimit: 60000,
     priceList: 'Mayorista',
     saleCondition: 'Contado',
+    // Tanda 16 (PENDIENTES.md item 15): mismo criterio que el backfill
+    // de priceList/saleCondition en Tanda 12 — valores uniformes en
+    // los 30 registros semilla, iguales a los defaults del formulario
+    // (no hay dato de negocio real detras para variarlos).
+    tradeName: '',
+    ivaCondition: 'Responsable Inscripto',
+    email: '',
+    googleMapsLink: '',
+    deliveryAddressSameAsFiscal: true,
+    deliveryAddress: '',
+    deliveryReferences: '',
+    businessCategory: 'Kiosco',
+    notes: '',
+    isActive: true,
     totalDebit: 75000,
     totalCredit: 0,
     currentBalance: 75000,
@@ -863,6 +1185,20 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
     creditLimit: 80000,
     priceList: 'Mayorista',
     saleCondition: 'Contado',
+    // Tanda 16 (PENDIENTES.md item 15): mismo criterio que el backfill
+    // de priceList/saleCondition en Tanda 12 — valores uniformes en
+    // los 30 registros semilla, iguales a los defaults del formulario
+    // (no hay dato de negocio real detras para variarlos).
+    tradeName: '',
+    ivaCondition: 'Responsable Inscripto',
+    email: '',
+    googleMapsLink: '',
+    deliveryAddressSameAsFiscal: true,
+    deliveryAddress: '',
+    deliveryReferences: '',
+    businessCategory: 'Kiosco',
+    notes: '',
+    isActive: true,
     totalDebit: 50000,
     totalCredit: 50000,
     currentBalance: 0,
@@ -904,6 +1240,20 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
     creditLimit: 60000,
     priceList: 'Mayorista',
     saleCondition: 'Contado',
+    // Tanda 16 (PENDIENTES.md item 15): mismo criterio que el backfill
+    // de priceList/saleCondition en Tanda 12 — valores uniformes en
+    // los 30 registros semilla, iguales a los defaults del formulario
+    // (no hay dato de negocio real detras para variarlos).
+    tradeName: '',
+    ivaCondition: 'Responsable Inscripto',
+    email: '',
+    googleMapsLink: '',
+    deliveryAddressSameAsFiscal: true,
+    deliveryAddress: '',
+    deliveryReferences: '',
+    businessCategory: 'Kiosco',
+    notes: '',
+    isActive: true,
     totalDebit: 41000,
     totalCredit: 0,
     currentBalance: 41000,
@@ -935,6 +1285,20 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
     creditLimit: 150000,
     priceList: 'Mayorista',
     saleCondition: 'Contado',
+    // Tanda 16 (PENDIENTES.md item 15): mismo criterio que el backfill
+    // de priceList/saleCondition en Tanda 12 — valores uniformes en
+    // los 30 registros semilla, iguales a los defaults del formulario
+    // (no hay dato de negocio real detras para variarlos).
+    tradeName: '',
+    ivaCondition: 'Responsable Inscripto',
+    email: '',
+    googleMapsLink: '',
+    deliveryAddressSameAsFiscal: true,
+    deliveryAddress: '',
+    deliveryReferences: '',
+    businessCategory: 'Kiosco',
+    notes: '',
+    isActive: true,
     totalDebit: 140000,
     totalCredit: 80000,
     currentBalance: 60000,
@@ -987,6 +1351,20 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
     creditLimit: 120000,
     priceList: 'Mayorista',
     saleCondition: 'Contado',
+    // Tanda 16 (PENDIENTES.md item 15): mismo criterio que el backfill
+    // de priceList/saleCondition en Tanda 12 — valores uniformes en
+    // los 30 registros semilla, iguales a los defaults del formulario
+    // (no hay dato de negocio real detras para variarlos).
+    tradeName: '',
+    ivaCondition: 'Responsable Inscripto',
+    email: '',
+    googleMapsLink: '',
+    deliveryAddressSameAsFiscal: true,
+    deliveryAddress: '',
+    deliveryReferences: '',
+    businessCategory: 'Kiosco',
+    notes: '',
+    isActive: true,
     totalDebit: 100000,
     totalCredit: 0,
     currentBalance: 100000,
@@ -1029,6 +1407,20 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
     creditLimit: 40000,
     priceList: 'Mayorista',
     saleCondition: 'Contado',
+    // Tanda 16 (PENDIENTES.md item 15): mismo criterio que el backfill
+    // de priceList/saleCondition en Tanda 12 — valores uniformes en
+    // los 30 registros semilla, iguales a los defaults del formulario
+    // (no hay dato de negocio real detras para variarlos).
+    tradeName: '',
+    ivaCondition: 'Responsable Inscripto',
+    email: '',
+    googleMapsLink: '',
+    deliveryAddressSameAsFiscal: true,
+    deliveryAddress: '',
+    deliveryReferences: '',
+    businessCategory: 'Kiosco',
+    notes: '',
+    isActive: true,
     totalDebit: 18000,
     totalCredit: 0,
     currentBalance: 18000,
@@ -1060,6 +1452,20 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
     creditLimit: 50000,
     priceList: 'Mayorista',
     saleCondition: 'Contado',
+    // Tanda 16 (PENDIENTES.md item 15): mismo criterio que el backfill
+    // de priceList/saleCondition en Tanda 12 — valores uniformes en
+    // los 30 registros semilla, iguales a los defaults del formulario
+    // (no hay dato de negocio real detras para variarlos).
+    tradeName: '',
+    ivaCondition: 'Responsable Inscripto',
+    email: '',
+    googleMapsLink: '',
+    deliveryAddressSameAsFiscal: true,
+    deliveryAddress: '',
+    deliveryReferences: '',
+    businessCategory: 'Kiosco',
+    notes: '',
+    isActive: true,
     totalDebit: 27000,
     totalCredit: 0,
     currentBalance: 27000,
@@ -1097,6 +1503,20 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
     creditLimit: 90000,
     priceList: 'Mayorista',
     saleCondition: 'Contado',
+    // Tanda 16 (PENDIENTES.md item 15): mismo criterio que el backfill
+    // de priceList/saleCondition en Tanda 12 — valores uniformes en
+    // los 30 registros semilla, iguales a los defaults del formulario
+    // (no hay dato de negocio real detras para variarlos).
+    tradeName: '',
+    ivaCondition: 'Responsable Inscripto',
+    email: '',
+    googleMapsLink: '',
+    deliveryAddressSameAsFiscal: true,
+    deliveryAddress: '',
+    deliveryReferences: '',
+    businessCategory: 'Kiosco',
+    notes: '',
+    isActive: true,
     totalDebit: 51000,
     totalCredit: 20000,
     currentBalance: 31000,
