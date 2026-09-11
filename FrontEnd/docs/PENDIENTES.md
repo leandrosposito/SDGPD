@@ -261,29 +261,28 @@ menor:
 Queda registrado para cuando se decida si hace falta distinguir "sin stock
 cargado" de "agotado" en la UI.
 
-### 15. `CreateClientModal` sigue teniendo 9 campos "fantasma" además de los 2 que se conectaron en Tanda 12 — Severidad: Media
+### 15. `CreateClientModal` tenía 10 campos "fantasma" además de los 2 que se conectaron en Tanda 12 — CERRADO (Tanda 16, 2026-09-11)
 
-Tanda 12 conectó `listaPrecios`/`condicionVenta` (ver
-`VERIFICACION_TANDA_12.md`) porque eran los 2 pedidos explícitamente, pero al
-auditar el archivo para esa tarea se confirmó que **otros 9 campos de estado del
-formulario tienen el mismo bug** — se cargan en la UI (con su propio `useState` y
-su tab correspondiente) pero `buildClientInput()` nunca los incluye en el payload
-real, así que se descartan en silencio al guardar (verificado comparando la lista
-completa de `useState` de `CreateClientModal.tsx:27-48` contra
-`buildClientInput()`, que solo arma `clientName/cuit/address/phone/zone/
-sellerName/creditLimit/priceList/saleCondition`):
+**Corrección de conteo:** este ítem decía "9 campos" pero la lista de abajo
+siempre tuvo 10 nombres — confirmado contra el código (19 `useState` totales en
+`CreateClientModal.tsx:27-48` − 9 conectados = 10, no 9).
 
-- `ClientGeneralTab`: `nombreFantasia`, `condicionIva`, `email`.
-- `ClientLogisticsTab`: `googleMapsLink`, `isEntregaIgualFiscal`, `direccionEntrega`,
-  `referenciasEntrega`.
-- `ClientSettingsTab`: `categoria`, `notas`, `isActive`.
+Resuelto: los 10 campos se conectaron de punta a punta (mismo criterio que
+`priceList`/`saleCondition` en Tanda 12 — ya tenían UI real y funcional, así que
+se conectan en vez de quitarse del formulario): tipo (`ClientAccount`, todos
+requeridos), DTO/mapper, backfill de los 30 clientes semilla, `buildClientInput()`
+y el precargado de edición. Ver
+`docs/historial/verificaciones/VERIFICACION_TANDA_16.md`.
 
-Ninguno de estos existe hoy en `ClientAccount`/`ClientFormInput`/`ClientAccountDTO`
-— conectarlos de verdad implica, para cada uno, la misma cadena de cambios que
-`priceList`/`saleCondition` (tipo + DTO + mapper + backfill del mock semilla de 30
-clientes). No se hizo en Tanda 12 porque no fue lo pedido — se deja registrado acá
-en vez de tocarlo por iniciativa propia, mismo criterio que el resto de este
-documento.
+- `ClientGeneralTab`: `nombreFantasia` → `tradeName`, `condicionIva` → `ivaCondition`, `email`.
+- `ClientLogisticsTab`: `googleMapsLink`, `isEntregaIgualFiscal` → `deliveryAddressSameAsFiscal`, `direccionEntrega` → `deliveryAddress`,
+  `referenciasEntrega` → `deliveryReferences`.
+- `ClientSettingsTab`: `categoria` → `businessCategory`, `notas` → `notes`, `isActive`.
+
+**Queda fuera de alcance, sin tocar:** ningún listado (`ClientDirectoryTable`/
+`ClientAccountsTable`) muestra todavía un indicador de `isActive` — se conectó el
+campo (se guarda y se relee), no se agregó UI nueva sobre el listado, porque no
+fue lo pedido.
 
 ---
 
@@ -345,5 +344,6 @@ escáner físico normalmente no dispara dos `Enter` en un intervalo tan corto.
 | 12 | `InventoryMovement`/`ProductHistoryEvent` sin `branchId` | Resuelto por código (Tanda 3g), sin verificar en navegador | Baja |
 | 13 | `updateProduct` (productos) descarta los lotes existentes al editar | Vigente — preexistente, preservado en Tanda 3e | Baja/Media |
 | 14 | Productos sin registro de stock en ninguna sucursal (`inv-019`) — decisión de producto pendiente, no bug | Vigente — comportamiento E5 correcto, sin cambios | N/A |
+| 15 | `CreateClientModal` con 10 campos fantasma (nota: tabla no incluía este ítem hasta ahora, corregido al cerrarlo) | Cerrado (Tanda 16) | — |
 | — | `NewTransactionModal` formato de hora | No reproduce | — |
 | — | `OrderProductsSection` `await` faltante | No reproduce (resuelto o nunca existió así) | — |
