@@ -1,6 +1,6 @@
 import type { Delivery, DeliveryStatus, DeliveryHistoryEvent, ReprogramacionEvent } from '@/shared/types/logistics.types';
 import type { Branch } from '@/shared/types/session.types';
-import type { DeliveryId, OrderLineId, OrderId, BranchId } from '@/shared/types/ids.types';
+import type { DeliveryId, OrderLineId, OrderId, BranchId, TripId, StopId } from '@/shared/types/ids.types';
 import { asDeliveryId, asDeliveryNoteId, asDeliveryHistoryEventId } from '@/shared/types/ids.types';
 import type { DeliveryNote, DeliveryNoteLine } from '@/shared/types/deliveryNote.types';
 import { puedeTransicionar, computeAllowedTransitions } from '@/shared/types/deliveryStatus.types';
@@ -397,6 +397,14 @@ export interface ReprogramDeliveryInput {
   motivoOtroTexto?: string;
   motivoTipo: MotivoTipo;
   responsable: string;
+  // Tanda 13 (hallazgo propio, enmienda ADR-013): trazabilidad — solo
+  // trips.service.ts#markStopNoVisitada los pasa (la reprogramacion
+  // nace de intentar marcar esa Parada como no visitada);
+  // ReprogramarModal.tsx nunca los pasa (reprogramacion
+  // "administrativa", sin viaje en curso). Ver ReprogramacionEvent en
+  // logistics.types.ts para el razonamiento completo.
+  tripId?: TripId;
+  stopId?: StopId;
 }
 
 export type ReprogramDeliveryReason = 'not-found' | 'invalid-transition' | 'motivo-invalido';
@@ -452,6 +460,8 @@ export async function reprogramDelivery(
           motivoCodigo: input.motivoCodigo,
           responsable: input.responsable,
           timestamp: now,
+          tripId: input.tripId,
+          stopId: input.stopId,
         };
 
         deliveriesStore = deliveriesStore.map((d) => {

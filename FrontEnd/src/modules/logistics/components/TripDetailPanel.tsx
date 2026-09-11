@@ -22,6 +22,7 @@ import {
 } from '../services/trips.service';
 import { getDeliveriesByIds } from '../services/deliveries.service';
 import { getPodForDelivery } from '../services/pod.service';
+import { getStopNoVisitadaBlockReason, STOP_NO_VISITADA_BLOCK_MESSAGE } from '@/shared/utils/stopVisitEligibility';
 import { DELIVERY_STATUS_LABEL, DELIVERY_STATUS_VARIANT } from '../deliveryStatusLabels';
 import { TRIP_STATUS_LABEL, TRIP_STATUS_VARIANT } from '../tripStatusLabels';
 import { PodModal } from './PodModal';
@@ -265,21 +266,28 @@ export const TripDetailPanel: FC<TripDetailPanelProps> = ({ trip, isOpen, onClos
                   <span>{stop.address}</span>
                 </div>
                 <Badge label={stop.estado} variant={stop.estado === 'Visitada' ? 'success' : stop.estado === 'NoVisitada' ? 'danger' : 'neutral'} />
-                <button
-                  type="button"
-                  className="trip-detail__btn-pod"
-                  disabled={stop.estado === 'NoVisitada' || stop.deliveryIds.length === 0}
-                  title={
-                    stop.estado === 'NoVisitada'
-                      ? 'Esta parada ya está marcada como no visitada.'
-                      : stop.deliveryIds.length === 0
-                        ? 'Esta parada no tiene entregas.'
-                        : undefined
-                  }
-                  onClick={() => setNoEntregaTarget({ stopId: stop.id, label: `${stop.clientName} (parada ${stop.orden})` })}
-                >
-                  Entrega no realizada
-                </button>
+                {(() => {
+                  // Tanda 13 (hallazgo ALTO, enmienda ADR-013): mismo
+                  // criterio server-side (trips.service.ts#markStopNoVisitada)
+                  // via getStopNoVisitadaBlockReason — este chequeo es
+                  // solo UX (no mostrar un boton que el servidor va a
+                  // rechazar igual), nunca la unica barrera real.
+                  const stopDeliveries = stop.deliveryIds
+                    .map((id) => deliveriesById.get(id as string))
+                    .filter((d): d is Delivery => d !== undefined);
+                  const blockReason = getStopNoVisitadaBlockReason(localTrip, stop, stopDeliveries);
+                  return (
+                    <button
+                      type="button"
+                      className="trip-detail__btn-pod"
+                      disabled={blockReason !== null}
+                      title={blockReason ? STOP_NO_VISITADA_BLOCK_MESSAGE[blockReason] : undefined}
+                      onClick={() => setNoEntregaTarget({ stopId: stop.id, label: `${stop.clientName} (parada ${stop.orden})` })}
+                    >
+                      Entrega no realizada
+                    </button>
+                  );
+                })()}
                 <div className="trip-detail__stop-move">
                   <button type="button" disabled={index === 0} onClick={() => handleMove(stop.id, -1)} aria-label={`Subir parada ${stop.orden}`}>
                     <ArrowUp size={14} />
