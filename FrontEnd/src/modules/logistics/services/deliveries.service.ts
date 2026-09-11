@@ -425,33 +425,43 @@ export async function reprogramDelivery(
     method: 'PUT',
     path: `/deliveries/${deliveryId}/reprogram`,
     body: { empresaId, idempotencyKey, ...input },
-    mock: async () => {
-      const delivery = deliveriesStore.find((d) => d.id === deliveryId);
-      if (!delivery) {
-        return { success: false, deliveryId, reason: 'not-found' as const };
-      }
-      if (!puedeTransicionar(delivery.status, 'REPROGRAMADO')) {
-        return { success: false, deliveryId, reason: 'invalid-transition' as const };
-      }
-      if (!input.motivoCodigo) {
-        return { success: false, deliveryId, reason: 'motivo-invalido' as const };
-      }
-      if (input.motivoCodigo === MOTIVO_OTRO_CODIGO && !input.motivoOtroTexto?.trim()) {
-        return { success: false, deliveryId, reason: 'motivo-invalido' as const };
-      }
+    mock: async () =>
+      withIdempotency(idempotencyKey, async () => {
+        // Tanda 15 (hallazgo MEDIO, mismo patron corregido en
+        // trips.service.ts#markStopNoVisitada — ver el comentario
+        // completo ahi): las precondiciones tienen que correr ADENTRO
+        // de withIdempotency. Antes corrian afuera; un segundo llamado
+        // con la misma clave (reintento de httpClient o del usuario)
+        // volvia a leer `delivery` YA reprogramado por el primer
+        // intento exitoso y devolvia 'invalid-transition' (REPROGRAMADO
+        // no puede volver a transicionar a REPROGRAMADO) en vez del
+        // resultado cacheado de exito — violando el contrato de
+        // ADR-010 seccion 4.
+        const delivery = deliveriesStore.find((d) => d.id === deliveryId);
+        if (!delivery) {
+          return { success: false, deliveryId, reason: 'not-found' as const };
+        }
+        if (!puedeTransicionar(delivery.status, 'REPROGRAMADO')) {
+          return { success: false, deliveryId, reason: 'invalid-transition' as const };
+        }
+        if (!input.motivoCodigo) {
+          return { success: false, deliveryId, reason: 'motivo-invalido' as const };
+        }
+        if (input.motivoCodigo === MOTIVO_OTRO_CODIGO && !input.motivoOtroTexto?.trim()) {
+          return { success: false, deliveryId, reason: 'motivo-invalido' as const };
+        }
 
-      // Resuelve motivoCodigo -> texto server-side, mismo criterio que
-      // registrarEntrega (nunca confia en texto que mande el cliente).
-      const catalogo = await getMotivoCatalog(empresaId, input.motivoTipo);
-      const motivoTexto =
-        input.motivoCodigo === MOTIVO_OTRO_CODIGO
-          ? input.motivoOtroTexto!.trim()
-          : catalogo.find((m) => m.codigo === input.motivoCodigo)?.descripcion;
-      if (!motivoTexto) {
-        return { success: false, deliveryId, reason: 'motivo-invalido' as const };
-      }
+        // Resuelve motivoCodigo -> texto server-side, mismo criterio que
+        // registrarEntrega (nunca confia en texto que mande el cliente).
+        const catalogo = await getMotivoCatalog(empresaId, input.motivoTipo);
+        const motivoTexto =
+          input.motivoCodigo === MOTIVO_OTRO_CODIGO
+            ? input.motivoOtroTexto!.trim()
+            : catalogo.find((m) => m.codigo === input.motivoCodigo)?.descripcion;
+        if (!motivoTexto) {
+          return { success: false, deliveryId, reason: 'motivo-invalido' as const };
+        }
 
-      return withIdempotency(idempotencyKey, () => {
         const now = new Date().toISOString();
         const reprogEvent: ReprogramacionEvent = {
           fechaAnterior: delivery.date,
@@ -483,8 +493,7 @@ export async function reprogramDelivery(
         releaseDeliveryFromTrip(deliveryId);
 
         return { success: true, deliveryId };
-      });
-    },
+      }),
   });
 }
 
@@ -527,33 +536,37 @@ export async function registrarEntrega(
     method: 'POST',
     path: `/deliveries/${deliveryId}/notes`,
     body: { empresaId, idempotencyKey, lines, evidenciaIds, creadoPor },
-    mock: async () => {
-      const delivery = deliveriesStore.find((d) => d.id === deliveryId);
-      if (!delivery) {
-        return { success: false, reason: 'not-found' as const };
-      }
-      if (!puedeTransicionar(delivery.status, 'FINALIZADO')) {
-        return { success: false, reason: 'invalid-transition' as const };
-      }
-      if (lines.length === 0) {
-        return { success: false, reason: 'no-lines' as const };
-      }
-
-      // Resuelve motivoCodigo -> texto server-side (catalogo real, no
-      // lo que mande el cliente) — 'OTRO' usa motivoOtroTexto, siempre
-      // que venga cargado (ADR-010 seccion 5: el texto libre bajo
-      // 'OTRO' queda guardado en la linea, no se descarta).
-      const catalogoRechazo = await getMotivoCatalog(empresaId, 'rechazo');
-      for (const line of lines) {
-        if (line.cantidadRechazada > 0 && !line.motivoCodigo) {
-          return { success: false, reason: 'motivo-invalido' as const };
+    mock: async () =>
+      withIdempotency(idempotencyKey, async () => {
+        // Tanda 15 (hallazgo MEDIO, mismo patron corregido en
+        // trips.service.ts#markStopNoVisitada — ver el comentario
+        // completo ahi): las precondiciones tienen que correr ADENTRO
+        // de withIdempotency, no antes.
+        const delivery = deliveriesStore.find((d) => d.id === deliveryId);
+        if (!delivery) {
+          return { success: false, reason: 'not-found' as const };
         }
-        if (line.motivoCodigo === MOTIVO_OTRO_CODIGO && !line.motivoOtroTexto?.trim()) {
-          return { success: false, reason: 'motivo-invalido' as const };
+        if (!puedeTransicionar(delivery.status, 'FINALIZADO')) {
+          return { success: false, reason: 'invalid-transition' as const };
         }
-      }
+        if (lines.length === 0) {
+          return { success: false, reason: 'no-lines' as const };
+        }
 
-      return withIdempotency(idempotencyKey, async () => {
+        // Resuelve motivoCodigo -> texto server-side (catalogo real, no
+        // lo que mande el cliente) — 'OTRO' usa motivoOtroTexto, siempre
+        // que venga cargado (ADR-010 seccion 5: el texto libre bajo
+        // 'OTRO' queda guardado en la linea, no se descarta).
+        const catalogoRechazo = await getMotivoCatalog(empresaId, 'rechazo');
+        for (const line of lines) {
+          if (line.cantidadRechazada > 0 && !line.motivoCodigo) {
+            return { success: false, reason: 'motivo-invalido' as const };
+          }
+          if (line.motivoCodigo === MOTIVO_OTRO_CODIGO && !line.motivoOtroTexto?.trim()) {
+            return { success: false, reason: 'motivo-invalido' as const };
+          }
+        }
+
         const now = new Date().toISOString();
         // Tanda 10B (ADR-010 seccion 6, hallazgo de Fase A: conecta el
         // flag que Tanda 9 dejo declarado sin consumidor): si el motivo
@@ -620,8 +633,7 @@ export async function registrarEntrega(
         }
 
         return { success: true, note };
-      });
-    },
+      }),
   });
 }
 
@@ -688,20 +700,24 @@ export async function createDelivery(
     method: 'POST',
     path: '/deliveries',
     body: { empresaId, idempotencyKey, orderId, ...input },
-    mock: async () => {
-      const order = await getOrderById(empresaId, orderId);
-      if (!order) {
-        return { success: false, reason: 'order-not-found' as const };
-      }
-      // Solo un pedido con el eje comercial en 'Confirmado' genera
-      // entrega — 'Borrador'/'Cancelado' no salen a reparto (ADR-010
-      // seccion 1: se valida contra `comercial`, el campo real, nunca
-      // contra el `status` deprecado).
-      if (order.comercial !== 'Confirmado') {
-        return { success: false, reason: 'order-not-confirmado' as const };
-      }
+    mock: async () =>
+      withIdempotency(idempotencyKey, async () => {
+        // Tanda 15 (hallazgo MEDIO, mismo patron corregido en
+        // trips.service.ts#markStopNoVisitada — ver el comentario
+        // completo ahi): las precondiciones tienen que correr ADENTRO
+        // de withIdempotency, no antes.
+        const order = await getOrderById(empresaId, orderId);
+        if (!order) {
+          return { success: false, reason: 'order-not-found' as const };
+        }
+        // Solo un pedido con el eje comercial en 'Confirmado' genera
+        // entrega — 'Borrador'/'Cancelado' no salen a reparto (ADR-010
+        // seccion 1: se valida contra `comercial`, el campo real, nunca
+        // contra el `status` deprecado).
+        if (order.comercial !== 'Confirmado') {
+          return { success: false, reason: 'order-not-confirmado' as const };
+        }
 
-      return withIdempotency(idempotencyKey, () => {
         const now = new Date().toISOString();
         const firstEvent: DeliveryHistoryEvent = {
           id: asDeliveryHistoryEventId(`dh-${Date.now()}-0`),
@@ -728,8 +744,7 @@ export async function createDelivery(
 
         deliveriesStore = [...deliveriesStore, delivery];
         return { success: true, delivery: { ...delivery, allowedTransitions: computeAllowedTransitions(delivery.status) } };
-      });
-    },
+      }),
   });
 }
 
