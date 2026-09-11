@@ -10,6 +10,7 @@ import type { OrderDTO, OrdersPageDTO, OrdersAggregatesDTO } from './dto';
 import { orderFromDTO, orderToDTO, orderFormInputToDTO, type OrderFormInput } from './mapper';
 import type { OrderProjectionForAggregation } from '@/modules/dashboard/api/dashboardAggregates';
 import { getActiveDeliveriesForOrder } from '@/modules/logistics/services/deliveries.service';
+import { fetchProducts } from '@/shared/api/products/products.service';
 import { maxOrderNumberSuffix, formatOrderNumber } from '@/shared/utils/orderNumber';
 
 export type { OrderFormInput };
@@ -284,9 +285,20 @@ export async function createOrder(empresaId: string, input: OrderFormInput): Pro
     method: 'POST',
     path: '/orders',
     body: { empresaId, ...orderFormInputToDTO(input) },
-    mock: () => {
+    mock: async () => {
       if (input.items.length === 0) {
         throw new ApiError(400, 'CLIENT_ERROR', 'El pedido necesita al menos un producto.');
+      }
+      // Tanda 14 (hallazgo Tanda 12 a medias): CreateOrderModal ya
+      // filtra el selector a productos activos (OrderProductsSection),
+      // pero eso es defensa del lado del cliente — createOrder es el
+      // unico punto que persiste el pedido, asi que rechaza igual si
+      // algun item llega con un sku de un producto dado de baja
+      // (OrderItem no tiene productId, solo sku — ver order.types.ts).
+      const products = await fetchProducts(empresaId);
+      const inactiveItem = input.items.find((item) => products.find((p) => p.sku === item.sku)?.status === 'inactive');
+      if (inactiveItem) {
+        throw new ApiError(400, 'CLIENT_ERROR', `El producto "${inactiveItem.name}" (${inactiveItem.sku}) esta dado de baja y no puede agregarse a un pedido.`);
       }
       const now = new Date().toISOString();
       const newDTO: OrderDTO = {
