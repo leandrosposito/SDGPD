@@ -46,7 +46,12 @@ export const CreateOrderModal: FC<CreateOrderModalProps> = ({ isOpen, onClose, o
     (signal) => fetchProducts(empresaId ?? '', signal),
     { staleTime: CACHE_STALE_TIME.CATALOG }
   );
-  const products = productsData ?? EMPTY_PRODUCTS;
+  // Tanda 14 (hallazgo Tanda 12 a medias): un producto dado de baja
+  // (estado inactive) no debe poder agregarse a un pedido nuevo — el
+  // catalogo completo (con inactivos) sigue siendo el correcto para
+  // InventoryPage/ComprasPage (administracion del catalogo), pero el
+  // selector de este modal es un punto de alta, no de administracion.
+  const products = useMemo(() => (productsData ?? EMPTY_PRODUCTS).filter((p) => p.status === 'active'), [productsData]);
 
   useEffect(() => {
     if (productsError) toast.error('No se pudo cargar el listado de productos.');

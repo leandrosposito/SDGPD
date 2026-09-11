@@ -152,7 +152,11 @@ export const TabPurchases: FC<TabPurchasesProps> = ({ branchName, branchId, prod
       });
 
       if (!result.success || !result.order) {
-        toast.error('No se pudo generar la orden de compra.');
+        toast.error(
+          result.reason === 'inactive-product'
+            ? `"${product.name}" esta dado de baja y no puede agregarse a una orden de compra.`
+            : 'No se pudo generar la orden de compra.'
+        );
         return;
       }
 

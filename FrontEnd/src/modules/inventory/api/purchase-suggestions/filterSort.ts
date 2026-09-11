@@ -42,12 +42,22 @@ function compareSuggestions(a: PurchaseSuggestionDTO, b: PurchaseSuggestionDTO, 
 // movements.service.ts#filterAndSortMovements: `PurchaseSuggestion` es
 // alcance SUCURSAL (E1), la comparación es por `branchId` exacto, no
 // por rango ni texto libre.
+// `activeProductIds` (Tanda 14, hallazgo Tanda 12 a medias): opcional
+// para que el smoke script de Tanda 3f siga pasando sin tocarlo — pero
+// purchase-suggestions.service.ts SIEMPRE lo pasa en el camino real,
+// para excluir sugerencias de productos dados de baja (mismo criterio
+// que filterAndSortLowStock en products.service.ts: un producto
+// inactive no necesita reposicion). `undefined` (solo en smoke/tests)
+// significa "no filtrar por estado", nunca el comportamiento real.
 export function filterAndSortPurchaseSuggestions(
   suggestions: readonly PurchaseSuggestionDTO[],
   filters: PurchaseSuggestionsFilters,
-  sort: PurchaseSuggestionsSort | undefined
+  sort: PurchaseSuggestionsSort | undefined,
+  activeProductIds?: ReadonlySet<string>
 ): PurchaseSuggestionDTO[] {
-  const inScope = suggestions.filter((s) => s.sucursal_id === filters.branchId);
+  const inScope = suggestions.filter(
+    (s) => s.sucursal_id === filters.branchId && (!activeProductIds || activeProductIds.has(s.producto_id))
+  );
 
   // Default: mayor déficit de stock primero (menor `stock_actual`
   // respecto de `stock_minimo` es lo más urgente de reponer) — como no

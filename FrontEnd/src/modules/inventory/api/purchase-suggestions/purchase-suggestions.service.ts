@@ -4,9 +4,22 @@ import type { PageQuery, PageResult, ExportResult } from '@/shared/types/paginat
 import { MAX_EXPORT_ROWS } from '@/shared/types/pagination.types';
 import { INVENTORY_MOCK_DATA } from '@/data/mock/inventory.data';
 import { httpClient } from '@/shared/api/httpClient';
+import { fetchProducts } from '@/shared/api/products/products.service';
 import type { PurchaseSuggestionDTO, PurchaseSuggestionsPageDTO } from './dto';
 import { purchaseSuggestionFromDTO, purchaseSuggestionToDTO } from './mapper';
 import { filterAndSortPurchaseSuggestions, paginateSuggestions, type PurchaseSuggestionsSortField } from './filterSort';
+
+// Tanda 14 (hallazgo Tanda 12 a medias): resuelve el set de productos
+// activos "servidor a servidor" (mismo patron ya establecido en
+// deliveries.service.ts#createDelivery -> orders.service.ts#getOrderById)
+// para que getPurchaseSuggestionsPage/exportPurchaseSuggestions
+// excluyan sugerencias de productos dados de baja sin que filterSort.ts
+// (logica PURA, sin import de httpClient) tenga que conocer
+// products.service.ts.
+async function getActiveProductIds(empresaId: string): Promise<Set<string>> {
+  const products = await fetchProducts(empresaId);
+  return new Set(products.filter((p) => p.status === 'active').map((p) => p.id));
+}
 
 // ============================================================
 // purchase-suggestions.service — Sugerencias de reposición (Tanda 3f
@@ -48,8 +61,9 @@ export async function getPurchaseSuggestionsPage(
       sortDirection: query.sort?.direction,
     },
     signal,
-    mock: () => {
-      const sorted = filterAndSortPurchaseSuggestions(suggestionsDTOStore, query.filters, query.sort);
+    mock: async () => {
+      const activeProductIds = await getActiveProductIds(query.filters.empresaId);
+      const sorted = filterAndSortPurchaseSuggestions(suggestionsDTOStore, query.filters, query.sort, activeProductIds);
       const { items, total, page, pageSize } = paginateSuggestions(sorted, query.page, query.pageSize);
       return { data: items, meta: { total, page, page_size: pageSize } };
     },
@@ -76,8 +90,9 @@ export async function exportPurchaseSuggestions(
       method: 'GET',
       path: '/inventory/purchase-suggestions/export',
       params: { empresaId: filters.empresaId, branchId: filters.branchId },
-      mock: () => {
-        const sorted = filterAndSortPurchaseSuggestions(suggestionsDTOStore, filters, sort);
+      mock: async () => {
+        const activeProductIds = await getActiveProductIds(filters.empresaId);
+        const sorted = filterAndSortPurchaseSuggestions(suggestionsDTOStore, filters, sort, activeProductIds);
         const truncated = sorted.length > MAX_EXPORT_ROWS;
         const items = sorted.slice(0, MAX_EXPORT_ROWS);
         return { items: structuredClone(items), truncated };
