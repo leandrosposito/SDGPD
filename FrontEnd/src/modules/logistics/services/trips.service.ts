@@ -1,8 +1,10 @@
 import type { Trip, Stop, TripStatus, TripPosition, CapacityOverrideEvent } from '@/shared/types/trip.types';
+import type { Delivery } from '@/shared/types/logistics.types';
 import type { TripId, StopId, VehicleId, DriverId, DeliveryId, BranchId } from '@/shared/types/ids.types';
 import { asTripId, asStopId } from '@/shared/types/ids.types';
 import { puedeTransicionarViaje, computeAllowedTripTransitions } from '@/shared/types/tripStatus.types';
 import { computeCapacidadUsada, excedeCapacidad } from '@/shared/utils/tripCapacity';
+import { getStopNoVisitadaBlockReason } from '@/shared/utils/stopVisitEligibility';
 import type { PageQuery, PageResult } from '@/shared/types/pagination.types';
 import { TRIPS_MOCK_DATA } from '@/data/mock/trips.data';
 import { httpClient } from '@/shared/api/httpClient';
@@ -590,7 +592,25 @@ export interface MarkStopNoVisitadaInput {
   fechaNueva: string; // ISO date (yyyy-MM-dd) — proximo intento
 }
 
-export type MarkStopNoVisitadaReason = 'not-found' | 'no-deliveries';
+// Tanda 13 — HALLAZGO ALTO corregido (enmienda ADR-013): antes esta
+// funcion no validaba NADA antes de reprogramar — se podia llamar
+// sobre una Parada ya 'Visitada' (con POD registrado) o sobre un viaje
+// 'Planificado'/'Rendido'/'Cancelado', y devolvia `success: true`
+// marcando la Parada 'NoVisitada' aunque TODAS las reprogramaciones de
+// sus entregas fallaran. Las 4 primeras razones vienen de
+// getStopNoVisitadaBlockReason (unica fuente de la regla, compartida
+// con el chequeo client-side de TripDetailPanel.tsx — ver
+// shared/utils/stopVisitEligibility.ts); 'reprogram-failed' es nueva:
+// si CUALQUIER reprogramDelivery de la Parada falla, la Parada NO se
+// marca NoVisitada (ver el comentario en el cuerpo de la funcion sobre
+// por que las entregas que SI tuvieron exito no se revierten).
+export type MarkStopNoVisitadaReason =
+  | 'not-found'
+  | 'trip-not-en-curso'
+  | 'stop-not-pendiente'
+  | 'no-deliveries'
+  | 'delivery-en-estado-terminal'
+  | 'reprogram-failed';
 
 export interface MarkStopNoVisitadaDeliveryResult {
   deliveryId: DeliveryId;
@@ -616,17 +636,29 @@ export async function markStopNoVisitada(
     method: 'POST',
     path: `/trips/${tripId}/stops/${stopId}/no-visitada`,
     body: { empresaId, idempotencyKey, ...input },
-    mock: () =>
-      withIdempotency(idempotencyKey, async () => {
-        const trip = tripsStore.find((t) => t.id === tripId);
-        const stop = trip?.paradas.find((s) => s.id === stopId);
-        if (!trip || !stop) {
-          return { success: false, reason: 'not-found' as const };
-        }
-        if (stop.deliveryIds.length === 0) {
-          return { success: false, reason: 'no-deliveries' as const };
-        }
+    mock: async () => {
+      const trip = tripsStore.find((t) => t.id === tripId);
+      const stop = trip?.paradas.find((s) => s.id === stopId);
+      if (!trip || !stop) {
+        return { success: false, reason: 'not-found' as const };
+      }
 
+      // Precondiciones (Tanda 13, hallazgo ALTO) — fuera de
+      // withIdempotency a proposito, mismo criterio que
+      // reprogramDelivery: un `success: false` nunca se cachea (ver
+      // withIdempotency), asi que revalidar aca o adentro es
+      // funcionalmente identico, pero afuera deja mas claro que estos
+      // chequeos SIEMPRE corren de nuevo en cada intento, nunca se
+      // saltan por una clave repetida.
+      const deliveries: Delivery[] = stop.deliveryIds
+        .map((id) => getDeliveryById(id))
+        .filter((d): d is Delivery => d !== undefined);
+      const blockReason = getStopNoVisitadaBlockReason(trip, stop, deliveries);
+      if (blockReason) {
+        return { success: false, reason: blockReason };
+      }
+
+      return withIdempotency(idempotencyKey, async () => {
         // Sub-clave por entrega, mismo criterio que registerPod
         // (`${idempotencyKey}-finalizar`) — cada llamado a
         // reprogramDelivery necesita su propia clave, la misma clave
@@ -640,8 +672,26 @@ export async function markStopNoVisitada(
             motivoOtroTexto: input.motivoOtroTexto,
             motivoTipo: 'no-entrega',
             responsable: quien,
+            tripId,
+            stopId,
           });
           resultadosPorEntrega.push({ deliveryId, success: result.success });
+        }
+
+        // Tanda 13 (hallazgo ALTO): si CUALQUIER reprogramacion fallo,
+        // la Parada NO se marca NoVisitada — un "exito parcial" no es
+        // un hecho real de negocio ("no se pudo entregar NADA en esta
+        // parada"), es una mezcla ambigua. Las entregas que SI tuvieron
+        // exito quedan reprogramadas igual (reprogramDelivery ya aplico
+        // ese cambio, es un hecho fisico — mismo criterio de "no se
+        // deshace" que registrarEntrega/registerPod en Tanda 8/10B):
+        // no hay rollback real en este mock, y agregar uno solo para
+        // este caso de borde no fue pedido. `resultadosPorEntrega`
+        // queda en la respuesta para que quien llama sepa exactamente
+        // que entregas reprogramo y cuales no, y pueda reintentar sobre
+        // las que fallaron.
+        if (resultadosPorEntrega.some((r) => !r.success)) {
+          return { success: false, reason: 'reprogram-failed' as const, resultadosPorEntrega };
         }
 
         // trip pudo cambiar (capacidadUsada/version) por cada
@@ -654,7 +704,8 @@ export async function markStopNoVisitada(
         tripsStore = tripsStore.map((t) => (t.id === tripId ? updated : t));
 
         return { success: true, trip: structuredClone(withComputedFields(updated)), resultadosPorEntrega };
-      }),
+      });
+    },
   });
 }
 

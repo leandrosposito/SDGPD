@@ -11,7 +11,7 @@
 
 import type { Order } from './order.types';
 import type { Branch } from './session.types';
-import type { DeliveryId, DeliveryHistoryEventId } from './ids.types';
+import type { DeliveryId, DeliveryHistoryEventId, TripId, StopId } from './ids.types';
 
 export type DeliveryStatus = 'CREADO' | 'EN_TRANSITO' | 'FINALIZADO' | 'REPROGRAMADO' | 'CANCELADO';
 
@@ -54,6 +54,20 @@ export interface ReprogramacionEvent {
   motivoCodigo?: string;
   responsable: string;
   timestamp: string; // ISO datetime
+  // Tanda 13 (hallazgo propio, enmienda ADR-013): trazabilidad —
+  // presentes SOLO cuando la reprogramacion nace de una Parada
+  // (trips.service.ts#markStopNoVisitada le pasa tripId/stopId a
+  // reprogramDelivery), ausentes cuando nace de ReprogramarModal.tsx
+  // (reprogramacion "administrativa", sin viaje en curso). Permiten
+  // reconstruir, desde el historial de UNA Delivery, "este intento de
+  // reprogramar vino de tratar de marcar la parada X del viaje Y como
+  // no visitada" — incluso si ese intento en conjunto termino
+  // fallando para OTRA entrega de la misma Parada (ver
+  // MarkStopNoVisitadaReason 'reprogram-failed': las entregas que SI
+  // se reprogramaron con exito conservan su evento, aunque la Parada
+  // no haya quedado marcada NoVisitada).
+  tripId?: TripId;
+  stopId?: StopId;
 }
 
 export interface Delivery {

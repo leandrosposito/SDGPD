@@ -8,8 +8,20 @@ import { getMotivoCatalog } from '@/shared/api/motivos/motivos.service';
 import { MOTIVO_OTRO_CODIGO } from '@/shared/types/motivo.types';
 import type { TripId, StopId } from '@/shared/types/ids.types';
 import type { Trip } from '@/shared/types/trip.types';
-import { markStopNoVisitada } from '../services/trips.service';
+import { markStopNoVisitada, type MarkStopNoVisitadaReason } from '../services/trips.service';
+import { STOP_NO_VISITADA_BLOCK_MESSAGE } from '@/shared/utils/stopVisitEligibility';
 import './ReprogramarModal.css';
+
+// Tanda 13 (hallazgo ALTO, enmienda ADR-013): mensajes especificos por
+// razon de rechazo — 4 vienen del predicado compartido con
+// TripDetailPanel.tsx (STOP_NO_VISITADA_BLOCK_MESSAGE), las 2 restantes
+// ('not-found'/'reprogram-failed') son propias de este flujo (no
+// aplican al chequeo client-side de habilitar/deshabilitar el boton).
+const STOP_NO_VISITADA_ERROR_MESSAGE: Record<MarkStopNoVisitadaReason, string> = {
+  ...STOP_NO_VISITADA_BLOCK_MESSAGE,
+  'not-found': 'No se encontró la parada o el viaje.',
+  'reprogram-failed': 'No se pudo reprogramar alguna entrega de la parada — la parada no quedó marcada como no visitada.',
+};
 
 // ============================================================
 // NoEntregaModal — Tanda 11 (ADR-013 seccion 3). "El chofer llego a
@@ -92,23 +104,16 @@ export const NoEntregaModal: FC<NoEntregaModalProps> = ({ isOpen, onClose, tripI
       );
 
       if (result.success && result.trip) {
-        const fallidas = result.resultadosPorEntrega?.filter((r) => !r.success) ?? [];
-        if (fallidas.length === 0) {
-          toast.success('Parada marcada como no visitada — las entregas se reprogramaron.');
-        } else {
-          // Mismo criterio que PodModal#deliveryFinalized: el hecho
-          // principal (parada no visitada) se guarda igual, pero si
-          // reprogramar alguna entrega puntual fallo, se avisa en vez
-          // de reportar un exito completo en silencio.
-          toast.warning(`Parada marcada como no visitada, pero ${fallidas.length} entrega(s) no se pudieron reprogramar — revisalas a mano.`, {
-            duration: 8000,
-          });
-        }
+        // Tanda 13 (hallazgo ALTO, enmienda ADR-013): markStopNoVisitada
+        // ya no devuelve success:true con reprogramaciones parciales
+        // fallidas (ver 'reprogram-failed' mas abajo) — si llegamos
+        // aca, las entregas de la Parada se reprogramaron todas.
+        toast.success('Parada marcada como no visitada — las entregas se reprogramaron.');
         onRegistered(result.trip);
         onClose();
         return;
       }
-      toast.error(result.reason === 'no-deliveries' ? 'Esta parada no tiene entregas para reprogramar.' : 'No se pudo registrar la no-entrega.');
+      toast.error(result.reason ? STOP_NO_VISITADA_ERROR_MESSAGE[result.reason] : 'No se pudo registrar la no-entrega.');
     } catch {
       toast.error('No se pudo registrar la no-entrega.');
     } finally {
