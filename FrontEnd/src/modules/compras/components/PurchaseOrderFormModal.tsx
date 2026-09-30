@@ -117,8 +117,13 @@ export const PurchaseOrderFormModal: FC<PurchaseOrderFormModalProps> = ({
   const productMatches = useMemo(() => {
     const q = productQuery.trim().toLowerCase();
     if (!q) return [];
+    // Tanda 14 (hallazgo Tanda 12 a medias): un producto dado de baja
+    // no debe poder agregarse a una OC nueva — `products` sigue
+    // llegando completo (ComprasPage tambien lo usa para resolver
+    // nombres de lineas de OCs ya existentes, que pueden referenciar
+    // productos ya inactivos), el filtro va aca, en el buscador.
     return products
-      .filter((p) => p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q))
+      .filter((p) => p.status === 'active' && (p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q)))
       .slice(0, 8);
   }, [products, productQuery]);
 
@@ -166,7 +171,9 @@ export const PurchaseOrderFormModal: FC<PurchaseOrderFormModalProps> = ({
             ? 'Agrega al menos un producto antes de guardar.'
             : result.reason === 'invalid-line'
               ? 'Revisa las cantidades y precios cargados.'
-              : 'No se pudo crear la orden de compra.';
+              : result.reason === 'inactive-product'
+                ? 'Uno de los productos cargados esta dado de baja. Quitalo de la orden.'
+                : 'No se pudo crear la orden de compra.';
         toast.error(reasonMessage);
       } finally {
         setIsSubmitting(false);

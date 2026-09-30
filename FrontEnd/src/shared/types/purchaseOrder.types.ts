@@ -107,7 +107,12 @@ export interface PurchaseOrdersAggregates {
 // de una transicion (ver PurchaseOrderTransitionResult).
 // ============================================================
 
-export type CreatePurchaseOrderReason = 'invalid-supplier' | 'no-lines' | 'invalid-line';
+// 'inactive-product' (Tanda 14, hallazgo Tanda 12 a medias): alguna
+// linea referencia un producto dado de baja (estado inactive) —
+// PurchaseOrderFormModal.tsx ya filtra el buscador a productos
+// activos, esto es el rechazo server-side (unico punto que persiste
+// la OC).
+export type CreatePurchaseOrderReason = 'invalid-supplier' | 'no-lines' | 'invalid-line' | 'inactive-product';
 
 export interface CreatePurchaseOrderInput {
   supplierId: Supplier['id'];
@@ -146,7 +151,11 @@ export interface PurchaseOrderTransitionResult {
 // de productos ni de proveedores.
 // ============================================================
 
-export type GeneratePurchaseOrderReason = 'invalid-supplier';
+// 'inactive-product' (Tanda 14, hallazgo Tanda 12 a medias): mismo
+// motivo que CreatePurchaseOrderReason — TabPurchases.tsx ya excluye
+// productos inactivos de las sugerencias listadas, esto es el rechazo
+// server-side.
+export type GeneratePurchaseOrderReason = 'invalid-supplier' | 'inactive-product';
 
 export interface GeneratePurchaseOrderFromSuggestionInput {
   supplierId: Supplier['id'];

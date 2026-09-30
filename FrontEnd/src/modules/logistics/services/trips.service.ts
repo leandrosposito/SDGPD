@@ -636,29 +636,43 @@ export async function markStopNoVisitada(
     method: 'POST',
     path: `/trips/${tripId}/stops/${stopId}/no-visitada`,
     body: { empresaId, idempotencyKey, ...input },
-    mock: async () => {
-      const trip = tripsStore.find((t) => t.id === tripId);
-      const stop = trip?.paradas.find((s) => s.id === stopId);
-      if (!trip || !stop) {
-        return { success: false, reason: 'not-found' as const };
-      }
+    mock: async () =>
+      withIdempotency(idempotencyKey, async () => {
+        // Tanda 15 (hallazgo MEDIO): las precondiciones tienen que
+        // correr ADENTRO de withIdempotency, no antes — withIdempotency
+        // consulta el cache ANTES de llamar a `compute`, asi que
+        // ponerlas aca garantiza que un segundo llamado con la MISMA
+        // clave (httpClient reintenta POST con DEFAULT_RETRIES=2, y
+        // nada impide ademas un reintento manual del usuario con la
+        // clave todavia vigente) devuelva el resultado cacheado de
+        // exito ANTES de volver a evaluarlas contra el estado ya
+        // mutado. El comentario anterior ("revalidar aca o adentro es
+        // funcionalmente identico") era la parte que estaba mal: es
+        // cierto que un `success: false` nunca se cachea (ver
+        // withIdempotency), pero si la PRIMERA llamada tuvo exito, la
+        // Parada ya quedo en 'NoVisitada' — un reintento con las
+        // precondiciones afuera volveria a leer el trip/stop ya mutados y
+        // getStopNoVisitadaBlockReason devolveria 'stop-not-pendiente'
+        // en vez de nunca ejecutarse (el cache de withIdempotency ni se
+        // llega a consultar), violando el contrato de ADR-010 seccion 4
+        // ("el servidor devuelve el resultado ya guardado de la primera
+        // vez — nunca un error"). Mismo patron corregido en
+        // deliveries.service.ts#reprogramDelivery/registrarEntrega/
+        // createDelivery (ver ese archivo).
+        const trip = tripsStore.find((t) => t.id === tripId);
+        const stop = trip?.paradas.find((s) => s.id === stopId);
+        if (!trip || !stop) {
+          return { success: false, reason: 'not-found' as const };
+        }
 
-      // Precondiciones (Tanda 13, hallazgo ALTO) — fuera de
-      // withIdempotency a proposito, mismo criterio que
-      // reprogramDelivery: un `success: false` nunca se cachea (ver
-      // withIdempotency), asi que revalidar aca o adentro es
-      // funcionalmente identico, pero afuera deja mas claro que estos
-      // chequeos SIEMPRE corren de nuevo en cada intento, nunca se
-      // saltan por una clave repetida.
-      const deliveries: Delivery[] = stop.deliveryIds
-        .map((id) => getDeliveryById(id))
-        .filter((d): d is Delivery => d !== undefined);
-      const blockReason = getStopNoVisitadaBlockReason(trip, stop, deliveries);
-      if (blockReason) {
-        return { success: false, reason: blockReason };
-      }
+        const deliveries: Delivery[] = stop.deliveryIds
+          .map((id) => getDeliveryById(id))
+          .filter((d): d is Delivery => d !== undefined);
+        const blockReason = getStopNoVisitadaBlockReason(trip, stop, deliveries);
+        if (blockReason) {
+          return { success: false, reason: blockReason };
+        }
 
-      return withIdempotency(idempotencyKey, async () => {
         // Sub-clave por entrega, mismo criterio que registerPod
         // (`${idempotencyKey}-finalizar`) — cada llamado a
         // reprogramDelivery necesita su propia clave, la misma clave
@@ -704,8 +718,7 @@ export async function markStopNoVisitada(
         tripsStore = tripsStore.map((t) => (t.id === tripId ? updated : t));
 
         return { success: true, trip: structuredClone(withComputedFields(updated)), resultadosPorEntrega };
-      });
-    },
+      }),
   });
 }
 

@@ -480,7 +480,14 @@ function filterAndSortLowStock(
   for (const record of stockDTOStore) {
     if (record.sucursal_id !== filters.branchId || !isBelowMinStock(record.stock, record.stock_minimo)) continue;
     const product = productById.get(record.producto_id);
-    if (!product || !matchesSearch(product, filters.search)) continue;
+    // Tanda 14 (hallazgo Tanda 12 a medias): un producto dado de baja
+    // (estado inactive) no necesita reposicion — a diferencia de Stock
+    // Actual (getStockedProductsPage/computeStockAggregates), que sigue
+    // mostrando TODO con su badge ACTIVO/INACTIVO (es una foto literal
+    // del inventario, no una lista accionable), Bajo Stock Minimo SI
+    // excluye: es la lista de "que hay que reponer", y un producto
+    // discontinuado no entra en esa pregunta.
+    if (!product || product.estado === 'inactive' || !matchesSearch(product, filters.search)) continue;
     matches.push(joinProductWithStock(product, record, filters.branchId));
   }
 

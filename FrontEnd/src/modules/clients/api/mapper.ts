@@ -16,7 +16,25 @@ import type { ClientAccountDTO, ClientFormPayloadDTO } from './dto';
 
 export type ClientFormInput = Pick<
   ClientAccount,
-  'clientName' | 'cuit' | 'address' | 'phone' | 'zone' | 'sellerName' | 'creditLimit' | 'priceList' | 'saleCondition'
+  | 'clientName'
+  | 'cuit'
+  | 'address'
+  | 'phone'
+  | 'zone'
+  | 'sellerName'
+  | 'creditLimit'
+  | 'priceList'
+  | 'saleCondition'
+  | 'tradeName'
+  | 'ivaCondition'
+  | 'email'
+  | 'googleMapsLink'
+  | 'deliveryAddressSameAsFiscal'
+  | 'deliveryAddress'
+  | 'deliveryReferences'
+  | 'businessCategory'
+  | 'notes'
+  | 'isActive'
 >;
 
 export function clientFromDTO(dto: ClientAccountDTO): ClientAccount {
@@ -28,9 +46,19 @@ export function clientFromDTO(dto: ClientAccountDTO): ClientAccount {
     phone: dto.cliente.telefono,
     zone: dto.cliente.zona,
     sellerName: dto.cliente.vendedor,
+    tradeName: dto.cliente.nombre_fantasia,
+    ivaCondition: dto.cliente.condicion_iva,
+    email: dto.cliente.email,
+    googleMapsLink: dto.cliente.google_maps_link,
+    deliveryAddressSameAsFiscal: dto.cliente.direccion_entrega_igual_fiscal,
+    deliveryAddress: dto.cliente.direccion_entrega,
+    deliveryReferences: dto.cliente.referencias_entrega,
     creditLimit: dto.cuenta.limite_credito,
     priceList: dto.cuenta.lista_precios,
     saleCondition: dto.cuenta.condicion_venta,
+    businessCategory: dto.cuenta.categoria,
+    notes: dto.cuenta.notas,
+    isActive: dto.cuenta.activo,
     totalDebit: dto.cuenta.total_debito,
     totalCredit: dto.cuenta.total_credito,
     currentBalance: dto.cuenta.saldo_actual,
@@ -56,11 +84,21 @@ export function clientToDTO(client: ClientAccount): ClientAccountDTO {
       telefono: client.phone,
       zona: client.zone,
       vendedor: client.sellerName,
+      nombre_fantasia: client.tradeName,
+      condicion_iva: client.ivaCondition,
+      email: client.email,
+      google_maps_link: client.googleMapsLink,
+      direccion_entrega_igual_fiscal: client.deliveryAddressSameAsFiscal,
+      direccion_entrega: client.deliveryAddress,
+      referencias_entrega: client.deliveryReferences,
     },
     cuenta: {
       limite_credito: client.creditLimit,
       lista_precios: client.priceList,
       condicion_venta: client.saleCondition,
+      categoria: client.businessCategory,
+      notas: client.notes,
+      activo: client.isActive,
       total_debito: client.totalDebit,
       total_credito: client.totalCredit,
       saldo_actual: client.currentBalance,
@@ -82,5 +120,15 @@ export function clientFormInputToDTO(input: ClientFormInput): ClientFormPayloadD
     limite_credito: input.creditLimit,
     lista_precios: input.priceList,
     condicion_venta: input.saleCondition,
+    nombre_fantasia: input.tradeName,
+    condicion_iva: input.ivaCondition,
+    email: input.email,
+    google_maps_link: input.googleMapsLink,
+    direccion_entrega_igual_fiscal: input.deliveryAddressSameAsFiscal,
+    direccion_entrega: input.deliveryAddress,
+    referencias_entrega: input.deliveryReferences,
+    categoria: input.businessCategory,
+    notas: input.notes,
+    activo: input.isActive,
   };
 }

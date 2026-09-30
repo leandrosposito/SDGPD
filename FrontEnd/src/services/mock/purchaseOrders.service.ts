@@ -18,6 +18,18 @@ import type {
 } from '@/shared/types/purchaseOrder.types';
 import { PURCHASE_ORDERS_MOCK_DATA } from '@/data/mock/purchaseOrders.data';
 import { httpClient } from '@/shared/api/httpClient';
+import { fetchProducts } from '@/shared/api/products/products.service';
+
+// Tanda 14 (hallazgo Tanda 12 a medias): "servidor a servidor" hacia
+// products.service.ts, mismo patron que
+// purchase-suggestions.service.ts#getActiveProductIds — createPurchaseOrder
+// y generatePurchaseOrderFromSuggestion son los 2 puntos que persisten
+// una linea de OC, asi que los 2 necesitan la misma verificacion.
+async function hasInactiveProduct(empresaId: string, productIds: readonly string[]): Promise<boolean> {
+  const products = await fetchProducts(empresaId);
+  const inactiveIds = new Set(products.filter((p) => p.status === 'inactive').map((p) => p.id));
+  return productIds.some((id) => inactiveIds.has(id));
+}
 
 // ============================================================
 // PURCHASE ORDERS SERVICE (Compras) — O1-O10, DECISIONES_TECNICAS.md.
@@ -257,7 +269,7 @@ export async function createPurchaseOrder(
     method: 'POST',
     path: '/purchase-orders',
     body: { empresaId, ...input },
-    mock: () => {
+    mock: async () => {
       if (!input.supplierId) {
         return { success: false, reason: 'invalid-supplier' };
       }
@@ -266,6 +278,9 @@ export async function createPurchaseOrder(
       }
       if (input.lines.some((l) => l.quantity <= 0 || l.unitPrice < 0)) {
         return { success: false, reason: 'invalid-line' };
+      }
+      if (await hasInactiveProduct(empresaId, input.lines.map((l) => l.productId))) {
+        return { success: false, reason: 'inactive-product' };
       }
 
       const newOrder: PurchaseOrder = {
@@ -338,9 +353,12 @@ export async function generatePurchaseOrderFromSuggestion(
     method: 'POST',
     path: '/purchase-orders/from-suggestion',
     body: { empresaId, ...input },
-    mock: () => {
+    mock: async () => {
       if (!input.supplierId) {
         return { success: false, merged: false, reason: 'invalid-supplier' };
+      }
+      if (await hasInactiveProduct(empresaId, [input.productId])) {
+        return { success: false, merged: false, reason: 'inactive-product' };
       }
 
       const existingDraft = purchaseOrdersStore.find(
