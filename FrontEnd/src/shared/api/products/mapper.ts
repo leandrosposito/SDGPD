@@ -34,7 +34,9 @@ function productLotFromDTO(dto: ProductLotDTO): ProductLot {
   };
 }
 
-function productLotToDTO(lot: ProductLot): ProductLotDTO {
+// Exportada (sesion avance-2026-09-30) para `updateProduct`: si el
+// formulario manda `lots` explicitos, se traducen con esta misma funcion.
+export function productLotToDTO(lot: ProductLot): ProductLotDTO {
   return {
     id: lot.id,
     numero_lote: lot.lotNumber,

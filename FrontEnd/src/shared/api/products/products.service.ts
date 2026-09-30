@@ -21,8 +21,10 @@ import {
   productStockToDTO,
   stockedProductFromDTO,
   productFormInputToDTO,
+  productLotToDTO,
   type ProductFormInput,
 } from './mapper';
+import { mergeProductUpdate } from './productUpdate';
 
 export type { ProductFormInput };
 
@@ -118,8 +120,8 @@ export async function updateProduct(empresaId: string, id: string, input: Produc
     path: `/products/${id}`,
     body: { empresaId, ...productFormInputToDTO(input) },
     mock: () => {
-      const exists = productsDTOStore.some((p) => p.id === id);
-      if (!exists) throw new ApiError(404, 'CLIENT_ERROR', 'El producto que intenta editar ya no existe.');
+      const previous = productsDTOStore.find((p) => p.id === id);
+      if (!previous) throw new ApiError(404, 'CLIENT_ERROR', 'El producto que intenta editar ya no existe.');
 
       const skuTaken = productsDTOStore.some(
         (p) => p.sku.toLowerCase() === input.sku.toLowerCase() && p.id !== id
@@ -129,16 +131,14 @@ export async function updateProduct(empresaId: string, id: string, input: Produc
       const barcodeTaken = productsDTOStore.some((p) => p.codigo_barras === input.barcode && p.id !== id);
       if (barcodeTaken) throw new ApiError(400, 'CLIENT_ERROR', 'Este codigo de barras ya existe.');
 
-      // NOTA (hallazgo de esta tanda, no una regresión nueva):
-      // `ProductFormInput` no incluye `lots` (el formulario de
-      // producto nunca los edita) — igual que en
-      // `services/mock/products.service.ts#updateProduct` antes de
-      // esta tanda, el registro actualizado no copia los lotes del
-      // anterior. El comportamiento visible es idéntico al que ya
-      // existía (editar un producto deja sus lotes vacíos); no se
-      // corrige acá porque no fue pedido y es lógica de negocio, no de
-      // paginación/cache — queda para PENDIENTES.md.
-      const updatedDTO: ProductDTO = { ...productFormInputToDTO(input), id, lotes: [] };
+      // PENDIENTES.md #13 (cerrado, sesion avance-2026-09-30): antes el
+      // registro se armaba con `lotes: []`, asi que editar un producto
+      // borraba sus lotes. Ahora se conservan los del registro anterior
+      // salvo que el formulario mande `lots` explicito — ver
+      // productUpdate.ts. `ProductFormValues` no tiene `lots`, asi que
+      // desde ProductFormModal `input.lots` llega siempre `undefined`.
+      const editedLots = input.lots === undefined ? undefined : input.lots.map(productLotToDTO);
+      const updatedDTO = mergeProductUpdate(previous, productFormInputToDTO(input), editedLots);
       productsDTOStore = productsDTOStore.map((p) => (p.id === id ? updatedDTO : p));
       return productFromDTO(updatedDTO);
     },
