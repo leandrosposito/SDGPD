@@ -14,11 +14,11 @@ Gates: `tsc` 0, lint 0 errores (1 warning preexistente), build OK, los 13 smoke 
 
 ## Pasos
 
-1. **Generar OC, caso feliz:** `/inventario` → tab **Reposición** → "Generar OC" sobre una sugerencia cuyo producto tenga proveedor válido.
+1. **Generar OC, caso feliz:** `/inventario` → tab **Reposición** → "Generar OC" sobre una sugerencia cuyo producto tenga proveedor válido. Ejemplo: Sucursal Centro, `sug-001` (`inv-002` → `sup-002`); o Sucursal Norte, `sug-002` (`inv-001` → `sup-001`).
    - **Esperado:** toast de éxito, se crea la orden (visible en `/compras`) y el botón no queda en "Generando...". Es el mismo punto P-03 de `docs/VERIFICACION_PENDIENTE_UNIFICADA.md`.
 2. **El proveedor es el correcto:** abrí la OC recién creada en `/compras`.
    - **Esperado:** el proveedor de la OC es el que figura como proveedor del producto en su ficha (Stock Actual → "Editar", campo proveedor). Esto prueba que el lookup por `Map` resuelve el mismo registro que resolvía `.find()`.
-3. **Producto sin proveedor válido:** si alguna sugerencia apunta a un producto sin proveedor válido (o editá un producto para dejarlo así), probá "Generar OC".
+3. **Producto sin proveedor válido (caso concreto del mock):** con **Sucursal Centro** activa, la sugerencia `sug-004` es "Producto Descontinuado 500g" (`inv-019`), cuyo `supplierId` es `sup-999`, un proveedor que no existe (confirmado por `scripts/verificacion/v15-avance-2026-09-30-integrity.mjs`). Hacé click en "Generar OC" sobre esa fila.
    - **Esperado:** toast de error "... no tiene un proveedor valido asociado ..." y no se crea ninguna OC.
 4. **Cambio de sucursal:** con Reposición abierta, cambiá de sucursal.
    - **Esperado:** cambian las sugerencias (alcance sucursal) y "Generar OC" sigue funcionando en la sucursal nueva.
