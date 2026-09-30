@@ -204,7 +204,15 @@ mock que el filtro devuelve conjuntos disjuntos por sucursal (ver
 `docs/historial/verificaciones/VERIFICACION_TANDA_3G.md`. Mismo matiz que el ítem 8 de esta tabla: resuelto
 por código, no confirmado en los hechos.
 
-### 13. `updateProduct` descarta los lotes del producto al editar — Severidad: Baja/Media (bug preexistente, preservado sin cambios en Tanda 3e)
+### 13. `updateProduct` descarta los lotes del producto al editar — CERRADO A NIVEL DE CÓDIGO (sesión avance-2026-09-30), sin verificación funcional confirmada — Severidad original: Baja/Media (bug preexistente, preservado sin cambios en Tanda 3e)
+
+**Resuelto (2026-09-30):** `updateProduct` ahora arma el registro con
+`mergeProductUpdate` (`shared/api/products/productUpdate.ts`), que conserva los
+`lotes` del registro anterior salvo que el input traiga `lots` explícito. Smoke
+`scripts/smoke/avance-2026-09-30-lotes.smoke.mjs` (14/14, sobre `inv-001` real).
+Checklist de navegador: `docs/historial/verificaciones/VERIFICACION_2026-09-30_T2_lotes.md`.
+Mismo matiz que los ítems 8 y 12: resuelto por código, no confirmado en los hechos.
+Texto original del hallazgo, abajo:
 
 Hallazgo de Tanda 3e al migrar `updateProduct` a la capa `api/`: el formulario de
 edición de producto (`ProductFormModal`/`ProductFormValues`) nunca incluyó `lots` —
@@ -330,7 +338,7 @@ escáner físico normalmente no dispara dos `Enter` en un intervalo tan corto.
 
 | # | Ítem | Estado | Severidad |
 |---|---|---|---|
-| 1 | Edición de proveedor sin botón disparador | Vigente | Media |
+| 1 | Edición de proveedor sin botón disparador | **Cerrado** (Tanda 12; reverificado 2026-09-30: `SupplierDetailPanel.tsx:244`) | — |
 | 2 | Filtros zona/vendedor/estado en ClientAccountsTable | No aplica (alcance documentado) | — |
 | 3 | `modules/compras` en español | Vigente | Baja |
 | 4 | 4 .docx/.pdf trackeados pese a `.gitignore` | Vigente | Baja |
@@ -342,7 +350,7 @@ escáner físico normalmente no dispara dos `Enter` en un intervalo tan corto.
 | 10 | 4 tabs de `inventory` (Ajustes, Categorías, Listas de Precios, Import/Export): UI sin funcionalidad | Vigente — features futuras, no código muerto | — |
 | 11 | `StockAdjustmentModal.tsx` — huérfano, no montado | Vigente | Baja |
 | 12 | `InventoryMovement`/`ProductHistoryEvent` sin `branchId` | Resuelto por código (Tanda 3g), sin verificar en navegador | Baja |
-| 13 | `updateProduct` (productos) descarta los lotes existentes al editar | Vigente — preexistente, preservado en Tanda 3e | Baja/Media |
+| 13 | `updateProduct` (productos) descarta los lotes existentes al editar | **Cerrado** (sesión avance-2026-09-30, `mergeProductUpdate`), sin verificar en navegador | — |
 | 14 | Productos sin registro de stock en ninguna sucursal (`inv-019`) — decisión de producto pendiente, no bug | Vigente — comportamiento E5 correcto, sin cambios | N/A |
 | 15 | `CreateClientModal` con 10 campos fantasma (nota: tabla no incluía este ítem hasta ahora, corregido al cerrarlo) | Cerrado (Tanda 16) | — |
 | — | `NewTransactionModal` formato de hora | No reproduce | — |

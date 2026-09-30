@@ -101,6 +101,14 @@ export const TabPurchases: FC<TabPurchasesProps> = ({ branchName, branchId, prod
     if (error) toast.error('No se pudo cargar las sugerencias de reposicion.');
   }, [error]);
 
+  // Indices por id de los catalogos (sesion avance-2026-09-30, cierra
+  // el pendiente de Tanda 3f "joins con Map en vez de .find() doble"):
+  // el join sugerencia -> producto -> proveedor de handleGenerateOrder
+  // pasa a ser O(1) por lookup, sin recorrer los dos catalogos en cada
+  // click. Se recalculan solo si cambia la referencia del catalogo.
+  const productsById = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
+  const suppliersById = useMemo(() => new Map(suppliers.map((s) => [s.id, s])), [suppliers]);
+
   const sortField = sort?.field ?? 'currentStock';
   const sortDesc = sort?.direction === 'desc';
 
@@ -119,13 +127,13 @@ export const TabPurchases: FC<TabPurchasesProps> = ({ branchName, branchId, prod
 
   const handleGenerateOrder = async (suggestion: PurchaseSuggestion) => {
     if (!empresaId) return;
-    const product = products.find((p) => p.id === suggestion.productId);
+    const product = productsById.get(suggestion.productId);
     if (!product) {
       toast.error(`No se encontro "${suggestion.productName}" en el catalogo de productos.`);
       return;
     }
 
-    const supplier = suppliers.find((s) => s.id === product.supplierId);
+    const supplier = suppliersById.get(product.supplierId);
     if (!supplier) {
       // O9: producto sin proveedor valido — se rechaza sin romper, con
       // motivo claro. No se llama al servicio de Compras con un
