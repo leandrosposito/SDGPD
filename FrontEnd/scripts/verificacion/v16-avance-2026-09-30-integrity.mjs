@@ -1,5 +1,5 @@
 // ============================================================
-// V15 (Fase D2, sesion avance-2026-09-30) — integridad referencial de
+// V16 (Fase D2, sesion avance-2026-09-30) — integridad referencial de
 // los mocks que tocan las Tandas 2 (lotes) y 4 (joins por Map en
 // Reposicion). Importa los mocks REALES (mismo resolve hook de @/ que
 // v11..v14), no copias.
@@ -18,7 +18,7 @@
 //      mergeProductUpdate no pueden chocar con los de otro producto).
 //   6. todo lote tiene cantidad entera >= 0 y fecha ISO parseable.
 //
-// Correr con: node scripts/verificacion/v15-avance-2026-09-30-integrity.mjs
+// Correr con: node scripts/verificacion/v16-avance-2026-09-30-integrity.mjs
 // (desde FrontEnd/).
 // ============================================================
 
