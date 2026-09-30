@@ -8,7 +8,7 @@
 
 **Criterio de "No ejecutado":** 6 de los 13 originales (0/1, 3a, 3b, 3c, 3d, 3g) tienen tabla de resultados con "No ejecutado" explícito. Los otros 7 (4, 5, 6, 7, 8, ADR-009, sweep) no tienen tabla de resultados. Según `docs/ESTADO.md`, ningún commit dice "confirmado en navegador", así que acá se toman **todos** sus puntos como no ejecutados. De Tanda 0/1 quedan afuera los únicos 2 puntos con resultado ("Verificado (parcial)": 6 y 11). Del punto 6 se conserva la mitad que no se probó.
 
-**Fuera de este archivo:** los checklists de Tandas 2, 2.5, 3e, 3f, 9, 10A, 10B, 11, 12, 13, B, C1 y C2 tampoco tienen evidencia de haberse corrido, pero no estaban en la lista de esta tarea. Siguen pendientes en su archivo original.
+**Fuera de este archivo:** los checklists de Tandas 2, 2.5, 3e, 3f, 9, 10A, 10B, 11, 12, 13, 14, 15, 16, B, C1 y C2, y los 2 de la sesión 2026-09-30 (`VERIFICACION_2026-09-30_T2_lotes.md`, `VERIFICACION_2026-09-30_T4_reposicion.md`), tampoco tienen evidencia de haberse corrido, pero no estaban en la lista de esta tarea. Siguen pendientes en su archivo original.
 
 **Preparación común:** `npm run dev` desde `FrontEnd/`, y hard refresh (Ctrl+Shift+R) antes de empezar. Para los escenarios de latencia, fallo o debug: copiá el bloque que corresponda de `FrontEnd/.env.local.ejemplo-verificacion` a `FrontEnd/.env.local`, **reiniciá el servidor** (Vite lee `.env*` una sola vez al arrancar) y recargá. El mock vive en memoria: **F5 lo resetea**. Donde un punto pida "no recargar", es literal.
 
