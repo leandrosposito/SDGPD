@@ -2,6 +2,8 @@
 
 **Estado:** Aceptado. **Fecha:** 2026-10-07. **Resuelve:** decisión #2 de [`08_DECISIONES_ABIERTAS.md`](../../../FrontEnd/docs/historial/auditorias/backend/08_DECISIONES_ABIERTAS.md).
 
+**Enmienda a ADRs del frontend:** ninguno.
+
 ## Contexto
 
 Hoy no hay autenticación:

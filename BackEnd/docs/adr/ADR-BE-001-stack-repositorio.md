@@ -2,6 +2,8 @@
 
 **Estado:** Aceptado. **Fecha:** 2026-10-07. **Resuelve:** decisión #26 de [`08_DECISIONES_ABIERTAS.md`](../../../FrontEnd/docs/historial/auditorias/backend/08_DECISIONES_ABIERTAS.md).
 
+**Enmienda a ADRs del frontend:** ninguno (cambia la regla 2.3 del protocolo y el `.gitignore`).
+
 ## Contexto
 
 La auditoría de backend (`FrontEnd/docs/historial/auditorias/backend/`, 2026-10-07) encontró que `BackEnd/` existía vacío y estaba en `.gitignore`. La regla `BackEnd/` no tenía barra inicial y, con `core.ignorecase=true`, ignoraba cualquier carpeta `backend/` del repo, incluida la de la propia auditoría (hallazgo **A18**, `00_RESUMEN.md`). El frontend ya tiene contratos tipados y una capa `api/` sobre `httpClient` con adaptador mock (`FrontEnd/src/shared/api/httpClient.ts:5-12`). Lo que no existe es un lugar compartido donde backend y frontend acuerden el contrato: 59 de 91 respuestas devuelven hoy el tipo de dominio del frontend (hallazgo **B4**).

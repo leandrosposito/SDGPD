@@ -63,3 +63,7 @@ La tarea pide documentar, y reescribir los 4 mocks no cambia ningún comportamie
 
 - Si el backend real implementa `GET /products` como lo usa hoy el mock (completo, sin límite) y los services lo siguen llamando anidado, el costo de cada página de sugerencias crece con el catálogo, no con la página. Es el anti-patrón que la regla 3.1 prohíbe.
 - Si se agrega un quinto lugar que necesite "solo activos" copiando `getActiveProductIds`, la deuda crece. Cualquier lugar nuevo usa el lookup acotado del punto 3.
+
+## Enmienda 2026-10-07
+
+Ninguna lista queda sin límite: los catálogos de selector pasan a búsqueda acotada con `pageSize` máximo según `contracts` ([ADR-BE-004](../../../BackEnd/docs/adr/ADR-BE-004-contrato-http.md)); la validación de productos en el alta de pedido se hace por **`productId`**, no por SKU ([ADR-BE-007](../../../BackEnd/docs/adr/ADR-BE-007-pedido.md)).

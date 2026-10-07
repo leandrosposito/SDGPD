@@ -2,6 +2,8 @@
 
 **Estado:** Aceptado. **Fecha:** 2026-10-07. **Resuelve:** decisiones #6, #7 y #8 de [`08_DECISIONES_ABIERTAS.md`](../../../FrontEnd/docs/historial/auditorias/backend/08_DECISIONES_ABIERTAS.md). Evidencia completa: [`07_CUMPLIMIENTO_PARCIAL.md`](../../../FrontEnd/docs/historial/auditorias/backend/07_CUMPLIMIENTO_PARCIAL.md).
 
+**Enmienda a ADRs del frontend:** ninguno (ADR-001 se confirma). RF del Documento 04: RF-PED-002, RF-PRE-001, RF-PRE-002, RF-PRE-003, RF-PRE-004, RF-CMP-002.
+
 ## Contexto
 
 - **El conflicto (B5):** ADR-001 y Doc 03 §17.25 dejan el pendiente dentro del mismo pedido. Doc 04 RF-PED-002 y RF-PRE-003 (MVP) piden "crear un Sub-Pedido (Backorder)" y "particionar" el pedido.

@@ -2,6 +2,8 @@
 
 **Estado:** Aceptado. **Fecha:** 2026-10-07. **Resuelve:** decisiones #13, #14, #20 y #22 de [`08_DECISIONES_ABIERTAS.md`](../../../FrontEnd/docs/historial/auditorias/backend/08_DECISIONES_ABIERTAS.md).
 
+**Enmienda a ADRs del frontend:** [ADR-010](../../../FrontEnd/docs/adr/ADR-010-modelo-logistico.md), [ADR-011](../../../FrontEnd/docs/adr/ADR-011-viajes-y-asignacion.md), [ADR-013](../../../FrontEnd/docs/adr/ADR-013-reprogramar-no-entrega.md).
+
 ## Contexto
 
 `04_TRANSVERSALES.md` §4, §5 y §15, y `03_REGLAS_DE_NEGOCIO.md` (última sección), encontraron:

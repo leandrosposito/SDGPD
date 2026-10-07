@@ -2,6 +2,8 @@
 
 **Estado:** Aceptado. **Fecha:** 2026-10-07. **Resuelve:** decisiones #5, #21 y #23 de [`08_DECISIONES_ABIERTAS.md`](../../../FrontEnd/docs/historial/auditorias/backend/08_DECISIONES_ABIERTAS.md).
 
+**Enmienda a ADRs del frontend:** [ADR-004](../../../FrontEnd/docs/adr/ADR-004-exportacion.md), [ADR-007](../../../FrontEnd/docs/adr/ADR-007-alertas.md), [ADR-009](../../../FrontEnd/docs/adr/ADR-009-alcance-dashboard.md).
+
 ## Contexto
 
 - **Exportación (B3):** el contrato de ADR-004 no tiene contrato HTTP.

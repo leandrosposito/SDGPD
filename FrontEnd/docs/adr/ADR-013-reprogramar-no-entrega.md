@@ -65,3 +65,7 @@ Nueva función pura `getStopNoVisitadaBlockReason(trip, stop, deliveries)` en `s
 **Lo que esta enmienda NO cambia:** las secciones 1-3 originales siguen vigentes tal cual — `releaseDeliveryFromTrip`, el catálogo de motivos, y "entrega no realizada" como acción de Parada que reusa `reprogramDelivery` en vez de duplicarlo. Esta enmienda solo agrega guardas antes de ejecutar esa lógica, y una condición de salida (todo-o-nada) después.
 
 **Qué se rompe si se cambia después:** si se agrega un nuevo `TripStatus` o `StopStatus` en el futuro, `TRIP_EN_CURSO_STATUSES` (el array de estados "en curso") y el chequeo `stop.estado !== 'Pendiente'` en `getStopNoVisitadaBlockReason` son los dos lugares a revisar — si un estado nuevo también debería habilitar (o seguir bloqueando) marcar una Parada como no visitada, la decisión se toma ahí, una sola vez, y se propaga sola a las dos capas (server + UX) porque comparten la misma función.
+
+## Enmienda 2026-10-07
+
+`markStopNoVisitada` pasa a ser **todo-o-nada también para las entregas** (una sola transacción): se revierte el "éxito parcial" de la enmienda 2026-09-11 y desaparece `reprogram-failed` — [ADR-BE-005](../../../BackEnd/docs/adr/ADR-BE-005-mutaciones.md).

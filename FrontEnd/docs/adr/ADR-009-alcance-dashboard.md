@@ -62,3 +62,7 @@ Verificado contra el mock real (no un fixture) con `scripts/verificacion/v-adr00
 - Si en algún momento se agrega `branchId` real a `Order` (la alternativa #1 descartada), el filtro vía `Delivery` para ventas/pedidos debería migrarse a usar el campo directo — más simple y sin el caso de borde de "pedido con entregas en más de una sucursal" (que SÍ ocurre en el mock real, `ord-004` — ver "Reconciliación" arriba, corrige una afirmación anterior de este mismo documento que decía lo contrario sin haberlo verificado).
 - Si se decide en el futuro modelar `ClientAccount`/facturas con relación a sucursal (ej. "sucursal de venta"), la tarjeta de cuentas por cobrar deja de ser la única excepción "empresa-only" — hay que sacar esa restricción explícitamente del código y de esta decisión, no dejarla como código muerto.
 - Cualquier tarjeta nueva que se agregue al dashboard en el futuro debe declarar explícitamente, desde el día uno, si puede honrar el filtro de sucursal o no — no asumir que "todo lo del dashboard se filtra igual" (exactamente el error que este ADR corrige).
+
+## Enmienda 2026-10-07
+
+El pedido tiene **sucursal de origen** obligatoria y el filtro del tablero usa ese campo, no el join por `Delivery` ([ADR-BE-007](../../../BackEnd/docs/adr/ADR-BE-007-pedido.md)); el tablero tiene **una sola fuente** (esta) y se extiende a los widgets del tablero viejo ([ADR-BE-011](../../../BackEnd/docs/adr/ADR-BE-011-exportacion-alertas-tablero.md)).

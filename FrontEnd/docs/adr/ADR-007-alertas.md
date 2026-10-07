@@ -27,3 +27,7 @@ Tanda 7 (Tablero) necesita un badge de alertas (contador) y un detalle navegable
 - Si el badge del layout deja de usar `/alerts/summary` y empieza a inferir el conteo del detalle paginado (ej. sumando `total` de una consulta filtrada), se reintroduce el riesgo de que un dato "rápido de mostrar siempre" (el badge, visible en cada pantalla) dependa de una consulta pensada para otro caso de uso (el detalle, paginado, más pesada).
 - Si se migra el detalle de cursor a offset después de haber compartido código con otros listados, hay que auditar qué asume "número de página" en vez de "cursor opaco" — mejor no hacerlo salvo necesidad real.
 - Si se permite borrado desde la UI más adelante, hay que decidir qué pasa con el historial ya acumulado sin esa capacidad (migración de datos, no solo de código).
+
+## Enmienda 2026-10-07
+
+Las alertas las genera un **job programado e idempotente**, y "leída" se guarda **por usuario** en tabla propia (`alert_reads`) — [ADR-BE-011](../../../BackEnd/docs/adr/ADR-BE-011-exportacion-alertas-tablero.md).

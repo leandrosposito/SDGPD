@@ -26,3 +26,7 @@
 - Migrar de `number` en centavos a decimal-string más adelante exige tocar cada tipo de dominio con un campo `Money` y cada punto que lo construye/lee — el propio módulo centralizado (`shared/utils/money.ts`) acota el costo: si toda la aritmética pasa por ahí, cambiar la representación interna es un cambio de un archivo, no de N call-sites.
 - Si un componente nuevo hace `precio * cantidad` directo sin pasar por el módulo (reintroduciendo el patrón que A10 hallazgo #3 ya señaló repetido 4 veces), se pierde la garantía de redondeo consistente que este ADR establece.
 - Si la previsualización de un formulario abierto deja de marcarse explícitamente como tal y se empieza a tratar como fuente de verdad, se reintroduce el riesgo que A10 hallazgo #3 ya señaló en `orders` (persistir un total calculado en cliente sin re-derivarlo server-side).
+
+## Enmienda 2026-10-07
+
+Política de redondeo fijada: **half-up por línea**, total = suma de líneas; alícuota de IVA como atributo del producto; la función de cálculo vive en `packages/contracts` y el servidor calcula todos los importes — [ADR-BE-006](../../../BackEnd/docs/adr/ADR-BE-006-dinero-numeracion.md).

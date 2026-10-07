@@ -2,6 +2,8 @@
 
 **Estado:** Aceptado. **Fecha:** 2026-10-07. **Resuelve:** decisiones #1 y #18 de [`08_DECISIONES_ABIERTAS.md`](../../../FrontEnd/docs/historial/auditorias/backend/08_DECISIONES_ABIERTAS.md). El detalle de caja de la #18 está en ADR-BE-010.
 
+**Enmienda a ADRs del frontend:** ninguno (reemplaza la regla 3.5 del protocolo y la decisión D1 del log se cumple).
+
 ## Contexto
 
 La decisión D1 (`FrontEnd/docs/historial/DECISIONES_TECNICAS_LOG.md:219-220`) dice que el frontend nunca manda la empresa como parámetro manipulable, porque sería "candidato a IDOR". La regla 3.5 del protocolo y el barrido del 2026-09-08 hicieron lo contrario: **87 de 91 llamadas** mandan `empresaId` en query o body (hallazgo **B1**, `04_TRANSVERSALES.md` §2; 01 C-10). Por otro lado, `branchId` viaja en el path en algunos endpoints, en la query en otros, y en 14 endpoints de recursos de sucursal no viaja (hallazgo **M5**, 01 C-8). El alcance empresa/sucursal de compras, caja, vehículos y lotes estaba abierto (08 #18).
@@ -67,6 +69,7 @@ SELECT set_config('app.empresa_id', $1, true);   -- equivale a SET LOCAL
 4. **Alertas y auditoría:** alcance EMPRESA, con `sucursal_id` opcional como atributo (no estaban en la lista de alcances).
 5. **Ningún DTO de respuesta expone `empresaId`:** es redundante con la sesión.
 6. **Rol de migraciones separado del rol de la aplicación:** el de migraciones es dueño de las tablas; el de la aplicación solo tiene `SELECT/INSERT/UPDATE/DELETE` sobre ellas.
+7. **Transición de la regla 3.5 en el frontend:** mientras un módulo siga sobre el adaptador mock, sus funciones de service pueden conservar el parámetro `empresaId` (el mock no lo usa). Se elimina de la firma y del request al conectar el módulo. Escrito así en la nueva regla 3.5 del protocolo.
 
 ## Objeciones
 

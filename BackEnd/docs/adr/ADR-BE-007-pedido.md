@@ -2,6 +2,8 @@
 
 **Estado:** Aceptado. **Fecha:** 2026-10-07. **Resuelve:** decisiones #9, #16, #19 y #24 de [`08_DECISIONES_ABIERTAS.md`](../../../FrontEnd/docs/historial/auditorias/backend/08_DECISIONES_ABIERTAS.md).
 
+**Enmienda a ADRs del frontend:** [ADR-009](../../../FrontEnd/docs/adr/ADR-009-alcance-dashboard.md), [ADR-016](../../../FrontEnd/docs/adr/ADR-016-filtro-estado-server-side.md). RF del Documento 04: RF-ENT-002.
+
 ## Contexto
 
 - **Dos estados conviviendo:** el `Order` tiene `status` (legado, comentado como "deprecado", `FrontEnd/src/shared/types/order.types.ts:75`) y `comercial` (ADR-010 §1).

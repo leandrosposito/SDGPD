@@ -2,6 +2,8 @@
 
 **Estado:** Aceptado. **Fecha:** 2026-10-07. **Resuelve:** decisiones #11 y #25 de [`08_DECISIONES_ABIERTAS.md`](../../../FrontEnd/docs/historial/auditorias/backend/08_DECISIONES_ABIERTAS.md).
 
+**Enmienda a ADRs del frontend:** [ADR-008](../../../FrontEnd/docs/adr/ADR-008-dinero-cantidades.md), [ADR-014](../../../FrontEnd/docs/adr/ADR-014-numero-pedido-correlativo.md).
+
 ## Contexto
 
 - **ADR-008** (centavos enteros más moneda) está decidido, pero no implementado. Todo importe persistido es `number` en pesos con decimales (`02_MODELO_DE_DATOS.md`; hallazgo **A16**).

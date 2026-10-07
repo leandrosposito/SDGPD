@@ -2,6 +2,8 @@
 
 **Estado:** Aceptado. **Fecha:** 2026-10-07. **Resuelve:** decisiones #3, #4, #12 y #15 de [`08_DECISIONES_ABIERTAS.md`](../../../FrontEnd/docs/historial/auditorias/backend/08_DECISIONES_ABIERTAS.md).
 
+**Enmienda a ADRs del frontend:** [ADR-006](../../../FrontEnd/docs/adr/ADR-006-ids-tipados.md), [ADR-015](../../../FrontEnd/docs/adr/ADR-015-estado-activo-en-altas.md), [ADR-016](../../../FrontEnd/docs/adr/ADR-016-filtro-estado-server-side.md). Reescribe la regla 3.1 del protocolo.
+
 ## Contexto
 
 La auditoría (`01_ENDPOINTS.md`, `04_TRANSVERSALES.md`) encontró:
