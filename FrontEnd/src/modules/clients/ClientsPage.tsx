@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo, type FC } from 'react';
 import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 import type { ClientAccount } from '@/shared/types/client.types';
 import {
   getClientsPage,
@@ -11,6 +12,7 @@ import {
 } from './api/clients.service';
 import type { ExportColumn } from '@/shared/components/ui/ExportButton';
 import { usePagedQuery } from '@/shared/hooks/usePagedQuery';
+import { cachedQueryKey } from '@/shared/api/queryKeys';
 import { useUrlListState } from '@/shared/hooks/useUrlListState';
 import { useSessionStore } from '@/shared/state/useSessionStore';
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
@@ -66,10 +68,15 @@ const directoryExportColumns: ExportColumn<ClientAccount>[] = [
   { header: 'Limite de Credito', accessor: (c) => c.creditLimit },
   { header: 'Saldo Actual', accessor: (c) => c.currentBalance },
   { header: 'Estado', accessor: (c) => c.status },
+  // Tanda 18: mismo dato que la columna "Activo" del Directorio
+  // (ClientDirectoryTable) — el archivo exportado coincide con lo que
+  // se ve en pantalla (ADR-004).
+  { header: 'Activo', accessor: (c) => (c.isActive ? 'Activo' : 'Inactivo') },
 ];
 
 export const ClientsPage: FC = () => {
   const empresaId = useSessionStore((s) => s.session?.company.id);
+  const queryClient = useQueryClient();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   // Tanda 4 (corrida completa, A13): tab activa, busqueda/zona/vendedor/
@@ -159,16 +166,19 @@ export const ClientsPage: FC = () => {
   // pagina vigente del Directorio (refetch), en vez de la invalidacion
   // de useCachedQuery que usaba Tanda 2.5 — mismo criterio que el
   // resto de los listados ya migrados a usePagedQuery.
+  //
+  // Tanda 17 (ADR-015 punto 5): ademas invalida 'clients-catalog'
+  // (useCachedQuery de CreateOrderModal/OrderDetailPanel, staleTime
+  // CATALOG = 5 min) — sin esto, dar de baja un cliente y abrir "Nuevo
+  // Pedido" enseguida seguia ofreciendolo con el isActive viejo.
   const handleSaveClient = async (input: ClientFormInput, clientId?: string) => {
     if (!empresaId) throw new Error('Todavia no hay una sesion activa.');
-    if (clientId) {
-      const updated = await updateClient(empresaId, clientId, input);
-      refetch();
-      return updated;
-    }
-    const created = await createClient(empresaId, input);
+    const saved = clientId
+      ? await updateClient(empresaId, clientId, input)
+      : await createClient(empresaId, input);
     refetch();
-    return created;
+    void queryClient.invalidateQueries({ queryKey: cachedQueryKey({ queryName: 'clients-catalog', empresaId }) });
+    return saved;
   };
 
   return (

@@ -18,7 +18,7 @@ src/
 │   ├── routes/           AppRoutes.tsx — ÚNICO lugar donde se declaran rutas
 │   ├── state/            2 stores de Zustand (useSessionStore, resettableStores)
 │   ├── types/           17 archivos *.types.ts, uno por dominio + pagination/session/ids — Tanda 9 agregó motivo.types.ts
-│   └── utils/            6 utilidades (date, logError, money, orderFulfillment, orderLogistics, resolveOrderClient) — Tanda 9 agregó orderLogistics.ts
+│   └── utils/            13 utilidades, reverificado 2026-10-07 con `ls src/shared/utils` (date, idempotency, logError, lotExpiration, money, orderEligibility, orderFulfillment, orderLogistics, orderNumber, patente, resolveOrderClient, stopVisitEligibility, tripCapacity). Este renglón decía 6: las Tandas 10B-13 sumaron 6 sin actualizarlo, y la Tanda 17 sumó orderEligibility (ADR-015)
 └── styles/              variables.css, reset.css, global.css, typography.css
 ```
 

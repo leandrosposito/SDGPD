@@ -6,11 +6,13 @@ import { MAX_EXPORT_ROWS } from '@/shared/types/pagination.types';
 import { ORDERS_MOCK_DATA } from '@/data/mock/orders.data';
 import { httpClient } from '@/shared/api/httpClient';
 import { ApiError } from '@/shared/api/ApiError';
-import type { OrderDTO, OrdersPageDTO, OrdersAggregatesDTO } from './dto';
+import type { OrderDTO, OrdersPageDTO, OrdersAggregatesDTO, CreateOrderResponseDTO } from './dto';
 import { orderFromDTO, orderToDTO, orderFormInputToDTO, type OrderFormInput } from './mapper';
 import type { OrderProjectionForAggregation } from '@/modules/dashboard/api/dashboardAggregates';
 import { getActiveDeliveriesForOrder } from '@/modules/logistics/services/deliveries.service';
 import { fetchProducts } from '@/shared/api/products/products.service';
+import { getClientById } from '@/modules/clients/api/clients.service';
+import { getCreateOrderBlockReason, type CreateOrderReason } from '@/shared/utils/orderEligibility';
 import { maxOrderNumberSuffix, formatOrderNumber } from '@/shared/utils/orderNumber';
 
 export type { OrderFormInput };
@@ -280,25 +282,46 @@ function nextOrderLineId(index: number): string {
 // RF-PED-001: alta manual (CreateOrderModal). `source` siempre
 // 'manual' acá — los pedidos con `source: 'mobile'` del mock simulan
 // llegar por otro canal (la app de vendedores), no por este formulario.
-export async function createOrder(empresaId: string, input: OrderFormInput): Promise<Order> {
-  const dto = await httpClient.request<OrderDTO>({
+// Tanda 17 (ADR-015 punto 2): un rechazo de negocio vuelve como
+// `{ success:false, reason }` — mismo criterio que cancelOrder/
+// createPurchaseOrder. Antes eran `throw ApiError(400)` y
+// CreateOrderModal descartaba el mensaje en un catch generico.
+// ApiError queda solo para fallas de infraestructura.
+export type { CreateOrderReason };
+export type CreateOrderResult =
+  | { success: true; order: Order }
+  | { success: false; reason: CreateOrderReason; detail?: string };
+
+export async function createOrder(empresaId: string, input: OrderFormInput): Promise<CreateOrderResult> {
+  const response = await httpClient.request<CreateOrderResponseDTO>({
     method: 'POST',
     path: '/orders',
     body: { empresaId, ...orderFormInputToDTO(input) },
-    mock: async () => {
-      if (input.items.length === 0) {
-        throw new ApiError(400, 'CLIENT_ERROR', 'El pedido necesita al menos un producto.');
+    mock: async (): Promise<CreateOrderResponseDTO> => {
+      // Tanda 17 (hallazgo Tanda 16 a medias): CreateOrderModal ya
+      // filtra el selector a clientes activos, pero createOrder es el
+      // unico punto que persiste el pedido — valida existencia y
+      // estado del cliente igual. Lookup de UN registro, no el
+      // catalogo entero (ADR-015 punto 4, ADR-016).
+      const client = input.items.length === 0 ? null : await getClientById(empresaId, input.clientId);
+      // Tanda 14 (hallazgo Tanda 12 a medias): mismo razonamiento para
+      // productos dados de baja (OrderItem no tiene productId, solo
+      // sku — ver order.types.ts). DEUDA (ADR-016): fetchProducts trae
+      // el catalogo completo sin limite para validar N items.
+      let inactiveItem: OrderFormInput['items'][number] | undefined;
+      if (client?.isActive) {
+        const products = await fetchProducts(empresaId);
+        inactiveItem = input.items.find((item) => products.find((p) => p.sku === item.sku)?.status === 'inactive');
       }
-      // Tanda 14 (hallazgo Tanda 12 a medias): CreateOrderModal ya
-      // filtra el selector a productos activos (OrderProductsSection),
-      // pero eso es defensa del lado del cliente — createOrder es el
-      // unico punto que persiste el pedido, asi que rechaza igual si
-      // algun item llega con un sku de un producto dado de baja
-      // (OrderItem no tiene productId, solo sku — ver order.types.ts).
-      const products = await fetchProducts(empresaId);
-      const inactiveItem = input.items.find((item) => products.find((p) => p.sku === item.sku)?.status === 'inactive');
-      if (inactiveItem) {
-        throw new ApiError(400, 'CLIENT_ERROR', `El producto "${inactiveItem.name}" (${inactiveItem.sku}) esta dado de baja y no puede agregarse a un pedido.`);
+      const reason = getCreateOrderBlockReason({
+        itemCount: input.items.length,
+        client,
+        hasInactiveProduct: inactiveItem !== undefined,
+      });
+      if (reason) {
+        return inactiveItem
+          ? { success: false, reason, detail: `"${inactiveItem.name}" (${inactiveItem.sku})` }
+          : { success: false, reason };
       }
       const now = new Date().toISOString();
       const newDTO: OrderDTO = {
@@ -337,10 +360,12 @@ export async function createOrder(empresaId: string, input: OrderFormInput): Pro
         historial: [{ id: `h-${Date.now()}`, fecha: now, estado: 'pending', descripcion: 'Pedido creado manualmente' }],
       };
       ordersDTOStore = [newDTO, ...ordersDTOStore];
-      return newDTO;
+      return { success: true, pedido: newDTO };
     },
   });
-  return orderFromDTO(dto);
+  return response.success
+    ? { success: true, order: orderFromDTO(response.pedido) }
+    : { success: false, reason: response.reason, detail: response.detail };
 }
 
 // Flujo lineal de estados (mismo comportamiento que STATUS_FLOW en

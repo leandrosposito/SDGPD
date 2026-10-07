@@ -17,6 +17,7 @@ export const ClientDirectoryTable: FC<ClientDirectoryTableProps> = ({ clients })
             <th>Zona</th>
             <th>Telefono</th>
             <th>Vendedor</th>
+            <th>Activo</th>
             <th className="text-right">Acciones</th>
           </tr>
         </thead>
@@ -29,6 +30,14 @@ export const ClientDirectoryTable: FC<ClientDirectoryTableProps> = ({ clients })
               <td><span className="client-badge client-badge--neutral">{client.zone}</span></td>
               <td>{client.phone}</td>
               <td>{client.sellerName}</td>
+              {/* Tanda 17/18 (ADR-015): un cliente dado de baja sigue en el
+                  Directorio (conserva historial y cuenta corriente), pero
+                  no recibe pedidos nuevos — el badge lo hace visible. */}
+              <td>
+                <span className={`client-badge ${client.isActive ? 'client-badge--success' : 'client-badge--danger'}`}>
+                  {client.isActive ? 'Activo' : 'Inactivo'}
+                </span>
+              </td>
               <td className="text-right">
                 <div className="client-actions-row">
                   <button className="client-btn-icon" title="Nuevo Pedido">
@@ -47,7 +56,7 @@ export const ClientDirectoryTable: FC<ClientDirectoryTableProps> = ({ clients })
           ))}
           {clients.length === 0 && (
             <tr>
-              <td colSpan={7} className="text-center text-tertiary" style={{ padding: '3rem' }}>
+              <td colSpan={8} className="text-center text-tertiary" style={{ padding: '3rem' }}>
                 No se encontraron clientes.
               </td>
             </tr>

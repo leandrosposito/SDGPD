@@ -16,7 +16,7 @@ import { MAX_EXPORT_ROWS } from '@/shared/types/pagination.types';
 import { CLIENTS_MOCK_DATA } from '@/data/mock/clients.data';
 import { httpClient } from '@/shared/api/httpClient';
 import { ApiError } from '@/shared/api/ApiError';
-import { asClientId } from '@/shared/types/ids.types';
+import { asClientId, type ClientId } from '@/shared/types/ids.types';
 import type { ClientAccountDTO, ClientsPageDTO } from './dto';
 import { clientFromDTO, clientToDTO, clientFormInputToDTO, type ClientFormInput } from './mapper';
 
@@ -170,6 +170,37 @@ export async function fetchClientsCatalog(empresaId: string, signal?: AbortSigna
     signal,
     mock: () => structuredClone(clientsStore),
   });
+}
+
+// Lookup de UN cliente por id (Tanda 17, ADR-015 punto 4): lo usa
+// orders.service.ts#createOrder del lado del servidor para validar
+// existencia y estado del cliente sin traer el catalogo entero — a
+// proposito NO reusa fetchClientsCatalog, que es exactamente la deuda
+// de ADR-016 (catalogo completo sin limite dentro de otro request).
+// null = 404 (no existe en esta empresa); cualquier otro error se
+// propaga.
+export async function getClientById(
+  empresaId: string,
+  clientId: ClientId,
+  signal?: AbortSignal
+): Promise<ClientAccount | null> {
+  try {
+    const dto = await httpClient.request<ClientAccountDTO>({
+      method: 'GET',
+      path: `/clients/${clientId}`,
+      params: { empresaId },
+      signal,
+      mock: () => {
+        const client = clientsStore.find((c) => c.id === clientId);
+        if (!client) throw new ApiError(404, 'CLIENT_ERROR', 'El cliente no existe.');
+        return clientToDTO(client);
+      },
+    });
+    return clientFromDTO(dto);
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 404) return null;
+    throw err;
+  }
 }
 
 export async function createClient(empresaId: string, input: ClientFormInput): Promise<ClientAccount> {

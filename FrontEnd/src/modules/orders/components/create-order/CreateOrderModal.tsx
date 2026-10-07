@@ -1,7 +1,9 @@
 import { type FC, useState, useMemo, useEffect } from 'react';
 import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 import { Modal } from '@/shared/components/ui/Modal';
 import { useCachedQuery, CACHE_STALE_TIME } from '@/shared/hooks/useCachedQuery';
+import { cachedQueryKey } from '@/shared/api/queryKeys';
 import { useSessionStore } from '@/shared/state/useSessionStore';
 import type { InventoryItem } from '@/shared/types/inventory.types';
 import type { Order } from '@/shared/types/order.types';
@@ -10,6 +12,7 @@ import { fetchProducts } from '@/shared/api/products/products.service';
 import { fetchClientsCatalog } from '@/modules/clients/api/clients.service';
 import { createOrder, type OrderFormInput } from '@/modules/orders/api/orders.service';
 import { todayLocalDateString } from '@/shared/utils/date';
+import { isClientSelectableForOrder, describeCreateOrderReason } from '@/shared/utils/orderEligibility';
 
 // Referencia estable: ver mismo patron en ComprasPage/InventoryPage.
 const EMPTY_PRODUCTS: InventoryItem[] = [];
@@ -33,6 +36,7 @@ interface CreateOrderModalProps {
 
 export const CreateOrderModal: FC<CreateOrderModalProps> = ({ isOpen, onClose, onConfirm }) => {
   const empresaId = useSessionStore((s) => s.session?.company.id);
+  const queryClient = useQueryClient();
   const [isSaving, setIsSaving] = useState(false);
 
   // Products available to add to the order (RF-PRD-001 master data).
@@ -59,14 +63,19 @@ export const CreateOrderModal: FC<CreateOrderModalProps> = ({ isOpen, onClose, o
 
   // Clientes reales disponibles para elegir (Tanda 5,
   // AUDIT_4_IDS_RELACIONES.md hallazgo ALTO #1) — mismo criterio de
-  // catalogo completo sin paginar que products (combobox, no listado).
+  // catalogo completo sin paginar que products (combobox, no listado —
+  // DEUDA, ver ADR-016).
   const { data: clientsData, error: clientsError } = useCachedQuery(
     'clients-catalog',
     undefined,
     (signal) => fetchClientsCatalog(empresaId ?? '', signal),
     { staleTime: CACHE_STALE_TIME.CATALOG }
   );
-  const clients = clientsData ?? EMPTY_CLIENTS;
+  // Tanda 17 (ADR-015 punto 1): un cliente dado de baja no recibe
+  // pedidos nuevos. Se filtra aca y no en fetchClientsCatalog porque
+  // OrderDetailPanel usa la MISMA cache para resolver el cliente de
+  // pedidos viejos, y ese si tiene que encontrar a los inactivos.
+  const clients = useMemo(() => (clientsData ?? EMPTY_CLIENTS).filter(isClientSelectableForOrder), [clientsData]);
 
   useEffect(() => {
     if (clientsError) toast.error('No se pudo cargar el listado de clientes.');
@@ -165,8 +174,21 @@ export const CreateOrderModal: FC<CreateOrderModalProps> = ({ isOpen, onClose, o
 
     setIsSaving(true);
     try {
-      const created = await createOrder(empresaId, input);
-      onConfirm?.(created);
+      const result = await createOrder(empresaId, input);
+      if (!result.success) {
+        toast.error(describeCreateOrderReason(result.reason, result.detail));
+        // El rechazo server-side significa que el catalogo cacheado
+        // (hasta CACHE_STALE_TIME.CATALOG) quedo viejo: se refresca para
+        // que el selector deje de ofrecer lo que el servidor rechaza.
+        if (result.reason === 'inactive-client' || result.reason === 'client-not-found') {
+          setSelectedClient(null);
+          void queryClient.invalidateQueries({ queryKey: cachedQueryKey({ queryName: 'clients-catalog', empresaId }) });
+        } else if (result.reason === 'inactive-product') {
+          void queryClient.invalidateQueries({ queryKey: cachedQueryKey({ queryName: 'products', empresaId }) });
+        }
+        return;
+      }
+      onConfirm?.(result.order);
       toast.success('Pedido guardado con exito!');
       handleClose();
     } catch {

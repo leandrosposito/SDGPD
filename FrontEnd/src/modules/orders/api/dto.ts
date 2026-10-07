@@ -1,4 +1,5 @@
 import type { OrderStatus, OrderComercialStatus, OrderSource, PaymentMethod } from '@/shared/types/order.types';
+import type { CreateOrderReason } from '@/shared/utils/orderEligibility';
 
 // ============================================================
 // dto.ts (orders) — Forma que tendría la respuesta de un backend
@@ -110,3 +111,10 @@ export interface CreateOrderDTO {
   notas: string;
   items: OrderItemDTO[];
 }
+
+// Respuesta de alta (Tanda 17, ADR-015 punto 2): un rechazo de negocio
+// viaja como resultado tipado con `reason`, no como error HTTP — mismo
+// criterio que CreatePurchaseOrderResult/OrderStatusTransitionResult.
+export type CreateOrderResponseDTO =
+  | { success: true; pedido: OrderDTO }
+  | { success: false; reason: CreateOrderReason; detail?: string };
