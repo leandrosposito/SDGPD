@@ -50,7 +50,7 @@ Esto actualiza la postura de `PENDIENTES.md` ítem 7, que en la Tanda 3e conside
 ### 3. El mock NO se reescribe ahora
 
 La tarea pide documentar, y reescribir los 4 mocks no cambia ningún comportamiento observable con 19 productos. Queda como deuda explícita (`PENDIENTES.md` ítem 18), con dos condiciones:
-- **Código nuevo no repite el patrón.** La validación de cliente de la Tanda 17 ya usa un lookup de un registro (`getClientById`), no `fetchClientsCatalog`.
+- **Código nuevo no repite el patrón del catálogo completo.** La validación de cliente de la Tanda 17 usa un lookup de un registro (`getClientById`), no `fetchClientsCatalog`, así que cumple 3.11. **Pero sigue siendo una llamada `httpClient` anidada dentro del mock de `createOrder`** (Fase D de la sesión 2026-10-07, hallazgo MEDIO): suma latencia simulada y `VITE_MOCK_FAILURE_RATE` al alta. Se arregla junto con el ítem 18 de `PENDIENTES.md`, con el mismo helper interno sin `httpClient`.
 - **Cuando se toque cualquiera de las 4 funciones por otro motivo**, se reemplaza su `fetchProducts` por un lookup acotado sin `httpClient` anidado. Hay dos formas válidas: leer `productsDTOStore` con un helper interno de `products.service.ts` que reciba los ids (`getProductStatusByIds(empresaId, ids)`, con un tope igual a la cantidad de ids pedida), o un endpoint `POST /products/status-lookup { ids }` con `ids.length ≤ 200`.
 
 ## Alternativas descartadas

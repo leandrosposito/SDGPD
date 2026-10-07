@@ -6,7 +6,7 @@
 
 - `CreateOrderModal.tsx`: el catálogo que llega a `OrderProductsSection` (buscador/scanner) se filtra a `status === 'active'` antes de pasarse — el catálogo completo (con inactivos) lo sigue usando `InventoryPage` para administración.
 - `PurchaseOrderFormModal.tsx`: el buscador de productos (`productMatches`) excluye inactivos — `products` completo se sigue usando en `ComprasPage` para resolver nombres de líneas de OCs ya existentes.
-- `orders.service.ts#createOrder`: rechaza server-side (`ApiError 400`, mensaje propio) si algún ítem del pedido referencia (por `sku`) un producto inactivo.
+- `orders.service.ts#createOrder`: rechaza server-side (`ApiError 400`, mensaje propio) si algún ítem del pedido referencia (por `sku`) un producto inactivo. **Nota 2026-10-07 (Tanda 17, ADR-015):** ese `ApiError 400` se reemplazó por `{ success:false, reason:'inactive-product', detail }`. El mensaje del `ApiError` nunca llegaba a la UI (`CreateOrderModal` mostraba siempre "No se pudo guardar el pedido."). Ahora el toast nombra el producto.
 - `purchaseOrders.service.ts#createPurchaseOrder`/`generatePurchaseOrderFromSuggestion`: rechazan (`reason: 'inactive-product'`) si alguna línea referencia (por `productId`) un producto inactivo.
 - `products.service.ts#filterAndSortLowStock`: excluye productos inactivos — cierra Bajo Stock Mínimo Y su KPI (`totalItems` de la paginación), son la misma fuente.
 - `purchase-suggestions/filterSort.ts` + `purchase-suggestions.service.ts`: `filterAndSortPurchaseSuggestions` gana un parámetro opcional `activeProductIds`; el service lo resuelve "servidor a servidor" contra `fetchProducts` antes de filtrar/exportar — cierra las Sugerencias de Reposición (`TabPurchases.tsx`).

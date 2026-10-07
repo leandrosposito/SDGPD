@@ -41,7 +41,7 @@ Es la misma forma que ya usan `cancelOrder` (`OrderStatusTransitionReason`), `cr
 
 ### 4. La validación del cliente en `createOrder` es un lookup de un solo registro
 
-`createOrder` valida el cliente con `getClientById(empresaId, clientId)` (1 registro por id), **no** con `fetchClientsCatalog` (catálogo entero). Así no se repite la deuda que la Tanda 14 introdujo con `fetchProducts` (ver ADR-016).
+`createOrder` valida el cliente con `getClientById(empresaId, clientId)` (1 registro por id), **no** con `fetchClientsCatalog` (catálogo entero). Así no se repite la parte de la deuda de la Tanda 14 que trae el catálogo sin límite (ver ADR-016). **Limitación conocida:** en el mock, `getClientById` pasa por `httpClient`, así que sigue siendo un request anidado dentro de otro. ADR-016 punto 3 lo cuenta dentro de la misma deuda.
 
 ### 5. Las mutaciones del maestro invalidan la caché del catálogo
 
