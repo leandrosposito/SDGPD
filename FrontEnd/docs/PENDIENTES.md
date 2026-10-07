@@ -306,6 +306,10 @@ Verificado el 2026-10-07: `CreateOrderModal.tsx` tiene `useState` para `address`
 
 Introducido en la Tanda 14. `getPurchaseSuggestionsPage`, `exportPurchaseSuggestions`, `createOrder` y `purchaseOrders.service.ts#hasInactiveProduct` (que usan `createPurchaseOrder`/`generatePurchaseOrderFromSuggestion`) llaman a `fetchProducts`, que trae el catálogo entero por `httpClient`, para saber qué productos están activos. Contradice las reglas 3.1 y 3.11. **Decisión y forma del contrato objetivo: `docs/adr/ADR-016-filtro-estado-server-side.md`.** No se reescribió el mock (no fue pedido y con 19 productos no cambia nada observable). La condición es que el código nuevo no repita el patrón y que, cuando se toque cualquiera de esas funciones por otro motivo, se reemplace por un lookup acotado (`getProductStatusByIds`). ADR-016 también actualiza la postura del ítem 7 sobre los dropdowns con catálogo completo: aceptable en el mock, no con backend real.
 
+### 19. 5 líneas de pedido del seed apuntan a SKUs que no existen en el catálogo, y `createOrder` acepta SKUs desconocidos — Severidad: Media (dato) / Baja (validación)
+
+Encontrado en la Fase D de la sesión 2026-10-07 (`scripts/verificacion/v17-clientes-inactivos.mjs`, D2.3, que **falla a propósito y queda así** hasta que se corrija el dato, regla 2.5): `ord-001/YER-TAR-1K`, `ord-001/GAL-SUR-200`, `ord-003/GAL-SUR-200`, `ord-004/GAL-SUR-200` y `ord-006/YER-TAR-1K`. `inventory.data.ts` no tiene ni `YER-TAR-1K` ni `GAL-SUR-200` (tiene `YER-MAT-1K`, `YER-UNI-05` y `GAL-AGU-200`). Es preexistente: ninguna verificación anterior cruzaba `OrderItem.sku` contra el catálogo. Relacionado: el chequeo de la Tanda 14 en `createOrder` (`products.find(sku)?.status === 'inactive'`) deja pasar en silencio un sku que no existe. Un backend real debería rechazarlo con su propio `reason` (`'product-not-found'`). No se tocó: es MEDIO/BAJO y está fuera del alcance pedido.
+
 ## Reportados pero no reproducidos (verificados y descartados)
 
 Estos dos ítems se investigaron con evidencia de código directa (no solo lectura
@@ -368,5 +372,6 @@ escáner físico normalmente no dispara dos `Enter` en un intervalo tan corto.
 | 16 | `deliveryAddressSameAsFiscal`/`deliveryAddress` sin consumidor: el pedido usa la dirección fiscal | Vigente (decisión de producto pendiente) | Media |
 | 17 | `OrderDeliverySection`: dirección/localidad/contacto/teléfono fantasma en el alta de pedido | Vigente | Media |
 | 18 | `fetchProducts` completo dentro de 4 operaciones server-side (Tanda 14) | Vigente, documentado en ADR-016 | Media (a escala) |
+| 19 | 5 líneas de pedido del seed con SKU inexistente; `createOrder` acepta SKUs desconocidos | Vigente (V17 D2.3 falla a la vista) | Media / Baja |
 | — | `NewTransactionModal` formato de hora | No reproduce | — |
 | — | `OrderProductsSection` `await` faltante | No reproduce (resuelto o nunca existió así) | — |

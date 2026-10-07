@@ -145,6 +145,15 @@ await updateClient(EMPRESA, target.id, { ...formInput, isActive: true });
 const reactivated = await createOrder(EMPRESA, orderInput(target));
 check('reactivado: vuelve a aceptar pedidos', reactivated.success === true);
 
+// ADR-014: un rechazo no consume numero correlativo. Entre `ok` y
+// `reactivated` hubo 3 rechazos (no-items, client-not-found,
+// inactive-client) — los dos altas exitosas tienen que ser consecutivos.
+const suffix = (r) => Number(r.order.orderNumber.replace(/\D/g, ''));
+check(
+  `ADR-014: los rechazos no queman numero (${ok.order.orderNumber} -> ${reactivated.order.orderNumber})`,
+  suffix(reactivated) === suffix(ok) + 1
+);
+
 // Camino de Tanda 14 migrado de `throw ApiError` a reason (ADR-015
 // punto 2): baja logica real del producto, despues alta de pedido.
 const { deleteProduct } = await import('../../src/shared/api/products/products.service.ts');
