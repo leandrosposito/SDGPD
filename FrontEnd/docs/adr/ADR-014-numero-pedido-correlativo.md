@@ -30,3 +30,7 @@
 
 - Si `Order` gana `empresaId` real (día que exista multi-empresa de verdad), el `Map` ya está preparado — no hace falta cambiar la firma de `nextOrderNumber`, solo que `createOrder` empiece a pasar el `empresaId` real de cada pedido en vez de siempre el mismo.
 - Si se migra a un backend real, el `Map` en memoria se reemplaza por la secuencia atómica de la base de datos — el contrato de `createOrder` (recibe `empresaId`, devuelve un `Order` con `orderNumber` ya asignado) no cambia, solo la implementación interna.
+
+## Enmienda 2026-10-07
+
+El contador por empresa pasa a ser una **tabla de contadores por serie con bloqueo de fila** en la misma transacción, y se extiende a remito, OC, recepción, viaje y recibo — [ADR-BE-006](../../../BackEnd/docs/adr/ADR-BE-006-dinero-numeracion.md).

@@ -24,3 +24,7 @@
 - Si se agrega un id nuevo sin pasar por `as<Tipo>Id`, se reintroduce el problema (TypeScript vería un `string` plano donde el resto del código espera el branded type, y el compilador lo señalaría — pero solo si el desarrollador no usa `as` para forzarlo, que está prohibido por las reglas de operación del prompt maestro).
 - Si se decide migrar los 4 tipos restantes antes de que las tandas que los necesitan lleguen, no hay costo de reversión real (es trabajo adelantado, no una decisión que rompa algo) — pero sí un costo de alcance si esa tanda no estaba planeada para tocar esos archivos.
 - Si el constructor deja de fallar explícito y empieza a aceptar cualquier string, se pierde la garantía que todo el resto del ADR (y ADR-001, que depende de `OrderLineId`) asume — cualquier parseo de URL o de un formulario que dependa de la validación teórica dejaría de estar protegido en la práctica.
+
+## Enmienda 2026-10-07
+
+Los ids pasan a ser **UUID v7 generados por el servidor**; los branded types se conservan y la validación por prefijo se reemplaza por validación de formato (con aceptación transitoria del prefijo legado mientras un módulo siga en mock) — [ADR-BE-004](../../../BackEnd/docs/adr/ADR-BE-004-contrato-http.md).

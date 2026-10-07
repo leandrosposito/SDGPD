@@ -781,6 +781,7 @@ Garantiza cobertura funcional total y elimina funcionalidades no respaldadas.
 ---
 
 ### RF-CMP-002: Recepción Fija y Gestión de Diferencias
+> **Enmendado por ADR-BE-008** (2026-10-07): recepción como documento propio, "parcial" derivado, la OC no se parte — [ADR-BE-008](../../BackEnd/docs/adr/ADR-BE-008-cumplimiento-parcial.md).
 - **Módulo**: Compras (CMP)
 - **Etapa**: MVP
 - **Estado de implementación**: [ ] Pendiente
@@ -959,6 +960,7 @@ Garantiza cobertura funcional total y elimina funcionalidades no respaldadas.
 ---
 
 ### RF-PED-002: Ciclo de Vida del Pedido y Entregas Parciales
+> **Enmendado por ADR-BE-008** (2026-10-07): el pendiente queda por línea dentro del mismo pedido, sin sub-pedido — [ADR-BE-008](../../BackEnd/docs/adr/ADR-BE-008-cumplimiento-parcial.md).
 - **Módulo**: Pedidos (PED)
 - **Etapa**: MVP
 - **Estado de implementación**: [ ] Pendiente
@@ -1028,6 +1030,7 @@ Garantiza cobertura funcional total y elimina funcionalidades no respaldadas.
 ---
 
 ### RF-PRE-001: Consolidación y Generación de Tareas de Picking
+> **Enmendado por ADR-BE-008** (2026-10-07): diferido a un módulo posterior con ADR propio — [ADR-BE-008](../../BackEnd/docs/adr/ADR-BE-008-cumplimiento-parcial.md).
 - **Módulo**: Preparación (PRE)
 - **Etapa**: MVP
 - **Estado de implementación**: [ ] Pendiente
@@ -1045,6 +1048,7 @@ Garantiza cobertura funcional total y elimina funcionalidades no respaldadas.
 ---
 
 ### RF-PRE-002: Confirmación de Picking (Armado de Bultos)
+> **Enmendado por ADR-BE-008** (2026-10-07): diferido a un módulo posterior con ADR propio — [ADR-BE-008](../../BackEnd/docs/adr/ADR-BE-008-cumplimiento-parcial.md).
 - **Módulo**: Preparación (PRE)
 - **Etapa**: MVP
 - **Estado de implementación**: [ ] Pendiente
@@ -1060,6 +1064,7 @@ Garantiza cobertura funcional total y elimina funcionalidades no respaldadas.
 ---
 
 ### RF-PRE-003: Tratamiento de Incidencias en Picking (Faltantes)
+> **Enmendado por ADR-BE-008** (2026-10-07): diferido a un módulo posterior; el faltante no particiona el pedido — [ADR-BE-008](../../BackEnd/docs/adr/ADR-BE-008-cumplimiento-parcial.md).
 - **Módulo**: Preparación (PRE)
 - **Etapa**: MVP
 - **Estado de implementación**: [ ] Pendiente
@@ -1077,6 +1082,7 @@ Garantiza cobertura funcional total y elimina funcionalidades no respaldadas.
 ---
 
 ### RF-PRE-004: Priorización y Asignación de Tareas
+> **Enmendado por ADR-BE-008** (2026-10-07): diferido a un módulo posterior con ADR propio — [ADR-BE-008](../../BackEnd/docs/adr/ADR-BE-008-cumplimiento-parcial.md).
 - **Módulo**: Preparación (PRE)
 - **Etapa**: Crecimiento
 - **Estado de implementación**: [ ] Pendiente
@@ -1164,6 +1170,7 @@ Garantiza cobertura funcional total y elimina funcionalidades no respaldadas.
 ---
 
 ### RF-ENT-002: Rechazo Total de Mercadería
+> **Enmendado por ADR-BE-009** (2026-10-07): lo rechazado reingresa con confirmación manual (no automático) — [ADR-BE-009](../../BackEnd/docs/adr/ADR-BE-009-inventario.md); "Rechazado" es un estado derivado del pedido — [ADR-BE-007](../../BackEnd/docs/adr/ADR-BE-007-pedido.md).
 - **Módulo**: Entregas (ENT)
 - **Etapa**: MVP
 - **Estado de implementación**: [ ] Pendiente

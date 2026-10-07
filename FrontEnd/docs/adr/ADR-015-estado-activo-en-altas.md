@@ -67,3 +67,7 @@ Guardar un cliente (`ClientsPage#handleSaveClient`) invalida `cachedQueryKey({ q
 - **`detail`:** `"<nombre>" (<sku>)` del primer ítem ofensor, igual que `inactive-product`.
 - **UI:** mismo tratamiento que `inactive-product`. Toast con el texto de `describeCreateOrderReason` e invalidación de `'products'`.
 - **Sin cambios** en los puntos 1-5. La validación sigue usando `fetchProducts` completo (deuda de ADR-016): solo cambió la forma de buscar, un `Map` por SKU en vez de un `.find()` anidado.
+
+## Enmienda 2026-10-07
+
+Los rechazos de negocio pasan a **4xx con `{code, message, details?}`** (422 para reglas); el adaptador `http` traduce `code` a la misma unión `{success:false, reason}` que usa la UI — [ADR-BE-004](../../../BackEnd/docs/adr/ADR-BE-004-contrato-http.md).

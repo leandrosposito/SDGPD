@@ -26,3 +26,7 @@ El prompt maestro exige que ningún export se arme en el navegador (Sección 7, 
 - Si se vuelve a un export síncrono sin job, hay que rediseñar el `ExportButton`/hook compartido desde cero (pierde sentido el estado de "progreso" y el polling) — mejor no migrar a esto salvo que el backend real garantice que todo export es instantáneo, algo poco probable a escala.
 - Si un export nuevo no reutiliza `ExportButton`/el hook compartido, se reintroduce la fragmentación de UI que este ADR busca evitar y cualquier cambio futuro al flujo (ej. agregar un nuevo formato) exige tocar N implementaciones en vez de una.
 - Si los filtros del export dejan de ser exactamente los mismos que el listado (ej. se recalculan por separado), el archivo exportado puede no coincidir con lo que el usuario ve en pantalla — bug de confianza difícil de detectar en QA.
+
+## Enmienda 2026-10-07
+
+El cliente manda columnas **por nombre** (lista blanca en `packages/contracts`) en lugar de funciones `accessor`; el job y el archivo corren en el servidor (worker sobre Postgres) y se entregan por URL de descarga con vencimiento — [ADR-BE-011](../../../BackEnd/docs/adr/ADR-BE-011-exportacion-alertas-tablero.md).

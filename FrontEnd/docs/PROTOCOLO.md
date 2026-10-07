@@ -10,11 +10,11 @@ Todo lo demás (cómo auditar, cómo implementar, cómo verificar, cuándo merge
 
 ## 1. CONTEXTO FIJO
 
-- SDGPD: frontend de un SaaS ERP multi-empresa (cada empresa con sus clientes, sucursales y depósitos).
-- Stack: React 19 + Vite + TypeScript + Zustand + TanStack Query + Zod + react-hook-form + Sonner + Lucide.
-- No hay backend. Todo se apoya en contratos de API tipados + adaptadores mock. Cuando exista el backend real se cambia el adaptador, no la UI.
+- SDGPD: SaaS ERP multi-empresa (cada empresa con sus clientes, sucursales y depósitos), en un monorepo: `FrontEnd/` y `BackEnd/` (ADR-BE-001).
+- Stack del frontend: React 19 + Vite + TypeScript + Zustand + TanStack Query + Zod + react-hook-form + Sonner + Lucide.
+- Backend (2026-10-07): **decidido y documentado, todavía sin código.** Node LTS + TypeScript + NestJS + PostgreSQL, multi-tenant con `empresa_id` + RLS, contrato compartido en `packages/contracts`. Las decisiones están en `BackEnd/docs/adr/ADR-BE-*.md`, y el índice y el plan de tandas BE-0 a BE-10, en `BackEnd/docs/README.md`. Hasta que cada módulo se conecte, el frontend sigue sobre adaptadores mock: cuando un módulo se conecta, se cambia el adaptador, no la UI.
 - Rama base de trabajo: `lean`. Nunca se toca `main`.
-- Alcance de dominio: productos, proveedores, clientes, pedidos, caja y settings son alcance EMPRESA. Stock, reposición y logística son alcance SUCURSAL. Products es transversal (`shared/api/products/`).
+- Alcance de dominio (ADR-BE-002): productos, proveedores, clientes, vehículos, choferes, motivos, usuarios y settings son alcance EMPRESA. Pedido (sucursal de origen) y orden de compra (sucursal destino) son EMPRESA con sucursal obligatoria como atributo. Stock, lotes, movimientos, reposición, entregas, viajes y caja son alcance SUCURSAL. Products es transversal (`shared/api/products/`).
 - Antes de empezar cualquier tarea, leer: `docs/ESTADO.md`, los `docs/adr/ADR-*.md` y `docs/historial/verificaciones/VERIFICACION_CORRIDA_COMPLETA.md`. Los hallazgos y decisiones que ya están ahí no se re-discuten ni se re-auditan.
 - `docs/historial/` no se lee al arrancar; solo se consulta si una tarea puntual lo pide (por ejemplo, para citar la evidencia original de un hallazgo ya resuelto). `docs/ESTADO.md` ya dice qué de ahí sigue vigente.
 
@@ -22,7 +22,7 @@ Todo lo demás (cómo auditar, cómo implementar, cómo verificar, cuándo merge
 
 1. Prohibido `git stash --keep-index` (Windows + OneDrive rompe el repo). Prohibido rebase, force push y tocar `main`.
 2. Prohibido instalar dependencias. Si algo parece requerirla, resolverlo sin ella o dejarlo documentado como no hecho.
-3. Prohibido agregar frameworks de testing. Prohibido i18n.
+3. Prohibido agregar frameworks de testing **en `FrontEnd/`**. En `BackEnd/` y `packages/` el testing es obligatorio (ADR-BE-001). Prohibido i18n.
 4. TypeScript estricto: nada de `any`, `@ts-ignore`, ni `as` para tapar un error de tipos.
 5. Nunca se modifica un script de verificación para que deje de fallar. Si un check falla, se arregla el código o el dato, o se reporta el hallazgo. Si hay que cambiar un script porque el check estaba mal planteado, el cambio se justifica por escrito y la salida original que fallaba queda visible en el informe.
 6. Si se delega en un fork, hay que verificar en disco que el trabajo existe (`git status`, `git show`, leer el archivo) antes de darlo por hecho. En este proyecto ya pasó dos veces que un fork reportó éxito sin haber escrito nada. La verificación adversarial (Fase D) nunca se delega.
@@ -33,11 +33,11 @@ Todo lo demás (cómo auditar, cómo implementar, cómo verificar, cuándo merge
 
 ## 3. REGLAS DE ESCALABILIDAD (no negociables, aplican a todo código nuevo)
 
-1. Ningún listado se consume sin paginar. Cursor por defecto.
+1. Ningún listado se consume sin paginar (ADR-BE-004). Maestros y documentos: offset con `total` y `pageSize` máximo 100. Registros append-only (movimientos de stock, historial de producto, auditoría, alertas, movimientos de caja y de cuenta corriente): cursor obligatorio. Un envoltorio por tipo: `{ items, total, page, pageSize, aggregates? }` o `{ items, nextCursor, aggregates? }`. No hay listas sin límite: los catálogos de selector son búsqueda acotada (ADR-016).
 2. Ningún agregado se calcula en el cliente sobre una colección completa. Totales, sumas, conteos y rankings vienen del servidor.
 3. Ninguna exportación se arma en el navegador (salvo dentro del adaptador mock, y anotado como deuda a sacar cuando exista el backend).
 4. Toda query key incluye `companyId`, y `branchId` si el dominio es de alcance sucursal.
-5. Toda función de service lleva `empresaId` explícito, aunque no pase por el caché. La garantía de los hooks no cubre las llamadas directas.
+5. Ningún request lleva `empresaId`: ni en la query, ni en el body, ni en el path. La empresa sale de la sesión en el servidor (ADR-BE-002). Las query keys siguen incluyendo `companyId` (regla 4), que el hook lee de la sesión. Mientras un módulo siga sobre el mock, sus services pueden conservar el parámetro, que se elimina al conectar el módulo.
 6. Búsquedas con debounce y cancelación (`AbortController`).
 7. Listas de más de ~100 filas visibles: preparadas para virtualización.
 8. Filtros, página, orden y búsqueda viven en la URL, y la URL es la única fuente de verdad.

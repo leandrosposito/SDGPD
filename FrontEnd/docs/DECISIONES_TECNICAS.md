@@ -42,3 +42,14 @@ Este archivo es un ÍNDICE, no el log. El detalle completo de cada decisión (co
 | Alcance del dashboard: empresa vs. sucursal, elegido por el usuario | 07/09/2026 | `docs/adr/ADR-009-alcance-dashboard.md` |
 | Modelo logístico: 3 ejes de estado (comercial escribible, logístico y financiero como proyecciones de solo lectura), jerarquía Viaje→Parada→Entrega→Línea (Parada multi-pedido), idempotencia (clave al formar la intención), catálogo de motivos (con flags), logística inversa, POD — **Aceptado 09/09/2026** | 09/09/2026 | `docs/adr/ADR-010-modelo-logistico.md` |
 | Viajes, capacidad multidimensional y motor de asignación por filtro (techo ~100, 409 granular, ventanas horarias anidadas) — **Aceptado 09/09/2026** | 09/09/2026 | `docs/adr/ADR-011-viajes-y-asignacion.md` |
+| Backend: stack (NestJS + PostgreSQL + Drizzle), monorepo, `packages/contracts`, testing y gates de tanda | 07/10/2026 | `BackEnd/docs/adr/ADR-BE-001-stack-repositorio.md` |
+| Backend: tenancy desde la sesión, RLS forzado, FK compuestas, `branchId` y alcances | 07/10/2026 | `BackEnd/docs/adr/ADR-BE-002-tenancy-rls.md` |
+| Backend: autenticación (access + refresh), usuario único, permisos módulo × acción, actor desde la sesión | 07/10/2026 | `BackEnd/docs/adr/ADR-BE-003-autenticacion-permisos.md` |
+| Backend: contrato HTTP (UUID v7, DTO camelCase, fechas, paths, errores 4xx con `code`, paginación offset/cursor) | 07/10/2026 | `BackEnd/docs/adr/ADR-BE-004-contrato-http.md` |
+| Backend: idempotencia por header, `version`, transacción por comando, auditoría genérica | 07/10/2026 | `BackEnd/docs/adr/ADR-BE-005-mutaciones.md` |
+| Backend: dinero en centavos, importes calculados en el servidor, IVA por producto, numeración por serie | 07/10/2026 | `BackEnd/docs/adr/ADR-BE-006-dinero-numeracion.md` |
+| Backend: pedido (eje comercial, sucursal de origen, `productId`, snapshot al confirmar) | 07/10/2026 | `BackEnd/docs/adr/ADR-BE-007-pedido.md` |
+| Backend: cumplimiento parcial por línea (venta y compra), recepción como documento, preparación diferida | 07/10/2026 | `BackEnd/docs/adr/ADR-BE-008-cumplimiento-parcial.md` |
+| Backend: inventario (kardex fuente de verdad, reserva, baja al despachar, retorno, lotes por sucursal) | 07/10/2026 | `BackEnd/docs/adr/ADR-BE-009-inventario.md` |
+| Backend: cuenta corriente append-only y caja por sucursal con apertura y cierre | 07/10/2026 | `BackEnd/docs/adr/ADR-BE-010-cuenta-corriente-caja.md` |
+| Backend: exportación por job, alertas por job y leídas por usuario, tablero y analítica | 07/10/2026 | `BackEnd/docs/adr/ADR-BE-011-exportacion-alertas-tablero.md` |

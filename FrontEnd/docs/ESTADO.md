@@ -8,6 +8,25 @@ Tanda 0 (contención de errores) → Tanda 1 (capa `api/`, piloto `suppliers`) �
 
 **No hay ninguna tanda "a medias"**: todo lo de arriba tiene commit real, mergeado a `lean`. Lo que sigue abajo no son tandas sin cerrar, son hallazgos que esas tandas no atacaron (fuera de su alcance declarado) o verificación en navegador que nunca se corrió.
 
+## ADRs de backend (2026-10-07) — las 26 decisiones de la auditoría, tomadas y documentadas
+
+**Punto de entrada para empezar el backend: `BackEnd/docs/README.md`.** Ahí están los 11 ADRs (`BackEnd/docs/adr/ADR-BE-001..011`), la trazabilidad de las 26 decisiones de `08_DECISIONES_ABIERTAS.md` (cada una en un solo ADR), la tabla de los 8 BLOQUEANTE y 21 ALTO (cada uno con su ADR o tanda), y el plan de tandas BE-0 a BE-10 con el trabajo de frontend que arrastra cada una. **`BackEnd/` sigue sin código.**
+
+- **`.gitignore`:** sin la regla `BackEnd/`, que ignoraba toda carpeta `backend/` (A18, cerrado). Reglas de monorepo para `node_modules`/`dist` y `.env` (salvo `.env.example`).
+- **Protocolo:** cambiaron §1 (el backend existe en `BackEnd/`, nuevos alcances), 2.3 (tests prohibidos solo en `FrontEnd/`), 3.1 (offset con tope 100 para maestros, cursor para append-only) y 3.5 (ningún request lleva `empresaId`).
+- **Enmiendas:**
+  - 11 ADRs del frontend tienen una sección "Enmienda 2026-10-07": 004, 006, 007, 008, 009, 010, 011, 013, 014, 015 y 016.
+  - En el Documento 04 hay 7 RF con la línea "Enmendado por": RF-PED-002, RF-PRE-001..004, RF-CMP-002 y RF-ENT-002.
+- **Pendiente de revisión:** cada ADR tiene "Sub-decisiones tomadas al redactar" y "Objeciones".
+  - Las objeciones que **bloquean** partes del plan:
+    - La regla 2.2 del protocolo prohíbe instalar dependencias, y BE-0 las necesita.
+    - `Delivery` no tiene líneas, y la baja de stock al despachar las necesita.
+    - La reserva se hace en la sucursal de origen, pero el despacho puede salir desde otra.
+    - El precio depende de la lista elegida en la UI, y el cliente ya no manda precios.
+    - Sin Facturación no hay débitos en la cuenta corriente.
+    - La "URL prefirmada" contra "solo Postgres".
+    - Retirar el tablero viejo deja 4 widgets sin fuente.
+
 ## Auditoría de backend (2026-10-07, solo lectura) — punto de entrada para la fase de ADRs de backend
 
 **`docs/historial/auditorias/backend/00_RESUMEN.md` alcanza solo para arrancar.** El detalle con evidencia está en los archivos `01` a `08` de la misma carpeta. No se tocó código, y no se tomó ninguna decisión: la regla 2.9 no aplicó en esta sesión.
