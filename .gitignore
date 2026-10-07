@@ -1,10 +1,17 @@
-# node_modules y builds
+# Dependencias y builds (FrontEnd/, BackEnd/ y packages/ del monorepo, ADR-BE-001)
 FrontEnd/node_modules/
 FrontEnd/dist/
+BackEnd/node_modules/
+BackEnd/dist/
+packages/*/node_modules/
+packages/*/dist/
+/node_modules/
+
+# Variables de entorno: nunca se versionan, salvo la plantilla
+.env
+.env.*
+!.env.example
 
 # Documentación pesada — solo se leen los extractos .md/.txt derivados
 Documentacion/**/*.docx
 Documentacion/**/*.pdf
-
-# BackEnd vacía por ahora
-BackEnd/
