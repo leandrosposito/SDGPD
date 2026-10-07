@@ -26,8 +26,8 @@ export const ORDERS_MOCK_DATA: Order[] = [
     notes: 'Entregar antes del mediodia.',
     items: [
       { id: asOrderLineId('oi-101'), sku: 'ACE-GIR-15', name: 'Aceite Girasol 1.5L', quantity: 12, unitPrice: 2100, subtotal: 25200, cantidadEntregada: 0 },
-      { id: asOrderLineId('oi-102'), sku: 'YER-TAR-1K', name: 'Yerba Taragui 1kg', quantity: 6,  unitPrice: 3600, subtotal: 21600, cantidadEntregada: 0 },
-      { id: asOrderLineId('oi-103'), sku: 'GAL-SUR-200', name: 'Galletitas Surtidas 200g', quantity: 1, unitPrice: 450, subtotal: 450, cantidadEntregada: 0 },
+      { id: asOrderLineId('oi-102'), sku: 'YER-MAT-1K', name: 'Yerba Mate 1kg Paquete', quantity: 6,  unitPrice: 3600, subtotal: 21600, cantidadEntregada: 0 },
+      { id: asOrderLineId('oi-103'), sku: 'GAL-AGU-200', name: 'Galletitas de Agua 200g', quantity: 1, unitPrice: 450, subtotal: 450, cantidadEntregada: 0 },
     ],
     history: [
       { id: 'h1', date: '2026-06-13T08:15:00Z', status: 'pending', description: 'Pedido ingresado via Mobile App' }
@@ -80,7 +80,7 @@ export const ORDERS_MOCK_DATA: Order[] = [
     totalAmount: 18585.6,
     notes: '',
     items: [
-      { id: asOrderLineId('oi-301'), sku: 'GAL-SUR-200', name: 'Galletitas Surtidas 200g', quantity: 24, unitPrice: 450, subtotal: 10800, cantidadEntregada: 0 },
+      { id: asOrderLineId('oi-301'), sku: 'GAL-AGU-200', name: 'Galletitas de Agua 200g', quantity: 24, unitPrice: 450, subtotal: 10800, cantidadEntregada: 0 },
       { id: asOrderLineId('oi-302'), sku: 'YER-UNI-05', name: 'Yerba Union 500g', quantity: 3, unitPrice: 1520, subtotal: 4560, cantidadEntregada: 0 },
     ],
     history: [
@@ -109,7 +109,7 @@ export const ORDERS_MOCK_DATA: Order[] = [
     notes: '',
     items: [
       { id: asOrderLineId('oi-401'), sku: 'ACE-GIR-15', name: 'Aceite Girasol 1.5L', quantity: 24, unitPrice: 2100, subtotal: 50400, cantidadEntregada: 0 },
-      { id: asOrderLineId('oi-402'), sku: 'GAL-SUR-200', name: 'Galletitas Surtidas 200g', quantity: 30, unitPrice: 450, subtotal: 13500, cantidadEntregada: 0 },
+      { id: asOrderLineId('oi-402'), sku: 'GAL-AGU-200', name: 'Galletitas de Agua 200g', quantity: 30, unitPrice: 450, subtotal: 13500, cantidadEntregada: 0 },
     ],
     history: [
       { id: 'h7', date: '2026-06-12T11:00:00Z', status: 'pending', description: 'Pedido ingresado via Mobile App' },
@@ -164,7 +164,7 @@ export const ORDERS_MOCK_DATA: Order[] = [
     totalAmount: 52272,
     notes: '',
     items: [
-      { id: asOrderLineId('oi-601'), sku: 'YER-TAR-1K', name: 'Yerba Taragui 1kg', quantity: 12, unitPrice: 3600, subtotal: 43200, cantidadEntregada: 0 },
+      { id: asOrderLineId('oi-601'), sku: 'YER-MAT-1K', name: 'Yerba Mate 1kg Paquete', quantity: 12, unitPrice: 3600, subtotal: 43200, cantidadEntregada: 0 },
     ],
     history: [
       { id: 'h14', date: '2026-06-11T08:00:00Z', status: 'pending', description: 'Pedido ingresado via Mobile App' },
