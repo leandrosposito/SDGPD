@@ -1,6 +1,6 @@
 # ADR-015 — Estado activo como precondición de alta: dónde se filtra y cómo se rechaza
 
-**Estado:** Decidido sin consultar (regla 2.9 del protocolo). **Fecha:** 2026-10-07. Generaliza lo que la Tanda 14 hizo para productos sin escribirlo como ADR, y lo aplica a clientes (`ClientAccount.isActive`, Tanda 16). Ver `docs/historial/auditorias/AUDIT_2026-10-07_clientes-inactivos.md`.
+**Estado:** Decidido sin consultar (regla 2.9 del protocolo). **Enmendado 2026-10-07b** (ver "Enmienda 2026-10-07b" al final: agrega `product-not-found`, la decisión original no cambia). **Fecha:** 2026-10-07. Generaliza lo que la Tanda 14 hizo para productos sin escribirlo como ADR, y lo aplica a clientes (`ClientAccount.isActive`, Tanda 16). Ver `docs/historial/auditorias/AUDIT_2026-10-07_clientes-inactivos.md`.
 
 ## Problema
 
@@ -58,3 +58,12 @@ Guardar un cliente (`ClientsPage#handleSaveClient`) invalida `cachedQueryKey({ q
 - Si un tercer maestro (proveedores, vehículos, choferes, que ya tienen `activo`) gana baja lógica en un punto de alta, tiene que seguir los mismos 5 puntos. Si solo filtra la UI, el server acepta el alta. Si no invalida la caché, el filtro llega tarde.
 - Si se filtra en el service del catálogo, `OrderDetailPanel` deja de resolver clientes de pedidos históricos.
 - Agregar un `CreateOrderReason` nuevo obliga a tocar `describeCreateOrderReason` (el `switch` es exhaustivo y `tsc` falla si falta un caso).
+
+## Enmienda 2026-10-07b — `product-not-found` (Tanda 21)
+
+`CreateOrderReason` gana `'product-not-found'`: un ítem cuyo SKU no resuelve a ningún producto del catálogo. Antes, `products.find(sku)?.status === 'inactive'` daba `false` con `undefined` y el pedido se persistía con una línea huérfana. La verificación V17 lo demostró contra el código previo: el pedido se creaba y consumía número.
+
+- **Precedencia:** `no-items` → `client-not-found` → `inactive-client` → **`product-not-found`** → `inactive-product`. Un producto que no existe ni siquiera tiene estado, así que preguntar si está inactivo no tiene sentido.
+- **`detail`:** `"<nombre>" (<sku>)` del primer ítem ofensor, igual que `inactive-product`.
+- **UI:** mismo tratamiento que `inactive-product`. Toast con el texto de `describeCreateOrderReason` e invalidación de `'products'`.
+- **Sin cambios** en los puntos 1-5. La validación sigue usando `fetchProducts` completo (deuda de ADR-016): solo cambió la forma de buscar, un `Map` por SKU en vez de un `.find()` anidado.

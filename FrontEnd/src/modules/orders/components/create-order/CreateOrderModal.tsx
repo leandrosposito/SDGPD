@@ -183,7 +183,7 @@ export const CreateOrderModal: FC<CreateOrderModalProps> = ({ isOpen, onClose, o
         if (result.reason === 'inactive-client' || result.reason === 'client-not-found') {
           setSelectedClient(null);
           void queryClient.invalidateQueries({ queryKey: cachedQueryKey({ queryName: 'clients-catalog', empresaId }) });
-        } else if (result.reason === 'inactive-product') {
+        } else if (result.reason === 'inactive-product' || result.reason === 'product-not-found') {
           void queryClient.invalidateQueries({ queryKey: cachedQueryKey({ queryName: 'products', empresaId }) });
         }
         return;
