@@ -68,6 +68,10 @@ const directoryExportColumns: ExportColumn<ClientAccount>[] = [
   { header: 'Limite de Credito', accessor: (c) => c.creditLimit },
   { header: 'Saldo Actual', accessor: (c) => c.currentBalance },
   { header: 'Estado', accessor: (c) => c.status },
+  // Tanda 18: mismo dato que la columna "Activo" del Directorio
+  // (ClientDirectoryTable) — el archivo exportado coincide con lo que
+  // se ve en pantalla (ADR-004).
+  { header: 'Activo', accessor: (c) => (c.isActive ? 'Activo' : 'Inactivo') },
 ];
 
 export const ClientsPage: FC = () => {
