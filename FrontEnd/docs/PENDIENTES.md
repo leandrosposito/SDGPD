@@ -294,6 +294,18 @@ fue lo pedido.
 
 ---
 
+### 16. `deliveryAddressSameAsFiscal`/`deliveryAddress`/`deliveryReferences` (Tanda 16) sin consumidor — Severidad: Media
+
+Verificado el 2026-10-07 (`grep -rn "deliveryAddressSameAsFiscal\|deliveryAddress" src`): son el otro booleano (y sus 2 campos asociados) que la Tanda 16 conectó al formulario de clientes. Se guardan y se releen, pero nada fuera de `create-client/`, el DTO y el mapper los lee. `CreateOrderModal.tsx#handleConfirm` arma el pedido con `clientAddress: selectedClient.address` (la dirección **fiscal**), así que un cliente con dirección de entrega distinta recibe el pedido en la fiscal. Mismo patrón de migración a medias que `isActive` (cerrado en la Tanda 17), pero **no se corrigió**: decidir qué dirección toma el pedido (la de entrega del cliente, la fiscal o la que se cargue en `OrderDeliverySection`, ver ítem 17) es una decisión de producto, no una conexión mecánica. Ver `docs/historial/auditorias/AUDIT_2026-10-07_clientes-inactivos.md` MEDIO-4.
+
+### 17. `OrderDeliverySection` captura dirección/localidad/contacto/teléfono y el alta de pedido los descarta — Severidad: Media
+
+Verificado el 2026-10-07: `CreateOrderModal.tsx` tiene `useState` para `address`, `locality`, `contact` y `phone` y se los pasa a `OrderDeliverySection`, pero `OrderFormInput` no tiene esos campos y `handleConfirm` no los incluye. Son campos fantasma, la misma clase de hueco que el ítem 15 cerró en clientes. Está atado al ítem 16 (cuál es la dirección de entrega de un pedido) y conviene resolverlos juntos. Preexistente, no lo introdujo ninguna tanda reciente.
+
+### 18. `fetchProducts` (catálogo completo, sin límite) llamado desde adentro de 4 operaciones del servidor — Severidad: Media (a escala). Hoy no tiene impacto
+
+Introducido en la Tanda 14. `getPurchaseSuggestionsPage`, `exportPurchaseSuggestions`, `createOrder` y `purchaseOrders.service.ts#hasInactiveProduct` (que usan `createPurchaseOrder`/`generatePurchaseOrderFromSuggestion`) llaman a `fetchProducts`, que trae el catálogo entero por `httpClient`, para saber qué productos están activos. Contradice las reglas 3.1 y 3.11. **Decisión y forma del contrato objetivo: `docs/adr/ADR-016-filtro-estado-server-side.md`.** No se reescribió el mock (no fue pedido y con 19 productos no cambia nada observable). La condición es que el código nuevo no repita el patrón y que, cuando se toque cualquiera de esas funciones por otro motivo, se reemplace por un lookup acotado (`getProductStatusByIds`). ADR-016 también actualiza la postura del ítem 7 sobre los dropdowns con catálogo completo: aceptable en el mock, no con backend real.
+
 ## Reportados pero no reproducidos (verificados y descartados)
 
 Estos dos ítems se investigaron con evidencia de código directa (no solo lectura
@@ -353,5 +365,8 @@ escáner físico normalmente no dispara dos `Enter` en un intervalo tan corto.
 | 13 | `updateProduct` (productos) descarta los lotes existentes al editar | **Cerrado** (sesión avance-2026-09-30, `mergeProductUpdate`), sin verificar en navegador | — |
 | 14 | Productos sin registro de stock en ninguna sucursal (`inv-019`) — decisión de producto pendiente, no bug | Vigente — comportamiento E5 correcto, sin cambios | N/A |
 | 15 | `CreateClientModal` con 10 campos fantasma (nota: tabla no incluía este ítem hasta ahora, corregido al cerrarlo) | Cerrado (Tanda 16) | — |
+| 16 | `deliveryAddressSameAsFiscal`/`deliveryAddress` sin consumidor: el pedido usa la dirección fiscal | Vigente (decisión de producto pendiente) | Media |
+| 17 | `OrderDeliverySection`: dirección/localidad/contacto/teléfono fantasma en el alta de pedido | Vigente | Media |
+| 18 | `fetchProducts` completo dentro de 4 operaciones server-side (Tanda 14) | Vigente, documentado en ADR-016 | Media (a escala) |
 | — | `NewTransactionModal` formato de hora | No reproduce | — |
 | — | `OrderProductsSection` `await` faltante | No reproduce (resuelto o nunca existió así) | — |
