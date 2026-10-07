@@ -8,6 +8,25 @@ Tanda 0 (contención de errores) → Tanda 1 (capa `api/`, piloto `suppliers`) �
 
 **No hay ninguna tanda "a medias"**: todo lo de arriba tiene commit real, mergeado a `lean`. Lo que sigue abajo no son tandas sin cerrar, son hallazgos que esas tandas no atacaron (fuera de su alcance declarado) o verificación en navegador que nunca se corrió.
 
+## Auditoría de backend (2026-10-07, solo lectura) — punto de entrada para la fase de ADRs de backend
+
+**`docs/historial/auditorias/backend/00_RESUMEN.md` alcanza solo para arrancar.** El detalle con evidencia está en los archivos `01` a `08` de la misma carpeta. No se tocó código, y no se tomó ninguna decisión: la regla 2.9 no aplicó en esta sesión.
+
+- **Qué hay:** 91 llamadas a `httpClient` (no 88: 3 están partidas en dos líneas), 25 entidades, 72 reglas de negocio del mock, 26 decisiones abiertas (9 bloqueantes).
+- **Cobertura del Doc 04:** de los 83 RF, 2 tienen contrato completo, 37 parcial y **44 ninguno** (29 de ellos son MVP).
+- **Hallazgos:** **8 BLOQUEANTE, 21 ALTO**, 20 MEDIO, 5 BAJO.
+- **Bloqueantes:**
+  - Tenancy: D1 prohíbe mandar `empresaId` y 87 llamadas lo mandan.
+  - No hay autenticación.
+  - La exportación de ADR-004 no tiene contrato HTTP.
+  - El wire no está definido: 59 de 91 respuestas devuelven el tipo de dominio del frontend.
+  - Cumplimiento parcial: ADR-001/Doc 03 contra el sub-pedido de Doc 04.
+  - Dos mecanismos de rechazo, y el body de error se descarta en modo `http`.
+  - Nada mueve stock.
+  - Formato de ids.
+- **Hallazgo de proceso:** `.gitignore:10` (`BackEnd/`) ignora **toda** carpeta `backend/` en cualquier nivel por `core.ignorecase=true`, incluida la de esta auditoría (se agregó con `git add -f`). No se corrigió (consigna); es la decisión #26.
+- **Siguiente paso:** resolver las 9 decisiones bloqueantes de `08_DECISIONES_ABIERTAS.md` como ADRs, en el orden de tandas BE-0 a BE-10 que propone el resumen.
+
 ## Tandas 20/21 — qué resolvieron y qué no (2026-10-07b)
 
 Cierran `PENDIENTES.md` ítem 19. **(1)** Tanda 20: las 5 líneas de `orders.data.ts` con SKU inexistente apuntan ahora a `YER-MAT-1K`/`GAL-AGU-200`. Cambian solo `sku`/`name`; precio y totales intactos. **(2)** Tanda 21: `createOrder` rechaza un SKU que no está en el catálogo con `reason: 'product-not-found'` (antes lo persistía en silencio, demostrado corriendo el V17 nuevo contra el código previo). **Todos los scripts de `scripts/smoke/` y `scripts/verificacion/` (26) dan exit 0.** Es la primera vez desde que existe V17 que ninguno está en rojo, así que un rojo vuelve a significar algo. Quedó afuera, documentado en `PENDIENTES.md` ítem 20: el mismo dato huérfano en `analytics.data.ts`, `alerts.data.ts` y `suppliers.data.ts`.
