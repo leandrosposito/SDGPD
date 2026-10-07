@@ -306,9 +306,20 @@ Verificado el 2026-10-07: `CreateOrderModal.tsx` tiene `useState` para `address`
 
 Introducido en la Tanda 14. `getPurchaseSuggestionsPage`, `exportPurchaseSuggestions`, `createOrder` y `purchaseOrders.service.ts#hasInactiveProduct` (que usan `createPurchaseOrder`/`generatePurchaseOrderFromSuggestion`) llaman a `fetchProducts`, que trae el catálogo entero por `httpClient`, para saber qué productos están activos. Contradice las reglas 3.1 y 3.11. **Decisión y forma del contrato objetivo: `docs/adr/ADR-016-filtro-estado-server-side.md`.** No se reescribió el mock (no fue pedido y con 19 productos no cambia nada observable). La condición es que el código nuevo no repita el patrón y que, cuando se toque cualquiera de esas funciones por otro motivo, se reemplace por un lookup acotado (`getProductStatusByIds`). ADR-016 también actualiza la postura del ítem 7 sobre los dropdowns con catálogo completo: aceptable en el mock, no con backend real.
 
-### 19. 5 líneas de pedido del seed apuntan a SKUs que no existen en el catálogo, y `createOrder` acepta SKUs desconocidos — Severidad: Media (dato) / Baja (validación)
+### 19. 5 líneas de pedido del seed apuntan a SKUs que no existen en el catálogo, y `createOrder` acepta SKUs desconocidos — CERRADO (Tandas 20 y 21, 2026-10-07)
+
+**Cierre:** Tanda 20 corrigió el dato (`YER-TAR-1K` → `YER-MAT-1K`, `GAL-SUR-200` → `GAL-AGU-200`, solo `sku`/`name`, totales intactos). V17 D2.3 pasó a verde **sin modificar el check**. Tanda 21 agregó `reason: 'product-not-found'` a `createOrder` (enmienda de ADR-015), con 3 checks nuevos en V17 que fallan contra el código previo. Ver `VERIFICACION_TANDA_20.md`/`VERIFICACION_TANDA_21.md`. Los mismos SKUs huérfanos en otros mocks quedan en el ítem 20.
+
+**Texto original:**
 
 Encontrado en la Fase D de la sesión 2026-10-07 (`scripts/verificacion/v17-clientes-inactivos.mjs`, D2.3, que **falla a propósito y queda así** hasta que se corrija el dato, regla 2.5): `ord-001/YER-TAR-1K`, `ord-001/GAL-SUR-200`, `ord-003/GAL-SUR-200`, `ord-004/GAL-SUR-200` y `ord-006/YER-TAR-1K`. `inventory.data.ts` no tiene ni `YER-TAR-1K` ni `GAL-SUR-200` (tiene `YER-MAT-1K`, `YER-UNI-05` y `GAL-AGU-200`). Es preexistente: ninguna verificación anterior cruzaba `OrderItem.sku` contra el catálogo. Relacionado: el chequeo de la Tanda 14 en `createOrder` (`products.find(sku)?.status === 'inactive'`) deja pasar en silencio un sku que no existe. Un backend real debería rechazarlo con su propio `reason` (`'product-not-found'`). No se tocó: es MEDIO/BAJO y está fuera del alcance pedido.
+
+### 20. Los mismos SKUs/nombres huérfanos en analytics, proveedores y alertas — Severidad: Media (analytics, alertas) / Baja (proveedores)
+
+Encontrado en la Fase A de la sesión 2026-10-07b (`AUDIT_2026-10-07b_seed-skus.md`), fuera del alcance pedido (el ítem 19 nombraba solo `orders.data.ts`):
+- `analytics.data.ts:25-26,54-55,84-85,121-122`: los rankings de productos usan `YER-TAR-1K`/`GAL-SUR-200`. Es un dataset estático sin service (ALTO abierto en `ESTADO.md`), así que corregirlo tiene sentido recién cuando `analytics` derive del catálogo real.
+- `alerts.data.ts:21,23`: `alr-005` (`productId: 'inv-013'`, Papel Higiénico) dice `productName: 'Yerba Taragui 1kg'`, y `alr-003` (`inv-009`, Arroz) dice "Galletitas Surtidas 200g". El id resuelve, pero el nombre denormalizado miente.
+- `suppliers.data.ts:44,64`: el catálogo **del proveedor** lista esos SKUs. Puede ser legítimo (productos que el proveedor vende y nosotros no tenemos dados de alta). No hay regla que lo decida.
 
 ## Reportados pero no reproducidos (verificados y descartados)
 
@@ -372,6 +383,7 @@ escáner físico normalmente no dispara dos `Enter` en un intervalo tan corto.
 | 16 | `deliveryAddressSameAsFiscal`/`deliveryAddress` sin consumidor: el pedido usa la dirección fiscal | Vigente (decisión de producto pendiente) | Media |
 | 17 | `OrderDeliverySection`: dirección/localidad/contacto/teléfono fantasma en el alta de pedido | Vigente | Media |
 | 18 | `fetchProducts` completo dentro de 4 operaciones server-side (Tanda 14) | Vigente, documentado en ADR-016 | Media (a escala) |
-| 19 | 5 líneas de pedido del seed con SKU inexistente; `createOrder` acepta SKUs desconocidos | Vigente (V17 D2.3 falla a la vista) | Media / Baja |
+| 19 | 5 líneas de pedido del seed con SKU inexistente; `createOrder` acepta SKUs desconocidos | **Cerrado** (Tandas 20/21; V17 en verde) | — |
+| 20 | SKUs/nombres huérfanos en `analytics.data`, `alerts.data`, `suppliers.data` | Vigente | Media / Baja |
 | — | `NewTransactionModal` formato de hora | No reproduce | — |
 | — | `OrderProductsSection` `await` faltante | No reproduce (resuelto o nunca existió así) | — |

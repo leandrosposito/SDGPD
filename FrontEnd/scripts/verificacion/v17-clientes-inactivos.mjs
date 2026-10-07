@@ -154,6 +154,23 @@ check(
   suffix(reactivated) === suffix(ok) + 1
 );
 
+// Tanda 21 (PENDIENTES 19): un sku que no existe en el catalogo se
+// rechaza con reason propio — antes pasaba en silencio y el pedido se
+// persistia con una linea huerfana.
+const unknownSkuInput = orderInput(target);
+unknownSkuInput.items = [...unknownSkuInput.items, { sku: 'SKU-NO-EXISTE', name: 'Fantasma', quantity: 1, unitPrice: 10, subtotal: 10 }];
+const ordersBefore = await createOrder(EMPRESA, orderInput(target));
+const withUnknownSku = await createOrder(EMPRESA, unknownSkuInput);
+check(
+  'sku inexistente: reason product-not-found con el sku en detail',
+  withUnknownSku.success === false && withUnknownSku.reason === 'product-not-found' && (withUnknownSku.detail ?? '').includes('SKU-NO-EXISTE')
+);
+const ordersAfter = await createOrder(EMPRESA, orderInput(target));
+check(
+  `sku inexistente: no llego al alta (no consumio numero) (${ordersBefore.order.orderNumber} -> ${ordersAfter.order.orderNumber})`,
+  suffix(ordersAfter) === suffix(ordersBefore) + 1
+);
+
 // Camino de Tanda 14 migrado de `throw ApiError` a reason (ADR-015
 // punto 2): baja logica real del producto, despues alta de pedido.
 const { deleteProduct } = await import('../../src/shared/api/products/products.service.ts');
@@ -163,6 +180,11 @@ check(
   `producto dado de baja ${product.sku}: reason inactive-product con el sku en detail`,
   withInactiveProduct.success === false && withInactiveProduct.reason === 'inactive-product' && (withInactiveProduct.detail ?? '').includes(product.sku)
 );
+
+// Precedencia (Tanda 21): con un sku inexistente Y uno dado de baja en
+// el mismo pedido, gana product-not-found.
+const both = await createOrder(EMPRESA, { ...unknownSkuInput, items: [...orderInput(target).items, ...unknownSkuInput.items.slice(-1)] });
+check('sku inexistente + producto dado de baja: gana product-not-found', both.success === false && both.reason === 'product-not-found');
 
 console.log('');
 if (failures > 0) {

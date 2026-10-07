@@ -308,19 +308,27 @@ export async function createOrder(empresaId: string, input: OrderFormInput): Pro
       // productos dados de baja (OrderItem no tiene productId, solo
       // sku — ver order.types.ts). DEUDA (ADR-016): fetchProducts trae
       // el catalogo completo sin limite para validar N items.
+      // Tanda 21 (PENDIENTES 19): un sku que no resuelve a ningun
+      // producto se rechaza como 'product-not-found' — antes el
+      // `find(...)?.status === 'inactive'` lo dejaba pasar en silencio.
+      let unknownItem: OrderFormInput['items'][number] | undefined;
       let inactiveItem: OrderFormInput['items'][number] | undefined;
       if (client?.isActive) {
         const products = await fetchProducts(empresaId);
-        inactiveItem = input.items.find((item) => products.find((p) => p.sku === item.sku)?.status === 'inactive');
+        const statusBySku = new Map(products.map((p) => [p.sku, p.status]));
+        unknownItem = input.items.find((item) => !statusBySku.has(item.sku));
+        inactiveItem = input.items.find((item) => statusBySku.get(item.sku) === 'inactive');
       }
       const reason = getCreateOrderBlockReason({
         itemCount: input.items.length,
         client,
+        hasUnknownProduct: unknownItem !== undefined,
         hasInactiveProduct: inactiveItem !== undefined,
       });
       if (reason) {
-        return inactiveItem
-          ? { success: false, reason, detail: `"${inactiveItem.name}" (${inactiveItem.sku})` }
+        const offending = reason === 'product-not-found' ? unknownItem : reason === 'inactive-product' ? inactiveItem : undefined;
+        return offending
+          ? { success: false, reason, detail: `"${offending.name}" (${offending.sku})` }
           : { success: false, reason };
       }
       const now = new Date().toISOString();
