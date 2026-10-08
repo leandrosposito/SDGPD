@@ -1,6 +1,6 @@
 # Estado — SDGPD Frontend
 
-**Corresponde a: 2026-10-07, rama `lean` (hasta `sesion-seed-skus-2026-10-07` incluida, Tandas 17-21 — ver `docs/historial/reportes/REPORTE_2026-10-07.md` y `REPORTE_2026-10-07b.md`).** Este es el único snapshot vigente del proyecto — reemplaza a `docs/historial/auditorias/AUDIT_00_RESUMEN.md` (que quedó fijado al 2026-09-06 y ya no describe el estado real) como lectura de entrada. **Reescribilo al cerrar cada sesión** — no alcanza con dejar el `REPORTE_<fecha>.md`, ese documenta lo que se hizo, este documenta dónde está el proyecto AHORA.
+**Corresponde a: 2026-10-08, rama `lean` (hasta `sesion-seed-skus-2026-10-07` incluida, Tandas 17-21 — ver `docs/historial/reportes/REPORTE_2026-10-07.md` y `REPORTE_2026-10-07b.md`).** Este es el único snapshot vigente del proyecto — reemplaza a `docs/historial/auditorias/AUDIT_00_RESUMEN.md` (que quedó fijado al 2026-09-06 y ya no describe el estado real) como lectura de entrada. **Reescribilo al cerrar cada sesión** — no alcanza con dejar el `REPORTE_<fecha>.md`, ese documenta lo que se hizo, este documenta dónde está el proyecto AHORA.
 
 ## Tandas — todas cerradas hasta acá (verificado contra `git log --oneline lean` + la sesión en curso)
 
@@ -32,12 +32,12 @@ Lo que las resoluciones cambiaron, y que hay que tener presente al implementar:
 - **Tablero:** ADR-009 se extiende a 4 endpoints nuevos (`/dashboard/kpis`, `/sales-series`, `/top-products`, `/recent-orders`) y ahí recién se retira `fetchDashboardData`.
 - **Otros cierres:** `/auth/*` exento de idempotencia; el login declara el tipo de cliente (web → cookie, nativa → refresh en el body); ningún valor de enum es texto de display (`ClientAccount.status` → `al-dia`/`con-deuda`, `allowedTransitions[].motivo` → `motivoCode`); "en preparación" es derivado y no hay acción manual para ponerlo; el límite de crédito se controla al confirmar el pedido contra saldo + pedidos sin facturar.
 
-**Dos objeciones nuevas, abiertas**, aparecidas al aplicar las resoluciones:
+**Dos objeciones nuevas**, aparecidas al aplicar las resoluciones, **resueltas en el Paso 0 de la sesión BE-0a (2026-10-08)**: §1 del protocolo ya incluye "listas de precios", y la referencia al §3 de ADR-010 quedó verificada. Texto original:
 
 - **ADR-BE-002, objeción 3:** el alcance EMPRESA ganó "listas de precios", pero la enumeración de `PROTOCOLO.md` §1 no la incluye, porque §1 estaba fuera del alcance de la sesión de cierre. La tabla de ADR-BE-002 es la fuente de verdad hasta que una sesión con §1 en alcance lo sincronice.
 - **ADR-BE-004, objeción 3:** la consigna ubicaba `allowedTransitions` en el §1 de ADR-010 y está en el §3. La enmienda se escribió contra §3. Diferencia de referencia, no de contenido.
 
-**Dos archivos quedaron desactualizados a propósito** (fuera del alcance de la sesión de cierre): `BackEnd/CLAUDE.md` (sus invariantes dicen "Postgres es la única infraestructura obligatoria" sin el límite de BE-6, y mandan a leer las objeciones "sin resolver") y `FrontEnd/CLAUDE.md` (lockfile y comandos, que se actualiza en BE-0).
+**Dos archivos habían quedado desactualizados a propósito** (fuera del alcance de la sesión de cierre): `BackEnd/CLAUDE.md`, sincronizado en el Paso 0 de BE-0a (el límite de BE-6 y las objeciones ya resueltas), y `FrontEnd/CLAUDE.md` (lockfile y comandos), que se actualiza en la tanda que sume `FrontEnd` a los workspaces.
 
 ## Auditoría de backend (2026-10-07, solo lectura) — punto de entrada para la fase de ADRs de backend
 

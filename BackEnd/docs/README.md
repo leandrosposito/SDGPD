@@ -18,7 +18,7 @@
 | [ADR-BE-010](adr/ADR-BE-010-cuenta-corriente-caja.md) | Cuenta corriente append-only (débito por factura), caja por sucursal con apertura y cierre |
 | [ADR-BE-011](adr/ADR-BE-011-exportacion-alertas-tablero.md) | Exportación por job en el servidor, alertas por job y leídas por usuario, una sola fuente de tablero |
 
-**Cierre del 2026-10-08:** las **74 sub-decisiones** quedaron **aprobadas** (con una corrección: Node 24 LTS en lugar de Node 22, ADR-BE-001 sub-decisión 1) y las **23 objeciones** quedaron **resueltas**, cada una con su línea "Resolución (2026-10-08)" debajo del texto original, que se conserva como historia. La tabla de objeciones de más abajo dice dónde quedó cada resolución. Al aplicarlas aparecieron **2 objeciones nuevas**, anotadas y sin resolver (ADR-BE-002 objeción 3 y ADR-BE-004 objeción 3).
+**Cierre del 2026-10-08:** las **74 sub-decisiones** quedaron **aprobadas** (con una corrección: Node 24 LTS en lugar de Node 22, ADR-BE-001 sub-decisión 1) y las **23 objeciones** quedaron **resueltas**, cada una con su línea "Resolución (2026-10-08)" debajo del texto original, que se conserva como historia. La tabla de objeciones de más abajo dice dónde quedó cada resolución. Al aplicarlas aparecieron **2 objeciones nuevas** (ADR-BE-002 objeción 3 y ADR-BE-004 objeción 3), **resueltas en el Paso 0 de la sesión BE-0a** (2026-10-08).
 
 ## Trazabilidad: las 26 decisiones de `08_DECISIONES_ABIERTAS.md`
 
@@ -137,9 +137,9 @@ Todas resueltas el **2026-10-08**. El texto original de cada objeción se conser
 | 22 | BE-011 | "URL prefirmada" supone storage, contra "solo Postgres" | Interfaz única de storage: disco local en desarrollo, S3-compatible en producción desde BE-7; los archivos no van a Postgres | ADR-BE-011 §Storage y objeción 1; ADR-BE-001 §Decisión 2 |
 | 23 | BE-011 | Retirar `fetchDashboardData` deja 4 widgets sin fuente | Resuelto por la sub-decisión 6: ADR-009 se extiende a esos 4 endpoints | ADR-BE-011 objeción 2; enmienda de ADR-009 |
 
-**Objeciones nuevas, aparecidas al aplicar las resoluciones (sin resolver):**
+**Objeciones nuevas, aparecidas al aplicar las resoluciones (resueltas en el Paso 0 de BE-0a, 2026-10-08):**
 
-| ADR | Objeción |
-|---|---|
-| BE-002, objeción 3 | El alcance EMPRESA gana "listas de precios", pero la enumeración de alcances de `PROTOCOLO.md` §1 no la incluye: §1 estaba fuera del alcance de la sesión de cierre. La tabla de ADR-BE-002 es la fuente de verdad hasta que una sesión con §1 en alcance lo sincronice |
-| BE-004, objeción 3 | La consigna de cierre ubica `allowedTransitions` en el §1 de ADR-010 y está en el §3. La enmienda se escribió contra §3, que es la sección real. Diferencia de referencia, no de contenido |
+| ADR | Objeción | Resolución |
+|---|---|---|
+| BE-002, objeción 3 | El alcance EMPRESA gana "listas de precios", pero la enumeración de alcances de `PROTOCOLO.md` §1 no la incluye | `PROTOCOLO.md` §1 la incluye |
+| BE-004, objeción 3 | La consigna de cierre ubica `allowedTransitions` en el §1 de ADR-010 y está en el §3 | Verificado: la enmienda quedó contra §3 (`ADR-010-modelo-logistico.md:224`). Cerrada sin cambios |

@@ -81,3 +81,5 @@ SELECT set_config('app.empresa_id', $1, true);   -- equivale a SET LOCAL
    **Resolución (2026-10-08):** la entidad la crea la **sub-decisión 5 de ADR-BE-009** (`replenishment_requests`, de alcance sucursal, con estado `requested` y el usuario que la pidió), aprobada el 2026-10-08. El alcance SUCURSAL de este ADR ya tiene a qué aplicarse, y se materializa en BE-4.
 
 3. **El alcance EMPRESA gana "listas de precios"** (resolución de la objeción 1 de ADR-BE-006, 2026-10-08), pero la enumeración de alcances de `FrontEnd/docs/PROTOCOLO.md` §1 **no** la incluye: §1 del protocolo está fuera del alcance de la sesión de cierre, que solo puede tocar la regla 2.2, la línea de D8 y la trampa 6.6. La tabla de este ADR es la fuente de verdad hasta que una sesión con §1 en alcance lo sincronice. **Objeción nueva, sin resolver.**
+
+   **Resolución (2026-10-08, sesión BE-0a, Paso 0):** `PROTOCOLO.md` §1 ya incluye "listas de precios" en el alcance EMPRESA. Protocolo y tabla de este ADR quedan sincronizados.
