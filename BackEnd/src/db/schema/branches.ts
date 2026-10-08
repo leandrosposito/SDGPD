@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm'
-import { check, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core'
+import { check, integer, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core'
 import { companies } from './companies.ts'
 
 /**
@@ -19,6 +19,8 @@ export const branches = pgTable(
     city: text('city').notNull(),
     address: text('address').notNull(),
     status: text('status', { enum: ['active', 'inactive'] }).notNull().default('active'),
+    /** Primer agregado editable: concurrencia optimista (ADR-BE-005 › Concurrencia), BE-0b. */
+    version: integer('version').notNull().default(1),
     createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
   },
   t => [

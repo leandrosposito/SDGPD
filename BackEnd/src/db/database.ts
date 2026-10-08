@@ -1,19 +1,27 @@
 import { Inject, Injectable, type OnModuleDestroy } from '@nestjs/common'
 import { idSchema } from '@sdgpd/contracts'
 import { sql } from 'drizzle-orm'
-import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres'
+import { drizzle } from 'drizzle-orm/node-postgres'
 import pg from 'pg'
 import { APP_CONFIG, type AppConfig } from '../config/config.ts'
+import type { Actor } from '../context/actor.ts'
+import { CommandTx } from './command.ts'
+import { claimKey, completeKey, type IdempotencyRequest, type StoredResponse } from './idempotency.ts'
 import * as schema from './schema/index.ts'
+import type { Db, TenantTx } from './tenant-tx.ts'
 
-type Db = NodePgDatabase<typeof schema>
-/** Transacción con el tenant ya fijado. Es lo único que recibe el código de negocio. */
-export type TenantTx = Parameters<Parameters<Db['transaction']>[0]>[0]
+export type { TenantTx } from './tenant-tx.ts'
+
+/** Lo que recibe una lectura: solo `select`, dentro de una transacción READ ONLY con el tenant fijado. */
+export type ReadTx = { readonly select: TenantTx['select'] }
 
 /**
- * Acceso a Postgres. El cliente Drizzle es privado: la única forma de tocar tablas de negocio es
- * withTenant (ADR-BE-002). El schema lo decide el rol de la conexión (search_path por rol,
- * ADR-BE-002 sub-decisión 8): este código no nombra ningún schema.
+ * Acceso a Postgres. El cliente Drizzle es privado. El código de negocio entra por:
+ * - `read(empresaId, fn)`: lecturas, en una transacción READ ONLY (Postgres rechaza cualquier escritura);
+ * - `command(actor, fn)` / `idempotentCommand(...)`: comandos, con un CommandTx cuyas escrituras
+ *   siempre se auditan (ADR-BE-005).
+ * `withTenant` (transacción cruda) queda para src/db/ y los tests: ESLint prohíbe usarlo en el resto
+ * de src/. El schema lo decide el rol de la conexión (ADR-BE-002, sub-decisión 8).
  */
 @Injectable()
 export class Database implements OnModuleDestroy {
@@ -37,11 +45,68 @@ export class Database implements OnModuleDestroy {
    * Abre una transacción, fija el tenant con set_config(..., true) —local a la transacción,
    * nunca a la conexión— y ejecuta fn. Sin tenant fijado, toda tabla con RLS devuelve cero filas.
    */
-  async withTenant<T>(empresaId: string, fn: (tx: TenantTx) => Promise<T>): Promise<T> {
+  async withTenant<T>(
+    empresaId: string,
+    fn: (tx: TenantTx) => Promise<T>,
+    accessMode: 'read write' | 'read only' = 'read write',
+  ): Promise<T> {
     const id = idSchema.parse(empresaId)
+    return this.db.transaction(
+      async tx => {
+        await tx.execute(sql`select set_config('app.empresa_id', ${id}, true)`)
+        return fn(tx)
+      },
+      { accessMode },
+    )
+  }
+
+  /** Lectura con el tenant de la empresa, en una transacción READ ONLY. */
+  async read<T>(empresaId: string, fn: (tx: ReadTx) => Promise<T>): Promise<T> {
+    return this.withTenant(empresaId, tx => fn({ select: tx.select.bind(tx) }), 'read only')
+  }
+
+  /** Comando: una transacción con el tenant del actor (ADR-BE-005 › Transacciones). */
+  async command<T>(actor: Actor, fn: (tx: CommandTx) => Promise<T>): Promise<T> {
+    return this.withTenant(actor.empresaId, tx => fn(new CommandTx(tx, actor)))
+  }
+
+  /**
+   * Comando idempotente (ADR-BE-005 › Idempotencia): la clave se registra en la MISMA transacción.
+   * Si el comando falla, no queda nada y un reintento se ejecuta de nuevo. Misma clave y mismo payload:
+   * replay de la respuesta guardada. Misma clave y otro payload: 422 `idempotency-key-reused`.
+   */
+  async idempotentCommand(
+    actor: Actor,
+    request: IdempotencyRequest,
+    fn: (tx: CommandTx) => Promise<StoredResponse>,
+  ): Promise<{ replayed: boolean; response: StoredResponse }> {
+    return this.withTenant(actor.empresaId, async tx => {
+      const claim = await claimKey(tx, actor, request)
+      if (!claim.claimed) return { replayed: true, response: claim.stored }
+      const response = await fn(new CommandTx(tx, actor))
+      await completeKey(tx, actor, request, response)
+      return { replayed: false, response }
+    })
+  }
+
+  /**
+   * Borra las claves de idempotencia vencidas de TODAS las empresas (ADR-BE-005, sub-decisión 8).
+   * Corre sin tenant: la política `expired_cleanup` (migración 0003) solo deja borrar las vencidas,
+   * y el DELETE no tiene WHERE ni RETURNING, así que no lee ninguna fila. Con un advisory lock de
+   * transacción por schema, corre en una sola instancia a la vez. Devuelve cuántas borró, o `null`
+   * si otra instancia tenía el lock.
+   */
+  async cleanupExpiredIdempotencyKeys(): Promise<number | null> {
     return this.db.transaction(async tx => {
-      await tx.execute(sql`select set_config('app.empresa_id', ${id}, true)`)
-      return fn(tx)
+      const lock = await tx.execute<{ locked: boolean; tenant: string | null }>(
+        sql`select pg_try_advisory_xact_lock(hashtext(current_schema() || ':idempotency-cleanup')) as locked,
+                   nullif(current_setting('app.empresa_id', true), '') as tenant`,
+      )
+      const row = lock.rows[0]
+      if (row?.tenant !== null) throw new Error('la limpieza de idempotencia no corre con un tenant fijado')
+      if (!row.locked) return null
+      const deleted = await tx.execute(sql`delete from ${schema.idempotencyKeys}`)
+      return deleted.rowCount ?? 0
     })
   }
 

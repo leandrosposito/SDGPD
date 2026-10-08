@@ -19,10 +19,18 @@ export type ErrorBody = z.infer<typeof errorBodySchema>
  */
 export const transversalErrorCodes = {
   'validation-error': 400,
+  /** POST sin header Idempotency-Key, o con uno que no es UUID (ADR-BE-005 › Idempotencia). */
+  'idempotency-key-required': 400,
+  /** Filtro, orden o paginación fuera de la lista blanca del recurso (ADR-BE-004 › Orden y filtros). */
+  'invalid-query': 400,
   unauthenticated: 401,
   forbidden: 403,
   'not-found': 404,
   'version-conflict': 409,
+  /** La misma clave sigue en ejecución. Defensivo: con la clave registrada en la transacción del comando no se observa. */
+  'idempotency-key-in-progress': 409,
+  /** Misma Idempotency-Key con otro payload. */
+  'idempotency-key-reused': 422,
   'internal-error': 500,
   'service-unavailable': 503,
 } as const

@@ -25,9 +25,17 @@ export default tseslint.config(
         'error',
         {
           paths: [
-            { name: 'pg', message: 'Solo src/db/ abre conexiones. Usá Database.withTenant.' },
-            { name: 'drizzle-orm/node-postgres', message: 'Solo src/db/ arma el cliente. Usá Database.withTenant.' },
+            { name: 'pg', message: 'Solo src/db/ abre conexiones. Usá Database.read() o un comando.' },
+            { name: 'drizzle-orm/node-postgres', message: 'Solo src/db/ arma el cliente. Usá Database.read() o un comando.' },
           ],
+        },
+      ],
+      // La transacción cruda (withTenant) escribe sin auditoría: fuera de src/db/ se usa read() o command().
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "MemberExpression[property.name='withTenant']",
+          message: 'withTenant es la transacción cruda: usá Database.read() o un comando (@Command()).',
         },
       ],
     },
