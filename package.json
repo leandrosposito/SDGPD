@@ -1,0 +1,18 @@
+{
+  "name": "sdgpd",
+  "private": true,
+  "description": "Monorepo SDGPD: workspaces del backend y de los paquetes compartidos (ADR-BE-001). FrontEnd se suma en la primera tanda que conecte un módulo.",
+  "workspaces": [
+    "packages/*",
+    "BackEnd"
+  ],
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "typecheck": "npm run typecheck --workspaces",
+    "lint": "npm run lint --workspaces",
+    "test": "npm run test --workspaces",
+    "build": "npm run build --workspaces"
+  }
+}

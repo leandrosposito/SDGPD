@@ -1,0 +1,20 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1791485973059,
+      "tag": "0000_companies_branches",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791485985894,
+      "tag": "0001_rls_companies_branches",
+      "breakpoints": true
+    }
+  ]
+}

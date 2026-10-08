@@ -8,13 +8,19 @@ SDGPD is an ERP built around business domains (Core, Comercial, Inventario, Log�
 
 ## Structure
 
-- `FrontEnd/` — React app, actively developed. All code today lives here. See `FrontEnd/CLAUDE.md` for stack, architecture, and implementation details.
-- `BackEnd/` — backend NestJS + PostgreSQL (monorepo, ADR-BE-001). **Decidido y documentado, todavía sin código** (2026-10-07): solo tiene `BackEnd/CLAUDE.md` y `BackEnd/docs/` (11 ADRs + plan de tandas BE-0 a BE-10). Read `BackEnd/CLAUDE.md` before touching it.
+- `FrontEnd/` — React app, actively developed (todavía sobre adaptadores mock). See `FrontEnd/CLAUDE.md` for stack, architecture, and implementation details.
+- `BackEnd/` — backend NestJS + PostgreSQL (monorepo, ADR-BE-001). **BE-0a hecha (2026-10-08):** esqueleto, Postgres en Supabase con RLS y suites de aislamiento, sin endpoints de negocio. Read `BackEnd/CLAUDE.md` before touching it.
+- `packages/contracts/` — contrato HTTP compartido (Zod), consumido por `BackEnd` (y por `FrontEnd` cuando se sume a los workspaces).
 - `Documentacion/` — business/domain specs (Product Vision, Arquitectura Funcional del Negocio, Modelo Funcional del Dominio) as .docx/.pdf, plus some derived .md/.txt extracts. See `Documentacion/README.md` first — it maps which file is which and which ones are current vs. archived. Consult these for business rules and domain vocabulary (in Spanish) before inventing behavior for a module.
 
 ## Commands
 
-No repo-root-level commands. All commands run from `FrontEnd/` — see `FrontEnd/CLAUDE.md`.
+- **Frontend:** todo corre desde `FrontEnd/`, incluido su `npm ci` (`FrontEnd` todavía no es un workspace). Ver `FrontEnd/CLAUDE.md`.
+- **Backend y `packages/contracts`:** desde la raíz (workspaces `BackEnd` y `packages/*`, lockfile en la raíz):
+  - `npm ci`
+  - `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`: todos los workspaces; con `-w @sdgpd/backend` o `-w @sdgpd/contracts`, uno solo.
+  - `npm run start -w @sdgpd/backend`: levanta el backend (`GET /health`).
+  - `npm run db:setup -w @sdgpd/backend`, `npm run db:migrate -w @sdgpd/backend`, `npm run db:generate -w @sdgpd/backend`, `npm run db:sql -w @sdgpd/backend -- <rol> "<sql>"`: base de datos (ver `BackEnd/docs/SETUP_SUPABASE.md`).
 
 ## Dónde buscar
 

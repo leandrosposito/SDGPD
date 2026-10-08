@@ -6,7 +6,19 @@ Guía para Claude Code al trabajar en `BackEnd/`.
 
 El backend de SDGPD: Node LTS + TypeScript + NestJS + PostgreSQL, multi-tenant con `empresa_id` y RLS, en el mismo monorepo que `FrontEnd/` (ADR-BE-001).
 
-**Hoy `BackEnd/` tiene solo documentación** (2026-10-07): no hay código, `package.json`, migraciones ni `packages/`. Lo primero que se construye es la tanda BE-0.
+**BE-0a está hecha** (2026-10-08): esqueleto NestJS, `packages/contracts` base, Postgres en Supabase con RLS forzado (`companies`, `branches`) y suites de aislamiento. Lo que sigue es **BE-0b** (idempotencia, `version`, auditoría, contadores, helpers de paginación). Estructura: `docs/ARQUITECTURA.md`. Entorno: `docs/SETUP_SUPABASE.md`.
+
+## Comandos (desde la raíz del repo, con `-w @sdgpd/backend`)
+
+- `npm ci`: instala los workspaces (`BackEnd` y `packages/*`). El lockfile está en la raíz.
+- `npm run typecheck | lint | test | build`: en la raíz corren en todos los workspaces; con `-w @sdgpd/backend`, solo en el backend.
+- `npm run start -w @sdgpd/backend`: levanta `dist/main.js` con `BackEnd/.env`.
+- `npm run db:setup -w @sdgpd/backend`: roles, schemas y privilegios. Es idempotente y corre como `postgres`.
+- `npm run db:migrate -w @sdgpd/backend [-- sdgpd|sdgpd_test]`: migraciones, como `sdgpd_migrator`.
+- `npm run db:generate -w @sdgpd/backend`: `drizzle-kit generate`. Después hay que revisar el SQL y sacar `"public".`. **`drizzle-kit push` está prohibido.**
+- `npm run db:sql -w @sdgpd/backend -- <migrator|app|app_test> [--tenant <uuid> [--commit]] "<sql>" ...`: SQL a mano, sin psql.
+
+Los tests corren contra `sdgpd_test` como `sdgpd_app_test`, y se niegan a arrancar con otra conexión.
 
 ## Qué leer antes de tocar algo
 

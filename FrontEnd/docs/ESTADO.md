@@ -1,6 +1,6 @@
 # Estado — SDGPD Frontend
 
-**Corresponde a: 2026-10-08, rama `lean` (hasta `sesion-seed-skus-2026-10-07` incluida, Tandas 17-21 — ver `docs/historial/reportes/REPORTE_2026-10-07.md` y `REPORTE_2026-10-07b.md`).** Este es el único snapshot vigente del proyecto — reemplaza a `docs/historial/auditorias/AUDIT_00_RESUMEN.md` (que quedó fijado al 2026-09-06 y ya no describe el estado real) como lectura de entrada. **Reescribilo al cerrar cada sesión** — no alcanza con dejar el `REPORTE_<fecha>.md`, ese documenta lo que se hizo, este documenta dónde está el proyecto AHORA.
+**Corresponde a: 2026-10-08, rama `lean` (hasta `sesion-be0a-2026-10-08` incluida — backend BE-0a, ver `docs/historial/reportes/REPORTE_2026-10-08.md`; frontend hasta `sesion-seed-skus-2026-10-07`, Tandas 17-21 — ver `docs/historial/reportes/REPORTE_2026-10-07.md` y `REPORTE_2026-10-07b.md`).** Este es el único snapshot vigente del proyecto — reemplaza a `docs/historial/auditorias/AUDIT_00_RESUMEN.md` (que quedó fijado al 2026-09-06 y ya no describe el estado real) como lectura de entrada. **Reescribilo al cerrar cada sesión** — no alcanza con dejar el `REPORTE_<fecha>.md`, ese documenta lo que se hizo, este documenta dónde está el proyecto AHORA.
 
 ## Tandas — todas cerradas hasta acá (verificado contra `git log --oneline lean` + la sesión en curso)
 
@@ -8,9 +8,22 @@ Tanda 0 (contención de errores) → Tanda 1 (capa `api/`, piloto `suppliers`) �
 
 **No hay ninguna tanda "a medias"**: todo lo de arriba tiene commit real, mergeado a `lean`. Lo que sigue abajo no son tandas sin cerrar, son hallazgos que esas tandas no atacaron (fuera de su alcance declarado) o verificación en navegador que nunca se corrió.
 
+## Backend — BE-0a hecha (2026-10-08, `sesion-be0a-2026-10-08`)
+
+La base del backend, sin endpoints de negocio y sin autenticación. Detalle en `docs/historial/reportes/REPORTE_2026-10-08.md`, estructura en `BackEnd/docs/ARQUITECTURA.md` y entorno en `BackEnd/docs/SETUP_SUPABASE.md`.
+
+- **Monorepo:** `package.json` raíz con los workspaces `packages/*` y `BackEnd`, y el lockfile en la raíz. **`FrontEnd` todavía no es un workspace**: `FrontEnd/package.json` y `FrontEnd/package-lock.json` no cambiaron, y su `npm ci` se sigue corriendo en `FrontEnd/`.
+- **`packages/contracts`:** id, cuerpo de error, envoltorios offset y cursor, fecha, instante, dinero y `/health`. Un cambio que rompe al backend falla en su typecheck sin compilar nada (verificado).
+- **Backend:** NestJS 12 con config validada con Zod, filtro global de errores, `ZodValidationPipe`, `X-Request-Id` y `GET /health` (el único endpoint).
+- **Base:** Supabase como Postgres 17.11, por el session pooler (el host directo es solo IPv6), con SSL verificado. Roles `sdgpd_migrator`, `sdgpd_app` y `sdgpd_app_test`; schemas `sdgpd` y `sdgpd_test`, con las mismas migraciones. `companies` y `branches` con RLS forzado, y `withTenant` con `set_config(..., true)`. UUID v7 generados por la aplicación.
+- **Tests:** 39 del backend y 12 de `contracts`, incluidas la suite de catálogo (cubre sola cualquier tabla futura) y la funcional de aislamiento, que falla si una tabla con RLS no tiene caso.
+- **Checklist sin ejecutar:** `BackEnd/docs/verificaciones/VERIFICACION_BE-0a.md` (lo corre Leandro).
+- **Sigue:** **BE-0b** (idempotencia, `version`, auditoría, contadores por serie, helpers de paginación y el arrastre de `httpClient` en el frontend) y después BE-1.
+- **Deuda abierta de BE-0a:** las FK que genera `drizzle-kit` traen `"public".` y hay que sacarlo a mano (si se olvida, el runner rechaza la migración). Express manda `X-Powered-By`. `companies.timezone` no se valida contra IANA hasta BE-1. Smart App Control impide usar `@swc/core` en la máquina de desarrollo.
+
 ## ADRs de backend (cerrados el 2026-10-08) — las 26 decisiones de la auditoría, tomadas y documentadas
 
-**Punto de entrada para empezar el backend: `BackEnd/docs/README.md`.** Ahí están los 11 ADRs (`BackEnd/docs/adr/ADR-BE-001..011`), la trazabilidad de las 26 decisiones de `08_DECISIONES_ABIERTAS.md` (cada una en un solo ADR), la tabla de los 8 BLOQUEANTE y 21 ALTO (cada uno con su ADR o tanda), y el plan de tandas BE-0 a BE-10 con el trabajo de frontend que arrastra cada una. **`BackEnd/` sigue sin código.**
+**Punto de entrada para empezar el backend: `BackEnd/docs/README.md`.** Ahí están los 11 ADRs (`BackEnd/docs/adr/ADR-BE-001..011`), la trazabilidad de las 26 decisiones de `08_DECISIONES_ABIERTAS.md` (cada una en un solo ADR), la tabla de los 8 BLOQUEANTE y 21 ALTO (cada uno con su ADR o tanda), y el plan de tandas BE-0 a BE-10 con el trabajo de frontend que arrastra cada una. **`BackEnd/` ya tiene código desde BE-0a** (sección siguiente).
 
 - **`.gitignore`:** sin la regla `BackEnd/`, que ignoraba toda carpeta `backend/` (A18, cerrado). Reglas de monorepo para `node_modules`/`dist` y `.env` (salvo `.env.example`).
 - **Protocolo:** cambiaron §1 (el backend existe en `BackEnd/`, nuevos alcances), 2.3 (tests prohibidos solo en `FrontEnd/`), 3.1 (offset con tope 100 para maestros, cursor para append-only) y 3.5 (ningún request lleva `empresaId`).

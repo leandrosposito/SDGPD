@@ -12,6 +12,12 @@ packages/*/dist/
 .env.*
 !.env.example
 
+# Certificados y claves: viven fuera del repo (BackEnd/docs/SETUP_SUPABASE.md)
+*.crt
+*.pem
+*.key
+*.p12
+
 # Documentación pesada — solo se leen los extractos .md/.txt derivados
 Documentacion/**/*.docx
 Documentacion/**/*.pdf
