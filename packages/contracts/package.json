@@ -1,0 +1,29 @@
+{
+  "name": "@sdgpd/contracts",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Contrato HTTP compartido entre BackEnd y FrontEnd: schemas Zod y tipos inferidos (ADR-BE-001, ADR-BE-004).",
+  "type": "module",
+  "exports": {
+    ".": {
+      "sdgpd-source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint --config ../../BackEnd/eslint.config.mjs .",
+    "test": "vitest run --config ../../BackEnd/vitest.contracts.config.mts",
+    "build": "tsc -p tsconfig.build.json"
+  },
+  "dependencies": {
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "typescript": "6.0.3"
+  }
+}

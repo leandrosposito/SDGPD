@@ -162,3 +162,5 @@ La auditoría (`01_ENDPOINTS.md`, `04_TRANSVERSALES.md`) encontró:
    **Resolución (2026-10-08):** **`allowedTransitions[].motivo` pasa a ser un `code` kebab-case** (`motivoCode`); el texto lo arma la UI. Queda anotado en la sección de enmienda de ADR-010, que es donde vive la forma de `allowedTransitions` (**§3** de ese ADR, no §1: ver la objeción 3).
 
 3. **La consigna de cierre ubica `allowedTransitions` en el §1 de ADR-010, y está en el §3.** El §1 de ADR-010 es "Ejes de estado"; `allowedTransitions` y su forma `{ transicion, permitida, motivo? }` son el §3, "Eventos append-only y proyección" (`FrontEnd/docs/adr/ADR-010-modelo-logistico.md:107` y la decisión aprobada 3 de ese ADR). La enmienda se escribió contra **§3**, que es la sección real. Diferencia de referencia, no de contenido. **Objeción nueva, anotada al aplicar la resolución.**
+
+   **Resolución (2026-10-08, sesión BE-0a, Paso 0):** verificado que la enmienda quedó bien: la sección "Enmienda 2026-10-07" de ADR-010 (`FrontEnd/docs/adr/ADR-010-modelo-logistico.md:224`) la escribe contra el §3, que es la sección real de `allowedTransitions`. No hay nada que corregir: la objeción queda cerrada.

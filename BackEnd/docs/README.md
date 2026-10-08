@@ -1,6 +1,6 @@
 # BackEnd/docs — Índice de la documentación del backend
 
-**Fecha:** 2026-10-08. Hoy `BackEnd/` contiene **solo documentación**: no hay código, ni `package.json`, ni migraciones. El origen de todo lo de acá es la auditoría de solo lectura [`FrontEnd/docs/historial/auditorias/backend/`](../../FrontEnd/docs/historial/auditorias/backend/00_RESUMEN.md) (2026-10-07). Las 26 decisiones abiertas que dejó ([`08_DECISIONES_ABIERTAS.md`](../../FrontEnd/docs/historial/auditorias/backend/08_DECISIONES_ABIERTAS.md)) quedaron tomadas y documentadas en 11 ADRs.
+**Fecha:** 2026-10-08. **BE-0a está hecha** (2026-10-08): `BackEnd/` tiene el esqueleto NestJS, la base con RLS y las suites de aislamiento; la estructura está en [`ARQUITECTURA.md`](ARQUITECTURA.md) y el entorno, en [`SETUP_SUPABASE.md`](SETUP_SUPABASE.md). El origen de todo lo de acá es la auditoría de solo lectura [`FrontEnd/docs/historial/auditorias/backend/`](../../FrontEnd/docs/historial/auditorias/backend/00_RESUMEN.md) (2026-10-07). Las 26 decisiones abiertas que dejó ([`08_DECISIONES_ABIERTAS.md`](../../FrontEnd/docs/historial/auditorias/backend/08_DECISIONES_ABIERTAS.md)) quedaron tomadas y documentadas en 11 ADRs.
 
 ## ADRs
 
@@ -18,7 +18,7 @@
 | [ADR-BE-010](adr/ADR-BE-010-cuenta-corriente-caja.md) | Cuenta corriente append-only (débito por factura), caja por sucursal con apertura y cierre |
 | [ADR-BE-011](adr/ADR-BE-011-exportacion-alertas-tablero.md) | Exportación por job en el servidor, alertas por job y leídas por usuario, una sola fuente de tablero |
 
-**Cierre del 2026-10-08:** las **74 sub-decisiones** quedaron **aprobadas** (con una corrección: Node 24 LTS en lugar de Node 22, ADR-BE-001 sub-decisión 1) y las **23 objeciones** quedaron **resueltas**, cada una con su línea "Resolución (2026-10-08)" debajo del texto original, que se conserva como historia. La tabla de objeciones de más abajo dice dónde quedó cada resolución. Al aplicarlas aparecieron **2 objeciones nuevas**, anotadas y sin resolver (ADR-BE-002 objeción 3 y ADR-BE-004 objeción 3).
+**Cierre del 2026-10-08:** las **74 sub-decisiones** quedaron **aprobadas** (con una corrección: Node 24 LTS en lugar de Node 22, ADR-BE-001 sub-decisión 1) y las **23 objeciones** quedaron **resueltas**, cada una con su línea "Resolución (2026-10-08)" debajo del texto original, que se conserva como historia. La tabla de objeciones de más abajo dice dónde quedó cada resolución. Al aplicarlas aparecieron **2 objeciones nuevas** (ADR-BE-002 objeción 3 y ADR-BE-004 objeción 3), **resueltas en el Paso 0 de la sesión BE-0a** (2026-10-08).
 
 ## Trazabilidad: las 26 decisiones de `08_DECISIONES_ABIERTAS.md`
 
@@ -55,16 +55,16 @@
 
 | Id | Hallazgo (resumido) | Lo resuelve | Tanda que lo corrige |
 |---|---|---|---|
-| B1 | `empresaId` en 87 llamadas contra D1 | ADR-BE-002 | BE-0 (infra), cada módulo al conectarse |
+| B1 | `empresaId` en 87 llamadas contra D1 | ADR-BE-002 | BE-0a (infra: RLS + `withTenant`), cada módulo al conectarse |
 | B2 | Sin auth; actor en el body | ADR-BE-003 | BE-1 |
 | B3 | Exportación sin contrato HTTP | ADR-BE-011 | BE-10 |
-| B4 | Wire indefinido | ADR-BE-004 | BE-0 (`contracts`), cada módulo |
+| B4 | Wire indefinido | ADR-BE-004 | BE-0a (`contracts` base), cada módulo |
 | B5 | Cumplimiento parcial contradictorio | ADR-BE-008 | BE-5, BE-6, BE-8 |
-| B6 | Dos mecanismos de rechazo; body de error descartado | ADR-BE-004 | BE-0 (`httpClient` + filtro de errores) |
+| B6 | Dos mecanismos de rechazo; body de error descartado | ADR-BE-004 | BE-0a (filtro de errores), BE-0b (`httpClient`) |
 | B7 | Nada mueve stock | ADR-BE-009 | BE-4, BE-5, BE-6, BE-8 |
-| B8 | Formato de ids | ADR-BE-004 | BE-0 |
+| B8 | Formato de ids | ADR-BE-004 | BE-0a (UUID v7 en el servidor), BE-0b (validador del frontend) |
 | A1 | 4 funciones sin `empresaId` en `dashboard.service.ts` | ADR-BE-011 (se retiran) | BE-10 |
-| A2 | Reintento de POST sin idempotencia | ADR-BE-005 | BE-0 |
+| A2 | Reintento de POST sin idempotencia | ADR-BE-005 | BE-0b |
 | A3 | Totales que manda el cliente | ADR-BE-006 | BE-5 |
 | A4 | Sobreentrega posible | ADR-BE-008 | BE-6 |
 | A5 | Dos caminos a `FINALIZADO` | ADR-BE-005 | BE-6, BE-7 |
@@ -74,10 +74,10 @@
 | A9 | Recepción de OC sin cantidades ni stock | ADR-BE-008 + ADR-BE-009 | BE-8 |
 | A10 | Remitos sin endpoint | ADR-BE-004 (sub-decisión 7) | BE-6 |
 | A11 | Efectos cruzados no transaccionales | ADR-BE-005 | BE-6, BE-7 |
-| A12 | Toasts con texto genérico en `http` | ADR-BE-004 | BE-0 |
-| A13 | Concurrencia en un solo endpoint | ADR-BE-005 | BE-0 (infra), cada módulo |
-| A14 | Idempotencia global; claves generadas al enviar | ADR-BE-005 | BE-0, BE-2 (vehículos y choferes), BE-6/7 (logística) |
-| A15 | Alertas leídas globalmente; auditoría sin escritores | ADR-BE-005 (auditoría) + ADR-BE-011 (alertas) | BE-0, BE-10 |
+| A12 | Toasts con texto genérico en `http` | ADR-BE-004 | BE-0b |
+| A13 | Concurrencia en un solo endpoint | ADR-BE-005 | BE-0b (infra), cada módulo |
+| A14 | Idempotencia global; claves generadas al enviar | ADR-BE-005 | BE-0b, BE-2 (vehículos y choferes), BE-6/7 (logística) |
+| A15 | Alertas leídas globalmente; auditoría sin escritores | ADR-BE-005 (auditoría) + ADR-BE-011 (alertas) | BE-0b, BE-10 |
 | A16 | Dinero en float | ADR-BE-006 | cada módulo con importes (BE-3, BE-5, BE-8, BE-9) |
 | A17 | Permisos sin enforcement; `USER_ROLE` fijo | ADR-BE-003 | BE-1 |
 | A18 | `BackEnd/` en `.gitignore` | ADR-BE-001 | **cerrado** en el Paso 0 de la sesión de ADRs (`509963b`) |
@@ -87,11 +87,14 @@
 
 ## Plan de tandas BE-0 a BE-10
 
+**BE-0 se dividió en dos (2026-10-08):** **BE-0a** es la base (monorepo, contratos, esqueleto, base con RLS y suite de aislamiento, sin endpoints de negocio ni autenticación) y **BE-0b** es el resto de la infraestructura de mutaciones que el plan original ponía en BE-0 (idempotencia, `version`, auditoría, contadores y helpers de paginación). BE-0b va antes de BE-1.
+
 Cada tanda pasa los 8 gates de ADR-BE-001 y sigue el protocolo de `FrontEnd/docs/PROTOCOLO.md` (fases A-E, merge `--no-ff` a `lean`). "Arrastra" es el trabajo de frontend que se hace en la misma tanda para conectar el módulo: cambiar al adaptador `http`, migrar el DTO a `contracts`, migrar el dinero a `Money`.
 
 | Tanda | Construye | ADRs | Arrastra en el frontend |
 |---|---|---|---|
-| **BE-0** | `package.json` de workspaces; `packages/contracts` (base); esqueleto NestJS; Drizzle con migraciones SQL; interceptor de transacción y tenant (`SET LOCAL`); filtro de errores `{code, message, details}`; tabla e interceptor de idempotencia (**`/auth/*` exento**); tabla e interceptor de auditoría; infraestructura de paginación y listas blancas; suite de aislamiento (vacía, que crece por tabla) | 001, 002, 004, 005 | `httpClient`: leer el cuerpo de error, header `Idempotency-Key`, reintentar solo GET y mutaciones con clave. Validador de ids que acepta UUID + prefijo legado (ADR-BE-004, sub-decisión 1). **Actualizar `FrontEnd/CLAUDE.md`**: con workspaces, el lockfile pasa a la raíz y `npm ci` se corre desde ahí (ADR-BE-001, objeción 3) |
+| **BE-0a** (hecha 2026-10-08) | `package.json` de workspaces (`BackEnd` y `packages/*`; **`FrontEnd` todavía no**) con el lockfile en la raíz; `packages/contracts` (base transversal: id, cuerpo de error, envoltorios offset y cursor, fecha, instante, dinero); esqueleto NestJS (config validada con Zod, filtro global de errores `{code, message, details}`, `ZodValidationPipe`, `X-Request-Id`, `GET /health`); roles y schemas en Supabase (`sdgpd_migrator`, `sdgpd_app`, `sdgpd_app_test`; `sdgpd` y `sdgpd_test`); Drizzle con migraciones SQL y runner propio; `companies` y `branches` con RLS forzado; `Database.withTenant` (`set_config(..., true)`); suite de catálogo y suite funcional de aislamiento | 001, 002, 004 | Nada: `FrontEnd/` no cambia en esta tanda |
+| **BE-0b** | Tabla e interceptor de idempotencia (**`/auth/*` exento**); `version` en agregados editables (409 con `details.currentVersion`); tabla e interceptor de auditoría; contadores por empresa y serie (ADR-BE-006 §Decisión 4); helpers de paginación (offset y cursor) y listas blancas de filtros y orden | 004, 005, 006 | `httpClient`: leer el cuerpo de error, header `Idempotency-Key`, reintentar solo GET y mutaciones con clave. Validador de ids que acepta UUID + prefijo legado (ADR-BE-004, sub-decisión 1). **`FrontEnd/CLAUDE.md`** se actualiza en la tanda que sume `FrontEnd` a los workspaces (ADR-BE-001, objeción 3 y sub-decisión 14) |
 | **BE-1** | empresas, sucursales, usuarios, sucursales habilitadas, roles y matriz módulo × acción; `/auth/*`; guard de permisos | 002, 003 | Login, logout, guard de rutas; `useSessionStore` contra `/auth/session`; `TabUsersRoles` con la matriz nueva; se elimina `USER_ROLE` |
 | **BE-2** | proveedores, motivos, vehículos, choferes (maestros sin dependencias de negocio) | 004, 005 | Conectar suppliers, vehicles, drivers y motivos: DTO a `contracts` (suppliers era snake_case), `version` en las ediciones, clave al abrir el formulario (A14), sin `empresaId` en los requests |
 | **BE-3** | productos (`taxRateBp`, **`2100` por defecto para los existentes**, `UNIQUE (empresa_id, sku)`, búsqueda acotada de ADR-016), clientes (sin `transactions` embebidas), **listas de precios** (alcance EMPRESA, porcentaje sobre el precio base, se siembran las 3 actuales) | 004, 006, 007, ADR-016 | Conectar products y clients; `Money` en precios y límite de crédito; los selectores pasan a búsqueda server-side; campo de alícuota en `ProductFormModal`; `ClientAccount.status` pasa a código (`al-dia`/`con-deuda`) y el texto lo arma la tabla |
@@ -137,9 +140,9 @@ Todas resueltas el **2026-10-08**. El texto original de cada objeción se conser
 | 22 | BE-011 | "URL prefirmada" supone storage, contra "solo Postgres" | Interfaz única de storage: disco local en desarrollo, S3-compatible en producción desde BE-7; los archivos no van a Postgres | ADR-BE-011 §Storage y objeción 1; ADR-BE-001 §Decisión 2 |
 | 23 | BE-011 | Retirar `fetchDashboardData` deja 4 widgets sin fuente | Resuelto por la sub-decisión 6: ADR-009 se extiende a esos 4 endpoints | ADR-BE-011 objeción 2; enmienda de ADR-009 |
 
-**Objeciones nuevas, aparecidas al aplicar las resoluciones (sin resolver):**
+**Objeciones nuevas, aparecidas al aplicar las resoluciones (resueltas en el Paso 0 de BE-0a, 2026-10-08):**
 
-| ADR | Objeción |
-|---|---|
-| BE-002, objeción 3 | El alcance EMPRESA gana "listas de precios", pero la enumeración de alcances de `PROTOCOLO.md` §1 no la incluye: §1 estaba fuera del alcance de la sesión de cierre. La tabla de ADR-BE-002 es la fuente de verdad hasta que una sesión con §1 en alcance lo sincronice |
-| BE-004, objeción 3 | La consigna de cierre ubica `allowedTransitions` en el §1 de ADR-010 y está en el §3. La enmienda se escribió contra §3, que es la sección real. Diferencia de referencia, no de contenido |
+| ADR | Objeción | Resolución |
+|---|---|---|
+| BE-002, objeción 3 | El alcance EMPRESA gana "listas de precios", pero la enumeración de alcances de `PROTOCOLO.md` §1 no la incluye | `PROTOCOLO.md` §1 la incluye |
+| BE-004, objeción 3 | La consigna de cierre ubica `allowedTransitions` en el §1 de ADR-010 y está en el §3 | Verificado: la enmienda quedó contra §3 (`ADR-010-modelo-logistico.md:224`). Cerrada sin cambios |
