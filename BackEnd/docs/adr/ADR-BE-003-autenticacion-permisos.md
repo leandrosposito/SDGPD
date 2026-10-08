@@ -18,7 +18,10 @@ Hallazgo **B2** (`00_RESUMEN.md`; `04_TRANSVERSALES.md` §1 y §3).
 
 ## Decisión
 
-1. **Access token corto** (Bearer, guardado en memoria del cliente) más **refresh token rotativo** en cookie `HttpOnly`, `Secure` y `SameSite`. El esquema sirve para la web y para una futura app de chofer. **Contraseñas con argon2id.**
+1. **Access token corto** (Bearer, guardado en memoria del cliente) más **refresh token rotativo**. **Contraseñas con argon2id.** El transporte del refresh depende del **tipo de cliente, que el login declara** (resolución de la objeción 1):
+   - **Web:** cookie `HttpOnly`, `Secure` y `SameSite`.
+   - **App nativa:** el refresh viaja en el **body** de la respuesta del login y en el body del request de `POST /auth/refresh`.
+   - En los dos casos rigen la **misma rotación** y la **misma detección de reuso** (sub-decisión 3). El contrato lo prevé desde ahora; la rama nativa se implementa cuando exista la app.
 2. **Un solo usuario:** `SessionUser` y `UserAccount` pasan a ser proyecciones de la misma tabla. **Un usuario pertenece a una sola empresa.**
 3. **La sesión devuelve** usuario, empresa, rol, permisos efectivos y sucursales habilitadas.
 4. **Roles por empresa y matriz de permisos módulo × acción**, aplicada **en el servidor en cada endpoint**. La UI la usa solo para ocultar. **La matriz incluye compras y settings.**
@@ -34,7 +37,8 @@ Hallazgo **B2** (`00_RESUMEN.md`; `04_TRANSVERSALES.md` §1 y §3).
 
 ## Consecuencias para el backend
 
-- Endpoints de auth (sub-decisión 1): `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`, `GET /auth/session`.
+- Endpoints de auth (sub-decisión 1): `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`, `GET /auth/session`. **`/auth/*` está exento de la idempotencia obligatoria en POST** de ADR-BE-005 (resolución de su objeción 1): login y logout se pueden repetir sin efecto, y refresh ya tiene rotación y detección de reuso.
+- `POST /auth/login` recibe el **tipo de cliente** (`web|native`) y decide dónde devuelve el refresh: cookie o body (decisión 1). El resto del flujo es idéntico.
 - Un guard global valida el access token, carga usuario, empresa, rol y permisos, y fija el tenant (ADR-BE-002). Un decorador por endpoint declara el permiso que exige (módulo + acción). **Un endpoint sin permiso declarado no compila el registro de rutas** (sub-decisión 6).
 - Los DTO de request **no tienen** campos de actor. `quien`, `creadoPor` y `responsable` (y `CapacityOverrideEvent.quien`, `Pod.creadoPor`, `DeliveryNote.creadoPor`) los llena el servidor desde la sesión, como id de usuario, más un snapshot del nombre para mostrar.
 - Tabla de sucursales habilitadas por usuario, que usa la validación de `branchId` de ADR-BE-002.
@@ -55,7 +59,7 @@ Hallazgo **B2** (`00_RESUMEN.md`; `04_TRANSVERSALES.md` §1 y §3).
 - **M11** (dos modelos de usuario; `Driver` sin usuario).
 - **M12** (la matriz no tiene compras ni settings).
 
-## Sub-decisiones tomadas al redactar (pendientes de revisión)
+## Sub-decisiones (aprobadas 2026-10-08)
 
 1. **Paths de auth:** `/auth/login`, `/auth/refresh`, `/auth/logout`, `/auth/session` (sustantivo `auth` más acción, siguiendo la convención de acciones de ADR-BE-004).
 2. **Access token:** JWT firmado, con duración de **15 minutos**. Claims: `sub` (usuario), `emp` (empresa), `rol`, `ver` (versión de permisos, para invalidar tokens cuando cambian los permisos).
@@ -69,4 +73,8 @@ Hallazgo **B2** (`00_RESUMEN.md`; `04_TRANSVERSALES.md` §1 y §3).
 ## Objeciones
 
 1. **Cookie `HttpOnly` y "futura app de chofer".** El refresh en cookie `HttpOnly` funciona en el navegador. Una app nativa no tiene cookie jar de navegador y suele guardar el refresh en el almacenamiento seguro del dispositivo, mandándolo en el body. Escrita tal cual, la decisión no cubre ese caso. Cuando exista la app, el endpoint de refresh va a necesitar aceptar también el token en el body, o la app va a ser una PWA. No hay evidencia en el repo de que la app sea nativa ni web; queda anotado.
+
+   **Resolución (2026-10-08):** **el login recibe el tipo de cliente.** Web: refresh en cookie. Nativa: refresh en el body de la respuesta del login y en el body del request de `/auth/refresh`, con la misma rotación y la misma detección de reuso. El contrato ya lo prevé (decisión 1); se implementa cuando exista la app.
 2. **`SameSite` y orígenes distintos:** si `VITE_API_BASE_URL` (`httpClient.ts:60-61`) apunta a otro **site** que el del frontend, una cookie `SameSite=Strict` (o `Lax`) no viaja en el refresh. La decisión asume frontend y API en el mismo site (mismo dominio registrable).
+
+   **Resolución (2026-10-08):** **confirmado: frontend y API se sirven en el mismo site.** En desarrollo, Vite hace **proxy de `/api`** al backend, así que es el mismo origen y la cookie viaja sin configuración extra. La cookie `SameSite=Strict` de la sub-decisión 3 queda como está.

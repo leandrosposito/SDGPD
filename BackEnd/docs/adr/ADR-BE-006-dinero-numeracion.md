@@ -16,8 +16,9 @@
 1. **El backend nace con centavos enteros más moneda** (ADR-008). **No hay floats en el contrato.** El frontend migra módulo por módulo al conectarse.
 2. **Pedido y orden de compra tienen moneda**, con la de la empresa por defecto.
 3. **El servidor calcula todos los importes.**
-   - El cliente manda `productId`, cantidad y descuento; **nunca subtotales ni totales**.
-   - **La alícuota de IVA es atributo del producto.**
+   - El cliente manda `productId`, cantidad, descuento y **`priceListId`**; **nunca precios, subtotales ni totales**.
+   - **La alícuota de IVA es atributo del producto.** Se agrega en BE-3, con `2100` por defecto para los productos existentes (resolución de la objeción 2).
+   - **Listas de precios** (resolución de la objeción 1): entidad de **alcance EMPRESA**. En BE-0..10 una lista es un **porcentaje sobre el precio base del producto**, que es lo que hace hoy `OrderProductsSection.tsx:59`. Los precios por producto dentro de una lista quedan para el ADR de RF-PRI. El pedido lleva `priceListId`, por defecto el de la cuenta del cliente (`ClientAccount.priceList`); **el cliente lo manda y el servidor resuelve el precio**. Se siembran las 3 listas actuales (`Minorista`, `Mayorista`, `Distribuidor`).
    - **Redondeo half-up por línea; el total es la suma de las líneas.**
    - **La función de cálculo vive en `contracts`**, para que la UI muestre la vista previa con la misma cuenta.
 4. **Numeración:** contador **por empresa y serie**, con **bloqueo de fila dentro de la misma transacción**, para pedido, remito, orden de compra, recepción, viaje y recibo (extiende ADR-014). **La numeración fiscal por punto de venta queda para el ADR de Facturación.**
@@ -46,7 +47,7 @@ RETURNING last_value;
 ## Consecuencias para el frontend (al conectar cada módulo)
 
 - Cada módulo pasa sus importes a `Money` (`shared/utils/money.ts`). Hoy solo lo usa `modules/dashboard/`.
-- `CreateOrderModal` deja de mandar `subtotal`, `discount`, `tax` y `totalAmount` (`orders/api/mapper.ts`, `OrderFormInput`). Manda líneas `{productId, quantity, unitDiscount}`. La vista previa usa la función de `contracts`, no el `useMemo` con `* 0.21`.
+- `CreateOrderModal` deja de mandar `subtotal`, `discount`, `tax` y `totalAmount` (`orders/api/mapper.ts`, `OrderFormInput`). Manda `priceListId` más líneas `{productId, quantity, unitDiscount}`. El selector de lista de precios deja de aplicar el `modifier` en el cliente (`OrderProductsSection.tsx:59`) y pasa a mandar el id; la vista previa usa la función de `contracts` con el precio que resolvió el servidor, no el `useMemo` con `* 0.21`.
 - `computePurchaseOrderTotal` (6 componentes) se reemplaza por los totales que devuelve el servidor, y por la función de `contracts` en la vista previa del formulario de OC.
 - El pedido y la OC muestran moneda. El formulario de OC ya la tiene (`PurchaseOrderFormModal`).
 - Los números legibles (`orderNumber` y los nuevos de remito, OC, recepción, viaje y recibo) se muestran donde hoy se muestra el id.
@@ -57,7 +58,7 @@ RETURNING last_value;
 - **A16** (dinero en float).
 - **A8**, parte de moneda (la fusión de OC tiene que respetar la moneda; ver sub-decisión 6). La parte de "pisa el precio" la corrige la tanda BE-8.
 
-## Sub-decisiones tomadas al redactar (pendientes de revisión)
+## Sub-decisiones (aprobadas 2026-10-08)
 
 1. **Alícuota en basis points** (`taxRateBp: 2100` = 21 %), entero.
 2. **Descuento de línea:** importe **por unidad** en centavos (`unitDiscount`), que es lo que hace hoy la UI (`discount * quantity`, `CreateOrderModal.tsx`).
@@ -76,4 +77,8 @@ RETURNING last_value;
 ## Objeciones
 
 1. **El precio depende de la lista de precios elegida en el modal, y la decisión dice que el cliente no manda precios.** Hoy `OrderProductsSection.tsx:59` aplica `modifier = priceList === 'Mayorista' ? 0.9 : priceList === 'Distribuidor' ? 0.8 : 1` sobre el precio del producto, con un selector de lista en `CreateOrderModal` (`priceList`, `useState('Mayorista')`). Si el cliente manda solo `productId`, cantidad y descuento, el servidor no sabe qué lista aplicar. Las listas de precios (RF-PRI-001) no tienen ADR. Opciones sin decidir: tomar la lista de `ClientAccount.priceList` (`client.types.ts:69`), aceptar `priceList` en el comando, o congelar el precio base hasta el ADR de precios.
+
+   **Resolución (2026-10-08):** **las listas de precios son una entidad de alcance EMPRESA** (agregada a la tabla de alcances de ADR-BE-002). En BE-0..10 **una lista es un porcentaje sobre el precio base del producto**, igual que hoy. Los precios por producto dentro de una lista quedan para el ADR de RF-PRI. **El pedido lleva `priceListId`**, por defecto el de la cuenta del cliente; el cliente lo manda y el **servidor resuelve el precio**, así que sigue siendo cierto que el cliente no manda precios. Se siembran las 3 listas actuales. El precio resuelto se congela en el snapshot al confirmar (ADR-BE-007 §5).
 2. **"La alícuota de IVA es atributo del producto"** y `InventoryItem` no tiene ese campo (`inventory.types.ts:39-64`). Hace falta agregarlo al ABM de productos (`ProductFormModal`) **antes** de poder confirmar un pedido calculado en el servidor. El orden de las tandas tiene que contemplarlo: BE-3 (productos) antes de BE-5 (pedidos).
+
+   **Resolución (2026-10-08):** **la alícuota se agrega en BE-3**, con **`2100` por defecto** para los productos existentes, y el campo entra al ABM (`ProductFormModal`) en la misma tanda. **BE-3 va antes que BE-5**, confirmado en el plan de tandas del README.

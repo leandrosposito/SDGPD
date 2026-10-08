@@ -8,7 +8,7 @@ Tanda 0 (contención de errores) → Tanda 1 (capa `api/`, piloto `suppliers`) �
 
 **No hay ninguna tanda "a medias"**: todo lo de arriba tiene commit real, mergeado a `lean`. Lo que sigue abajo no son tandas sin cerrar, son hallazgos que esas tandas no atacaron (fuera de su alcance declarado) o verificación en navegador que nunca se corrió.
 
-## ADRs de backend (2026-10-07) — las 26 decisiones de la auditoría, tomadas y documentadas
+## ADRs de backend (cerrados el 2026-10-08) — las 26 decisiones de la auditoría, tomadas y documentadas
 
 **Punto de entrada para empezar el backend: `BackEnd/docs/README.md`.** Ahí están los 11 ADRs (`BackEnd/docs/adr/ADR-BE-001..011`), la trazabilidad de las 26 decisiones de `08_DECISIONES_ABIERTAS.md` (cada una en un solo ADR), la tabla de los 8 BLOQUEANTE y 21 ALTO (cada uno con su ADR o tanda), y el plan de tandas BE-0 a BE-10 con el trabajo de frontend que arrastra cada una. **`BackEnd/` sigue sin código.**
 
@@ -17,15 +17,27 @@ Tanda 0 (contención de errores) → Tanda 1 (capa `api/`, piloto `suppliers`) �
 - **Enmiendas:**
   - 11 ADRs del frontend tienen una sección "Enmienda 2026-10-07": 004, 006, 007, 008, 009, 010, 011, 013, 014, 015 y 016.
   - En el Documento 04 hay 7 RF con la línea "Enmendado por": RF-PED-002, RF-PRE-001..004, RF-CMP-002 y RF-ENT-002.
-- **Pendiente de revisión:** cada ADR tiene "Sub-decisiones tomadas al redactar" y "Objeciones".
-  - Las objeciones que **bloquean** partes del plan:
-    - La regla 2.2 del protocolo prohíbe instalar dependencias, y BE-0 las necesita.
-    - `Delivery` no tiene líneas, y la baja de stock al despachar las necesita.
-    - La reserva se hace en la sucursal de origen, pero el despacho puede salir desde otra.
-    - El precio depende de la lista elegida en la UI, y el cliente ya no manda precios.
-    - Sin Facturación no hay débitos en la cuenta corriente.
-    - La "URL prefirmada" contra "solo Postgres".
-    - Retirar el tablero viejo deja 4 widgets sin fuente.
+### Cierre del 2026-10-08 — ya no hay nada pendiente de revisión
+
+**Las 74 sub-decisiones quedaron aprobadas** (una corrección: **Node 24 LTS** en lugar de Node 22) y **las 23 objeciones quedaron resueltas**, cada una con su "Resolución (2026-10-08)" debajo del texto original, que se conserva como historia. La tabla "Objeciones: las 23 y dónde quedó cada resolución" de `BackEnd/docs/README.md` es el índice. **Ninguna objeción bloquea ya el plan.**
+
+Lo que las resoluciones cambiaron, y que hay que tener presente al implementar:
+
+- **Dependencias:** la regla 2.2 del protocolo quedó acotada a `FrontEnd/`. En `BackEnd/` y `packages/` se instalan solo las que liste la consigna de la tanda; cualquier otra es condición de parada. D8 se reescribió en consecuencia (el lockfile solo cambia en una tanda que las autorice).
+- **`Delivery` pasa a tener líneas** (`orderLineId` + cantidad despachada, fijadas al crear la entrega, validadas con `SELECT … FOR UPDATE` sobre las líneas del pedido). De ahí salen la baja física al despachar y los **dos pendientes** del pedido: de despachar y de entregar.
+- **La reserva de stock vive siempre en la sucursal desde la que sale la mercadería**, y se traslada en la misma transacción si la entrega sale de otra.
+- **Listas de precios:** entidad de alcance EMPRESA, un porcentaje sobre el precio base en BE-0..10. El pedido manda `priceListId` y el servidor resuelve el precio.
+- **Facturación** dejó de estar fuera del plan: necesita su propio ADR y es **prerrequisito de BE-9**. Hasta entonces, los pedidos en cuenta corriente no generan deuda, y eso quedó aceptado porque no hay nada en producción.
+- **Storage:** interfaz única de archivos, disco local en desarrollo y object storage S3-compatible en producción **desde BE-7**. Los archivos no se guardan en Postgres. El principio "Postgres es la única infraestructura obligatoria" ahora dice hasta cuándo vale: hasta BE-6 inclusive.
+- **Tablero:** ADR-009 se extiende a 4 endpoints nuevos (`/dashboard/kpis`, `/sales-series`, `/top-products`, `/recent-orders`) y ahí recién se retira `fetchDashboardData`.
+- **Otros cierres:** `/auth/*` exento de idempotencia; el login declara el tipo de cliente (web → cookie, nativa → refresh en el body); ningún valor de enum es texto de display (`ClientAccount.status` → `al-dia`/`con-deuda`, `allowedTransitions[].motivo` → `motivoCode`); "en preparación" es derivado y no hay acción manual para ponerlo; el límite de crédito se controla al confirmar el pedido contra saldo + pedidos sin facturar.
+
+**Dos objeciones nuevas, abiertas**, aparecidas al aplicar las resoluciones:
+
+- **ADR-BE-002, objeción 3:** el alcance EMPRESA ganó "listas de precios", pero la enumeración de `PROTOCOLO.md` §1 no la incluye, porque §1 estaba fuera del alcance de la sesión de cierre. La tabla de ADR-BE-002 es la fuente de verdad hasta que una sesión con §1 en alcance lo sincronice.
+- **ADR-BE-004, objeción 3:** la consigna ubicaba `allowedTransitions` en el §1 de ADR-010 y está en el §3. La enmienda se escribió contra §3. Diferencia de referencia, no de contenido.
+
+**Dos archivos quedaron desactualizados a propósito** (fuera del alcance de la sesión de cierre): `BackEnd/CLAUDE.md` (sus invariantes dicen "Postgres es la única infraestructura obligatoria" sin el límite de BE-6, y mandan a leer las objeciones "sin resolver") y `FrontEnd/CLAUDE.md` (lockfile y comandos, que se actualiza en BE-0).
 
 ## Auditoría de backend (2026-10-07, solo lectura) — punto de entrada para la fase de ADRs de backend
 

@@ -22,7 +22,14 @@
 ### Exportación
 - **Job en el servidor** (ADR-004).
 - El cliente manda **recurso, filtros, orden, formato y columnas por nombre**, contra una lista blanca por recurso definida en `contracts`.
-- El servidor arma el archivo y lo entrega por **URL prefirmada**.
+- El servidor arma el archivo y lo entrega por **URL firmada con vencimiento** (ver §Storage).
+
+### Storage (resolución de la objeción 1)
+- **Una interfaz única de almacenamiento de archivos** en el backend, con dos implementaciones:
+  - **Desarrollo:** disco local, con **URLs firmadas por el propio backend** (HMAC con vencimiento).
+  - **Producción:** **object storage compatible con S3**, que pasa a ser infraestructura obligatoria **recién desde la primera tanda que guarda archivos** (uploads de BE-7). ADR-BE-001 §Decisión 2 quedó corregido con ese límite.
+- **Los archivos no se guardan en Postgres.** Ni `bytea` ni large objects.
+- Vale tanto para las exportaciones de este ADR como para la evidencia de ADR-005 y los uploads de POD (BE-7).
 
 ### Alertas
 - Las genera un **job programado e idempotente**.
@@ -75,7 +82,7 @@
 | **M16** | dos fuentes de tablero |
 | **M18** (en analytics) | SKUs huérfanos: dejan de existir al reemplazarse el dataset estático por agregados reales |
 
-## Sub-decisiones tomadas al redactar (pendientes de revisión)
+## Sub-decisiones (aprobadas 2026-10-08)
 
 1. **Formatos de exportación:** `csv` y `xlsx`, los mismos que hoy (`ExportFormat`). La librería de XLSX del servidor es una dependencia nueva a aprobar.
 2. **Vida del archivo exportado:** el `downloadUrl` expira a los **15 minutos**, y el archivo se borra a las **24 horas**.
@@ -87,4 +94,8 @@
 ## Objeciones
 
 1. **"URL prefirmada" supone un object storage**, y ADR-BE-001 dice que **Postgres es la única infraestructura obligatoria**. ADR-005 (evidencias) ya asumía lo mismo (`docs/adr/ADR-005-evidencia-rechazo.md`: "Subida directa a storage con URL prefirmada"). Con la decisión tal cual, o se agrega un storage (contra ADR-BE-001), o la "URL prefirmada" la firma el propio backend (token HMAC con vencimiento) y el archivo se guarda en Postgres (`bytea` o large object). Esa segunda vía no es una URL prefirmada de storage en sentido estricto. No lo resuelvo.
+
+   **Resolución (2026-10-08):** **una interfaz única de almacenamiento de archivos** en el backend. **Desarrollo:** disco local, con URLs firmadas por el propio backend (HMAC con vencimiento). **Producción:** object storage compatible con S3, que pasa a ser infraestructura obligatoria **recién desde la primera tanda que guarda archivos** (uploads de BE-7). **Los archivos no se guardan en Postgres.** El principio de ADR-BE-001 ("Postgres es la única infraestructura obligatoria") quedó corregido para decir **hasta qué tanda** vale: hasta BE-6 inclusive. Escrito en la sección §Storage.
 2. **Retirar `fetchDashboardData` deja sin fuente a 4 widgets.** `DashboardPage.tsx:47,56,62,71` (KPIs, ventas, top productos, últimos pedidos) se alimentan **solo** de `fetchDashboardData`. Los agregados de ADR-009 (`getDashboardAggregates`) cubren otras tarjetas (ventas por zona, pedidos por estado, cuentas por cobrar). "Una sola fuente, la de ADR-009" requiere que ADR-009 se **extienda** a esos 4 widgets (sub-decisión 6). Si no, el tablero pierde la mitad de su contenido.
+
+   **Resolución (2026-10-08):** **resuelto por la sub-decisión 6**, aprobada: ADR-009 se extiende a esos 4 endpoints (`GET /dashboard/kpis`, `/dashboard/sales-series`, `/dashboard/top-products`, `/dashboard/recent-orders`), todos con su alcance de sucursal. La línea quedó agregada a la **sección de enmienda de ADR-009**.

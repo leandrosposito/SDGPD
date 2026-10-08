@@ -33,12 +33,15 @@ La auditoría (`01_ENDPOINTS.md`, `04_TRANSVERSALES.md`) encontró:
 - **DTO explícito para todos los recursos**, definido en `packages/contracts` (ADR-BE-001).
 - JSON en **camelCase, con los nombres de campo de los tipos de dominio actuales**. Los 28 DTO en snake_case se migran al conectar cada módulo.
 - **La base usa el mismo vocabulario en snake_case, sin traducir** (`Order.clientName` → `orders.client_name`).
+- **Los campos existentes no se renombran** (resolución de la objeción 1). Dos reglas para que la mezcla de idiomas no empeore:
+  1. **Un campo nuevo usa el idioma de los demás campos de su entidad.** (`Trip` sigue en español, `Order` en inglés.)
+  2. **Ningún valor de enum es texto de display.** Todo valor de enum es un **código kebab-case**; el texto lo arma la UI.
 - Los campos que calcula el servidor (`allowedTransitions`, `capacidadUsada`, `sobrecargado`) **son parte del DTO, de solo lectura**.
 
 ### Fechas
 - Instantes en **ISO 8601 UTC**. Fechas sin hora como **`yyyy-MM-dd`**.
 - La empresa tiene **zona horaria** para resolver "hoy".
-- **Ningún texto de display viaja como dato.**
+- **Ningún texto de display viaja como dato.** Eso incluye los valores de enum y el `motivo` de `allowedTransitions`, que pasan a ser códigos (resolución de las objeciones 1 y 2).
 
 ### Paths
 - Sustantivos en **plural y kebab-case**.
@@ -102,6 +105,8 @@ La auditoría (`01_ENDPOINTS.md`, `04_TRANSVERSALES.md`) encontró:
   - Pasan a cursor: `TabMovements`, `TabProductHistory`, `AuditLogWidget` y `CashTransactionsTable`. `AlertsBell` ya usa cursor.
   - Cambian de componente de paginación: "anterior/siguiente" en lugar de números de página.
   - El cursor vive en la URL (regla 3.8).
+- **Valores de enum que pasan a código** (resolución de la objeción 1): `ClientAccount.status: 'Al dia' | 'Con Deuda'` → `'al-dia' | 'con-deuda'` (`client.types.ts:95`). La tabla de clientes arma el texto y el color desde el código. Mismo criterio para cualquier otro enum con texto de display que aparezca al conectar un módulo.
+- **`allowedTransitions[].motivo` pasa a `motivoCode`** (resolución de la objeción 2): el servidor manda el código y la UI arma el texto. `DeliveriesTable` y los paneles de viaje leen el código, nunca una frase. Anotado en la enmienda de ADR-010 (§3).
 - **Paths que cambian:**
   - Transiciones y acciones: `/advance`, `/cancel`, `/reprogram`, `/assign`, `/no-visitada`, `/toggle-activo`, `/read` → `POST /{recurso}/{id}/{accion}` en kebab-case e inglés.
   - Español: `/posicion` → `/position` (`TripPosition`), `/recorrido` → `/route` (`getTripRoute`). `/motivos` se mantiene (`MotivoCatalogItem`).
@@ -124,7 +129,7 @@ La auditoría (`01_ENDPOINTS.md`, `04_TRANSVERSALES.md`) encontró:
 | **M20** | cursor de alertas sin tope |
 | **L4** | vocabulario de `reason` inconsistente |
 
-## Sub-decisiones tomadas al redactar (pendientes de revisión)
+## Sub-decisiones (aprobadas 2026-10-08)
 
 1. **Transición de ids en el frontend:** mientras un módulo siga corriendo sobre el adaptador mock, su constructor acepta **UUID o el prefijo legado**. El prefijo se elimina cuando el último módulo esté conectado. Alternativa: convertir los seeds a UUID. Se eligió la transición para no reescribir 17 archivos de mock en la tanda de cada módulo.
 2. **Convención única de acciones:** el segmento `{accion}` es un **verbo en inglés kebab-case**.
@@ -150,4 +155,10 @@ La auditoría (`01_ENDPOINTS.md`, `04_TRANSVERSALES.md`) encontró:
 ## Objeciones
 
 1. **"camelCase con los nombres de campo de los tipos de dominio actuales" congela un vocabulario mezclado.** En la misma entidad conviven inglés y español: `Trip.estado/paradas/fecha` contra `Order.status/date` (`trip.types.ts:87-114`, `order.types.ts:66-86`). También hay nombres de display como valor de enum (`ClientAccount.status: 'Al dia' | 'Con Deuda'`, `client.types.ts:95`). La decisión los traslada al wire y a la base tal cual, así que la mezcla queda permanente.
+
+   **Resolución (2026-10-08):** **no se renombran los campos existentes.** Renombrar no cambia ningún comportamiento y obliga a escribir mappers para 59 endpoints. La mezcla de idiomas queda, acotada por dos reglas que evitan que empeore (sección Decisión › DTO): un campo nuevo usa el idioma de los demás campos de su entidad, y **ningún valor de enum es texto de display**. Los valores como `'Al dia'` o `'Con Deuda'` pasan a códigos kebab-case (`al-dia`, `con-deuda`) y el texto lo arma la UI.
 2. **"Ningún texto de display viaja como dato" choca con `allowedTransitions[].motivo`**, un texto en español armado en el cliente (`deliveryStatus.types.ts:42-48`, `tripStatus.types.ts:34-40`). Si viaja en el DTO, es texto de display. Con la decisión tal cual, el motivo tendría que ser un `code` y el texto lo arma la UI.
+
+   **Resolución (2026-10-08):** **`allowedTransitions[].motivo` pasa a ser un `code` kebab-case** (`motivoCode`); el texto lo arma la UI. Queda anotado en la sección de enmienda de ADR-010, que es donde vive la forma de `allowedTransitions` (**§3** de ese ADR, no §1: ver la objeción 3).
+
+3. **La consigna de cierre ubica `allowedTransitions` en el §1 de ADR-010, y está en el §3.** El §1 de ADR-010 es "Ejes de estado"; `allowedTransitions` y su forma `{ transicion, permitida, motivo? }` son el §3, "Eventos append-only y proyección" (`FrontEnd/docs/adr/ADR-010-modelo-logistico.md:107` y la decisión aprobada 3 de ese ADR). La enmienda se escribió contra **§3**, que es la sección real. Diferencia de referencia, no de contenido. **Objeción nueva, anotada al aplicar la resolución.**

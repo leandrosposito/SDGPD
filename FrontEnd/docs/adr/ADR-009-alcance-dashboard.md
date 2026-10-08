@@ -66,3 +66,5 @@ Verificado contra el mock real (no un fixture) con `scripts/verificacion/v-adr00
 ## Enmienda 2026-10-07
 
 El pedido tiene **sucursal de origen** obligatoria y el filtro del tablero usa ese campo, no el join por `Delivery` ([ADR-BE-007](../../../BackEnd/docs/adr/ADR-BE-007-pedido.md)); el tablero tiene **una sola fuente** (esta) y se extiende a los widgets del tablero viejo ([ADR-BE-011](../../../BackEnd/docs/adr/ADR-BE-011-exportacion-alertas-tablero.md)).
+
+**Cierre 2026-10-08:** este ADR se extiende concretamente a **4 endpoints nuevos** para los widgets que hoy alimenta `fetchDashboardData`: `GET /dashboard/kpis`, `GET /dashboard/sales-series`, `GET /dashboard/top-products` y `GET /dashboard/recent-orders` (paginado, tope 10), **todos con el alcance de sucursal de este ADR** y con el filtro por sucursal de origen del pedido. Con eso `fetchDashboardData` se retira sin que el tablero pierda contenido (resolución de la objeción 2 de ADR-BE-011). El cambio en los números es deliberado: cada pedido cuenta en **una sola** sucursal y desaparece el doble conteo; la tanda BE-5 le asigna sucursal de origen al seed (resolución de la objeción 2 de ADR-BE-007).

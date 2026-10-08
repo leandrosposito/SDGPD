@@ -218,3 +218,10 @@ Guarda el trazo (`{x, y, t}[]`) en vez de una imagen — permite replay/verifica
 ## Enmienda 2026-10-07
 
 §4: `Idempotency-Key` por **header**, alcance empresa+usuario+operación, hash de payload y TTL 48 h; §7: el POD es evidencia de `registrarEntrega` y **no finaliza** la entrega por su cuenta ([ADR-BE-005](../../../BackEnd/docs/adr/ADR-BE-005-mutaciones.md)); §6 confirmado, con saldo de cuarentena ([ADR-BE-009](../../../BackEnd/docs/adr/ADR-BE-009-inventario.md)).
+
+**Cierre 2026-10-08:**
+
+- **§3, forma de `allowedTransitions`:** el campo `motivo` **deja de ser texto** y pasa a ser un **código kebab-case** (`motivoCode`); el texto lo arma la UI. La estructura `{ transicion, permitida, motivoCode? }` y la garantía de la corrección del 2026-09-09 (el cliente lee, nunca infiere) no cambian: lo único que cambia es que lo que viaja es un código y no una frase en español, porque ningún texto de display viaja como dato ([ADR-BE-004](../../../BackEnd/docs/adr/ADR-BE-004-contrato-http.md), resolución de su objeción 2).
+- **§4, exención:** `/auth/*` queda **exento** de la idempotencia obligatoria en POST ([ADR-BE-005](../../../BackEnd/docs/adr/ADR-BE-005-mutaciones.md)).
+- **§7, POD con líneas:** el formulario de POD del chofer pasa a incluir las **líneas de la entrega**, con la cantidad despachada **precargada como entregada**, así que el chofer solo toca las líneas con novedad. Es posible porque la entrega tiene líneas desde que se crea ([ADR-BE-008](../../../BackEnd/docs/adr/ADR-BE-008-cumplimiento-parcial.md)). Cambio de UI de la tanda BE-7.
+- **§6, destino de la devolución:** la reserva de stock vive siempre en la sucursal desde la que sale la mercadería, y se traslada al crear una entrega desde otra sucursal ([ADR-BE-009](../../../BackEnd/docs/adr/ADR-BE-009-inventario.md), resolución de su objeción 2).
