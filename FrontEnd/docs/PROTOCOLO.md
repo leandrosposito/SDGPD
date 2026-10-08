@@ -21,7 +21,7 @@ Todo lo demás (cómo auditar, cómo implementar, cómo verificar, cuándo merge
 ## 2. REGLAS PERMANENTES
 
 1. Prohibido `git stash --keep-index` (Windows + OneDrive rompe el repo). Prohibido rebase, force push y tocar `main`.
-2. Prohibido instalar dependencias. Si algo parece requerirla, resolverlo sin ella o dejarlo documentado como no hecho.
+2. Prohibido instalar dependencias **en `FrontEnd/`**: si algo parece requerirla, resolverlo sin ella o dejarlo documentado como no hecho. En `BackEnd/` y `packages/` se instalan **solo las dependencias que la consigna de la tanda liste explícitamente** (ADR-BE-001 §Decisión 6); cualquier otra dependencia, incluida una transitiva que haya que agregar a mano, es **condición de parada** (§9.2), no una decisión a tomar en el momento.
 3. Prohibido agregar frameworks de testing **en `FrontEnd/`**. En `BackEnd/` y `packages/` el testing es obligatorio (ADR-BE-001). Prohibido i18n.
 4. TypeScript estricto: nada de `any`, `@ts-ignore`, ni `as` para tapar un error de tipos.
 5. Nunca se modifica un script de verificación para que deje de fallar. Si un check falla, se arregla el código o el dato, o se reporta el hallazgo. Si hay que cambiar un script porque el check estaba mal planteado, el cambio se justifica por escrito y la salida original que fallaba queda visible en el informe.
@@ -74,7 +74,7 @@ Verificaciones mínimas, siempre:
 - **D5 — Conformidad con los ADRs**, uno por uno, contra el código real.
 - **D6 — Seguridad de tipos.** `any`, `as` sobre tipos de dominio, `@ts-ignore`, campos opcionales que deberían ser obligatorios: sólo dentro del diff de la sesión.
 - **D7 — Restos.** Servicios sin consumidores, hooks reemplazados y no borrados, esquemas duplicados. Listar, no borrar.
-- **D8 — Build desde cero.** `git status --porcelain` limpio, `rm -rf node_modules`, `npm ci`, `tsc --noEmit`, lint, build, todos los smoke. Confirmar con `git diff` que `package.json` y el lockfile no cambiaron. Pegar cada salida.
+- **D8 — Build desde cero.** `git status --porcelain` limpio, `rm -rf node_modules`, `npm ci`, `tsc --noEmit`, lint, build, todos los smoke. Pegar cada salida. Sobre `package.json` y el lockfile: **solo pueden cambiar en una tanda cuya consigna autorice dependencias** (regla 2.2), y en ese caso el diff tiene que **corresponderse con la lista de esa consigna**, ni una línea de más. En cualquier otra tanda, confirmar con `git diff` que no cambiaron. La tanda que crea los workspaces del monorepo (BE-0) **mueve el lockfile a la raíz por diseño**, y eso cuenta como cambio autorizado.
 
 ### Fase E — Merge
 
@@ -102,7 +102,7 @@ Todas ya ocurrieron acá. Revisarlas activamente, no de memoria:
 3. **La función huérfana.** Lógica correcta, con smoke test que pasa, que la UI nunca llama. Gate 5 existe por esto.
 4. **El medidor ajustado.** Un check falla y se edita el script para que deje de fallar. Regla 2.5 existe por esto.
 5. **El rodeo al linter.** `Promise.resolve().then(() => setState(...))` dentro de un efecto para que la regla de lint se calle. La regla se calla, el problema queda, con un tick de retraso encima. Si aparece la tentación, es señal de que el patrón está mal, no el linter.
-6. **La garantía que no cubre todo.** `empresaId` es imposible de olvidar en los hooks de caché, pero los services llamados directo no tienen esa red. Regla 3.5 existe por esto.
+6. **La garantía que no cubre todo.** El caché obliga a poner `companyId` en toda query key (regla 3.4), pero eso es una garantía del caché, no del contrato: no dice nada sobre lo que el request manda. Con la regla 3.5 nueva, el riesgo se invirtió — ya no es olvidar `empresaId` en un service, es **dejarlo puesto**: un request que todavía lo manda compila, pasa gates y parece funcionar, porque el servidor lo ignora y resuelve el tenant por la sesión. Queda un parámetro muerto que se lee como si fuera la fuente de verdad. Al conectar un módulo, se elimina de la firma y del request; mientras siga sobre el mock, puede quedar. Regla 3.5 existe por esto.
 
 ## 7. DEFINICIÓN DE "TERMINADO"
 

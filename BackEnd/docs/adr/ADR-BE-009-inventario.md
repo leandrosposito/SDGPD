@@ -18,7 +18,9 @@ Además, los lotes viven en el producto (alcance empresa) y no se concilian con 
 ## Decisión
 
 1. **El kardex es append-only y es la fuente de verdad.** El saldo por producto, sucursal y lote se materializa en la misma transacción, y se tiene que poder conciliar contra el kardex.
-2. **Reserva al confirmar el pedido:** disponible = físico − reservado. **La baja física ocurre al despachar** (entrega a `EN_TRANSITO`). **Cancelar libera la reserva.**
+2. **Reserva al confirmar el pedido:** disponible = físico − reservado. **La baja física ocurre al despachar** (entrega a `EN_TRANSITO`), **por las cantidades de las líneas de la entrega** (ADR-BE-008, resolución de su objeción 1). **Cancelar libera la reserva.**
+   - **La reserva es por producto y sucursal, sin lote**: el lote se elige al despachar (sub-decisión 1, FEFO).
+   - **La reserva vive siempre en la sucursal desde la que va a salir la mercadería** (resolución de la objeción 2). Al crear una entrega desde una sucursal distinta de la de origen del pedido, **la reserva se traslada en la misma transacción**: se libera en la de origen y se reserva en la de despacho, que tiene que tener disponible; si no, 422 `insufficient-stock`.
 3. **Lo rechazado pasa a "en tránsito de retorno"** y reingresa con la confirmación manual de recepción (ADR-010 §6). RF-ENT-002 queda enmendado.
 4. **La recepción de compra ingresa stock.**
 5. **Un ajuste manual es un documento con motivo y usuario.**
@@ -43,11 +45,12 @@ Además, los lotes viven en el producto (alcance empresa) y no se concilian con 
 
 | Comando | Efecto |
 |---|---|
-| Confirmar pedido | `reserved += cantidad` en la sucursal de origen (ADR-BE-007). Si no alcanza el disponible, 422 `insufficient-stock` |
-| Despachar (entrega → `EN_TRANSITO`) | `physical −= cantidad`, `reserved −= cantidad` |
+| Confirmar pedido | `reserved += cantidad` en la sucursal de origen (ADR-BE-007), por producto y sin lote. Si no alcanza el disponible, 422 `insufficient-stock` |
+| Crear entrega desde otra sucursal | **traslado de reserva**: `reserved −=` en la sucursal de origen y `reserved +=` en la de despacho, en la misma transacción. Si la de despacho no tiene disponible, 422 `insufficient-stock` |
+| Despachar (entrega → `EN_TRANSITO`) | `physical −= despachada`, `reserved −= despachada`, por las líneas de la entrega (ADR-BE-008). El lote se elige acá (FEFO) |
 | Registrar entrega con rechazo | `in_return_transit += rechazada` |
 | Confirmar recepción de devolución | `in_return_transit −= declarada`; `physical += recibida` |
-| Cancelar pedido | `reserved −=` lo reservado que quede |
+| Cancelar pedido | `reserved −=` lo reservado que quede, **en la sucursal donde esté la reserva** (la de origen, o la de despacho si se trasladó) |
 | Recibir OC | `physical += recibida` |
 | Ajuste | `physical ±=`, con motivo y usuario |
 
@@ -67,7 +70,7 @@ Además, los lotes viven en el producto (alcance empresa) y no se concilian con 
 - **A9**, parte de stock (la recepción de OC ingresa stock).
 - **A19** (reposición solicitada solo en el navegador), por la sub-decisión 5.
 
-## Sub-decisiones tomadas al redactar (pendientes de revisión)
+## Sub-decisiones (aprobadas 2026-10-08)
 
 1. **Elección de lote al despachar:** FEFO (primero vence, primero sale) automático, salvo que el comando indique el lote.
 2. **Recepción de compra y lotes:** la línea de recepción acepta número de lote y vencimiento opcionales. Sin lote, ingresa a un lote técnico "sin lote" de esa sucursal.
@@ -79,4 +82,8 @@ Además, los lotes viven en el producto (alcance empresa) y no se concilian con 
 ## Objeciones
 
 1. **"La baja física ocurre al despachar" y `Delivery` no tiene líneas.** La entrega no tiene cantidades por producto (`FrontEnd/src/shared/types/logistics.types.ts:73-93`). Las cantidades aparecen recién en el remito, al finalizar (`deliveryNote.types.ts:19-44`). En el momento de pasar a `EN_TRANSITO` no hay cantidad que descontar. Para que la decisión se pueda implementar tal cual, `Delivery` necesita líneas con la cantidad despachada, que es la "cantidad despachada" de Doc 03 §17.24. Ningún ADR lo dice todavía.
+
+   **Resolución (2026-10-08):** **`Delivery` pasa a tener líneas** (`orderLineId` + cantidad despachada, fijadas al crear la entrega). La resolución completa, con la validación de sobreentrega y los dos pendientes, está en **ADR-BE-008, resolución de su objeción 1**. La baja física al despachar usa esas cantidades, y por eso la decisión 2 de este ADR ya se puede implementar tal cual.
 2. **Reserva en la sucursal de origen contra despacho desde otra sucursal.** La reserva se hace en la sucursal de origen del pedido (ADR-BE-007), pero una entrega puede salir de otra (`Delivery.branchId` es independiente del pedido; los 6 pedidos del seed tienen entregas en 2 o 3 sucursales, ADR-009). Con la decisión tal cual, el despacho desde B baja la reserva en A y el físico en B, así que A queda con reserva sin físico y B con físico sin reserva. Falta decidir si el despacho desde otra sucursal **traslada** la reserva, o si una entrega solo puede salir de la sucursal de origen.
+
+   **Resolución (2026-10-08):** **la reserva se traslada.** Al crear una entrega desde una sucursal distinta de la de origen, en la **misma transacción** se libera la reserva en la sucursal de origen y se reserva en la de despacho, que tiene que tener disponible (si no, 422 `insufficient-stock`). **La reserva siempre vive donde va a salir la mercadería.** Es por **producto y sucursal, sin lote**: el lote se elige al despachar (FEFO, sub-decisión 1). Queda como fila propia en la tabla de efectos por comando.

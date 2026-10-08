@@ -21,9 +21,10 @@
 
 ### Cuenta corriente
 - **Registro propio append-only**, con **saldo materializado por cliente y moneda**.
-- **El débito lo genera la factura, no el remito.**
+- **El débito lo genera la factura, no el remito.** Hace falta un **ADR de Facturación antes de BE-9** (resolución de la objeción 1): primero factura interna no fiscal, la electrónica fiscal después.
 - **La imputación de pagos se persiste**, con FIFO como sugerencia.
 - **La antigüedad de deuda se calcula por consulta** y no se guarda.
+- **Límite de crédito** (resolución de la objeción 2): la **exposición** del cliente es `saldo de la cuenta corriente + importe de los pedidos confirmados todavía no facturados`. Se controla **al confirmar el pedido**; si se supera, **422 `credit-limit-exceeded`**. Se puede **forzar con el permiso "aprobar"** (ADR-BE-003, sub-decisión 6), y queda registrado **quién lo forzó y por qué**.
 
 ### Caja
 - **Alcance sucursal.**
@@ -65,7 +66,7 @@
 - **M13** (caja sin fecha, sin filtros, sin coherencia de categoría).
 - **L3** (categorías en dos idiomas).
 
-## Sub-decisiones tomadas al redactar (pendientes de revisión)
+## Sub-decisiones (aprobadas 2026-10-08)
 
 1. **Una sesión de caja abierta por caja a la vez**, y **una caja por sucursal** en BE-0..10 (la tabla admite varias).
 2. **Cierre con arqueo:** el usuario declara lo contado; el sistema calcula lo esperado y registra la diferencia como un hecho del cierre. No hay ajuste automático (mismo criterio que la recepción de devolución de ADR-010 §6).
@@ -76,4 +77,8 @@
 ## Objeciones
 
 1. **"El débito lo genera la factura" y Facturación no tiene ADR ni tanda.** RF-FAC-001..004 no tienen contrato (`06_COBERTURA_RF.md`), y ADR-BE-006 deja "la numeración fiscal para el ADR de Facturación". Con la decisión tal cual, **la cuenta corriente no recibe ningún débito hasta que exista la factura**. A21 queda formalmente resuelto en diseño, pero sin operación que lo ejercite. Mientras tanto, los pedidos con `paymentMethod: 'Cuenta Corriente'` (`order.types.ts:40`) no generan deuda.
+
+   **Resolución (2026-10-08):** **la factura sigue siendo el origen del débito.** Hace falta un **ADR de Facturación antes de BE-9**: primero **factura interna no fiscal**, la **electrónica fiscal después**. Hasta BE-9 los pedidos en cuenta corriente no generan deuda, y **eso queda aceptado porque no hay nada en producción**. El ADR de Facturación queda como **prerrequisito de BE-9** en el plan de tandas del README.
 2. **El control de límite de crédito (RF-CLI-002)** necesita saber cuánta deuda "comprometida" tiene el cliente: pedidos confirmados y todavía sin facturar. Si el débito nace con la factura, el saldo de la cuenta no alcanza para bloquear un pedido nuevo. Ninguna decisión define contra qué se compara `creditLimit`.
+
+   **Resolución (2026-10-08):** **exposición = saldo de la cuenta corriente + importe de los pedidos confirmados todavía no facturados.** Se controla **al confirmar el pedido**; si se supera, **422 `credit-limit-exceeded`**. Se puede **forzar con el permiso "aprobar"**, y queda registrado **quién lo forzó y por qué** (además de la auditoría genérica de ADR-BE-005). Escrito en la sección Decisión › Cuenta corriente.

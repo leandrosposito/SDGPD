@@ -18,6 +18,7 @@
 1. **Se persiste solo el eje comercial.** Los ejes logístico y financiero son derivados (ADR-010 §1).
    - **El `status` legado no existe en la base.** El DTO lo expone derivado y de solo lectura hasta que el frontend deje de usarlo.
    - **`advanceOrderStatus` desaparece** y se reemplaza por comandos explícitos.
+   - **"En preparación" es un valor derivado del eje logístico** (alguna entrega en `CREADO`; sub-decisión 1). **No existe una acción manual de "poner en preparación": crear la entrega es empezar a prepararla** (resolución de la objeción 1).
 2. **"Rechazado" y "Entregado y bloqueado" son derivados**, no estados persistidos. **Un pedido entregado por completo es inmutable.**
 3. **El pedido tiene sucursal de origen obligatoria**, con la sucursal activa por defecto. Se sigue viendo a nivel empresa.
    - **Enmienda ADR-009:** el filtro del tablero usa ese campo y no el join por `Delivery`.
@@ -59,7 +60,7 @@
 - **M15** (FK por SKU).
 - Además cierra `PENDIENTES.md` #16 y #17 (dirección de entrega), que no tienen id en `00_RESUMEN.md`.
 
-## Sub-decisiones tomadas al redactar (pendientes de revisión)
+## Sub-decisiones (aprobadas 2026-10-08)
 
 1. **Derivación del `status` legado** (en orden de precedencia):
 
@@ -81,4 +82,8 @@
 ## Objeciones
 
 1. **"Solo se persiste el eje comercial" choca con "en preparación sigue siendo un estado"** (ADR-BE-008). Si el eje logístico es 100 % derivado de las entregas, "en preparación" no tiene dónde guardarse como estado: solo puede derivarse (la sub-decisión 1 lo deriva de "alguna entrega `CREADO`"). Hoy `preparing` es un valor que se setea a mano con `advanceOrderStatus` (`orders.service.ts:383-388`). Con las dos decisiones juntas, nadie puede "poner un pedido en preparación" sin crear una entrega.
+
+   **Resolución (2026-10-08):** **"en preparación" es un valor derivado del eje logístico** (alguna entrega en `CREADO`), no un estado persistido. **No existe una acción manual de "poner en preparación": crear la entrega es empezar a prepararla.** Eso es exactamente lo que ya hacía la sub-decisión 1, así que la contradicción estaba en el texto de ADR-BE-008 ("sigue siendo un estado"), que quedó corregido en esa misma fecha. `advanceOrderStatus` desaparece sin reemplazo manual.
 2. **Enmienda ADR-009 y los datos actuales:** ADR-009 verificó que los 6 pedidos del seed tienen entregas en 2 o 3 sucursales (`docs/adr/ADR-009-alcance-dashboard.md`, tabla de reconciliación). Filtrar por sucursal de origen cambia los números del tablero respecto de hoy: cada pedido cuenta en una sola sucursal. No es un error, pero el seed no tiene sucursal de origen y habrá que asignarla.
+
+   **Resolución (2026-10-08):** **el cambio en los números del tablero queda aceptado**: cada pedido cuenta en una sola sucursal, la de origen, y desaparece el doble conteo de ADR-009. **La tanda que conecte pedidos (BE-5) le asigna sucursal de origen al seed**, anotado en el plan de tandas del README.

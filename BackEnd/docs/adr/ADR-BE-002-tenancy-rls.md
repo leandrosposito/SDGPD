@@ -17,7 +17,7 @@ La decisión D1 (`FrontEnd/docs/historial/DECISIONES_TECNICAS_LOG.md:219-220`) d
 
 | Alcance | Entidades |
 |---|---|
-| EMPRESA | productos, proveedores, clientes, vehículos, choferes, motivos, usuarios, settings |
+| EMPRESA | productos, proveedores, clientes, vehículos, choferes, motivos, usuarios, settings, **listas de precios** (ADR-BE-006, resolución de la objeción 1) |
 | EMPRESA, con sucursal obligatoria como atributo | pedido (sucursal de origen), orden de compra (sucursal destino) |
 | SUCURSAL | stock, lotes, movimientos, reposición, entregas, viajes, caja |
 
@@ -61,7 +61,7 @@ SELECT set_config('app.empresa_id', $1, true);   -- equivale a SET LOCAL
 - **B1** (tenant en el request, contra D1).
 - **M5** (`branchId` en el path, en la query o en ninguno).
 
-## Sub-decisiones tomadas al redactar (pendientes de revisión)
+## Sub-decisiones (aprobadas 2026-10-08)
 
 1. **La tabla `companies` (`Company`, `session.types.ts:24`) es la única sin `empresa_id`:** su `id` es el tenant, y su política es `id = current_setting('app.empresa_id', true)::uuid`.
 2. **Login antes de conocer el tenant:** el usuario se busca por email con una función `SECURITY DEFINER` (`auth_find_user(email)`) que devuelve solo id, empresa y hash, y que es lo único que puede leer `users` sin tenant. El email es único **global** (ADR-BE-003: un usuario pertenece a una sola empresa).
@@ -74,4 +74,10 @@ SELECT set_config('app.empresa_id', $1, true);   -- equivale a SET LOCAL
 ## Objeciones
 
 1. **Caja SUCURSAL contradice el texto vigente del protocolo**, que pone caja en EMPRESA (`FrontEnd/docs/PROTOCOLO.md:17`). Se resuelve en esta misma sesión, porque §1 del protocolo está dentro del alcance. Lo dejo anotado para que conste que el cambio es deliberado.
+
+   **Resolución (2026-10-08):** **confirmado.** Caja es de alcance SUCURSAL y el cambio es deliberado: una caja física es de un lugar y el arqueo se hace por caja (ADR-BE-010). El texto del protocolo ya quedó reescrito en la sesión del 2026-10-07 (`PROTOCOLO.md` §1).
 2. **"Reposición" figura como SUCURSAL, pero hoy su estado "solicitado" vive solo en el navegador** (`FrontEnd/src/modules/inventory/state/useReplenishmentStore.ts:29-49`, hallazgo A19). El alcance queda decidido, pero no hay entidad persistida a la cual aplicárselo hasta que una tanda la cree.
+
+   **Resolución (2026-10-08):** la entidad la crea la **sub-decisión 5 de ADR-BE-009** (`replenishment_requests`, de alcance sucursal, con estado `requested` y el usuario que la pidió), aprobada el 2026-10-08. El alcance SUCURSAL de este ADR ya tiene a qué aplicarse, y se materializa en BE-4.
+
+3. **El alcance EMPRESA gana "listas de precios"** (resolución de la objeción 1 de ADR-BE-006, 2026-10-08), pero la enumeración de alcances de `FrontEnd/docs/PROTOCOLO.md` §1 **no** la incluye: §1 del protocolo está fuera del alcance de la sesión de cierre, que solo puede tocar la regla 2.2, la línea de D8 y la trampa 6.6. La tabla de este ADR es la fuente de verdad hasta que una sesión con §1 en alcance lo sincronice. **Objeción nueva, sin resolver.**

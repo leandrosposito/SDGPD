@@ -21,7 +21,7 @@
 ## Decisión
 
 ### Idempotencia
-- Por header **`Idempotency-Key`, obligatoria en todo POST**.
+- Por header **`Idempotency-Key`, obligatoria en todo POST**, **con una sola excepción: `/auth/*`** (resolución de la objeción 1). Login y logout se pueden repetir sin efecto, y refresh ya tiene rotación y detección de reuso (ADR-BE-003).
 - **Alcance:** empresa + usuario + operación + clave, con **hash del payload** y **TTL de 48 h**.
 
 | Situación | Respuesta |
@@ -41,6 +41,7 @@
 - **Cada comando es una transacción todo-o-nada que incluye sus efectos cruzados.**
 - `markStopNoVisitada` pasa a ser todo-o-nada (**enmienda ADR-013**).
 - **Hay un solo camino a `FINALIZADO`: `registrarEntrega`** (remito + líneas del pedido + stock). **El POD es evidencia de esa operación y no finaliza por su cuenta.**
+- Consecuencia asumida (resolución de la objeción 2): **el formulario de POD del chofer pasa a incluir las líneas**, con la **cantidad despachada precargada como entregada** (las líneas de la entrega existen desde su creación, ADR-BE-008), así que el chofer solo toca las líneas con novedad. Es un cambio de UI de BE-7.
 
 ### Auditoría
 Las dos cosas:
@@ -89,7 +90,7 @@ Las dos cosas:
 | **A15** (parte de auditoría) | ninguna mutación escribe el log genérico |
 | **M17** | requests anidados dentro de los resolvers |
 
-## Sub-decisiones tomadas al redactar (pendientes de revisión)
+## Sub-decisiones (aprobadas 2026-10-08)
 
 1. **"Operación"** del alcance de idempotencia = método + plantilla de ruta (`POST /orders/:id/cancel`), no la URL concreta.
 2. **Hash del payload:** SHA-256 del body JSON canonicalizado (claves ordenadas).
@@ -107,4 +108,8 @@ Las dos cosas:
 ## Objeciones
 
 1. **"Idempotencia obligatoria en todo POST" incluye `POST /auth/login`, `/auth/refresh` y `/auth/logout`** (ADR-BE-003). Un login repetido con la misma clave **devolvería la respuesta original, con el token de la primera vez**, y ese token quedaría persistido en la tabla de idempotencia (un secreto guardado fuera de su lugar). Además, la clave forma parte del alcance "usuario", y el usuario todavía no existe antes del login. Escrita tal cual, la regla no aplica a los endpoints de auth. Hace falta una excepción explícita.
+
+   **Resolución (2026-10-08):** **`/auth/*` queda exento de idempotencia.** Login y logout se pueden repetir sin efecto, y refresh ya tiene rotación y detección de reuso. Escrito en la sección Decisión › Idempotencia y en ADR-BE-003 › Consecuencias para el backend. Ningún token queda guardado en la tabla de idempotencia.
 2. **"Un solo camino a `FINALIZADO`" contra la Tanda 10B:** hoy el chofer registra el POD por parada (`trips.service.ts:517-567`) y eso finaliza. Con la decisión, el flujo del chofer tiene que cargar cantidades entregadas y rechazadas por línea (`registrarEntrega`), no solo receptor y firma. Es un cambio de UX de la app del chofer que ningún ADR del frontend contempla (ADR-010 §7 trata el POD como evidencia, pero el código de 10B lo usa como finalización).
+
+   **Resolución (2026-10-08):** **un solo camino a `FINALIZADO`, confirmado.** El formulario de POD del chofer pasa a incluir las líneas, con la **cantidad despachada precargada como entregada**, así que el chofer solo toca las líneas con novedad (lo rechazado o lo que no entró). La precarga es posible porque la entrega tiene líneas con cantidad despachada desde que se crea (ADR-BE-008, resolución de su objeción 1). Es un **cambio de UI que se hace al conectar logística (BE-7)**, anotado en el plan de tandas del README.
