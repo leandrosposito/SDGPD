@@ -36,8 +36,11 @@ export const PRESET_ORDER: readonly DateRangePreset[] = [
 type FixedPreset = 'today' | 'last7days' | 'thisMonth' | 'thisQuarter';
 
 // Re-exportado con el nombre historico (Fase 0.2 de la corrida completa,
-// delegado al helper unico de shared/utils/date.ts) para no tocar los
-// call-sites existentes (ExportButton.tsx y los de mas abajo).
+// delegado al helper unico de shared/utils/date.ts). Verificado en la
+// Tanda 22 (2026-10-09): ningun archivo lo importa desde aca — los
+// call-sites usan toLocalDateString de shared/utils/date.ts directo.
+// Este archivo lo usa adentro (computeDateRangeForPreset). El re-export
+// queda listado como resto en el reporte de la Tanda 22, sin borrar.
 export { toISODateString };
 
 // Rango [dateFrom, dateTo] de uno de los 4 presets fijos (no 'all', no
@@ -69,11 +72,12 @@ export function computeDateRangeForPreset(
   }
 }
 
-// Valor inicial listo para useState(() => defaultDateRangeValue(...)).
-// Default 'all' para listados que hoy no filtran por fecha (Compras,
-// Cuentas Corrientes, Morosos); LogisticsPage pasa 'today' explicito
-// para preservar su comportamiento actual (antes fijo a todayISO, ahora
-// seleccionable con "Hoy" como default).
+// DateRangeValue completo para un preset: 'all'/'custom' sin fechas, los
+// 4 presets fijos con su rango calculado. Consumidor: LogisticsPage
+// (deriva el rango desde la URL; sin from/to y sin preset usa 'today').
+// Compras, TabPendingReceipt, Cuentas Corrientes y Morosos NO lo usan:
+// toman dateFrom/dateTo tal cual de la URL, sin calcular desde el preset
+// (Tanda 22, diferencia documentada, no unificada).
 export function defaultDateRangeValue(preset: DateRangePreset = 'all'): DateRangeValue {
   if (preset === 'all' || preset === 'custom') {
     return { preset, dateFrom: undefined, dateTo: undefined };

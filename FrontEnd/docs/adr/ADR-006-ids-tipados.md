@@ -28,3 +28,7 @@
 ## Enmienda 2026-10-07
 
 Los ids pasan a ser **UUID v7 generados por el servidor**; los branded types se conservan y la validación por prefijo se reemplaza por validación de formato (con aceptación transitoria del prefijo legado mientras un módulo siga en mock) — [ADR-BE-004](../../../BackEnd/docs/adr/ADR-BE-004-contrato-http.md).
+
+## Enmienda 2026-10-09
+
+Cada ID branded expone `as<Tipo>Id` (lanza; para valores de origen confiable) e `is<Tipo>Id` (type guard; obligatorio para todo valor que entra desde afuera: URL, storage, respuesta sin validar). `as <Tipo>Id` fuera de `ids.types.ts` está prohibido y lo hace cumplir ESLint (`no-restricted-syntax`, `FrontEnd/eslint.config.js`, Tanda 22).

@@ -7,7 +7,7 @@ import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary';
 import { SkeletonTable } from '@/shared/components/ui/SkeletonLoader';
 import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay';
 import { DateRangeFilter } from '@/shared/components/ui/DateRangeFilter';
-import { computeDateRangeForPreset, type DateRangeValue } from '@/shared/components/ui/dateRangePresets';
+import { defaultDateRangeValue, type DateRangeValue } from '@/shared/components/ui/dateRangePresets';
 import { ExportButton, type ExportColumn } from '@/shared/components/ui/ExportButton';
 import { useSessionStore } from '@/shared/state/useSessionStore';
 import type { Delivery } from '@/shared/types/logistics.types';
@@ -65,20 +65,18 @@ export const LogisticsPage: FC = () => {
   const setStatusFilter = (value: DeliveryStatusFilter) => urlState.setFilter('status', value === 'all' ? undefined : value);
 
   // Default 'today' (comportamiento historico, antes fijo a "hoy"
-  // hardcodeado): sin preset en la URL, se interpreta 'today' — y como
-  // ningun handlePresetChange corrio todavia para computar dateFrom/
-  // dateTo reales (DateRangeFilter.tsx los computa recien al elegir un
-  // preset), hay que calcularlos ahora mismo con la misma funcion, para
-  // no perder el filtro "solo hoy" en el primer render.
+  // hardcodeado): sin preset en la URL, se interpreta 'today'. Si la URL
+  // trae from/to, mandan esos. Si no (primer render, o un preset fijo
+  // sin fechas en la URL), el rango se calcula desde el preset con
+  // defaultDateRangeValue, para no perder el filtro "solo hoy" en el
+  // primer render (DateRangeFilter.tsx recien computa dateFrom/dateTo
+  // al elegir un preset).
   const dateRange: DateRangeValue = useMemo(() => {
     const preset = (urlState.filters.preset as DateRangeValue['preset'] | undefined) ?? 'today';
     if (urlState.filters.from || urlState.filters.to) {
       return { preset, dateFrom: urlState.filters.from, dateTo: urlState.filters.to };
     }
-    if (preset === 'all' || preset === 'custom') {
-      return { preset, dateFrom: undefined, dateTo: undefined };
-    }
-    return { preset, ...computeDateRangeForPreset(preset) };
+    return defaultDateRangeValue(preset);
   }, [urlState.filters.preset, urlState.filters.from, urlState.filters.to]);
 
   function setDateRange(next: DateRangeValue) {

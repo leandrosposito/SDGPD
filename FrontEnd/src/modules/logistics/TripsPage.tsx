@@ -12,7 +12,7 @@ import { SkeletonTable } from '@/shared/components/ui/SkeletonLoader';
 import type { Trip, TripStatus } from '@/shared/types/trip.types';
 import type { Vehicle } from '@/shared/types/vehicle.types';
 import type { Driver } from '@/shared/types/driver.types';
-import type { VehicleId, DriverId } from '@/shared/types/ids.types';
+import { isVehicleId, isDriverId, type VehicleId, type DriverId } from '@/shared/types/ids.types';
 import { getTripsPage, type TripQueryFilters, type TripSortField } from './services/trips.service';
 import { fetchActiveVehicles } from '@/shared/api/vehicles/vehicles.service';
 import { fetchActiveDrivers } from '@/shared/api/drivers/drivers.service';
@@ -31,6 +31,29 @@ import './LogisticsAdminPage.css';
 const EMPTY_VEHICLES: Vehicle[] = [];
 const EMPTY_DRIVERS: Driver[] = [];
 const TRIP_STATUSES: TripStatus[] = ['Planificado', 'Despachado', 'EnTransito', 'Rendido', 'Cancelado'];
+
+// Parseo explicito (ADR-006, enmienda 2026-10-09, Tanda 22) de los dos
+// ids que este archivo lee desde la URL (filtros `vehicleId`/`driverId`
+// de useUrlListState) — mismo patron que safeBranchId de ComprasPage:
+// un valor mal formado no rompe el render, se trata como "sin filtro"
+// con un aviso en consola en vez de silenciarse sin rastro.
+function safeVehicleId(raw: string | null | undefined): VehicleId | undefined {
+  if (!raw) return undefined;
+  if (!isVehicleId(raw)) {
+    console.warn(`TripsPage: valor de vehiculo invalido en la URL, se ignora: "${raw}"`);
+    return undefined;
+  }
+  return raw;
+}
+
+function safeDriverId(raw: string | null | undefined): DriverId | undefined {
+  if (!raw) return undefined;
+  if (!isDriverId(raw)) {
+    console.warn(`TripsPage: valor de chofer invalido en la URL, se ignora: "${raw}"`);
+    return undefined;
+  }
+  return raw;
+}
 
 export const TripsPage: FC = () => {
   const activeBranchId = useSessionStore((s) => s.activeBranchId);
@@ -67,8 +90,8 @@ export const TripsPage: FC = () => {
       branchId: activeBranchId,
       estado: (urlState.filters.estado as TripStatus | undefined) ?? undefined,
       fecha: urlState.filters.fecha,
-      vehicleId: urlState.filters.vehicleId as VehicleId | undefined,
-      driverId: urlState.filters.driverId as DriverId | undefined,
+      vehicleId: safeVehicleId(urlState.filters.vehicleId),
+      driverId: safeDriverId(urlState.filters.driverId),
     }),
     [empresaId, activeBranchId, urlState.filters.estado, urlState.filters.fecha, urlState.filters.vehicleId, urlState.filters.driverId]
   );

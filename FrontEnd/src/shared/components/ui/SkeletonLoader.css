@@ -10,13 +10,6 @@
   animation: shimmer 1.6s infinite linear;
 }
 
-.skeleton-card {
-  background: var(--color-bg-surface);
-  border: 0.0625rem solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: var(--space-6);
-}
-
 .skeleton-table {
   display: flex;
   flex-direction: column;

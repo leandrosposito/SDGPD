@@ -9,7 +9,7 @@
 // Correr con: node scripts/smoke/tanda-7.smoke.mjs (desde FrontEnd/).
 // ============================================================
 
-import { money, sumMoney, multiplyMoney, moneyFromNumber, formatMoney, MoneyCurrencyMismatchError } from '../../src/shared/utils/money.ts';
+import { money, sumMoney, multiplyMoney, moneyFromNumber, formatMoney, parseMoneyInput, MoneyCurrencyMismatchError } from '../../src/shared/utils/money.ts';
 import { paginateAlertsByCursor, sortAlertsByRecency } from '../../src/shared/api/alerts/alertsCursor.ts';
 import { groupSalesByZone, groupOrdersByStatusInRange } from '../../src/modules/dashboard/api/dashboardAggregates.ts';
 
@@ -53,6 +53,28 @@ check('multiplyMoney redondea al centavo entero (100 * 0.0333 = 3.33 -> 3)', mul
 const fromNumber = moneyFromNumber(1234.5, 'ARS');
 check('moneyFromNumber convierte $1234,50 a 123450 centavos', fromNumber.centavos === 123450);
 check('formatMoney formatea sin lanzar', typeof formatMoney(fromNumber) === 'string' && formatMoney(fromNumber).length > 0);
+
+// parseMoneyInput (Tanda 22). Esperados tomados del contrato, no de lo
+// que la funcion devuelve hoy:
+// - header de parseMoneyInput (money.ts): "Lanza si el string no es un
+//   numero valido, nunca devuelve NaN en silencio"; "mismo criterio que
+//   los 2 schemas Zod" = z.coerce.number() sobre <input type="number">,
+//   cuyo valor DOM es decimal con punto y sin separador de miles.
+// - moneyFromNumber: el valor esta en la unidad PRINCIPAL (1234.5 = $1234,50).
+// - money()/multiplyMoney + ADR-008 (enmienda 2026-10-07): redondeo al
+//   centavo mas cercano, mitad hacia arriba, en un solo punto.
+// Fuera del smoke a proposito (el contrato no define el signo): "-10".
+// Ver "Decisiones pendientes" del reporte de la Tanda 22.
+const isArsMoney = (m, centavos) => m.centavos === centavos && m.moneda === 'ARS' && Number.isInteger(m.centavos);
+check('parseMoneyInput("1234") -> 123400 centavos', isArsMoney(parseMoneyInput('1234', 'ARS'), 123400));
+check('parseMoneyInput("1234.567") (3 decimales) -> 123457 centavos (half-up)', isArsMoney(parseMoneyInput('1234.567', 'ARS'), 123457));
+check('parseMoneyInput("1.005") (mitad exacta) -> 101 centavos (half-up, no 100 por error binario)', isArsMoney(parseMoneyInput('1.005', 'ARS'), 101));
+// "Infinity" no esta en la lista de la consigna: cubre el cambio de
+// Number.isNaN a Number.isFinite (Tanda 22) — un no finito nunca puede
+// terminar en centavos NaN/Infinity.
+for (const raw of ['', '   ', 'abc', '1234,56', '1.234,56', '0,5', '1,234.56', '12,345', '1.234.567,89', 'Infinity']) {
+  check(`parseMoneyInput(${JSON.stringify(raw)}) lanza (no es un numero valido para el criterio de input type="number")`, throws(() => parseMoneyInput(raw, 'ARS')));
+}
 
 // ------------------------------------------------------------
 // 2. Cursor de alertas (ADR-007) — pedir una pagina, usar el
