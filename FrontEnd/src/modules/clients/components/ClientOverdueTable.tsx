@@ -11,7 +11,7 @@ import { usePagedQuery } from '@/shared/hooks/usePagedQuery';
 import { useUrlListState } from '@/shared/hooks/useUrlListState';
 import { useSessionStore } from '@/shared/state/useSessionStore';
 import { DateRangeFilter } from '@/shared/components/ui/DateRangeFilter';
-import type { DateRangePreset, DateRangeValue } from '@/shared/components/ui/dateRangePresets';
+import { readDateRangeFromUrl, dateRangeToUrlParams, type DateRangeValue } from '@/shared/components/ui/dateRangePresets';
 import { ExportButton, type ExportColumn } from '@/shared/components/ui/ExportButton';
 import { getOverdueClientsPage, exportOverdueClients } from '@/modules/clients/api/clients.service';
 import type {
@@ -69,21 +69,16 @@ export const ClientOverdueTable: FC<ClientOverdueTableProps> = ({ search }) => {
       : 'all';
   const setBucketFilter = (bucket: BucketFilter) => urlState.setFilter('bucket', bucket === 'all' ? undefined : bucket);
 
+  // Lectura y escritura del rango: helper compartido de
+  // dateRangePresets.ts (Tanda 24, regla PROTOCOLO 3.8). Default 'all'.
+  const { preset: urlPreset, from: urlFrom, to: urlTo } = urlState.filters;
   const dateRange: DateRangeValue = useMemo(
-    () => ({
-      preset: (urlState.filters.preset as DateRangePreset | undefined) ?? 'all',
-      dateFrom: urlState.filters.from,
-      dateTo: urlState.filters.to,
-    }),
-    [urlState.filters.preset, urlState.filters.from, urlState.filters.to]
+    () => readDateRangeFromUrl({ preset: urlPreset, from: urlFrom, to: urlTo }, 'all'),
+    [urlPreset, urlFrom, urlTo]
   );
 
   function setDateRange(next: DateRangeValue) {
-    urlState.setFilters({
-      preset: next.preset === 'all' ? undefined : next.preset,
-      from: next.dateFrom,
-      to: next.dateTo,
-    });
+    urlState.setFilters(dateRangeToUrlParams(next, 'all'));
   }
 
   const filters: OverdueClientsQueryFilters = useMemo(
