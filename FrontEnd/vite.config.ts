@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defaultClientConditions, defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { fileURLToPath } from 'node:url'
 
@@ -6,6 +6,11 @@ import { fileURLToPath } from 'node:url'
 export default defineConfig({
   plugins: [react()],
   resolve: {
+    // BE-1b (ADR-BE-001, sub-decision 8): @sdgpd/contracts se consume desde sus FUENTES, por la
+    // condicion de export 'sdgpd-source', igual que el backend. Asi un cambio de contrato que rompe al
+    // frontend falla en su tsc (customConditions en tsconfig.app.json) sin compilar contracts antes, y
+    // Vite resuelve el mismo archivo. Las condiciones por defecto de Vite se conservan.
+    conditions: ['sdgpd-source', ...defaultClientConditions],
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
