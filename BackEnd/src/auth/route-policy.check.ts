@@ -2,6 +2,7 @@ import { Inject, Injectable, type OnModuleInit, RequestMethod } from '@nestjs/co
 import { PATH_METADATA } from '@nestjs/common/constants.js'
 import { DiscoveryService, MetadataScanner, Reflector } from '@nestjs/core'
 import { PathsExplorer } from '@nestjs/core/router/paths-explorer.js'
+import { API_PREFIX } from '../http/api-prefix.ts'
 import { ROUTE_ALLOWLIST, ROUTE_POLICY_METADATA, type RouteAllowlist, type RoutePolicy } from './route-policy.ts'
 
 /** `/a/` + `/b/:id` → `/a/b/:id`. */
@@ -46,7 +47,7 @@ export class RoutePolicyCheck implements OnModuleInit {
         ])
         for (const prefix of prefixes) {
           for (const path of route.path) {
-            const name = `${method} ${joinPath(prefix, path)}`
+            const name = `${method} ${joinPath(`/${API_PREFIX}`, prefix, path)}`
             if (policy === undefined) problems.push(`${name} (${controller.name}.${route.methodName}) no declara permiso`)
             else if (policy.kind === 'public' && !this.allowlist.public.includes(name)) {
               problems.push(`${name} está marcada @Public() y no es una ruta pública`)

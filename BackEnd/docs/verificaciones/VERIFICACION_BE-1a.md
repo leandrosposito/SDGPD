@@ -2,6 +2,8 @@
 
 **Fecha:** 2026-10-09. Lo corre Leandro, en **Git Bash**, desde la raíz del repo (`C:\proyectos\SDGPD`), con Node 24 y `BackEnd/.env` armado según `BackEnd/docs/SETUP_SUPABASE.md`. BE-1a no toca el frontend, así que no hay pasos de navegador: la conexión es BE-1b.
 
+> **Actualizado en BE-1b (2026-10-09):** el backend sirve todo bajo el prefijo global `/api` (la variable `B` ya lo incluye) y la cookie de refresh va con `Path=/api/auth/refresh`. En la sección 5, el mensaje de arranque nombra la ruta con el prefijo: `GET /api/users (UsersController.list) no declara permiso`.
+
 **Gate 5 (ADR-BE-001):** todos los endpoints nuevos tienen su schema en `packages/contracts` (`auth.ts`, `users.ts`, `branches.ts`). Su consumidor del frontend llega en **BE-1b** (login, logout, guard de rutas, `useSessionStore` contra `/auth/session`, `TabUsersRoles` contra `/users` y `/roles`; plan en `BackEnd/docs/README.md`). Hasta entonces, su consumidor es este checklist.
 
 **Secretos:** ningún paso imprime contraseñas, tokens ni la clave JWT. Los valores salen de `BackEnd/.env` con `grep`; no los pegues en ningún lado.
@@ -12,15 +14,15 @@
 |---|---|---|
 | 0.1 | `npm ci` | termina sin errores (puede avisar `allow-scripts` por `esbuild`: es esperado) |
 | 0.2 | `grep -c '^JWT_SECRET=' BackEnd/.env` | `1`. Si da `0`: `npm run db:setup -w @sdgpd/backend -- --secrets-only` y repetí |
-| 0.3 | `npm run db:migrate -w @sdgpd/backend` | `sdgpd: sin migraciones pendientes (6 en total)` y lo mismo para `sdgpd_test` |
+| 0.3 | `npm run db:migrate -w @sdgpd/backend` | `sdgpd: sin migraciones pendientes (7 en total)` y lo mismo para `sdgpd_test` |
 | 0.4 | `npm run db:seed-dev -w @sdgpd/backend` | dos líneas `ok`: `Distribuidora La Proveedora S.A.: 4 sucursales, 4 roles, admin con email en SEED_ADMIN_EMAIL…` y `Empresa B (aislamiento): 1 sucursales, 4 roles…`. Corrélo dos veces: la segunda dice lo mismo (idempotente) |
 | 0.5 | `npm run typecheck && npm run lint && npm test && npm run build` | todo en verde. Los tests tardan unos 10 minutos (base remota) |
-| 0.6 | En una terminal aparte: `npm run start -w @sdgpd/backend` | en el log, `Mapped {/auth/login, POST}`, `{/users, GET}`, `{/roles/:id/permissions, PUT}`, `{/branches, GET}` y `Nest application successfully started` |
+| 0.6 | En una terminal aparte: `npm run start -w @sdgpd/backend` | en el log, `Mapped {/api/auth/login, POST}`, `{/api/users, GET}`, `{/api/roles/:id/permissions, PUT}`, `{/api/branches, GET}` y `Nest application successfully started` |
 
 Variables para el resto (en la terminal de las pruebas):
 
 ```bash
-P=$(grep '^PORT=' BackEnd/.env | cut -d= -f2); B="http://localhost:$P"
+P=$(grep '^PORT=' BackEnd/.env | cut -d= -f2); B="http://localhost:$P/api"   # desde BE-1b todas las rutas llevan el prefijo /api
 EA=$(grep '^SEED_ADMIN_EMAIL=' BackEnd/.env | cut -d= -f2);   PA=$(grep '^SEED_ADMIN_PASSWORD=' BackEnd/.env | cut -d= -f2)
 EB=$(grep '^SEED_ADMIN_B_EMAIL=' BackEnd/.env | cut -d= -f2); PB=$(grep '^SEED_ADMIN_B_PASSWORD=' BackEnd/.env | cut -d= -f2)
 login() { curl -s -c "$3" -H 'Content-Type: application/json' -d "{\"email\":\"$1\",\"password\":\"$2\",\"clientType\":\"web\"}" "$B/auth/login"; }
@@ -31,7 +33,7 @@ token() { node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>consol
 
 | # | Paso | Resultado esperado |
 |---|---|---|
-| 1.1 | `curl -i -H 'Content-Type: application/json' -d "{\"email\":\"$EA\",\"password\":\"$PA\",\"clientType\":\"web\"}" $B/auth/login \| grep -iE '^HTTP\|^set-cookie' \| sed 's/sdgpd_refresh=[^;]*/sdgpd_refresh=<token>/'` | `HTTP/1.1 200 OK` y `Set-Cookie: sdgpd_refresh=<token>; Path=/auth/refresh; HttpOnly; Secure; SameSite=Strict; Max-Age=2592000` |
+| 1.1 | `curl -i -H 'Content-Type: application/json' -d "{\"email\":\"$EA\",\"password\":\"$PA\",\"clientType\":\"web\"}" $B/auth/login \| grep -iE '^HTTP\|^set-cookie' \| sed 's/sdgpd_refresh=[^;]*/sdgpd_refresh=<token>/'` | `HTTP/1.1 200 OK` y `Set-Cookie: sdgpd_refresh=<token>; Path=/api/auth/refresh; HttpOnly; Secure; SameSite=Strict; Max-Age=2592000` |
 | 1.2 | `login "$EA" "$PA" /tmp/a.jar \| node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const o=JSON.parse(s);console.log(o.tokenType,o.session.company.name,o.session.role.name,o.session.permissions.length,o.session.branches.map(b=>b.code+':'+b.status).join(','))})"` | `Bearer Distribuidora La Proveedora S.A. Admin 70 CTR:active,NOR:active,SUR:active,VMA:inactive`. El body **no** tiene el refresh token |
 | 1.3 | `curl -s -H 'Content-Type: application/json' -d "{\"email\":\"$EA\",\"password\":\"mal-mal-mal\",\"clientType\":\"web\"}" $B/auth/login` | `{"code":"invalid-credentials","message":"Email o contraseña incorrectos"}` (401) |
 | 1.4 | Lo mismo con `"email":"nadie@sdgpd.local"` y la contraseña que quieras | **exactamente** el mismo body y el mismo 401 |
@@ -84,7 +86,7 @@ TB=$(login "$EB" "$PB" /tmp/b.jar | token)
 
 | # | Paso | Resultado esperado |
 |---|---|---|
-| 5.1 | Cortá el backend. En `BackEnd/src/settings/users.controller.ts`, borrá la línea `@RequirePermission('settings', 'ver')` de `list()`. `npm run build -w @sdgpd/backend && npm run start -w @sdgpd/backend` | no arranca: `Error: Rutas sin política de acceso válida (ADR-BE-003, sub-decisión 6): - GET /users (UsersController.list) no declara permiso` |
+| 5.1 | Cortá el backend. En `BackEnd/src/settings/users.controller.ts`, borrá la línea `@RequirePermission('settings', 'ver')` de `list()`. `npm run build -w @sdgpd/backend && npm run start -w @sdgpd/backend` | no arranca: `Error: Rutas sin política de acceso válida (ADR-BE-003, sub-decisión 6): - GET /api/users (UsersController.list) no declara permiso` |
 | 5.2 | `git checkout -- BackEnd/src/settings/users.controller.ts` y volvé a compilar y levantar | arranca normal |
 
 ## 6. Limpieza

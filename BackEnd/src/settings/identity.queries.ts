@@ -1,6 +1,7 @@
-import type { Branch, Permission, Role, User } from '@sdgpd/contracts'
-import { asc, eq, inArray, type SQL } from 'drizzle-orm'
-import { auditedEntity } from '../db/command.ts'
+import type { Permission, Role, User, UserErrorCode } from '@sdgpd/contracts'
+import { and, asc, count, eq, exists, inArray, type SQL } from 'drizzle-orm'
+import { auditedEntity, type CommandTx } from '../db/command.ts'
+import { BusinessRuleError } from '../http/errors.ts'
 import { branches, rolePermissions, roles, userBranches, users } from '../db/schema/index.ts'
 import type { TenantTx } from '../db/tenant-tx.ts'
 
@@ -78,6 +79,29 @@ export async function toRoles(select: Select, rows: { id: string; name: string; 
   return rows.map(r => ({ ...r, permissions: byRole.get(r.id) ?? [] }))
 }
 
+/** Scope del lock que serializa los cambios de usuarios y de matrices de una empresa. */
+export const IDENTITY_LOCK = 'identity'
+
+/**
+ * Guarda contra el autobloqueo (BE-1b): después de cambiar usuarios o matrices, en la misma
+ * transacción, la empresa tiene que seguir teniendo al menos un usuario activo con `settings.editar`.
+ * Si no, 422 `last-admin` y el comando se revierte entero. Quien llama toma antes
+ * `tx.lockScope(IDENTITY_LOCK)`, así dos cambios concurrentes no pueden pasar el chequeo a la vez.
+ */
+export async function assertAnAdminRemains(tx: CommandTx): Promise<void> {
+  const editor = tx
+    .select({ id: rolePermissions.id })
+    .from(rolePermissions)
+    .where(and(eq(rolePermissions.roleId, users.roleId), eq(rolePermissions.module, 'settings'), eq(rolePermissions.action, 'editar')))
+  const [row] = await tx.select({ n: count() }).from(users).where(and(eq(users.active, true), exists(editor)))
+  if ((row?.n ?? 0) === 0) {
+    throw new BusinessRuleError(
+      'last-admin' satisfies UserErrorCode,
+      'El cambio dejaría a la empresa sin ningún usuario activo que pueda editar usuarios y permisos',
+    )
+  }
+}
+
 export const branchColumns = {
   id: branches.id,
   name: branches.name,
@@ -86,4 +110,3 @@ export const branchColumns = {
   address: branches.address,
   status: branches.status,
 }
-export type BranchRow = Branch

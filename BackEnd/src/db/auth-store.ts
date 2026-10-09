@@ -61,6 +61,20 @@ export type SessionData = {
 export class AuthStore {
   constructor(private readonly database: Database) {}
 
+  /**
+   * Para un email inexistente (BE-1b): las mismas dos transacciones que hace un login con contraseña
+   * incorrecta (leer el estado del bloqueo y registrar el fallo), contra una empresa que no existe, para
+   * que el tiempo de respuesta no delate qué emails existen. Con un tenant inexistente, RLS no deja ver
+   * ni escribir nada: no tiene efectos.
+   */
+  async simulateLoginLookups(): Promise<void> {
+    const nobody = newId()
+    await this.isLocked(nobody, nobody)
+    await this.database.withTenant(nobody, tx =>
+      tx.select({ n: sql<number>`count(*)::int` }).from(loginAttempts).where(eq(loginAttempts.userId, nobody)),
+    )
+  }
+
   /** ¿El usuario está bloqueado por intentos fallidos ahora? */
   async isLocked(empresaId: string, userId: string): Promise<boolean> {
     return this.database.withTenant(

@@ -18,6 +18,7 @@ import {
 import { and, eq } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { AppModule } from '../../src/app.module.ts'
+import { configureApp } from '../../src/http/api-prefix.ts'
 import { Public, RequirePermission } from '../../src/auth/route-policy.ts'
 import { newId } from '../../src/db/ids.ts'
 import { auditLog } from '../../src/db/schema/index.ts'
@@ -253,6 +254,7 @@ describe('verificación de arranque', () => {
   async function boot(controller: new () => object): Promise<unknown> {
     const moduleRef = await Test.createTestingModule({ imports: [AppModule.register(testConfig())], controllers: [controller] }).compile()
     const nest = moduleRef.createNestApplication<INestApplication<Server>>({ logger: false })
+    configureApp(nest)
     try {
       await nest.init()
       return undefined
@@ -273,7 +275,7 @@ describe('verificación de arranque', () => {
     }
     const err = await boot(UndeclaredController)
     expect(err).toBeInstanceOf(Error)
-    expect(String(err)).toContain('GET /sin-permiso (UndeclaredController.list) no declara permiso')
+    expect(String(err)).toContain('GET /api/sin-permiso (UndeclaredController.list) no declara permiso')
   })
 
   it('@Public() en una ruta que no es de las públicas también hace fallar el bootstrap', async () => {
@@ -285,7 +287,7 @@ describe('verificación de arranque', () => {
         return []
       }
     }
-    expect(String(await boot(FakePublicController))).toContain('GET /falsa-publica está marcada @Public()')
+    expect(String(await boot(FakePublicController))).toContain('GET /api/falsa-publica está marcada @Public()')
   })
 })
 

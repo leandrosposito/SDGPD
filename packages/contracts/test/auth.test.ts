@@ -45,7 +45,7 @@ describe('login', () => {
 
   it('códigos con su status', () => {
     expect(authErrorCodes).toEqual({ 'invalid-credentials': 401, 'csrf-header-required': 403, 'branch-not-enabled': 403, 'not-implemented': 501 })
-    expect(userErrorCodes).toEqual({ 'email-in-use': 409, 'role-not-found': 422, 'branch-not-found': 422 })
+    expect(userErrorCodes).toEqual({ 'email-in-use': 409, 'role-not-found': 422, 'branch-not-found': 422, 'last-admin': 422 })
   })
 })
 

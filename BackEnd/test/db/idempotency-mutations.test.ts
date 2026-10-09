@@ -29,7 +29,7 @@ const server = () => probe.app.getHttpServer()
 
 async function createBranch(): Promise<string> {
   const res = await request(server())
-    .post('/probe/branches')
+    .post('/api/probe/branches')
     .set(actorHeaders(A.empresaId, A.userId))
     .set('Idempotency-Key', newId())
     .send({ name: 'Original', code: `PUT-${newId().slice(-8)}` })
@@ -38,7 +38,7 @@ async function createBranch(): Promise<string> {
 }
 
 const put = (id: string, key: string | undefined, body: object) => {
-  const req = request(server()).put(`/probe/branches/${id}`).set(actorHeaders(A.empresaId, A.userId))
+  const req = request(server()).put(`/api/probe/branches/${id}`).set(actorHeaders(A.empresaId, A.userId))
   return (key === undefined ? req : req.set('Idempotency-Key', key)).send(body)
 }
 

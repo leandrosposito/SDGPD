@@ -5,7 +5,9 @@ import type pg from 'pg'
 import request from 'supertest'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { newId } from '../../src/db/ids.ts'
+import { createHash } from 'node:crypto'
 import { canonicalJson, payloadHash } from '../../src/db/idempotency.ts'
+import { apiPath } from '../../src/http/api-prefix.ts'
 import { auditLog, branches, idempotencyKeys } from '../../src/db/schema/index.ts'
 import { actorHeaders, createProbeApp, type ProbeApp } from '../support/probe-app.ts'
 import { rawTestClient } from '../support/db.ts'
@@ -31,7 +33,7 @@ afterAll(async () => {
 })
 
 const post = (path: string, tenant: TestTenant, key: string | undefined, body: object) => {
-  const req = request(probe.app.getHttpServer()).post(path).set(actorHeaders(tenant.empresaId, tenant.userId))
+  const req = request(probe.app.getHttpServer()).post(apiPath(path)).set(actorHeaders(tenant.empresaId, tenant.userId))
   return (key === undefined ? req : req.set('Idempotency-Key', key)).send(body)
 }
 
@@ -52,8 +54,19 @@ async function keyRows(tenant: TestTenant, key: string): Promise<number> {
 describe('payload hash', () => {
   it('canonicaliza: el orden de las claves no cambia el hash, el contenido sí', () => {
     expect(canonicalJson({ b: 1, a: { d: [1, { y: 2, x: 1 }], c: null } })).toBe('{"a":{"c":null,"d":[1,{"x":1,"y":2}]},"b":1}')
-    expect(payloadHash({ a: 1, b: 2 })).toBe(payloadHash({ b: 2, a: 1 }))
-    expect(payloadHash({ a: 1 })).not.toBe(payloadHash({ a: 2 }))
+    // BE-1b: HMAC con clave del servidor (la firma de payloadHash ganó la clave; mismas aserciones).
+    const key = new Uint8Array(32).fill(3)
+    expect(payloadHash(key, { a: 1, b: 2 })).toBe(payloadHash(key, { b: 2, a: 1 }))
+    expect(payloadHash(key, { a: 1 })).not.toBe(payloadHash(key, { a: 2 }))
+  })
+
+  it('es un HMAC: depende de la clave y no es el SHA-256 del payload (que se podría recalcular sin la clave)', () => {
+    const body = { email: 'a@b.com', password: 'una-contraseña-inicial' }
+    const k1 = new Uint8Array(32).fill(1)
+    const k2 = new Uint8Array(32).fill(2)
+    expect(payloadHash(k1, body)).not.toBe(payloadHash(k2, body))
+    expect(payloadHash(k1, body)).not.toBe(createHash('sha256').update(canonicalJson(body)).digest('hex'))
+    expect(payloadHash(k1, body)).toMatch(/^[0-9a-f]{64}$/)
   })
 })
 
@@ -140,7 +153,7 @@ describe('Idempotency-Key', () => {
 
 describe('rutas /auth/*', () => {
   it('no exigen Idempotency-Key ni actor', async () => {
-    const res = await request(probe.app.getHttpServer()).post('/auth/probe').send({})
+    const res = await request(probe.app.getHttpServer()).post('/api/auth/probe').send({})
     expect(res.status).toBe(200)
     expect(res.body).toEqual({ ok: true })
   })

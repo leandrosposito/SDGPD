@@ -9,6 +9,7 @@ import { ACTIONS, type Action, MODULES, type Module } from '@sdgpd/contracts'
 import { eq } from 'drizzle-orm'
 import request, { type Response } from 'supertest'
 import { AppModule } from '../../src/app.module.ts'
+import { apiPath, configureApp } from '../../src/http/api-prefix.ts'
 import { Database, type TenantTx } from '../../src/db/database.ts'
 import { newId } from '../../src/db/ids.ts'
 import { auditLog, branches, companies, rolePermissions, roles, userBranches, users } from '../../src/db/schema/index.ts'
@@ -20,6 +21,7 @@ export type AuthApp = { app: INestApplication<Server>; database: Database }
 export async function createAuthApp(controllers: Type[] = []): Promise<AuthApp> {
   const moduleRef = await Test.createTestingModule({ imports: [AppModule.register(testConfig())], controllers }).compile()
   const app = moduleRef.createNestApplication<INestApplication<Server>>({ logger: false })
+  configureApp(app)
   await app.init()
   return { app, database: app.get(Database) }
 }
@@ -161,7 +163,7 @@ export function bodiesWithSecrets(): string[] {
 export type LoggedIn = { accessToken: string; refreshToken: string; res: Response }
 
 export async function login(app: AuthApp, email: string, password = TEST_PASSWORD): Promise<Response> {
-  return recorded(await request(app.app.getHttpServer()).post('/auth/login').send({ email, password, clientType: 'web' }))
+  return recorded(await request(app.app.getHttpServer()).post('/api/auth/login').send({ email, password, clientType: 'web' }))
 }
 
 export async function loginOk(app: AuthApp, email: string): Promise<LoggedIn> {
@@ -176,14 +178,14 @@ export async function loginOk(app: AuthApp, email: string): Promise<LoggedIn> {
 }
 
 export async function refresh(app: AuthApp, refreshToken: string | undefined, withHeader = true): Promise<Response> {
-  let req = request(app.app.getHttpServer()).post('/auth/refresh')
+  let req = request(app.app.getHttpServer()).post('/api/auth/refresh')
   if (withHeader) req = req.set('X-Requested-With', 'XMLHttpRequest')
   if (refreshToken !== undefined) req = req.set('Cookie', `sdgpd_refresh=${refreshToken}`)
   return recorded(await req.send())
 }
 
 export async function get(app: AuthApp, path: string, accessToken?: string): Promise<Response> {
-  const req = request(app.app.getHttpServer()).get(path)
+  const req = request(app.app.getHttpServer()).get(apiPath(path))
   return recorded(await (accessToken === undefined ? req : req.set('Authorization', `Bearer ${accessToken}`)))
 }
 
@@ -194,6 +196,6 @@ export async function send(
   accessToken: string,
   body: object,
 ): Promise<Response> {
-  const req = request(app.app.getHttpServer())[method](path).set('Authorization', `Bearer ${accessToken}`)
+  const req = request(app.app.getHttpServer())[method](apiPath(path)).set('Authorization', `Bearer ${accessToken}`)
   return recorded(await (method === 'post' ? req.set('Idempotency-Key', newId()) : req).send(body))
 }

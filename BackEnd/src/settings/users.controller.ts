@@ -25,7 +25,15 @@ import { Command } from '../http/command.interceptor.ts'
 import { BusinessRuleError, ConflictError, NotFoundError } from '../http/errors.ts'
 import { ListQueryPipe } from '../http/list-query.pipe.ts'
 import { ZodValidationPipe } from '../http/zod-validation.pipe.ts'
-import { findUser, selectUserRows, toUsers, userBranchEntity, userEntity } from './identity.queries.ts'
+import {
+  assertAnAdminRemains,
+  findUser,
+  IDENTITY_LOCK,
+  selectUserRows,
+  toUsers,
+  userBranchEntity,
+  userEntity,
+} from './identity.queries.ts'
 
 /** El rol y las sucursales tienen que existir en la empresa (la FK compuesta lo garantiza; esto da un 422 con código). */
 async function assertRoleAndBranches(tx: CommandTx, roleId: string, branchIds: string[]): Promise<void> {
@@ -120,6 +128,7 @@ export class UsersController {
   /**
    * Nombre, rol, activo y sucursales, con la versión leída (409 si cambió). Cambiar el rol sube
    * permissions_version (los tokens viejos dejan de valer). Desactivar revoca sus refresh tokens.
+   * Si dejaría a la empresa sin un usuario activo con settings.editar: 422 `last-admin` (BE-1b).
    */
   @Put(':id')
   @RequirePermission('settings', 'editar')
@@ -128,6 +137,7 @@ export class UsersController {
     @Param('id', new ZodValidationPipe(idSchema)) id: string,
     @Body(new ZodValidationPipe(updateUserRequestSchema)) body: UpdateUserRequest,
   ): Promise<User> {
+    await tx.lockScope(IDENTITY_LOCK)
     const [current] = await tx
       .select({ roleId: users.roleId, active: users.active, permissionsVersion: users.permissionsVersion })
       .from(users)
@@ -143,6 +153,7 @@ export class UsersController {
     })
     await syncBranches(tx, id, tx.actor.empresaId, body.branchIds)
     if (current.active && !body.active) await tx.revokeRefreshTokens(id)
+    await assertAnAdminRemains(tx)
     const user = await findUser(tx.select, id)
     if (user === undefined) throw new NotFoundError('user')
     return user

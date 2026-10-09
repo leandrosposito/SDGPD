@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto'
+import { createHmac } from 'node:crypto'
 import { and, eq, sql } from 'drizzle-orm'
 import type { Actor } from '../context/actor.ts'
 import { ConflictError, IdempotencyKeyReusedError } from '../http/errors.ts'
@@ -31,9 +31,13 @@ function canonicalize(value: unknown): unknown {
   return value
 }
 
-/** SHA-256 del body JSON canonicalizado (ADR-BE-005, sub-decisión 2). */
-export function payloadHash(body: unknown): string {
-  return createHash('sha256').update(canonicalJson(body)).digest('hex')
+/**
+ * HMAC-SHA256 del payload JSON canonicalizado, con una clave del servidor (ADR-BE-005, sub-decisión 2,
+ * enmendada en BE-1b). Antes era SHA-256 a secas: con una contraseña inicial en el body (POST /users),
+ * quien leyera idempotency_keys podía probar contraseñas contra un hash rápido. Sin la clave, no.
+ */
+export function payloadHash(key: Uint8Array, body: unknown): string {
+  return createHmac('sha256', key).update(canonicalJson(body)).digest('hex')
 }
 
 function keyOf(actor: Actor, request: IdempotencyRequest) {

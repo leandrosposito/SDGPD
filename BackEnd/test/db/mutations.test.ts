@@ -33,7 +33,7 @@ const server = () => probe.app.getHttpServer()
 
 async function createBranch(tenant: TestTenant, code: string): Promise<{ id: string; version: number }> {
   const res = await request(server())
-    .post('/probe/branches')
+    .post('/api/probe/branches')
     .set(actorHeaders(tenant.empresaId, tenant.userId))
     .set('Idempotency-Key', newId())
     .send({ name: `Sucursal ${code}`, code })
@@ -42,7 +42,7 @@ async function createBranch(tenant: TestTenant, code: string): Promise<{ id: str
 }
 
 const put = (tenant: TestTenant, id: string, body: object) =>
-  request(server()).put(`/probe/branches/${id}`).set(actorHeaders(tenant.empresaId, tenant.userId)).send(body)
+  request(server()).put(`/api/probe/branches/${id}`).set(actorHeaders(tenant.empresaId, tenant.userId)).send(body)
 
 async function auditOf(tenant: TestTenant, entityId: string) {
   return probe.database.withTenant(tenant.empresaId, tx =>
@@ -108,7 +108,7 @@ describe('auditoría', () => {
   it('un comando que falla (rollback) no deja registro de auditoría', async () => {
     const code = `RB-${newId().slice(-8)}`
     const res = await request(server())
-      .post('/probe/failing')
+      .post('/api/probe/failing')
       .set(actorHeaders(A.empresaId, A.userId))
       .set('Idempotency-Key', newId())
       .send({ name: 'falla', code })
@@ -172,7 +172,7 @@ describe('contadores', () => {
   it('dos empresas no comparten numeración', async () => {
     const res = (tenant: TestTenant) =>
       request(server())
-        .post('/probe/numbers')
+        .post('/api/probe/numbers')
         .set(actorHeaders(tenant.empresaId, tenant.userId))
         .set('Idempotency-Key', newId())
         .send({ series: 'OC' })

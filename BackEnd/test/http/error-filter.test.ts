@@ -9,6 +9,7 @@ import request from 'supertest'
 import { validate as isUuid, version as uuidVersion } from 'uuid'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { z } from 'zod'
+import { configureApp } from '../../src/http/api-prefix.ts'
 import { BusinessRuleError } from '../../src/http/errors.ts'
 import { HttpCoreModule } from '../../src/http/http.module.ts'
 import { ZodValidationPipe } from '../../src/http/zod-validation.pipe.ts'
@@ -43,6 +44,7 @@ beforeAll(async () => {
     controllers: [ProbeController],
   }).compile()
   app = moduleRef.createNestApplication<INestApplication<Server>>({ logger: false })
+  configureApp(app)
   await app.init()
 })
 
@@ -60,28 +62,28 @@ function expectErrorBody(res: request.Response, status: number, code: string): v
 
 describe('filtro global de errores', () => {
   it('error de validación → 400 validation-error con los issues en details', async () => {
-    const res = await request(app.getHttpServer()).post('/probe/validation').send({ name: '', quantity: 1.5 })
+    const res = await request(app.getHttpServer()).post('/api/probe/validation').send({ name: '', quantity: 1.5 })
     expectErrorBody(res, 400, 'validation-error')
     const paths = (res.body as { details: { issues: { path: string[] }[] } }).details.issues.map(i => i.path.join('.'))
     expect(paths.sort()).toEqual(['name', 'quantity'])
   })
 
   it('un body válido pasa el pipe y llega transformado', async () => {
-    const res = await request(app.getHttpServer()).post('/probe/validation').send({ name: 'ok', quantity: 2 })
+    const res = await request(app.getHttpServer()).post('/api/probe/validation').send({ name: 'ok', quantity: 2 })
     expect(res.status).toBe(201)
     expect(res.body).toEqual({ name: 'ok', quantity: 2 })
   })
 
   it('JSON mal formado → 400 validation-error', async () => {
     const res = await request(app.getHttpServer())
-      .post('/probe/validation')
+      .post('/api/probe/validation')
       .set('Content-Type', 'application/json')
       .send('{"name": ')
     expectErrorBody(res, 400, 'validation-error')
   })
 
   it('error de negocio → 422 con su code y details', async () => {
-    const res = await request(app.getHttpServer()).get('/probe/business')
+    const res = await request(app.getHttpServer()).get('/api/probe/business')
     expectErrorBody(res, 422, 'invalid-transition')
     expect(res.body).toEqual({
       code: 'invalid-transition',
@@ -91,7 +93,7 @@ describe('filtro global de errores', () => {
   })
 
   it('error no previsto → 500 internal-error, sin stack ni mensaje interno en el cuerpo', async () => {
-    const res = await request(app.getHttpServer()).get('/probe/unexpected')
+    const res = await request(app.getHttpServer()).get('/api/probe/unexpected')
     expectErrorBody(res, 500, 'internal-error')
     expect(res.body).toEqual({ code: 'internal-error', message: 'Error interno del servidor' })
     expect(res.text).not.toContain(SECRET)
@@ -99,7 +101,7 @@ describe('filtro global de errores', () => {
   })
 
   it('ruta inexistente → 404 not-found', async () => {
-    const res = await request(app.getHttpServer()).get('/no-existe')
+    const res = await request(app.getHttpServer()).get('/api/no-existe')
     expectErrorBody(res, 404, 'not-found')
   })
 })
@@ -108,10 +110,10 @@ describe('X-Request-Id', () => {
   it('cada respuesta, también las de error, trae un UUID v7 distinto', async () => {
     const server = app.getHttpServer()
     const responses = await Promise.all([
-      request(server).post('/probe/validation').send({ name: 'ok', quantity: 1 }),
-      request(server).get('/probe/business'),
-      request(server).get('/probe/unexpected'),
-      request(server).get('/no-existe'),
+      request(server).post('/api/probe/validation').send({ name: 'ok', quantity: 1 }),
+      request(server).get('/api/probe/business'),
+      request(server).get('/api/probe/unexpected'),
+      request(server).get('/api/no-existe'),
     ])
     const ids = responses.map(r => r.headers['x-request-id'])
     for (const id of ids) {
@@ -121,7 +123,7 @@ describe('X-Request-Id', () => {
   })
 
   it('el id que manda el cliente no reemplaza al del servidor', async () => {
-    const res = await request(app.getHttpServer()).get('/probe/business').set('X-Request-Id', 'del-cliente-123')
+    const res = await request(app.getHttpServer()).get('/api/probe/business').set('X-Request-Id', 'del-cliente-123')
     expect(res.headers['x-request-id']).not.toBe('del-cliente-123')
     expect(uuidVersion(String(res.headers['x-request-id']))).toBe(7)
   })

@@ -5,6 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { z } from 'zod'
 import { newId } from '../../src/db/ids.ts'
 import { branches } from '../../src/db/schema/index.ts'
+import { apiPath } from '../../src/http/api-prefix.ts'
 import { actorHeaders, createProbeApp, type ProbeApp } from '../support/probe-app.ts'
 import { createTestCompany, removeTestCompany, type TestTenant } from '../support/tenants.ts'
 
@@ -44,7 +45,7 @@ afterAll(async () => {
 })
 
 const get = (path: string, query: Record<string, string | number> = {}) =>
-  request(probe.app.getHttpServer()).get(path).query(query).set(actorHeaders(T.empresaId, T.userId))
+  request(probe.app.getHttpServer()).get(apiPath(path)).query(query).set(actorHeaders(T.empresaId, T.userId))
 
 describe('offset', () => {
   it('total correcto, páginas sin solaparse y orden por la lista blanca', async () => {
@@ -86,7 +87,7 @@ describe('cursor', () => {
   async function createAudited(n: number): Promise<void> {
     for (let i = 0; i < n; i++) {
       const res = await request(probe.app.getHttpServer())
-        .post('/probe/branches')
+        .post('/api/probe/branches')
         .set(actorHeaders(T.empresaId, T.userId))
         .set('Idempotency-Key', newId())
         .send({ name: 'Cursor', code: `C-${newId().slice(-10)}` })

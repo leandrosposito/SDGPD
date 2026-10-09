@@ -20,8 +20,11 @@ export class AuthService {
 
   /**
    * POST /auth/login. Email inexistente, contraseña incorrecta, usuario inactivo y usuario bloqueado
-   * responden igual (401 `invalid-credentials`) y tardan lo mismo: siempre se verifica un hash.
-   * Solo una contraseña incorrecta suma un intento fallido.
+   * responden igual (401 `invalid-credentials`) y tardan lo mismo (BE-1b): siempre se verifica un
+   * hash (con un email inexistente, uno ficticio con los mismos parámetros) y siempre hay las mismas dos
+   * transacciones de base que con una contraseña incorrecta (estado del bloqueo y registro del fallo).
+   * Solo una contraseña incorrecta suma un intento fallido; también durante el bloqueo, así que seguir
+   * probando lo vuelve a bloquear.
    */
   async login(request: LoginRequest): Promise<IssuedSession<LoginResponse>> {
     if (request.clientType === 'native') {
@@ -29,13 +32,14 @@ export class AuthService {
     }
     const candidate = await this.database.findLoginUser(request.email)
     if (candidate === null) {
+      await this.store.simulateLoginLookups()
       await burnPasswordCheck(request.password)
       throw new InvalidCredentialsError()
     }
     const locked = await this.store.isLocked(candidate.empresaId, candidate.id)
     const valid = await verifyPassword(candidate.passwordHash, request.password)
     if (!valid) {
-      if (!locked) await this.store.registerLoginFailure(candidate.empresaId, candidate.id)
+      await this.store.registerLoginFailure(candidate.empresaId, candidate.id)
       throw new InvalidCredentialsError()
     }
     if (locked || !candidate.active) throw new InvalidCredentialsError()

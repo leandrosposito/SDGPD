@@ -13,19 +13,24 @@ export const postgresUrlSchema = z
 /** Conexiones por proceso. La base es remota (pooler de Supabase en modo sesión): pocas. */
 const DEFAULT_POOL_SIZE = 5
 
-/** Clave HS256 del access token (ADR-BE-003, sub-decisión 2): al menos 256 bits, en base64url. La genera db:setup. */
-const JWT_SECRET_MIN_BYTES = 32
-const jwtSecretSchema = z
+/**
+ * Claves del servidor en base64url, de al menos 256 bits. Las genera db:setup (o `-- --secrets-only`):
+ * JWT_SECRET firma el access token (ADR-BE-003, sub-decisión 2); IDEMPOTENCY_HMAC_KEY es la clave del
+ * HMAC del payload de idempotencia (ADR-BE-005, BE-1b).
+ */
+const SECRET_MIN_BYTES = 32
+const secretKeySchema = z
   .string()
   .regex(/^[A-Za-z0-9_-]+$/, 'tiene que ser base64url')
   .transform(s => new Uint8Array(Buffer.from(s, 'base64url')))
-  .refine(key => key.length >= JWT_SECRET_MIN_BYTES, `tiene que tener al menos ${JWT_SECRET_MIN_BYTES} bytes`)
+  .refine(key => key.length >= SECRET_MIN_BYTES, `tiene que tener al menos ${SECRET_MIN_BYTES} bytes`)
 
 const envSchema = z.object({
   PORT: z.coerce.number().int().min(1).max(65535),
   DATABASE_URL: postgresUrlSchema,
   DATABASE_CA_CERT: z.string().min(1).refine(p => existsSync(p), 'el archivo del certificado no existe'),
-  JWT_SECRET: jwtSecretSchema,
+  JWT_SECRET: secretKeySchema,
+  IDEMPOTENCY_HMAC_KEY: secretKeySchema,
 })
 
 export type AppConfig = {
@@ -33,6 +38,8 @@ export type AppConfig = {
   database: { url: string; caCert: string; maxConnections: number }
   /** Clave del access token. Vive solo en BackEnd/.env: nunca va a un log ni a una respuesta. */
   auth: { jwtSecret: Uint8Array }
+  /** Clave del HMAC del payload de idempotencia. Vive solo en BackEnd/.env. */
+  idempotency: { hmacKey: Uint8Array }
 }
 
 /** Valida el entorno al arrancar (ADR-BE-001, sub-decisión 5): si falta una variable, el proceso no levanta. */
@@ -51,6 +58,7 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
       maxConnections: DEFAULT_POOL_SIZE,
     },
     auth: { jwtSecret: parsed.data.JWT_SECRET },
+    idempotency: { hmacKey: parsed.data.IDEMPOTENCY_HMAC_KEY },
   }
 }
 

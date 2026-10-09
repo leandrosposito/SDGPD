@@ -100,5 +100,7 @@ export const userErrorCodes = {
   'email-in-use': 409,
   'role-not-found': 422,
   'branch-not-found': 422,
+  /** El cambio dejaría a la empresa sin ningún usuario activo con settings.editar (BE-1b). */
+  'last-admin': 422,
 } as const
 export type UserErrorCode = keyof typeof userErrorCodes
