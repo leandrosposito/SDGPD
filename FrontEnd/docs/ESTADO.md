@@ -1,12 +1,39 @@
 # Estado — SDGPD Frontend
 
-**Corresponde a: 2026-10-09, rama `lean` (hasta `sesion-be1a-2026-10-09` incluida — backend BE-1a, ver `docs/historial/reportes/REPORTE_2026-10-09_be1a.md`; frontend Tanda 25, ver `docs/historial/reportes/REPORTE_2026-10-09_tanda25.md`; Tandas 23/24, ver `REPORTE_2026-10-09_tandas23-24.md`, y Tanda 22, ver `REPORTE_2026-10-09_tanda22.md`; backend BE-0b, ver `docs/historial/reportes/REPORTE_2026-10-09.md`, y BE-0a, ver `REPORTE_2026-10-08.md`; Tandas 17-21 en `REPORTE_2026-10-07.md` y `REPORTE_2026-10-07b.md`).** Este es el único snapshot vigente del proyecto — reemplaza a `docs/historial/auditorias/AUDIT_00_RESUMEN.md` (que quedó fijado al 2026-09-06 y ya no describe el estado real) como lectura de entrada. **Reescribilo al cerrar cada sesión** — no alcanza con dejar el `REPORTE_<fecha>.md`, ese documenta lo que se hizo, este documenta dónde está el proyecto AHORA.
+**Corresponde a: 2026-10-09, rama `lean` (hasta `sesion-be1b-2026-10-09` incluida — BE-1b, conexión del frontend a la autenticación, ver `docs/historial/reportes/REPORTE_2026-10-09_be1b.md`; backend BE-1a, ver `REPORTE_2026-10-09_be1a.md`; frontend Tanda 25, ver `docs/historial/reportes/REPORTE_2026-10-09_tanda25.md`; Tandas 23/24, ver `REPORTE_2026-10-09_tandas23-24.md`, y Tanda 22, ver `REPORTE_2026-10-09_tanda22.md`; backend BE-0b, ver `docs/historial/reportes/REPORTE_2026-10-09.md`, y BE-0a, ver `REPORTE_2026-10-08.md`; Tandas 17-21 en `REPORTE_2026-10-07.md` y `REPORTE_2026-10-07b.md`).** Este es el único snapshot vigente del proyecto — reemplaza a `docs/historial/auditorias/AUDIT_00_RESUMEN.md` (que quedó fijado al 2026-09-06 y ya no describe el estado real) como lectura de entrada. **Reescribilo al cerrar cada sesión** — no alcanza con dejar el `REPORTE_<fecha>.md`, ese documenta lo que se hizo, este documenta dónde está el proyecto AHORA.
 
 ## Tandas — todas cerradas hasta acá (verificado contra `git log --oneline lean` + la sesión en curso)
 
 Tanda 0 (contención de errores) → Tanda 1 (capa `api/`, piloto `suppliers`) → Tanda 2 (cache TanStack Query) → Tanda 2.5 (`useCachedQuery`, `httpClient` unificado) → Tandas 3a-3g (migración de `orders`, `cash`, `settings`, `clients`, `inventory` completo incluida Reposición) → Tanda 4 (contexto de sucursal + estado en URL) → Tanda 5 (IDs tipados) → Tanda 6 (exportación server-side) → Tanda 7 (tablero/analítica) → Tanda 8 (entregas) → Tanda B/C1/C2 (funciones huérfanas + export en el resto de los listados) → ADR-009 (alcance del dashboard) → barrido de `empresaId` en los 17 services → reorganización física de la documentación (`historial/`, `negocio/`, `_archivo/`) → ADR-010/ADR-011 Aceptados (con correcciones 2026-09-09) + Tanda 9, modelo logístico base (ver `docs/historial/verificaciones/VERIFICACION_TANDA_9.md`) → ADR-012 Aceptado + Tanda 10A, code-splitting por ruta (ver `docs/historial/verificaciones/VERIFICACION_TANDA_10A.md`) → Tanda 10B, operación logística (vehículos, choferes, viajes, POD) sobre ADR-011 (ver `docs/historial/verificaciones/VERIFICACION_TANDA_10B.md`) → ADR-013/ADR-014 Aceptados + Tanda 11, ajustes de logística y pedidos (ver `docs/historial/verificaciones/VERIFICACION_TANDA_11.md`) → Tanda 12, ajustes de pedidos/inventario/clientes/proveedores (ver `docs/historial/verificaciones/VERIFICACION_TANDA_12.md`) → Tanda 13, hallazgo ALTO en `markStopNoVisitada` + trazabilidad de `ReprogramacionEvent` (enmienda ADR-013) (ver `docs/historial/verificaciones/VERIFICACION_TANDA_13.md`) → **Tandas 14/15/16: productos `inactive` excluidos de pedidos/OC/reposición, precondiciones de idempotencia movidas adentro de `withIdempotency` (hallazgo MEDIO), y los 10 campos fantasma restantes de `CreateClientModal` conectados (`PENDIENTES.md` ítem 15, cerrado)** (ver `docs/historial/reportes/REPORTE_2026-09-11_tanda14-16.md` y `docs/historial/verificaciones/VERIFICACION_TANDA_{14,15,16}.md`) → **sesión avance-2026-09-30: checklist unificado, lotes conservados al editar un producto, join por `Map` en Reposición, auditoría IAM/notificaciones** (ver `docs/historial/reportes/REPORTE_2026-09-30.md`) → **Tandas 17/18/19 (2026-10-07): clientes dados de baja fuera del alta de pedidos (ADR-015), estado Activo/Inactivo en el Directorio, ADR-016 sobre la deuda de `fetchProducts`** (ver `docs/historial/reportes/REPORTE_2026-10-07.md`) → **Tandas 20/21 (2026-10-07b): SKUs huérfanos del seed de pedidos corregidos, `createOrder` rechaza SKUs inexistentes (`product-not-found`, enmienda ADR-015)** (ver `docs/historial/reportes/REPORTE_2026-10-07b.md`) → **Tanda 22 (2026-10-09): regla de ESLint contra `as <Tipo>Id`, 3 exports huérfanos conectados, `SkeletonCard` borrado, definición de call-site real en el Gate 5** (ver `docs/historial/reportes/REPORTE_2026-10-09_tanda22.md`) → **Tandas 23/24 (2026-10-09): dinero con signo y redondeo simétrico (ADR-008); rango de fechas en la URL con lectura/escritura única en los 5 listados (PROTOCOLO 3.8). El punto 23.2 (cast `'' as Trip['id']`) quedó NO HECHO por condición de parada** (ver `docs/historial/reportes/REPORTE_2026-10-09_tandas23-24.md`) → **Tanda 25 (2026-10-09): cierre de PENDIENTES #23 (subcomponente `TripLivePosition`, sin centinela) con la regla de ESLint extendida al cast indexado, y `v13` sin el crash de libuv al salir** (ver `docs/historial/reportes/REPORTE_2026-10-09_tanda25.md`).
 
 **No hay ninguna tanda "a medias"**: todo lo de arriba tiene commit real, mergeado a `lean`. Lo que sigue abajo no son tandas sin cerrar, son hallazgos que esas tandas no atacaron (fuera de su alcance declarado) o verificación en navegador que nunca se corrió.
+
+## BE-1b hecha — el frontend conectado a la autenticación (2026-10-09, `sesion-be1b-2026-10-09`)
+
+Detalle en `docs/historial/reportes/REPORTE_2026-10-09_be1b.md`. Checklist de navegador sin ejecutar: `docs/historial/verificaciones/VERIFICACION_BE-1b.md`. Sub-decisiones nuevas: ADR-BE-003 (24-28), ADR-BE-005 (enmienda de la sub-decisión 2), ADR-BE-001 (15-16), ADR-BE-002 (22) y la enmienda de ADR-006.
+
+- **Parte 0, backend:**
+  - HMAC-SHA256 de idempotencia con `IDEMPOTENCY_HMAC_KEY` (cierra el MEDIO de BE-1a);
+  - guarda de último admin (422 `last-admin`, con lock por empresa);
+  - login con tiempo parejo;
+  - limpieza de refresh tokens vencidos;
+  - **prefijo global `/api`** (cookie `Path=/api/auth/refresh`);
+  - ids fijos de la empresa demo y sus 4 sucursales en el seed.
+- **Parte 1, workspaces:** `FrontEnd` es el tercer workspace y hay **un único lockfile, el de la raíz** (se borró `FrontEnd/package-lock.json`). Ninguna versión del frontend cambió (`npm ls --all` comparado; `xlsx` 0.20.3 con el mismo integrity); el build salió idéntico. El frontend consume `@sdgpd/contracts` desde sus fuentes (`sdgpd-source`).
+- **Parte 2, modo mixto:**
+  - `VITE_HTTP_SERVICES` es el único lugar que dice qué va por http; hoy `auth`, `session`, `users`, `roles` y `branches`. **Todo lo demás sigue en mock**, y sin la variable todo es mock como antes (sin login).
+  - Access token en memoria; ante un 401, un solo refresh (single-flight) y un reintento.
+  - Proxy de Vite `/api` sin reescribir.
+  - Login, logout y guard de rutas.
+  - `useSessionStore` contra `/api/auth/session`.
+  - El mock usa los UUID fijos del seed para la empresa demo y sus sucursales.
+- **Parte 3, UI:**
+  - `usePermission` es el único lugar donde la UI pregunta por permisos, y solo oculta;
+  - `USER_ROLE` ya no existe;
+  - `TabUsersRoles` conectado: alta, edición, matriz 10 × 7, 409 y 422 con mensaje;
+  - rama de fallo de v13 probada.
+- **Tests y scripts:** 177 del backend y 27 de `contracts`. Hay 31 scripts del frontend, con los nuevos `be-1b`, `be-1b-ui` y `v18-ids-demo`; `v-adr009` se actualizó por los ids.
+- **Sigue: BE-2** (proveedores, motivos, vehículos y choferes). Pendiente sin tanda: el alta de empresas en producción.
 
 ## Backend — BE-1a hecha (2026-10-09, `sesion-be1a-2026-10-09`)
 
@@ -20,9 +47,9 @@ Autenticación, identidad y permisos en el backend (ADR-BE-003). **`FrontEnd/` n
 - **Seed:** `db:seed-dev`, solo contra `sdgpd`. Crea 2 empresas (A con las 4 sucursales del mock) y un admin por empresa. Las credenciales quedan solo en `BackEnd/.env` (`SEED_*`).
 - **Tests:** 165 del backend en 12 archivos (eran 86) y 27 de `contracts` (eran 18).
 - **Checklist sin ejecutar:** `BackEnd/docs/verificaciones/VERIFICACION_BE-1a.md` (curl contra el backend con el seed).
-- **Abierto (MEDIO):** el `payload_hash` de idempotencia de `POST /users` incluye la contraseña inicial (SHA-256 rápido, 48 h). Arreglo propuesto: HMAC con clave del servidor.
+- ~~**Abierto (MEDIO):** el `payload_hash` de idempotencia de `POST /users` incluye la contraseña inicial.~~ **Cerrado en BE-1b** (HMAC con `IDEMPOTENCY_HMAC_KEY`).
 - **Pendiente sin tanda:** alta de empresas nuevas en producción (necesita su propio ADR).
-- **Sigue: BE-1b.** Login, logout, guard de rutas, `useSessionStore` contra `/auth/session`, `TabUsersRoles`, eliminar `USER_ROLE`, sumar `FrontEnd` a los workspaces y probar la rama de fallo de v13. Riesgos a resolver ahí: el `Path` de la cookie frente al proxy `/api`, y un solo refresh en vuelo.
+- **Siguió: BE-1b (hecha, ver arriba).** Login, logout, guard de rutas, `useSessionStore` contra `/auth/session`, `TabUsersRoles`, eliminar `USER_ROLE`, sumar `FrontEnd` a los workspaces y probar la rama de fallo de v13. Riesgos a resolver ahí: el `Path` de la cookie frente al proxy `/api`, y un solo refresh en vuelo.
 
 ## Tanda 25 — centinela de viajes y gate intermitente (2026-10-09, `sesion-centinela-trip-2026-10-09`)
 
@@ -236,9 +263,9 @@ Quedó explícitamente fuera de alcance (documentado en ADR-010/011 y en `VERIFI
 
 ## Checklists de verificación en navegador — sin evidencia de haberse ejecutado
 
-Ningún commit en el historial dice "confirmado en navegador" sobre ninguno de los checklists de `docs/historial/verificaciones/` (41 archivos, incluidos `VERIFICACION_TANDA_9.md` a `VERIFICACION_TANDA_25.md`, `VERIFICACION_BE-0b.md` y los 2 de la sesión 2026-09-30: `VERIFICACION_2026-09-30_T2_lotes.md` y `VERIFICACION_2026-09-30_T4_reposicion.md`). Hay que asumir que **todos** siguen pendientes de que Leandro los corra, no solo los que dicen explícitamente "PENDIENTE"/"NO EJECUTADA" en su propio texto.
+Ningún commit en el historial dice "confirmado en navegador" sobre ninguno de los checklists de `docs/historial/verificaciones/` (42 archivos, incluidos `VERIFICACION_TANDA_9.md` a `VERIFICACION_TANDA_25.md`, `VERIFICACION_BE-0b.md`, `VERIFICACION_BE-1b.md` y los 2 de la sesión 2026-09-30: `VERIFICACION_2026-09-30_T2_lotes.md` y `VERIFICACION_2026-09-30_T4_reposicion.md`). Hay que asumir que **todos** siguen pendientes de que Leandro los corra, no solo los que dicen explícitamente "PENDIENTE"/"NO EJECUTADA" en su propio texto.
 
-**Por dónde empezar:** `docs/VERIFICACION_PENDIENTE_UNIFICADA.md` junta en 42 puntos, ordenados por riesgo, todo lo pendiente de las Tandas 0/1, 3a-3d, 3g, 4-8, ADR-009 y el barrido de `empresaId`. Quedan fuera del unificado, pendientes en su archivo original: Tandas 2, 2.5, 3e, 3f, 9, 10A, 10B, 11-18, 20-25, B, C1, C2, los 2 de 2026-09-30 y BE-0b (más `BackEnd/docs/verificaciones/VERIFICACION_BE-0a.md` y `VERIFICACION_BE-1a.md`).
+**Por dónde empezar:** `docs/VERIFICACION_PENDIENTE_UNIFICADA.md` junta en 42 puntos, ordenados por riesgo, todo lo pendiente de las Tandas 0/1, 3a-3d, 3g, 4-8, ADR-009 y el barrido de `empresaId`. Quedan fuera del unificado, pendientes en su archivo original: Tandas 2, 2.5, 3e, 3f, 9, 10A, 10B, 11-18, 20-25, B, C1, C2, los 2 de 2026-09-30 y BE-0b y BE-1b (más `BackEnd/docs/verificaciones/VERIFICACION_BE-0a.md` y `VERIFICACION_BE-1a.md`, este último ajustado en BE-1b al prefijo `/api`).
 
 ## Deuda técnica viva
 

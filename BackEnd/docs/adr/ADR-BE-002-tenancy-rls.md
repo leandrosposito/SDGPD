@@ -104,6 +104,10 @@ SELECT set_config('app.empresa_id', $1, true);   -- equivale a SET LOCAL
 20. **`branchId` lo valida el guard**, en la query o en el body (nunca en el path), contra las sucursales habilitadas del usuario (`user_branches`), que lee en cada request. Una sucursal de otra empresa no puede estar habilitada (FK compuesta), así que también da 403. No hay excepción para el rol Admin: el admin del seed tiene todas habilitadas.
 21. **`login_attempts` lleva `empresa_id`**, como toda tabla (sub-decisión 14, catálogo): es una fila por usuario, no por email. Un email inexistente no deja fila, y el bloqueo responde igual que cualquier fallo (ADR-BE-003, sub-decisión 12), así que no hace falta una tabla sin tenant.
 
+### Sub-decisiones de la tanda BE-1b (2026-10-09, sin consulta)
+
+22. **Ids fijos de la empresa demo del seed** (`BackEnd/scripts/db/demo-ids.ts`): la empresa conserva el id que le dio el seed de BE-1a en desarrollo, y sus 4 sucursales pasan a UUID fijos (`0192f000-0000-7000-8000-00000000000N`), **los mismos que usa el mock del frontend**, para que un módulo por http y otro en mock hablen de las mismas sucursales. Si las sucursales ya existían con otros ids, `ensureDemoBranches` las migra (crea la del id fijo con los mismos datos, mueve `user_branches` y borra la vieja; si tiene otras referencias, la FK hace fallar todo el seed) y nunca las duplica. Si `SEED_EMPRESA_ID` de `.env` no es el id fijo, el seed falla con un mensaje claro. Solo vale para el seed de desarrollo: las empresas reales tienen ids v7 generados.
+
 ## Objeciones
 
 1. **Caja SUCURSAL contradice el texto vigente del protocolo**, que pone caja en EMPRESA (`FrontEnd/docs/PROTOCOLO.md:17`). Se resuelve en esta misma sesión, porque §1 del protocolo está dentro del alcance. Lo dejo anotado para que conste que el cambio es deliberado.

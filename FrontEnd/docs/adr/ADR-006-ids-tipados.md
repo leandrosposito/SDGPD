@@ -32,3 +32,7 @@ Los ids pasan a ser **UUID v7 generados por el servidor**; los branded types se 
 ## Enmienda 2026-10-09
 
 Cada ID branded expone `as<Tipo>Id` (lanza; para valores de origen confiable) e `is<Tipo>Id` (type guard; obligatorio para todo valor que entra desde afuera: URL, storage, respuesta sin validar). `as <Tipo>Id` fuera de `ids.types.ts` está prohibido y lo hace cumplir ESLint (`no-restricted-syntax`, `FrontEnd/eslint.config.js`, Tanda 22). La prohibición incluye la forma indexada, `as <Entidad>['id']` (clave `id` o terminada en `Id`, directa o dentro de una unión), que la regla marca desde la Tanda 25.
+
+## Enmienda 2026-10-09 (BE-1b)
+
+En el mock, la empresa demo y sus 4 sucursales dejan el prefijo legado (`company-001`, `branch-001`..`branch-004`) y usan los **UUID fijos del seed de desarrollo del backend** (`BackEnd/scripts/db/demo-ids.ts`; lo verifica `scripts/verificacion/v18-ids-demo.mjs`). Es solo un cambio de datos: `asBranchId`/`isBranchId` ya aceptaban UUID (ADR-BE-004, sub-decisión 1). El resto de los ids del mock sigue con el prefijo legado mientras su módulo no se conecte.

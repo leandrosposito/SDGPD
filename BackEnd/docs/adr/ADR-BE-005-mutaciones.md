@@ -95,6 +95,7 @@ Las dos cosas:
 
 1. **"Operación"** del alcance de idempotencia = método + plantilla de ruta (`POST /orders/:id/cancel`), no la URL concreta.
 2. **Hash del payload:** SHA-256 del body JSON canonicalizado (claves ordenadas).
+   **Enmienda (2026-10-09, BE-1b):** el hash pasa a ser **HMAC-SHA256 con una clave del servidor** (`IDEMPOTENCY_HMAC_KEY`, 32 bytes en base64url, solo en `BackEnd/.env`, generada por `db:setup -- --secrets-only`), sobre el mismo payload canonicalizado (`{ params, body }`, Paso 0 de BE-1a). Con SHA-256 a secas, quien leyera `idempotency_keys` podía probar contraseñas contra el hash de un `POST /users` (la contraseña inicial está en el body): sin la clave, no. Cierra el hallazgo MEDIO de BE-1a. Las claves guardadas antes del cambio (TTL 48 h, solo en desarrollo) ya no coinciden: un replay de una de ellas da 422.
 3. **`version` en comandos de acción** (POST `/{id}/{accion}`):
    - **Obligatoria** en las acciones que cambian la composición del agregado (`assign-deliveries`, reordenar paradas, editar líneas).
    - **No obligatoria** en las transiciones de estado: su precondición de estado ya detecta el conflicto (pasar de `CREADO` a `EN_TRANSITO` dos veces falla igual por la máquina de estados). Evita 409 espurios en la app del chofer.

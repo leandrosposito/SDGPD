@@ -1,6 +1,6 @@
 # Arquitectura del backend
 
-**Verificado contra el filesystem el 2026-10-09** (tanda BE-1a; antes, BE-0b el mismo día y BE-0a el 2026-10-08; `find BackEnd packages -not -path '*/node_modules/*' -not -path '*/dist/*'`). Si leés esto después de esa fecha, reverificalo antes de confiar en él (PROTOCOLO.md regla 2.10).
+**Verificado contra el filesystem el 2026-10-09** (tanda BE-1b; antes, BE-1a y BE-0b el mismo día y BE-0a el 2026-10-08; `find BackEnd packages -not -path '*/node_modules/*' -not -path '*/dist/*'`). Si leés esto después de esa fecha, reverificalo antes de confiar en él (PROTOCOLO.md regla 2.10).
 
 ## Monorepo
 
@@ -64,24 +64,27 @@ BackEnd/
                                      login_attempts; FK de user_id en idempotency_keys y audit_log (NOT VALID)
     0005_rls_identity.sql            custom (BE-1a): RLS de las 6 tablas, política definer_lookup (users,
                                      refresh_tokens) y las funciones SECURITY DEFINER auth_find_user/auth_find_refresh_token
+    0006_refresh_tokens_cleanup.sql  custom (BE-1b): política expired_cleanup (DELETE de vencidos sin tenant)
     meta/                 journal y snapshots de drizzle-kit
   scripts/db/             corren con Node 24 sin compilar
     lib.ts                conexión con SSL verificado, roles, schemas, lectura y escritura de .env;
                           APPEND_ONLY_TABLES (revoca UPDATE/DELETE de audit_log a los roles de aplicación);
                           DEFINER_FUNCTIONS + hardenDefinerFunctions (search_path y EXECUTE de las funciones, BE-1a);
-                          ensureJwtSecret (JWT_SECRET en .env, BE-1a)
-    setup.ts              roles, schemas, privilegios, URLs y JWT_SECRET en .env (idempotente, como postgres;
+                          ensureAppSecrets (JWT_SECRET, BE-1a; IDEMPOTENCY_HMAC_KEY, BE-1b)
+    setup.ts              roles, schemas, privilegios, URLs y las claves del servidor en .env (idempotente, como postgres;
                           `-- --secrets-only` solo genera los secretos)
     migrate.ts            runner propio: mismas migraciones en sdgpd y sdgpd_test (como sdgpd_migrator)
     sql.ts                ejecuta SQL como un rol propio, con o sin tenant (reemplaza a psql)
     seed-dev.ts           seed de desarrollo, solo sdgpd (BE-1a): 2 empresas, sucursales del mock, 4 roles, admins
+    demo-ids.ts           BE-1b: ids FIJOS de la empresa demo y sus 4 sucursales (los mismos del mock del frontend)
+    demo-branches.ts      BE-1b: ensureDemoBranches, crea o migra las sucursales demo a su id fijo sin duplicarlas
   src/
     main.ts               valida la config y levanta Nest; sin config válida (o con una ruta sin política) no arranca
     app.module.ts         AppModule.register(config): DatabaseModule + HttpCoreModule + AuthModule + CommandModule
                           + SettingsModule + HealthController
     context/actor.ts      Actor { empresaId, userId, requestId }; bindActor (ÚNICO punto de entrada, lo llama AuthGuard),
                           requireActor, @CurrentActor()
-    config/config.ts      loadConfig(env) con Zod (PORT, DATABASE_URL, DATABASE_CA_CERT, JWT_SECRET); APP_CONFIG
+    config/config.ts      loadConfig(env) con Zod (PORT, DATABASE_URL, DATABASE_CA_CERT, JWT_SECRET, IDEMPOTENCY_HMAC_KEY); APP_CONFIG
     auth/                 autenticación y permisos (BE-1a, ADR-BE-003)
       auth.module.ts      AuthController, AuthService, TokenService, AuthStore, AuthGuard (APP_GUARD por useExisting),
                           RoutePolicyCheck y ROUTE_ALLOWLIST
@@ -108,12 +111,14 @@ BackEnd/
       database.module.ts  módulo global que exporta Database e IdempotencyCleanupService
       tenant-tx.ts        tipos Db y TenantTx
       command.ts          CommandTx: select + insert/update/delete siempre auditados (update/delete con versión) + nextNumber;
-                          removeChild (borrado auditado de filas hijas sin versión) y revokeRefreshTokens (BE-1a)
+                          removeChild (borrado auditado de filas hijas sin versión) y revokeRefreshTokens (BE-1a);
+                          lockScope (advisory lock de transacción por empresa y scope, BE-1b)
       auth-store.ts       AuthStore: intentos de login, familias y rotación de refresh, carga del usuario del guard, sesión
       refresh-tokens.ts   insertar, revocar familia, revocar los de un usuario (TTL 30 días)
       pg-errors.ts        isUniqueViolation(err, constraint)
-      idempotency.ts      canonicalJson, payloadHash (SHA-256), claimKey/completeKey, TTL 48 h
-      idempotency-cleanup.service.ts  setInterval de 15 min + advisory lock
+      idempotency.ts      canonicalJson, payloadHash (HMAC-SHA256 con IDEMPOTENCY_HMAC_KEY desde BE-1b), claimKey/completeKey, TTL 48 h
+      idempotency-cleanup.service.ts  setInterval de 15 min + advisory lock: claves de idempotencia y, desde BE-1b,
+                          refresh tokens vencidos (Database.cleanupExpiredRefreshTokens, con su propio lock)
       counters.ts         nextNumber(tx, empresaId, series): SERIE-000001
       pagination.ts       offsetPage, cursorPage, encodeCursor/decodeCursor, keysetAfter/keysetOrder (instante, id), orderByWhitelist
       ids.ts              newId(): UUID v7 (uuid), porque Postgres 17 no tiene uuidv7()
@@ -138,6 +143,8 @@ BackEnd/
       zod-validation.pipe.ts   ZodValidationPipe(schema)
       request-id.middleware.ts X-Request-Id (UUID v7) en toda respuesta
       http.module.ts      HttpCoreModule: APP_FILTER + middleware en '*path'
+      api-prefix.ts       BE-1b: API_PREFIX ('api'), apiPath(), configureApp(app) — el prefijo global /api, aplicado
+                          en un solo lugar por main.ts y por todas las apps de los tests
     health/
       health.controller.ts     GET /health, público
   test/
@@ -153,6 +160,8 @@ BackEnd/
     db/definer.test.ts    funciones SECURITY DEFINER: columnas, catálogo, EXECUTE; sin tenant 0 filas
     db/idempotency.test.ts   replay, 422, 400, rollback, concurrencia, /auth/*, limpieza
     db/idempotency-mutations.test.ts   Idempotency-Key en PUT (Paso 0 de BE-1a)
+    auth/be1b-backend.test.ts   BE-1b: HMAC, último admin (y concurrencia), login parejo, limpieza de refresh, /api,
+                          sucursales demo con id fijo
     db/mutations.test.ts     versión (409/404), auditoría (before/after, rollback, permisos), contadores
     db/pagination.test.ts    offset (total, pageSize máximo) y cursor (recorrido con inserciones), lista blanca
     db/catalog.test.ts    suite de catálogo (cubre cualquier tabla futura)
@@ -200,5 +209,7 @@ BackEnd/
 - **Tenant:** `Database.withTenant(empresaId, fn)` abre una transacción, ejecuta `select set_config('app.empresa_id', $1, true)` y corre `fn(tx)`. El cliente Drizzle es privado, y ESLint prohíbe `pg` y `drizzle-orm/node-postgres` fuera de `src/db/`. Desde BE-0b, fuera de `src/db/` ESLint también prohíbe `withTenant` y la reflexión (`Reflect`, `Object.getOwnProperty*`, `.session`), así que el código de negocio entra solo por `Database.read()` (READ ONLY) o por un comando (`CommandTx`, con escrituras siempre auditadas; ADR-BE-005, sub-decisión 11). Sin tenant, toda tabla con RLS devuelve cero filas.
 
 ## Flujo de un request
+
+**Desde BE-1b, toda ruta lleva el prefijo global `/api`** (`/api/health`, `/api/auth/login`, `/api/users`…), fijado por `configureApp`. La cookie de refresh va con `Path=/api/auth/refresh`. Los nombres de ruta de la verificación de arranque y de las listas `PUBLIC_ROUTES`/`SESSION_ROUTES` incluyen el prefijo.
 
 `RequestIdMiddleware` (genera y devuelve `X-Request-Id`) → `AuthGuard` (BE-1a; las rutas públicas pasan sin tocar nada): access token → usuario, rol, permisos y sucursales con el tenant del token → `bindActor` → permiso de la ruta (403) → `branchId` habilitado (403) → `CommandInterceptor`, solo en mutaciones: transacción con el tenant del actor, más `Idempotency-Key` en POST (y en PUT/PATCH/DELETE si viene) → controller (`ZodValidationPipe` o `ListQueryPipe` con un schema de `contracts`) → lectura con `Database.read()` o comando con `@Command() tx: CommandTx` → respuesta (un replay lleva `Idempotent-Replayed: true`). Cualquier excepción pasa por `ErrorFilter`, y lo no previsto sale como `500 internal-error` con el detalle solo en el log.
