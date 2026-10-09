@@ -6,7 +6,9 @@
 //   - los dos schemas sin privilegios para PUBLIC, anon, authenticated ni service_role.
 // Las contraseñas se generan acá (o se reusan las de BackEnd/.env) y se guardan SOLO en .env.
 // Al servidor viaja el verificador SCRAM, nunca la contraseña en claro (no queda en ningún log).
-// Uso: npm run db:setup -w @sdgpd/backend
+// También genera los secretos de la aplicación que faltan en .env (JWT_SECRET, BE-1a): con
+// `-- --secrets-only` hace solo eso, sin conectarse a la base.
+// Uso: npm run db:setup -w @sdgpd/backend [-- --secrets-only]
 import { createHash, createHmac, pbkdf2Sync, randomBytes } from 'node:crypto'
 import type pg from 'pg'
 import {
@@ -16,7 +18,9 @@ import {
   connectionUser,
   databaseUrl,
   enforceAppendOnly,
+  ensureJwtSecret,
   envValue,
+  hardenDefinerFunctions,
   pgErrorText,
   readEnvFile,
   ROLE_KEYS,
@@ -52,6 +56,9 @@ function passwordFor(role: RoleKey, envLines: string[]): string {
 }
 
 async function main(): Promise<void> {
+  console.log(ensureJwtSecret() ? 'JWT_SECRET generada en .env' : 'JWT_SECRET ya estaba en .env')
+  if (process.argv.includes('--secrets-only')) return
+
   const envLines = readEnvFile()
   const roleKeys = ROLE_KEYS
   const passwords: Record<RoleKey, string> = {
@@ -137,6 +144,7 @@ async function main(): Promise<void> {
       await admin.query(`revoke all on all tables in schema ${schema} from ${revokeFrom}`)
       await admin.query(`revoke all on ${schema}.schema_migrations from ${role}`)
       await enforceAppendOnly(admin, APP_ROLE_SCHEMA[key])
+      await hardenDefinerFunctions(admin, APP_ROLE_SCHEMA[key])
     }
     await admin.query('reset role')
 

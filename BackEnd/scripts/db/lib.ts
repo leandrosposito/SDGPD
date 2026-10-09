@@ -1,5 +1,6 @@
 // Utilidades de los scripts de base (setup, migrate, sql). Corren con Node 24 sin compilar
 // (type stripping): solo sintaxis TypeScript borrable. Nunca imprimen contraseñas ni URLs.
+import { randomBytes } from 'node:crypto'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import pg from 'pg'
 
@@ -42,6 +43,29 @@ export async function enforceAppendOnly(client: pg.Client, schema: SchemaName): 
     const qualified = `${client.escapeIdentifier(schema)}.${client.escapeIdentifier(table)}`
     const exists = await client.query<{ t: string | null }>('select to_regclass($1)::text as t', [qualified])
     if (exists.rows[0]?.t !== null) await client.query(`revoke update, delete, truncate on ${qualified} from ${role}`)
+  }
+}
+
+/**
+ * Funciones SECURITY DEFINER (ADR-BE-002, sub-decisión 2; BE-1a): login y refresh antes de conocer el
+ * tenant. Las crea una migración, que no puede nombrar schemas ni roles; por eso su search_path fijo
+ * (`<schema>, pg_temp`: pg_temp al final, para que una tabla temporal no pueda suplantar a una real) y
+ * su EXECUTE (solo el rol de aplicación de ese schema, nunca PUBLIC) los aplican setup.ts y migrate.ts,
+ * en la misma transacción que las migraciones. El dueño es el migrador, que es quien las crea.
+ */
+export const DEFINER_FUNCTIONS = ['auth_find_user(text)', 'auth_find_refresh_token(text)'] as const
+
+export async function hardenDefinerFunctions(client: pg.Client, schema: SchemaName): Promise<void> {
+  const role = client.escapeIdentifier(SCHEMA_APP_ROLE[schema])
+  const qualifiedSchema = client.escapeIdentifier(schema)
+  for (const signature of DEFINER_FUNCTIONS) {
+    const exists = await client.query<{ f: string | null }>('select to_regprocedure($1)::text as f', [`${schema}.${signature}`])
+    if (exists.rows[0]?.f === null) continue
+    const open = signature.indexOf('(')
+    const fn = `${qualifiedSchema}.${client.escapeIdentifier(signature.slice(0, open))}${signature.slice(open)}`
+    await client.query(`alter function ${fn} set search_path = ${qualifiedSchema}, pg_temp`)
+    await client.query(`revoke all on function ${fn} from public`)
+    await client.query(`grant execute on function ${fn} to ${role}`)
   }
 }
 
@@ -117,6 +141,20 @@ export function writeEnvValues(values: Record<string, string>): void {
   }
   if (lines.at(-1) !== '') lines.push('')
   writeFileSync(ENV_FILE, lines.join('\n'))
+}
+
+/** Bytes de la clave HS256 del access token (ADR-BE-003, sub-decisión 2; BE-1a): 256 bits. */
+export const JWT_SECRET_BYTES = 32
+
+/**
+ * Genera JWT_SECRET en .env si falta (32 bytes aleatorios en base64url). Vive solo en .env: nunca se
+ * imprime ni se versiona. Devuelve true si la generó.
+ */
+export function ensureJwtSecret(): boolean {
+  const current = envValue(readEnvFile(), 'JWT_SECRET')
+  if (current !== undefined && Buffer.from(current, 'base64url').length >= JWT_SECRET_BYTES) return false
+  writeEnvValues({ JWT_SECRET: randomBytes(JWT_SECRET_BYTES).toString('base64url') })
+  return true
 }
 
 /** Mensaje de un error de Postgres sin datos de conexión. */

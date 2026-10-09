@@ -1,6 +1,6 @@
 # Arquitectura del backend
 
-**Verificado contra el filesystem el 2026-10-09** (tanda BE-0b; antes, BE-0a el 2026-10-08; `find BackEnd packages -not -path '*/node_modules/*' -not -path '*/dist/*'`). Si leés esto después de esa fecha, reverificalo antes de confiar en él (PROTOCOLO.md regla 2.10).
+**Verificado contra el filesystem el 2026-10-09** (tanda BE-1a; antes, BE-0b el mismo día y BE-0a el 2026-10-08; `find BackEnd packages -not -path '*/node_modules/*' -not -path '*/dist/*'`). Si leés esto después de esa fecha, reverificalo antes de confiar en él (PROTOCOLO.md regla 2.10).
 
 ## Monorepo
 
@@ -28,12 +28,18 @@ packages/contracts/
     money.ts            moneySchema { amount entero, currency ISO 4217 }, currencySchema
     health.ts           healthResponseSchema (GET /health)
     query.ts            offsetQuerySchema, cursorQuerySchema, ListSpec + offsetListQuerySchema/cursorListQuerySchema (listas blancas, BE-0b)
+    branches.ts         branchSchema, branchListQuerySchema, branchPageSchema (BE-1a)
+    auth.ts             MODULES (10) × ACTIONS (7), permissionSchema, emailSchema, loginRequestSchema, sessionSchema,
+                        accessTokenResponseSchema, loginResponseSchema, REQUESTED_WITH_HEADER, authErrorCodes (BE-1a)
+    users.ts            userSchema, create/updateUserRequestSchema, passwordSchema, userListQuerySchema, roleSchema,
+                        updateRolePermissionsRequestSchema, roleListQuerySchema, páginas, userErrorCodes (BE-1a)
   test/
     contracts.test.ts
     query.test.ts
+    auth.test.ts        matriz, login, usuarios, sesión (BE-1a)
 ```
 
-Solo tiene el contrato transversal (ADR-BE-004 y ADR-BE-006), sin recursos de negocio. Lint y tests usan las herramientas de `BackEnd` con `--config` (ADR-BE-001, sub-decisión 12).
+Tiene el contrato transversal (ADR-BE-004 y ADR-BE-006) y, desde BE-1a, el de autenticación, usuarios, roles y sucursales. Lint y tests usan las herramientas de `BackEnd` con `--config` (ADR-BE-001, sub-decisión 12).
 
 **Cómo lo consume `BackEnd`** (ADR-BE-001, sub-decisión 8): el typecheck y los tests resuelven `@sdgpd/contracts` por la condición `sdgpd-source`, que apunta a las fuentes. Un cambio en `contracts` que rompe al backend falla en el `tsc --noEmit` del backend sin compilar nada antes. El build y el runtime usan `dist/`.
 
@@ -41,7 +47,7 @@ Solo tiene el contrato transversal (ADR-BE-004 y ADR-BE-006), sin recursos de ne
 
 ```
 BackEnd/
-  package.json            scripts: typecheck, lint, test, build, start, db:setup, db:generate, db:migrate, db:sql
+  package.json            scripts: typecheck, lint, test, build, start, db:setup, db:generate, db:migrate, db:sql, db:seed-dev
   tsconfig.json           typecheck de todo (src, test, scripts, configs); customConditions: sdgpd-source
   tsconfig.build.json     build de src/ a dist/ (contra contracts/dist)
   eslint.config.mjs       único config de lint (también para contracts)
@@ -54,25 +60,58 @@ BackEnd/
     0001_rls_companies_branches.sql  custom: ENABLE + FORCE RLS y políticas
     0002_mutations_infra.sql         generada: idempotency_keys, audit_log, document_counters, branches.version
     0003_rls_mutations_infra.sql     custom: RLS de las tres tablas nuevas (+ expired_cleanup, audit_log append-only)
+    0004_identity.sql                generada (BE-1a): roles, role_permissions, users, user_branches, refresh_tokens,
+                                     login_attempts; FK de user_id en idempotency_keys y audit_log (NOT VALID)
+    0005_rls_identity.sql            custom (BE-1a): RLS de las 6 tablas, política definer_lookup (users,
+                                     refresh_tokens) y las funciones SECURITY DEFINER auth_find_user/auth_find_refresh_token
     meta/                 journal y snapshots de drizzle-kit
   scripts/db/             corren con Node 24 sin compilar
     lib.ts                conexión con SSL verificado, roles, schemas, lectura y escritura de .env;
-                          APPEND_ONLY_TABLES (revoca UPDATE/DELETE de audit_log a los roles de aplicación)
-    setup.ts              roles, schemas, privilegios y URLs en .env (idempotente, como postgres)
+                          APPEND_ONLY_TABLES (revoca UPDATE/DELETE de audit_log a los roles de aplicación);
+                          DEFINER_FUNCTIONS + hardenDefinerFunctions (search_path y EXECUTE de las funciones, BE-1a);
+                          ensureJwtSecret (JWT_SECRET en .env, BE-1a)
+    setup.ts              roles, schemas, privilegios, URLs y JWT_SECRET en .env (idempotente, como postgres;
+                          `-- --secrets-only` solo genera los secretos)
     migrate.ts            runner propio: mismas migraciones en sdgpd y sdgpd_test (como sdgpd_migrator)
     sql.ts                ejecuta SQL como un rol propio, con o sin tenant (reemplaza a psql)
+    seed-dev.ts           seed de desarrollo, solo sdgpd (BE-1a): 2 empresas, sucursales del mock, 4 roles, admins
   src/
-    main.ts               valida la config y levanta Nest; sin config válida no arranca
-    app.module.ts         AppModule.register(config): DatabaseModule + HttpCoreModule + CommandModule + HealthController
-    context/actor.ts      Actor { empresaId, userId, requestId }; bindActor (ÚNICO punto de entrada, lo llama BE-1),
+    main.ts               valida la config y levanta Nest; sin config válida (o con una ruta sin política) no arranca
+    app.module.ts         AppModule.register(config): DatabaseModule + HttpCoreModule + AuthModule + CommandModule
+                          + SettingsModule + HealthController
+    context/actor.ts      Actor { empresaId, userId, requestId }; bindActor (ÚNICO punto de entrada, lo llama AuthGuard),
                           requireActor, @CurrentActor()
-    config/config.ts      loadConfig(env) con Zod; APP_CONFIG
+    config/config.ts      loadConfig(env) con Zod (PORT, DATABASE_URL, DATABASE_CA_CERT, JWT_SECRET); APP_CONFIG
+    auth/                 autenticación y permisos (BE-1a, ADR-BE-003)
+      auth.module.ts      AuthController, AuthService, TokenService, AuthStore, AuthGuard (APP_GUARD por useExisting),
+                          RoutePolicyCheck y ROUTE_ALLOWLIST
+      auth.controller.ts  POST /auth/login | refresh | logout, GET /auth/session
+      auth.service.ts     login (mismo 401 para todo fallo, bloqueo, rama native 501), refresh (rotación), logout, sesión
+      auth.guard.ts       guard global: Bearer → claims → usuario con el tenant del token → bindActor → permiso →
+                          branchId habilitado; @CurrentPrincipal()
+      route-policy.ts     @RequirePermission(módulo, acción), @SessionOnly(), @Public(); PUBLIC_ROUTES, SESSION_ROUTES
+      route-policy.check.ts   RoutePolicyCheck (onModuleInit): toda ruta declara política válida o la app no arranca
+      tokens.ts           TokenService (JWT HS256 de 15 min: sub, emp, rol, ver, sid), refresh opaco y su SHA-256, Bearer
+      refresh-cookie.ts   cookie sdgpd_refresh (HttpOnly, Secure, SameSite=Strict, Path=/auth/refresh), lectura a mano
+      passwords.ts        argon2id (m=19456, t=2, p=1, PHC), verificación, hash de relleno para emails inexistentes
+      default-roles.ts    los 4 roles iniciales y su matriz (sin Nest: también lo importa scripts/db/seed-dev.ts)
+    settings/             gestión de usuarios, roles y sucursales, módulo settings (BE-1a)
+      settings.module.ts
+      users.controller.ts GET /users, POST /users, PUT /users/:id
+      roles.controller.ts GET /roles, PUT /roles/:id/permissions
+      branches.controller.ts  GET /branches (todas con settings.ver; si no, las habilitadas)
+      identity.queries.ts entidades auditadas (user sin passwordHash, user-branch, role, role-permission) y lecturas
     db/
       database.ts         Database: pool pg con SSL verificado; withTenant (solo src/db/ y tests), read() READ ONLY,
-                          command(), idempotentCommand(), cleanupExpiredIdempotencyKeys(), ping()
+                          command(), idempotentCommand(), cleanupExpiredIdempotencyKeys(), ping();
+                          findLoginUser() y findRefreshToken(): las ÚNICAS lecturas sin tenant (funciones SECURITY DEFINER)
       database.module.ts  módulo global que exporta Database e IdempotencyCleanupService
       tenant-tx.ts        tipos Db y TenantTx
-      command.ts          CommandTx: select + insert/update/delete siempre auditados (update/delete con versión) + nextNumber
+      command.ts          CommandTx: select + insert/update/delete siempre auditados (update/delete con versión) + nextNumber;
+                          removeChild (borrado auditado de filas hijas sin versión) y revokeRefreshTokens (BE-1a)
+      auth-store.ts       AuthStore: intentos de login, familias y rotación de refresh, carga del usuario del guard, sesión
+      refresh-tokens.ts   insertar, revocar familia, revocar los de un usuario (TTL 30 días)
+      pg-errors.ts        isUniqueViolation(err, constraint)
       idempotency.ts      canonicalJson, payloadHash (SHA-256), claimKey/completeKey, TTL 48 h
       idempotency-cleanup.service.ts  setInterval de 15 min + advisory lock
       counters.ts         nextNumber(tx, empresaId, series): SERIE-000001
@@ -81,16 +120,18 @@ BackEnd/
       schema/             tablas Drizzle, sin schema (lo fija el rol por search_path)
         companies.ts
         branches.ts       (BE-0b: version)
-        idempotency-keys.ts
-        audit-log.ts
+        idempotency-keys.ts   (BE-1a: FK de user_id)
+        audit-log.ts      (BE-1a: FK de user_id)
         document-counters.ts
+        identity.ts       roles, role_permissions, users, user_branches, refresh_tokens, login_attempts (BE-1a)
         index.ts
     http/
       errors.ts           AppError y subclases: ValidationError 400, InvalidQueryError 400, IdempotencyKeyRequiredError 400,
-                          UnauthenticatedError 401, NotFoundError 404, ConflictError 409, BusinessRuleError 422,
-                          IdempotencyKeyReusedError 422, ServiceUnavailableError 503
+                          UnauthenticatedError 401, InvalidCredentialsError 401, ForbiddenError 403, NotFoundError 404,
+                          ConflictError 409, BusinessRuleError 422, IdempotencyKeyReusedError 422, NotImplementedError 501,
+                          ServiceUnavailableError 503
       command.interceptor.ts   CommandInterceptor (global): toda mutación fuera de /auth/* es un comando; POST exige
-                          Idempotency-Key; @Command() da el CommandTx al handler
+                          Idempotency-Key; PUT/PATCH/DELETE la honran si viene (Paso 0 de BE-1a); @Command() da el CommandTx
       command.module.ts   APP_INTERCEPTOR
       list-query.pipe.ts  ListQueryPipe(spec): 400 invalid-query fuera de la lista blanca
       error.filter.ts     filtro global (@Catch()): toda respuesta de error es { code, message, details? }
@@ -98,24 +139,31 @@ BackEnd/
       request-id.middleware.ts X-Request-Id (UUID v7) en toda respuesta
       http.module.ts      HttpCoreModule: APP_FILTER + middleware en '*path'
     health/
-      health.controller.ts     GET /health, el único endpoint de BE-0a
+      health.controller.ts     GET /health, público
   test/
     setup/guard.ts        globalSetup: se niega a arrancar si la conexión no es sdgpd_app_test sobre sdgpd_test
-    support/db.ts         testConfig() (pool de 2), rawTestClient() sin tenant, pgCode()
-    support/probe-app.ts  app de prueba: guard que fija el actor desde headers (SOLO en test/) y rutas /probe/*, /auth/probe
-    support/tenants.ts    createTestCompany / removeTestCompany
+    support/db.ts         testConfig() (pool de 2, con JWT_SECRET), rawTestClient() sin tenant, pgCode()
+    support/probe-app.ts  app de prueba: reemplaza al AuthGuard por un guard que fija el actor desde headers (SOLO en
+                          test/) y rutas /probe/* (settings.editar), /auth/probe (pública solo acá)
+    support/tenants.ts    createTestCompany (con un usuario real), createTestUser, removeTestCompany
+    support/auth-app.ts   app completa con el AuthGuard real, empresas con roles/usuarios/sucursales, login/refresh,
+                          registro de respuestas y búsqueda de secretos (V4)
+    auth/auth.test.ts     login (mismo 401, bloqueo, native 501), refresh (rotación, reuso, CSRF), logout, JWT forjados
+    auth/permissions.test.ts   403/200, matriz y versión de permisos, branchId, usuarios, aislamiento por endpoint, arranque
+    db/definer.test.ts    funciones SECURITY DEFINER: columnas, catálogo, EXECUTE; sin tenant 0 filas
     db/idempotency.test.ts   replay, 422, 400, rollback, concurrencia, /auth/*, limpieza
+    db/idempotency-mutations.test.ts   Idempotency-Key en PUT (Paso 0 de BE-1a)
     db/mutations.test.ts     versión (409/404), auditoría (before/after, rollback, permisos), contadores
     db/pagination.test.ts    offset (total, pageSize máximo) y cursor (recorrido con inserciones), lista blanca
     db/catalog.test.ts    suite de catálogo (cubre cualquier tabla futura)
-    db/isolation.test.ts  suite funcional de aislamiento (A contra B) + semántica de withTenant
+    db/isolation.test.ts  suite funcional de aislamiento (A contra B, 11 tablas) + semántica de withTenant
     http/error-filter.test.ts   400 / 422 / 500 / 404 / JSON mal formado / X-Request-Id
     http/health.test.ts   /health ok y 503 con la aplicación completa
     config/config.test.ts loadConfig
   docs/
     ARQUITECTURA.md       este archivo
     SETUP_SUPABASE.md     cómo armar el entorno
-    verificaciones/VERIFICACION_BE-0a.md   checklist manual
+    verificaciones/VERIFICACION_BE-0a.md, VERIFICACION_BE-1a.md   checklists manuales
     adr/                  ADR-BE-001..011
     README.md             índice, trazabilidad y plan de tandas
 ```
@@ -141,9 +189,16 @@ BackEnd/
   - `audit_log`: append-only. Solo hay políticas de SELECT e INSERT, y los roles de aplicación no tienen UPDATE ni DELETE (se revocan explícitamente).
   - `document_counters`: PK `(empresa_id, series)`, series `PED`, `REM`, `OC`, `REC`, `VIA` y `RCB`.
   - `branches.version integer NOT NULL DEFAULT 1`.
-  - `user_id` todavía no tiene FK: la agrega BE-1.
+  - `user_id` tiene FK compuesta `(empresa_id, user_id) → users` desde BE-1a, `NOT VALID` (las filas viejas de los tests no se validan; las nuevas sí). Un usuario auditado no se puede borrar.
+- **Tablas de identidad (BE-1a, ADR-BE-003),** todas con RLS forzado, `tenant_isolation`, FK compuestas y su caso en la suite de aislamiento:
+  - `roles` (`UNIQUE (empresa_id, name)`, `version`) y `role_permissions` (una fila por permiso módulo × acción, con CHECK de los 10 módulos y las 7 acciones).
+  - `users`: email único **global** y normalizado (CHECK), `password_hash` argon2id (CHECK `$argon2id$`), `role_id`, `active`, `permissions_version` y `version`.
+  - `user_branches`: sucursales habilitadas por usuario.
+  - `refresh_tokens`: solo el SHA-256 del token (CHECK de 64 hex, único), `family_id`, `expires_at`, `used_at`, `revoked_at`.
+  - `login_attempts`: PK `(empresa_id, user_id)`, `failed_count`, `window_started_at`, `locked_until`.
+  - `users` y `refresh_tokens` tienen además la política `definer_lookup` (`FOR SELECT TO` el migrador): la usan **solo** las funciones `SECURITY DEFINER` `auth_find_user(email)` y `auth_find_refresh_token(hash)`, que devuelven lo mínimo para el login y el refresh sin tenant. `search_path` fijo (`<schema>, pg_temp`) y `EXECUTE` solo para el rol de aplicación de su schema (los fija `scripts/db`).
 - **Tenant:** `Database.withTenant(empresaId, fn)` abre una transacción, ejecuta `select set_config('app.empresa_id', $1, true)` y corre `fn(tx)`. El cliente Drizzle es privado, y ESLint prohíbe `pg` y `drizzle-orm/node-postgres` fuera de `src/db/`. Desde BE-0b, fuera de `src/db/` ESLint también prohíbe `withTenant` y la reflexión (`Reflect`, `Object.getOwnProperty*`, `.session`), así que el código de negocio entra solo por `Database.read()` (READ ONLY) o por un comando (`CommandTx`, con escrituras siempre auditadas; ADR-BE-005, sub-decisión 11). Sin tenant, toda tabla con RLS devuelve cero filas.
 
 ## Flujo de un request
 
-`RequestIdMiddleware` (genera y devuelve `X-Request-Id`) → autenticación (BE-1: `bindActor`) → `CommandInterceptor`, solo en mutaciones: transacción con el tenant del actor, más `Idempotency-Key` en POST → controller (`ZodValidationPipe` o `ListQueryPipe` con un schema de `contracts`) → lectura con `Database.read()` o comando con `@Command() tx: CommandTx` → respuesta (un replay lleva `Idempotent-Replayed: true`). Cualquier excepción pasa por `ErrorFilter`, y lo no previsto sale como `500 internal-error` con el detalle solo en el log.
+`RequestIdMiddleware` (genera y devuelve `X-Request-Id`) → `AuthGuard` (BE-1a; las rutas públicas pasan sin tocar nada): access token → usuario, rol, permisos y sucursales con el tenant del token → `bindActor` → permiso de la ruta (403) → `branchId` habilitado (403) → `CommandInterceptor`, solo en mutaciones: transacción con el tenant del actor, más `Idempotency-Key` en POST (y en PUT/PATCH/DELETE si viene) → controller (`ZodValidationPipe` o `ListQueryPipe` con un schema de `contracts`) → lectura con `Database.read()` o comando con `@Command() tx: CommandTx` → respuesta (un replay lleva `Idempotent-Replayed: true`). Cualquier excepción pasa por `ErrorFilter`, y lo no previsto sale como `500 internal-error` con el detalle solo en el log.

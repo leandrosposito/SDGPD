@@ -3,6 +3,7 @@ import { idSchema } from '@sdgpd/contracts'
 import { sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import pg from 'pg'
+import { z } from 'zod'
 import { APP_CONFIG, type AppConfig } from '../config/config.ts'
 import type { Actor } from '../context/actor.ts'
 import { CommandTx } from './command.ts'
@@ -11,6 +12,20 @@ import * as schema from './schema/index.ts'
 import type { Db, TenantTx } from './tenant-tx.ts'
 
 export type { TenantTx } from './tenant-tx.ts'
+
+const loginUserRowSchema = z
+  .object({ id: z.uuid(), empresa_id: z.uuid(), password_hash: z.string(), active: z.boolean() })
+  .strict()
+  .transform(r => ({ id: r.id, empresaId: r.empresa_id, passwordHash: r.password_hash, active: r.active }))
+/** Lo que devuelve `auth_find_user`: nada más. */
+export type LoginUserRow = z.output<typeof loginUserRowSchema>
+
+const refreshTokenRowSchema = z
+  .object({ id: z.uuid(), empresa_id: z.uuid(), user_id: z.uuid(), family_id: z.uuid() })
+  .strict()
+  .transform(r => ({ id: r.id, empresaId: r.empresa_id, userId: r.user_id, familyId: r.family_id }))
+/** Lo que devuelve `auth_find_refresh_token`: nada más. */
+export type RefreshTokenRow = z.output<typeof refreshTokenRowSchema>
 
 /** Lo que recibe una lectura: solo `select`, dentro de una transacción READ ONLY con el tenant fijado. */
 export type ReadTx = { readonly select: TenantTx['select'] }
@@ -108,6 +123,22 @@ export class Database implements OnModuleDestroy {
       const deleted = await tx.execute(sql`delete from ${schema.idempotencyKeys}`)
       return deleted.rowCount ?? 0
     })
+  }
+
+  /**
+   * Login sin tenant (ADR-BE-002, sub-decisión 2): la función SECURITY DEFINER `auth_find_user`, que
+   * devuelve solo id, empresa, hash y activo. Junto con `findRefreshToken`, es la ÚNICA lectura de
+   * users o refresh_tokens sin tenant; cualquier otra consulta sin tenant ve cero filas (RLS).
+   */
+  async findLoginUser(email: string): Promise<LoginUserRow | null> {
+    const result = await this.pool.query('select * from auth_find_user($1)', [email])
+    return result.rows.length === 0 ? null : loginUserRowSchema.parse(result.rows[0])
+  }
+
+  /** Refresh sin tenant: la función SECURITY DEFINER `auth_find_refresh_token` (id, empresa, usuario, familia). */
+  async findRefreshToken(tokenHash: string): Promise<RefreshTokenRow | null> {
+    const result = await this.pool.query('select * from auth_find_refresh_token($1)', [tokenHash])
+    return result.rows.length === 0 ? null : refreshTokenRowSchema.parse(result.rows[0])
   }
 
   /** Verifica que la base contesta. No toca tablas. */

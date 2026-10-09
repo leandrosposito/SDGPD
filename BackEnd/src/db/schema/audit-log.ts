@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm'
-import { check, index, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { check, foreignKey, index, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { users } from './identity.ts'
 
 export const AUDIT_ACTIONS = ['create', 'update', 'delete'] as const
 export type AuditAction = (typeof AUDIT_ACTIONS)[number]
@@ -29,6 +30,7 @@ export const auditLog = pgTable(
   t => [
     index('audit_log_empresa_at_id_idx').on(t.empresaId, t.at, t.id),
     index('audit_log_entity_idx').on(t.empresaId, t.entity, t.entityId),
+    foreignKey({ name: 'audit_log_user_fk', columns: [t.empresaId, t.userId], foreignColumns: [users.empresaId, users.id] }),
     check('audit_log_action_ck', sql`${t.action} in ('create', 'update', 'delete')`),
   ],
 )

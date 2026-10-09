@@ -1,4 +1,4 @@
-import type { TransversalErrorCode } from '@sdgpd/contracts'
+import type { AuthErrorCode, TransversalErrorCode } from '@sdgpd/contracts'
 
 type Details = Record<string, unknown>
 
@@ -41,12 +41,28 @@ export class InvalidQueryError extends AppError {
   }
 }
 
-/** 401: el request no tiene actor (sin sesión; la autenticación llega en BE-1). */
+/** 401: sin sesión válida (sin access token, token inválido o vencido, usuario inactivo o con permisos cambiados). */
 export class UnauthenticatedError extends AppError {
   readonly status = 401
   constructor() {
     super('unauthenticated' satisfies TransversalErrorCode, 'Hace falta una sesión')
   }
+}
+
+/**
+ * 401 del login: el MISMO código y el MISMO mensaje para email inexistente, contraseña incorrecta,
+ * usuario inactivo y usuario bloqueado por intentos fallidos (no revela qué emails existen).
+ */
+export class InvalidCredentialsError extends AppError {
+  readonly status = 401
+  constructor() {
+    super('invalid-credentials' satisfies AuthErrorCode, 'Email o contraseña incorrectos')
+  }
+}
+
+/** 403: hay sesión, pero no alcanza (permiso, sucursal no habilitada, header de CSRF). */
+export class ForbiddenError extends AppError {
+  readonly status = 403
 }
 
 /** 404: el recurso no existe (o no es del tenant, que para el cliente es lo mismo). */
@@ -73,6 +89,14 @@ export class IdempotencyKeyReusedError extends AppError {
 /** 422: regla de negocio. El `code` es el del vocabulario del recurso (ADR-BE-004, sub-decisión 3). */
 export class BusinessRuleError extends AppError {
   readonly status = 422
+}
+
+/** 501: parte del contrato que todavía no tiene implementación (la rama nativa del login). */
+export class NotImplementedError extends AppError {
+  readonly status = 501
+  constructor(message: string) {
+    super('not-implemented' satisfies AuthErrorCode, message)
+  }
 }
 
 /** 503: una dependencia (la base) no contesta. */
