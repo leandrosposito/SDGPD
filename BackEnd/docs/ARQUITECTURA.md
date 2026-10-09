@@ -1,6 +1,6 @@
 # Arquitectura del backend
 
-**Verificado contra el filesystem el 2026-10-08** (tanda BE-0a, `find BackEnd packages -not -path '*/node_modules/*' -not -path '*/dist/*'`). Si leés esto después de esa fecha, reverificalo antes de confiar en él (PROTOCOLO.md regla 2.10).
+**Verificado contra el filesystem el 2026-10-09** (tanda BE-0b; antes, BE-0a el 2026-10-08; `find BackEnd packages -not -path '*/node_modules/*' -not -path '*/dist/*'`). Si leés esto después de esa fecha, reverificalo antes de confiar en él (PROTOCOLO.md regla 2.10).
 
 ## Monorepo
 
@@ -22,12 +22,15 @@ packages/contracts/
     index.ts            barrel
     id.ts               idSchema (UUID)
     error.ts            errorBodySchema { code, message, details? }, errorCodeSchema, transversalErrorCodes
+                        (BE-0b suma idempotency-key-required, invalid-query, idempotency-key-in-progress, idempotency-key-reused)
     pagination.ts       offsetPageSchema(item, aggregates?), cursorPageSchema(item, aggregates?), MAX_PAGE_SIZE = 100
     time.ts             dateSchema (yyyy-MM-dd), instantSchema (ISO 8601 UTC)
     money.ts            moneySchema { amount entero, currency ISO 4217 }, currencySchema
     health.ts           healthResponseSchema (GET /health)
+    query.ts            offsetQuerySchema, cursorQuerySchema, ListSpec + offsetListQuerySchema/cursorListQuerySchema (listas blancas, BE-0b)
   test/
     contracts.test.ts
+    query.test.ts
 ```
 
 Solo tiene el contrato transversal (ADR-BE-004 y ADR-BE-006), sin recursos de negocio. Lint y tests usan las herramientas de `BackEnd` con `--config` (ADR-BE-001, sub-decisión 12).
@@ -49,27 +52,47 @@ BackEnd/
   drizzle/                migraciones SQL versionadas
     0000_companies_branches.sql      generada (con "public". sacado a mano)
     0001_rls_companies_branches.sql  custom: ENABLE + FORCE RLS y políticas
+    0002_mutations_infra.sql         generada: idempotency_keys, audit_log, document_counters, branches.version
+    0003_rls_mutations_infra.sql     custom: RLS de las tres tablas nuevas (+ expired_cleanup, audit_log append-only)
     meta/                 journal y snapshots de drizzle-kit
   scripts/db/             corren con Node 24 sin compilar
-    lib.ts                conexión con SSL verificado, roles, schemas, lectura y escritura de .env
+    lib.ts                conexión con SSL verificado, roles, schemas, lectura y escritura de .env;
+                          APPEND_ONLY_TABLES (revoca UPDATE/DELETE de audit_log a los roles de aplicación)
     setup.ts              roles, schemas, privilegios y URLs en .env (idempotente, como postgres)
     migrate.ts            runner propio: mismas migraciones en sdgpd y sdgpd_test (como sdgpd_migrator)
     sql.ts                ejecuta SQL como un rol propio, con o sin tenant (reemplaza a psql)
   src/
     main.ts               valida la config y levanta Nest; sin config válida no arranca
-    app.module.ts         AppModule.register(config): DatabaseModule + HttpCoreModule + HealthController
+    app.module.ts         AppModule.register(config): DatabaseModule + HttpCoreModule + CommandModule + HealthController
+    context/actor.ts      Actor { empresaId, userId, requestId }; bindActor (ÚNICO punto de entrada, lo llama BE-1),
+                          requireActor, @CurrentActor()
     config/config.ts      loadConfig(env) con Zod; APP_CONFIG
     db/
-      database.ts         Database: pool pg con SSL verificado; withTenant(empresaId, fn) y ping()
-      database.module.ts  módulo global que exporta Database
+      database.ts         Database: pool pg con SSL verificado; withTenant (solo src/db/ y tests), read() READ ONLY,
+                          command(), idempotentCommand(), cleanupExpiredIdempotencyKeys(), ping()
+      database.module.ts  módulo global que exporta Database e IdempotencyCleanupService
+      tenant-tx.ts        tipos Db y TenantTx
+      command.ts          CommandTx: select + insert/update/delete siempre auditados (update/delete con versión) + nextNumber
+      idempotency.ts      canonicalJson, payloadHash (SHA-256), claimKey/completeKey, TTL 48 h
+      idempotency-cleanup.service.ts  setInterval de 15 min + advisory lock
+      counters.ts         nextNumber(tx, empresaId, series): SERIE-000001
+      pagination.ts       offsetPage, cursorPage, encodeCursor/decodeCursor, keysetAfter/keysetOrder (instante, id), orderByWhitelist
       ids.ts              newId(): UUID v7 (uuid), porque Postgres 17 no tiene uuidv7()
       schema/             tablas Drizzle, sin schema (lo fija el rol por search_path)
         companies.ts
-        branches.ts
+        branches.ts       (BE-0b: version)
+        idempotency-keys.ts
+        audit-log.ts
+        document-counters.ts
         index.ts
     http/
-      errors.ts           AppError y subclases: ValidationError 400, NotFoundError 404, ConflictError 409,
-                          BusinessRuleError 422, ServiceUnavailableError 503
+      errors.ts           AppError y subclases: ValidationError 400, InvalidQueryError 400, IdempotencyKeyRequiredError 400,
+                          UnauthenticatedError 401, NotFoundError 404, ConflictError 409, BusinessRuleError 422,
+                          IdempotencyKeyReusedError 422, ServiceUnavailableError 503
+      command.interceptor.ts   CommandInterceptor (global): toda mutación fuera de /auth/* es un comando; POST exige
+                          Idempotency-Key; @Command() da el CommandTx al handler
+      command.module.ts   APP_INTERCEPTOR
+      list-query.pipe.ts  ListQueryPipe(spec): 400 invalid-query fuera de la lista blanca
       error.filter.ts     filtro global (@Catch()): toda respuesta de error es { code, message, details? }
       zod-validation.pipe.ts   ZodValidationPipe(schema)
       request-id.middleware.ts X-Request-Id (UUID v7) en toda respuesta
@@ -79,6 +102,11 @@ BackEnd/
   test/
     setup/guard.ts        globalSetup: se niega a arrancar si la conexión no es sdgpd_app_test sobre sdgpd_test
     support/db.ts         testConfig() (pool de 2), rawTestClient() sin tenant, pgCode()
+    support/probe-app.ts  app de prueba: guard que fija el actor desde headers (SOLO en test/) y rutas /probe/*, /auth/probe
+    support/tenants.ts    createTestCompany / removeTestCompany
+    db/idempotency.test.ts   replay, 422, 400, rollback, concurrencia, /auth/*, limpieza
+    db/mutations.test.ts     versión (409/404), auditoría (before/after, rollback, permisos), contadores
+    db/pagination.test.ts    offset (total, pageSize máximo) y cursor (recorrido con inserciones), lista blanca
     db/catalog.test.ts    suite de catálogo (cubre cualquier tabla futura)
     db/isolation.test.ts  suite funcional de aislamiento (A contra B) + semántica de withTenant
     http/error-filter.test.ts   400 / 422 / 500 / 404 / JSON mal formado / X-Request-Id
@@ -108,8 +136,14 @@ BackEnd/
   - `companies`: el `id` es el tenant (no tiene `empresa_id`), lleva `timezone` IANA.
   - `branches`: `empresa_id NOT NULL` con FK a `companies`, `UNIQUE (empresa_id, id)` y `UNIQUE (empresa_id, code)`.
   - Las dos con RLS habilitado y forzado, y la política `tenant_isolation`.
-- **Tenant:** `Database.withTenant(empresaId, fn)` abre una transacción, ejecuta `select set_config('app.empresa_id', $1, true)` y corre `fn(tx)`. Es la única forma de tocar tablas de negocio: el cliente Drizzle es privado, y ESLint prohíbe `pg` y `drizzle-orm/node-postgres` fuera de `src/db/`. Sin tenant, toda tabla con RLS devuelve cero filas.
+- **Tablas de infraestructura de mutaciones (BE-0b),** todas con RLS forzado y su caso en la suite de aislamiento:
+  - `idempotency_keys`: única por `(empresa_id, user_id, operation, key)`, con `payload_hash`, `response_status`, `response_body` y `expires_at` (48 h). Además de `tenant_isolation`, tiene la política `expired_cleanup` (DELETE de vencidas sin tenant).
+  - `audit_log`: append-only. Solo hay políticas de SELECT e INSERT, y los roles de aplicación no tienen UPDATE ni DELETE (se revocan explícitamente).
+  - `document_counters`: PK `(empresa_id, series)`, series `PED`, `REM`, `OC`, `REC`, `VIA` y `RCB`.
+  - `branches.version integer NOT NULL DEFAULT 1`.
+  - `user_id` todavía no tiene FK: la agrega BE-1.
+- **Tenant:** `Database.withTenant(empresaId, fn)` abre una transacción, ejecuta `select set_config('app.empresa_id', $1, true)` y corre `fn(tx)`. El cliente Drizzle es privado, y ESLint prohíbe `pg` y `drizzle-orm/node-postgres` fuera de `src/db/`. Desde BE-0b, fuera de `src/db/` ESLint también prohíbe `withTenant` y la reflexión (`Reflect`, `Object.getOwnProperty*`, `.session`), así que el código de negocio entra solo por `Database.read()` (READ ONLY) o por un comando (`CommandTx`, con escrituras siempre auditadas; ADR-BE-005, sub-decisión 11). Sin tenant, toda tabla con RLS devuelve cero filas.
 
 ## Flujo de un request
 
-`RequestIdMiddleware` (genera y devuelve `X-Request-Id`) → controller (`ZodValidationPipe` con un schema de `contracts`) → servicio (`Database.withTenant`, desde BE-1 con la empresa de la sesión) → respuesta. Cualquier excepción pasa por `ErrorFilter`, y lo no previsto sale como `500 internal-error` con el detalle solo en el log.
+`RequestIdMiddleware` (genera y devuelve `X-Request-Id`) → autenticación (BE-1: `bindActor`) → `CommandInterceptor`, solo en mutaciones: transacción con el tenant del actor, más `Idempotency-Key` en POST → controller (`ZodValidationPipe` o `ListQueryPipe` con un schema de `contracts`) → lectura con `Database.read()` o comando con `@Command() tx: CommandTx` → respuesta (un replay lleva `Idempotent-Replayed: true`). Cualquier excepción pasa por `ErrorFilter`, y lo no previsto sale como `500 internal-error` con el detalle solo en el log.

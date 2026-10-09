@@ -152,6 +152,13 @@ La auditoría (`01_ENDPOINTS.md`, `04_TRANSVERSALES.md`) encontró:
 7. **Remitos:** `GET /deliveries/{id}/delivery-notes` (cierra A10). Se lee con el detalle de la entrega.
 8. **El nombre del recurso sale del tipo de dominio**, en plural y kebab-case, sin traducir: `orders` (`Order`), `deliveries` (`Delivery`), `trips` (`Trip`), `motivos` (`MotivoCatalogItem`), `client-accounts` (`ClientAccount`).
 
+## Sub-decisiones de BE-0b (tomadas al implementar, 2026-10-08; sin consulta, PROTOCOLO regla 2.9)
+
+9. **Lista blanca por recurso en `contracts`:** `ListSpec` (campos de orden con su default y filtros con su schema), con `offsetQuerySchema` (`page` desde 1, `pageSize` hasta `MAX_PAGE_SIZE`, por defecto 20) y `cursorQuerySchema` (`cursor` opaco, `limit` hasta `MAX_PAGE_SIZE`, por defecto 50). Un campo de orden o un filtro fuera de la lista, o un parámetro fuera de rango, es **400 `invalid-query`** (código nuevo), con los problemas en `details.issues`. El backend lo aplica con `ListQueryPipe`.
+10. **Cursor:** base64url del JSON `[at, id]` del último elemento (sub-decisión 5), con keyset sobre `(instante, id)`. Un cursor que no se decodifica es 400 `invalid-query`.
+11. **Códigos nuevos del cuerpo de error:** `idempotency-key-required` (400), `invalid-query` (400), `idempotency-key-in-progress` (409, defensivo: ver ADR-BE-005, sub-decisión 9) e `idempotency-key-reused` (422).
+12. **Frontend: el `code` del servidor no reemplaza al del cliente.** `ApiError.code` sigue siendo la clasificación del cliente (`TIMEOUT`, `CLIENT_ERROR`, `SERVER_ERROR`…), que es lo que decide los reintentos. El `code` del cuerpo del contrato llega en un campo aparte, `ApiError.serverCode`, junto con `details`. El `message` del servidor reemplaza al genérico. Un cuerpo que no tiene la forma `{ code, message, details? }` se ignora, como antes.
+
 ## Objeciones
 
 1. **"camelCase con los nombres de campo de los tipos de dominio actuales" congela un vocabulario mezclado.** En la misma entidad conviven inglés y español: `Trip.estado/paradas/fecha` contra `Order.status/date` (`trip.types.ts:87-114`, `order.types.ts:66-86`). También hay nombres de display como valor de enum (`ClientAccount.status: 'Al dia' | 'Con Deuda'`, `client.types.ts:95`). La decisión los traslada al wire y a la base tal cual, así que la mezcla queda permanente.

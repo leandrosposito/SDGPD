@@ -6,7 +6,7 @@ Guía para Claude Code al trabajar en `BackEnd/`.
 
 El backend de SDGPD: Node LTS + TypeScript + NestJS + PostgreSQL, multi-tenant con `empresa_id` y RLS, en el mismo monorepo que `FrontEnd/` (ADR-BE-001).
 
-**BE-0a está hecha** (2026-10-08): esqueleto NestJS, `packages/contracts` base, Postgres en Supabase con RLS forzado (`companies`, `branches`) y suites de aislamiento. Lo que sigue es **BE-0b** (idempotencia, `version`, auditoría, contadores, helpers de paginación). Estructura: `docs/ARQUITECTURA.md`. Entorno: `docs/SETUP_SUPABASE.md`.
+**BE-0a está hecha** (2026-10-08): esqueleto NestJS, `packages/contracts` base, Postgres en Supabase con RLS forzado (`companies`, `branches`) y suites de aislamiento. **BE-0b está hecha** (2026-10-09): `CommandInterceptor` (toda mutación es una transacción; POST exige `Idempotency-Key`), `CommandTx` (escrituras siempre auditadas, `version`, `nextNumber`), `audit_log` append-only, contadores por serie y helpers de paginación con listas blancas. El actor se fija solo con `bindActor`, que llama BE-1. Lo que sigue es **BE-1**. Estructura: `docs/ARQUITECTURA.md`. Entorno: `docs/SETUP_SUPABASE.md`.
 
 ## Comandos (desde la raíz del repo, con `-w @sdgpd/backend`)
 

@@ -9,7 +9,7 @@ SDGPD is an ERP built around business domains (Core, Comercial, Inventario, Log�
 ## Structure
 
 - `FrontEnd/` — React app, actively developed (todavía sobre adaptadores mock). See `FrontEnd/CLAUDE.md` for stack, architecture, and implementation details.
-- `BackEnd/` — backend NestJS + PostgreSQL (monorepo, ADR-BE-001). **BE-0a hecha (2026-10-08):** esqueleto, Postgres en Supabase con RLS y suites de aislamiento, sin endpoints de negocio. Read `BackEnd/CLAUDE.md` before touching it.
+- `BackEnd/` — backend NestJS + PostgreSQL (monorepo, ADR-BE-001). **BE-0a hecha (2026-10-08):** esqueleto, Postgres en Supabase con RLS y suites de aislamiento. **BE-0b hecha (2026-10-09):** idempotencia, `version`, auditoría, contadores y paginación. Todavía sin endpoints de negocio ni autenticación (BE-1). Read `BackEnd/CLAUDE.md` before touching it.
 - `packages/contracts/` — contrato HTTP compartido (Zod), consumido por `BackEnd` (y por `FrontEnd` cuando se sume a los workspaces).
 - `Documentacion/` — business/domain specs (Product Vision, Arquitectura Funcional del Negocio, Modelo Funcional del Dominio) as .docx/.pdf, plus some derived .md/.txt extracts. See `Documentacion/README.md` first — it maps which file is which and which ones are current vs. archived. Consult these for business rules and domain vocabulary (in Spanish) before inventing behavior for a module.
 
