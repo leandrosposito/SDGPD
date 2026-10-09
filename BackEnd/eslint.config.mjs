@@ -37,6 +37,16 @@ export default tseslint.config(
           selector: "MemberExpression[property.name='withTenant']",
           message: 'withTenant es la transacción cruda: usá Database.read() o un comando (@Command()).',
         },
+        // V2 de BE-0b: desde un builder de select() se llega por reflexión a la sesión de Drizzle y se
+        // escribe sin auditoría. Fuera de src/db/ no se inspeccionan objetos ajenos por reflexión.
+        {
+          selector: "MemberExpression[property.name='session'], MemberExpression[property.value='session']",
+          message: 'La sesión de Drizzle escribe sin auditoría: usá los helpers de CommandTx.',
+        },
+        {
+          selector: "Identifier[name='Reflect'], MemberExpression[object.name='Object'][property.name=/^getOwnProperty/]",
+          message: 'Sin reflexión fuera de src/db/: es la puerta para escribir sin auditoría (V2 de BE-0b).',
+        },
       ],
     },
   },
