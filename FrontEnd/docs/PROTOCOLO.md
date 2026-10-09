@@ -87,6 +87,7 @@ Según la sección 8.
 3. `vite build` exitoso.
 4. Smoke script `.mjs` (sin framework) de la lógica pura agregada, en `scripts/smoke/`.
 5. **Gate de conexión:** toda función nueva exportada tiene al menos un call-site real en la UI, sin contar su propio smoke test. Una función que sólo la llama su test es código muerto disfrazado de feature terminada, y hace que el gate 4 valide algo que nadie usa. Si no tiene call-site, la tanda no está terminada.
+   Cuenta como call-site real: (a) un uso fuera del propio archivo en código que llega a la UI, o (b) un uso dentro del propio archivo desde una función que cumple (a). Un export cuyo único consumidor externo es `scripts/smoke` es válido solo si cumple (b). Sin (a) ni (b) es código muerto, salvo que figure en `PENDIENTES.md` con el ADR y el disparador que lo va a conectar. *(Agregado 2026-10-09, Tanda 22.)*
 6. Autorrevisión del diff completo buscando: `any` colados, agregados en cliente, query keys sin scope, listados sin paginar, services sin `empresaId`, archivos fuera de alcance.
 7. Checklist de navegador escrito en `docs/historial/verificaciones/VERIFICACION_<tanda>.md`, con pasos concretos y resultado esperado.
 8. **Gate de arquitectura:** si la tanda cambió la estructura de `src/` (carpetas nuevas o borradas, módulos nuevos, un componente/service que se movió de lugar), actualizar `docs/ARQUITECTURA.md` es parte de la misma tanda, no una tarea de documentación aparte para después. Una tanda que cambia dónde vive algo y no toca `ARQUITECTURA.md` no está terminada.

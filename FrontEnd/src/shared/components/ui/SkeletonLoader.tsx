@@ -34,16 +34,6 @@ export const SkeletonLoader: FC<SkeletonLoaderProps> = ({
 };
 
 // Convenience composites
-export const SkeletonCard: FC<{ rows?: number }> = ({ rows = 3 }) => (
-  <div className="skeleton-card">
-    <SkeletonLoader height="1.5rem" width="60%" />
-    <SkeletonLoader height="2.5rem" width="40%" style={{ marginTop: 'var(--space-2)' }} />
-    {Array.from({ length: rows }).map((_, i) => (
-      <SkeletonLoader key={i} height="0.75rem" style={{ marginTop: 'var(--space-2)' }} />
-    ))}
-  </div>
-);
-
 export const SkeletonTable: FC<{ rows?: number; cols?: number }> = ({
   rows = 5,
   cols = 5,

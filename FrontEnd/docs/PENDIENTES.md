@@ -321,6 +321,19 @@ Encontrado en la Fase A de la sesión 2026-10-07b (`AUDIT_2026-10-07b_seed-skus.
 - `alerts.data.ts:21,23`: `alr-005` (`productId: 'inv-013'`, Papel Higiénico) dice `productName: 'Yerba Taragui 1kg'`, y `alr-003` (`inv-009`, Arroz) dice "Galletitas Surtidas 200g". El id resuelve, pero el nombre denormalizado miente.
 - `suppliers.data.ts:44,64`: el catálogo **del proveedor** lista esos SKUs. Puede ser legítimo (productos que el proveedor vende y nosotros no tenemos dados de alta). No hay regla que lo decida.
 
+### 21. `sumMoney`, `multiplyMoney` y `parseMoneyInput` sin consumidor de producción, y 3 multiplicaciones de dinero en float — Severidad: Media (ADR-008)
+
+Registrado el 2026-10-09 (Tanda 22), como excepción del Gate 5 (`PROTOCOLO.md` §5: un export sin call-site real es código muerto salvo que figure acá con el ADR y el disparador).
+
+- `shared/utils/money.ts`: `sumMoney`, `multiplyMoney` y `parseMoneyInput` no tienen consumidor de producción. Solo los ejercita `scripts/smoke/tanda-7.smoke.mjs`. Son la API del módulo único de dinero (ADR-008).
+- Multiplicaciones de dinero en `number` flotante que no pasan por el módulo (el patrón del hallazgo #3 de AUDIT_10):
+  - `modules/compras/components/PurchaseOrderDetailPanel.tsx:144` — `r.quantity * r.unitPrice`
+  - `modules/orders/components/create-order/CreateOrderModal.tsx:113` — `item.price * item.quantity`
+  - `services/mock/purchaseOrders.service.ts:61` — `l.quantity * l.unitPrice`
+- **Disparador:** la conexión de cada módulo al backend (ADR-BE-006 §49-51). Cada módulo pasa sus importes a `Money`, y los totales vienen del servidor o de la función de `packages/contracts`.
+- **Decisión:** no se migran antes.
+- Relacionado (Tanda 22): `moneyFromNumber` (`money.ts`, un consumidor en `dashboardAggregates.service.ts:106`) convierte con `value * 100` y pierde la mitad exacta por error binario (`1.005` → 100 centavos, no 101). `parseMoneyInput` ya no pasa por ahí (corregido en la Tanda 22). `moneyFromNumber` no se tocó porque tiene consumidor de producción.
+
 ## Reportados pero no reproducidos (verificados y descartados)
 
 Estos dos ítems se investigaron con evidencia de código directa (no solo lectura
@@ -385,5 +398,6 @@ escáner físico normalmente no dispara dos `Enter` en un intervalo tan corto.
 | 18 | `fetchProducts` completo dentro de 4 operaciones server-side (Tanda 14) | Vigente, documentado en ADR-016 | Media (a escala) |
 | 19 | 5 líneas de pedido del seed con SKU inexistente; `createOrder` acepta SKUs desconocidos | **Cerrado** (Tandas 20/21; V17 en verde) | — |
 | 20 | SKUs/nombres huérfanos en `analytics.data`, `alerts.data`, `suppliers.data` | Vigente | Media / Baja |
+| 21 | `sumMoney`/`multiplyMoney`/`parseMoneyInput` sin consumidor de producción + 3 multiplicaciones de dinero en float | Vigente — se conecta con cada módulo (ADR-BE-006 §49-51) | Media |
 | — | `NewTransactionModal` formato de hora | No reproduce | — |
 | — | `OrderProductsSection` `await` faltante | No reproduce (resuelto o nunca existió así) | — |

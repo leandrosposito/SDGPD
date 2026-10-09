@@ -36,7 +36,7 @@ Este archivo es un ÍNDICE, no el log. El detalle completo de cada decisión (co
 | Mecanismo de "tiempo real" simulado (sin backend) — **enmendado 09/09/2026**: `useLiveQuery` acepta intervalo por consumidor, default 30s sin cambios, posición de viaje 10-15s | 07/09/2026 | `docs/adr/ADR-003-tiempo-real.md` |
 | Contrato de exportación (Excel/CSV) server-side | 07/09/2026 | `docs/adr/ADR-004-exportacion.md` |
 | Evidencia del rechazo de mercadería (upload de fotos/PDF) | 07/09/2026 | `docs/adr/ADR-005-evidencia-rechazo.md` |
-| IDs tipados (branded types: `OrderId`, `BranchId`, etc.) | 07/09/2026 | `docs/adr/ADR-006-ids-tipados.md` |
+| IDs tipados (branded types: `OrderId`, `BranchId`, etc.) — **enmendado 09/10/2026**: `is<Tipo>Id` obligatorio para todo valor externo, `as <Tipo>Id` fuera de `ids.types.ts` prohibido por ESLint (`no-restricted-syntax`) | 07/09/2026 | `docs/adr/ADR-006-ids-tipados.md` |
 | Alcance y ciclo de vida de las alertas del tablero | 07/09/2026 | `docs/adr/ADR-007-alertas.md` |
 | Dinero y cantidades (módulo `Money`, centavos enteros) | 07/09/2026 | `docs/adr/ADR-008-dinero-cantidades.md` |
 | Alcance del dashboard: empresa vs. sucursal, elegido por el usuario | 07/09/2026 | `docs/adr/ADR-009-alcance-dashboard.md` |

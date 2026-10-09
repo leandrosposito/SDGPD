@@ -65,15 +65,29 @@ export function formatMoney(m: Money): string {
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: m.moneda }).format(m.centavos / 100);
 }
 
+// Unidad principal -> centavos SIN redondear, desplazando la coma en
+// base 10 (notacion exponencial) en vez de multiplicar en binario:
+// 1.005 * 100 da 100.49999999999999 (Math.round -> 100, mal), mientras
+// que Number('1.005e2') da 100.5 (Math.round -> 101, half-up). El
+// redondeo sigue ocurriendo solo en money(). Tanda 22: lo usa
+// parseMoneyInput; moneyFromNumber conserva `value * 100` (tiene un
+// consumidor en dashboard, ver el reporte de la Tanda 22).
+function principalToUnroundedCentavos(value: number): number {
+  const [mantissa, exponent = '0'] = String(value).split('e');
+  return Number(`${mantissa}e${Number(exponent) + 2}`);
+}
+
 // Parseo desde un input de formulario (string del DOM) — coercion +
 // validacion explicita, mismo criterio que los 2 schemas Zod ya
 // migrados (ProductFormModal/PurchaseOrderFormModal, AUDIT_9). Lanza
-// si el string no es un numero valido, nunca devuelve NaN en
-// silencio.
+// si el string no es un numero valido (vacio, solo espacios, no
+// numerico, o no finito como "Infinity"), nunca devuelve NaN en
+// silencio. El valor se lee en la unidad principal, igual que
+// moneyFromNumber, y se redondea half-up al centavo.
 export function parseMoneyInput(raw: string, moneda: Currency): Money {
   const parsed = Number(raw);
-  if (raw.trim() === '' || Number.isNaN(parsed)) {
+  if (raw.trim() === '' || !Number.isFinite(parsed)) {
     throw new Error(`Monto invalido: "${raw}" no es un numero.`);
   }
-  return moneyFromNumber(parsed, moneda);
+  return money(principalToUnroundedCentavos(parsed), moneda);
 }
