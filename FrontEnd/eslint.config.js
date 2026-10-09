@@ -36,8 +36,10 @@ const ZUSTAND_SELECTOR_RULES = [
 // IDs branded (ADR-006, enmienda 2026-10-09, Tanda 22): `x as <Tipo>Id`
 // fuera de ids.types.ts saltea la validacion de formato del constructor.
 // Valor externo (URL, storage, respuesta sin validar) -> is<Tipo>Id;
-// valor confiable -> as<Tipo>Id(). Cubre `x as OrderId` y
-// `x as OrderId | undefined`.
+// valor confiable -> as<Tipo>Id(). Cubre `x as OrderId`,
+// `x as OrderId | undefined` y, desde la Tanda 25, el mismo cast por
+// tipo indexado: `x as Trip['id']` / `x as Stop['tripId'] | undefined`
+// (clave 'id' o terminada en 'Id').
 const BRANDED_ID_CAST_MESSAGE =
   "Prohibido 'as <Tipo>Id' fuera de ids.types.ts (ADR-006). Usá is<Tipo>Id para valores externos o as<Tipo>Id() para confiables."
 const BRANDED_ID_CAST_RULES = [
@@ -47,6 +49,14 @@ const BRANDED_ID_CAST_RULES = [
   },
   {
     selector: 'TSAsExpression > TSUnionType.typeAnnotation > TSTypeReference[typeName.name=/Id$/]',
+    message: BRANDED_ID_CAST_MESSAGE,
+  },
+  {
+    selector: "TSAsExpression > TSIndexedAccessType.typeAnnotation[indexType.literal.value=/^(id|[A-Za-z]+Id)$/]",
+    message: BRANDED_ID_CAST_MESSAGE,
+  },
+  {
+    selector: "TSAsExpression > TSUnionType.typeAnnotation > TSIndexedAccessType[indexType.literal.value=/^(id|[A-Za-z]+Id)$/]",
     message: BRANDED_ID_CAST_MESSAGE,
   },
 ]
