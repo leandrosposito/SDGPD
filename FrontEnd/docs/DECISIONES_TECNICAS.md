@@ -38,7 +38,7 @@ Este archivo es un ÍNDICE, no el log. El detalle completo de cada decisión (co
 | Evidencia del rechazo de mercadería (upload de fotos/PDF) | 07/09/2026 | `docs/adr/ADR-005-evidencia-rechazo.md` |
 | IDs tipados (branded types: `OrderId`, `BranchId`, etc.) — **enmendado 09/10/2026**: `is<Tipo>Id` obligatorio para todo valor externo, `as <Tipo>Id` fuera de `ids.types.ts` prohibido por ESLint (`no-restricted-syntax`) | 07/09/2026 | `docs/adr/ADR-006-ids-tipados.md` |
 | Alcance y ciclo de vida de las alertas del tablero | 07/09/2026 | `docs/adr/ADR-007-alertas.md` |
-| Dinero y cantidades (módulo `Money`, centavos enteros) | 07/09/2026 | `docs/adr/ADR-008-dinero-cantidades.md` |
+| Dinero y cantidades (módulo `Money`, centavos enteros) — **enmendado 09/10/2026**: `Money` admite negativos, redondeo simétrico (la mitad se aleja del cero), conversión por desplazamiento decimal con `moneyFromNumber` como único camino | 07/09/2026 | `docs/adr/ADR-008-dinero-cantidades.md` |
 | Alcance del dashboard: empresa vs. sucursal, elegido por el usuario | 07/09/2026 | `docs/adr/ADR-009-alcance-dashboard.md` |
 | Modelo logístico: 3 ejes de estado (comercial escribible, logístico y financiero como proyecciones de solo lectura), jerarquía Viaje→Parada→Entrega→Línea (Parada multi-pedido), idempotencia (clave al formar la intención), catálogo de motivos (con flags), logística inversa, POD — **Aceptado 09/09/2026** | 09/09/2026 | `docs/adr/ADR-010-modelo-logistico.md` |
 | Viajes, capacidad multidimensional y motor de asignación por filtro (techo ~100, 409 granular, ventanas horarias anidadas) — **Aceptado 09/09/2026** | 09/09/2026 | `docs/adr/ADR-011-viajes-y-asignacion.md` |

@@ -30,7 +30,7 @@ import { TabPendingReceipt } from './components/TabPendingReceipt';
 import { PURCHASE_ORDER_STATUS_LABEL } from './purchaseOrderLabels';
 import { Tabs, type TabItem } from '@/shared/components/ui/Tabs';
 import { DateRangeFilter } from '@/shared/components/ui/DateRangeFilter';
-import type { DateRangeValue } from '@/shared/components/ui/dateRangePresets';
+import { readDateRangeFromUrl, dateRangeToUrlParams, type DateRangeValue } from '@/shared/components/ui/dateRangePresets';
 import { ExportButton, type ExportColumn } from '@/shared/components/ui/ExportButton';
 import './ComprasPage.css';
 
@@ -152,21 +152,16 @@ export const ComprasPage: FC = () => {
   // ocultaria de entrada todo el historico existente sin que el
   // usuario haya tocado nada (ver DECISIONES_TECNICAS.md). Tanda 4: vive
   // en la URL (`oc_preset`/`oc_from`/`oc_to`) junto al resto de filtros.
+  // Lectura y escritura: helper compartido de dateRangePresets.ts
+  // (Tanda 24, regla PROTOCOLO 3.8).
+  const { preset: ocUrlPreset, from: ocUrlFrom, to: ocUrlTo } = ocUrlState.filters;
   const dateRange: DateRangeValue = useMemo(
-    () => ({
-      preset: (ocUrlState.filters.preset as DateRangeValue['preset'] | undefined) ?? 'all',
-      dateFrom: ocUrlState.filters.from,
-      dateTo: ocUrlState.filters.to,
-    }),
-    [ocUrlState.filters.preset, ocUrlState.filters.from, ocUrlState.filters.to]
+    () => readDateRangeFromUrl({ preset: ocUrlPreset, from: ocUrlFrom, to: ocUrlTo }, 'all'),
+    [ocUrlPreset, ocUrlFrom, ocUrlTo]
   );
 
   function setDateRange(next: DateRangeValue) {
-    ocUrlState.setFilters({
-      preset: next.preset === 'all' ? undefined : next.preset,
-      from: next.dateFrom,
-      to: next.dateTo,
-    });
+    ocUrlState.setFilters(dateRangeToUrlParams(next, 'all'));
   }
 
   // Catalogo de productos y lista de proveedores (Tanda 2.5,

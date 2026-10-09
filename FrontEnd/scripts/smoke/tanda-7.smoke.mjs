@@ -62,9 +62,8 @@ check('formatMoney formatea sin lanzar', typeof formatMoney(fromNumber) === 'str
 //   cuyo valor DOM es decimal con punto y sin separador de miles.
 // - moneyFromNumber: el valor esta en la unidad PRINCIPAL (1234.5 = $1234,50).
 // - money()/multiplyMoney + ADR-008 (enmienda 2026-10-07): redondeo al
-//   centavo mas cercano, mitad hacia arriba, en un solo punto.
-// Fuera del smoke a proposito (el contrato no define el signo): "-10".
-// Ver "Decisiones pendientes" del reporte de la Tanda 22.
+//   centavo mas cercano en un solo punto; desde la enmienda 2026-10-09
+//   (Tanda 23) la mitad exacta se aleja del cero y Money admite negativos.
 const isArsMoney = (m, centavos) => m.centavos === centavos && m.moneda === 'ARS' && Number.isInteger(m.centavos);
 check('parseMoneyInput("1234") -> 123400 centavos', isArsMoney(parseMoneyInput('1234', 'ARS'), 123400));
 check('parseMoneyInput("1234.567") (3 decimales) -> 123457 centavos (half-up)', isArsMoney(parseMoneyInput('1234.567', 'ARS'), 123457));
@@ -75,6 +74,20 @@ check('parseMoneyInput("1.005") (mitad exacta) -> 101 centavos (half-up, no 100 
 for (const raw of ['', '   ', 'abc', '1234,56', '1.234,56', '0,5', '1,234.56', '12,345', '1.234.567,89', 'Infinity']) {
   check(`parseMoneyInput(${JSON.stringify(raw)}) lanza (no es un numero valido para el criterio de input type="number")`, throws(() => parseMoneyInput(raw, 'ARS')));
 }
+
+// Tanda 23 (ADR-008, enmienda 2026-10-09): negativos, redondeo simetrico
+// y un solo camino de conversion (parseMoneyInput delega en moneyFromNumber).
+check('parseMoneyInput("-10") -> -1000 centavos (Money admite negativos)', isArsMoney(parseMoneyInput('-10', 'ARS'), -1000));
+check('parseMoneyInput("-1.005") -> -101 centavos (mitad exacta se aleja del cero)', isArsMoney(parseMoneyInput('-1.005', 'ARS'), -101));
+const cancel = sumMoney(parseMoneyInput('1.005', 'ARS'), parseMoneyInput('-1.005', 'ARS'));
+check('sumMoney(parse("1.005"), parse("-1.005")) -> 0 centavos (un importe y su reverso se cancelan)', isArsMoney(cancel, 0) && !Object.is(cancel.centavos, -0));
+check('moneyFromNumber(1.005) -> 101 centavos (desplaza la coma en base 10, no * 100)', isArsMoney(moneyFromNumber(1.005, 'ARS'), 101));
+check('moneyFromNumber(8.345) -> 835 centavos (8.345 * 100 en binario da 834.49...)', isArsMoney(moneyFromNumber(8.345, 'ARS'), 835));
+check('moneyFromNumber(0.1 + 0.2) -> 30 centavos', isArsMoney(moneyFromNumber(0.1 + 0.2, 'ARS'), 30));
+check('moneyFromNumber(NaN) lanza', throws(() => moneyFromNumber(NaN, 'ARS')));
+check('moneyFromNumber(Infinity) lanza', throws(() => moneyFromNumber(Infinity, 'ARS')));
+check('multiplyMoney(-201 centavos, 0.5) = -100.5 -> -101 (mitad exacta negativa se aleja del cero)', multiplyMoney(money(-201, 'ARS'), 0.5).centavos === -101);
+check('money(100.5) -> 101 y money(-100.5) -> -101 (simetrico)', money(100.5, 'ARS').centavos === 101 && money(-100.5, 'ARS').centavos === -101);
 
 // ------------------------------------------------------------
 // 2. Cursor de alertas (ADR-007) — pedir una pagina, usar el

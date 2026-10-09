@@ -41,6 +41,7 @@ Todo lo demás (cómo auditar, cómo implementar, cómo verificar, cuándo merge
 6. Búsquedas con debounce y cancelación (`AbortController`).
 7. Listas de más de ~100 filas visibles: preparadas para virtualización.
 8. Filtros, página, orden y búsqueda viven en la URL, y la URL es la única fuente de verdad.
+   *Enmienda 2026-10-09 (Tanda 24), rango de fechas:* `preset` va siempre que no sea el default del listado; `from`/`to` van **solo** con `preset=custom`. Con un preset fijo (`today`, `last7days`, `thisMonth`, `thisQuarter`), el rango se calcula al renderizar con `defaultDateRangeValue(preset)`; si la URL trae `from`/`to` junto a un preset fijo, se ignoran, y al elegir un preset fijo no se escriben `from`/`to` (se limpian si estaban). Con `preset=custom`, `from`/`to` salen de la URL. `from`/`to` sin preset se interpretan como custom. Sin nada, rige el default de cada listado (Logística `today`, el resto `all`). La lectura y la escritura viven en un solo lugar, `readDateRangeFromUrl`/`dateRangeToUrlParams` (`shared/components/ui/dateRangePresets.ts`): ningún listado arma el rango a mano.
 9. Nada de derivar datos del servidor con `useEffect` + `setState`.
 10. Dinero: entero en centavos, por el módulo único de `shared/`. Nunca flotante, nunca aritmética suelta.
 11. Todo request tiene un límite explícito.

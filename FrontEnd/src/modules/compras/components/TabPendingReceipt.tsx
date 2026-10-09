@@ -15,7 +15,7 @@ import { SkeletonTable } from '@/shared/components/ui/SkeletonLoader';
 import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay';
 import { Pagination } from '@/shared/components/ui/Pagination';
 import { DateRangeFilter } from '@/shared/components/ui/DateRangeFilter';
-import type { DateRangeValue } from '@/shared/components/ui/dateRangePresets';
+import { readDateRangeFromUrl, dateRangeToUrlParams, type DateRangeValue } from '@/shared/components/ui/dateRangePresets';
 import { ExportButton, type ExportColumn } from '@/shared/components/ui/ExportButton';
 import { usePagedQuery } from '@/shared/hooks/usePagedQuery';
 import { useUrlListState } from '@/shared/hooks/useUrlListState';
@@ -74,21 +74,16 @@ export const TabPendingReceipt: FC<TabPendingReceiptProps> = ({
     filterKeys: ['preset', 'from', 'to'],
   });
 
+  // Lectura y escritura del rango: helper compartido de
+  // dateRangePresets.ts (Tanda 24, regla PROTOCOLO 3.8). Default 'all'.
+  const { preset: urlPreset, from: urlFrom, to: urlTo } = urlState.filters;
   const dateRange: DateRangeValue = useMemo(
-    () => ({
-      preset: (urlState.filters.preset as DateRangeValue['preset'] | undefined) ?? 'all',
-      dateFrom: urlState.filters.from,
-      dateTo: urlState.filters.to,
-    }),
-    [urlState.filters.preset, urlState.filters.from, urlState.filters.to]
+    () => readDateRangeFromUrl({ preset: urlPreset, from: urlFrom, to: urlTo }, 'all'),
+    [urlPreset, urlFrom, urlTo]
   );
 
   function setDateRange(next: DateRangeValue) {
-    urlState.setFilters({
-      preset: next.preset === 'all' ? undefined : next.preset,
-      from: next.dateFrom,
-      to: next.dateTo,
-    });
+    urlState.setFilters(dateRangeToUrlParams(next, 'all'));
   }
 
   const filters: PurchaseOrdersQueryFilters = useMemo(

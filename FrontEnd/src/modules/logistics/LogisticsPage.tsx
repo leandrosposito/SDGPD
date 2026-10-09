@@ -7,7 +7,7 @@ import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary';
 import { SkeletonTable } from '@/shared/components/ui/SkeletonLoader';
 import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay';
 import { DateRangeFilter } from '@/shared/components/ui/DateRangeFilter';
-import { defaultDateRangeValue, type DateRangeValue } from '@/shared/components/ui/dateRangePresets';
+import { readDateRangeFromUrl, dateRangeToUrlParams, type DateRangePreset, type DateRangeValue } from '@/shared/components/ui/dateRangePresets';
 import { ExportButton, type ExportColumn } from '@/shared/components/ui/ExportButton';
 import { useSessionStore } from '@/shared/state/useSessionStore';
 import type { Delivery } from '@/shared/types/logistics.types';
@@ -49,6 +49,10 @@ const PRIORITY_LABEL: Record<Delivery['priority'], string> = {
   low: 'Baja',
 };
 
+// Unico listado con rango por defecto distinto de 'all' (historico: el
+// tablero de entregas siempre arranco en "hoy").
+const LOGISTICS_DEFAULT_DATE_PRESET: DateRangePreset = 'today';
+
 export const LogisticsPage: FC = () => {
   const activeBranchId = useSessionStore((s) => s.activeBranchId);
   const session = useSessionStore((s) => s.session);
@@ -65,26 +69,16 @@ export const LogisticsPage: FC = () => {
   const setStatusFilter = (value: DeliveryStatusFilter) => urlState.setFilter('status', value === 'all' ? undefined : value);
 
   // Default 'today' (comportamiento historico, antes fijo a "hoy"
-  // hardcodeado): sin preset en la URL, se interpreta 'today'. Si la URL
-  // trae from/to, mandan esos. Si no (primer render, o un preset fijo
-  // sin fechas en la URL), el rango se calcula desde el preset con
-  // defaultDateRangeValue, para no perder el filtro "solo hoy" en el
-  // primer render (DateRangeFilter.tsx recien computa dateFrom/dateTo
-  // al elegir un preset).
-  const dateRange: DateRangeValue = useMemo(() => {
-    const preset = (urlState.filters.preset as DateRangeValue['preset'] | undefined) ?? 'today';
-    if (urlState.filters.from || urlState.filters.to) {
-      return { preset, dateFrom: urlState.filters.from, dateTo: urlState.filters.to };
-    }
-    return defaultDateRangeValue(preset);
-  }, [urlState.filters.preset, urlState.filters.from, urlState.filters.to]);
+  // hardcodeado). Lectura y escritura del rango en la URL: helper
+  // compartido de dateRangePresets.ts (Tanda 24, regla PROTOCOLO 3.8).
+  const { preset: urlPreset, from: urlFrom, to: urlTo } = urlState.filters;
+  const dateRange: DateRangeValue = useMemo(
+    () => readDateRangeFromUrl({ preset: urlPreset, from: urlFrom, to: urlTo }, LOGISTICS_DEFAULT_DATE_PRESET),
+    [urlPreset, urlFrom, urlTo]
+  );
 
   function setDateRange(next: DateRangeValue) {
-    urlState.setFilters({
-      preset: next.preset === 'today' ? undefined : next.preset,
-      from: next.dateFrom,
-      to: next.dateTo,
-    });
+    urlState.setFilters(dateRangeToUrlParams(next, LOGISTICS_DEFAULT_DATE_PRESET));
   }
 
   const activeBranchName = session?.branches.find((b) => b.id === activeBranchId)?.name ?? '';
