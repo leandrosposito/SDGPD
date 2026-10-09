@@ -2,18 +2,36 @@
 // en cada tabla; con el tenant de A, ninguna operación alcanza las filas de B. Cada tabla con RLS
 // necesita un caso en ISOLATION_CASES: el primer test compara contra el catálogo y falla si falta alguno.
 // Corre como sdgpd_app_test a través de Database.withTenant, el mismo camino que la aplicación.
+import { createHash } from 'node:crypto'
 import { eq, type SQL, sql } from 'drizzle-orm'
 import type pg from 'pg'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { Database, type TenantTx } from '../../src/db/database.ts'
 import { newId } from '../../src/db/ids.ts'
-import { auditLog, branches, companies, documentCounters, idempotencyKeys } from '../../src/db/schema/index.ts'
+import {
+  auditLog,
+  branches,
+  companies,
+  documentCounters,
+  idempotencyKeys,
+  loginAttempts,
+  refreshTokens,
+  rolePermissions,
+  roles,
+  userBranches,
+  users,
+} from '../../src/db/schema/index.ts'
 import { INSUFFICIENT_PRIVILEGE, pgCode, rawTestClient, testConfig } from '../support/db.ts'
+import { testPasswordHash } from '../support/tenants.ts'
 
 type Tenant = {
   companyId: string
   branchId: string
+  roleId: string
+  permissionId: string
   userId: string
+  userBranchId: string
+  refreshTokenId: string
   idempotencyKey: string
   auditId: string
   label: string
@@ -34,10 +52,11 @@ type IsolationCase = {
   appendOnly?: true
 }
 
-const auditRow = (empresaId: string, id = newId()) => ({
+/** Desde BE-1a, user_id tiene FK a users: la fila de prueba de cada tenant usa su usuario real. */
+const auditRow = (empresaId: string, userId: string, id = newId()) => ({
   id,
   empresaId,
-  userId: newId(),
+  userId,
   action: 'create' as const,
   entity: 'isolation-probe',
   entityId: newId(),
@@ -90,7 +109,7 @@ const ISOLATION_CASES: Record<string, IsolationCase> = {
     match: t => sql`id = ${t.auditId}`,
     mutation: sql`entity = 'modificada por A'`,
     probe: sql`entity`,
-    insertWith: (tx, empresaId) => tx.insert(auditLog).values(auditRow(empresaId)),
+    insertWith: (tx, empresaId) => tx.insert(auditLog).values(auditRow(empresaId, newId())),
     appendOnly: true,
   },
   document_counters: {
@@ -99,6 +118,68 @@ const ISOLATION_CASES: Record<string, IsolationCase> = {
     mutation: sql`last_value = last_value + 1000`,
     probe: sql`last_value`,
     insertWith: (tx, empresaId) => tx.insert(documentCounters).values({ empresaId, series: 'REM', lastValue: 1 }),
+  },
+  // Identidad (BE-1a). Las FK de los insertWith apuntan a filas inexistentes a propósito: RLS rechaza
+  // antes (WITH CHECK se evalúa antes que la FK, que es un trigger AFTER).
+  roles: {
+    tenantColumn: 'empresa_id',
+    match: t => sql`id = ${t.roleId}`,
+    mutation: sql`name = 'modificada por A'`,
+    probe: sql`name`,
+    insertWith: (tx, empresaId) => tx.insert(roles).values({ id: newId(), empresaId, name: `intruso ${newId()}` }),
+  },
+  role_permissions: {
+    tenantColumn: 'empresa_id',
+    match: t => sql`id = ${t.permissionId}`,
+    mutation: sql`action = 'forzar'`,
+    probe: sql`action`,
+    insertWith: (tx, empresaId) =>
+      tx.insert(rolePermissions).values({ id: newId(), empresaId, roleId: newId(), module: 'orders', action: 'ver' }),
+  },
+  users: {
+    tenantColumn: 'empresa_id',
+    match: t => sql`id = ${t.userId}`,
+    mutation: sql`full_name = 'modificada por A'`,
+    probe: sql`full_name`,
+    insertWith: (tx, empresaId) =>
+      tx.insert(users).values({
+        id: newId(),
+        empresaId,
+        email: `intruso-${newId()}@sdgpd.test`,
+        fullName: 'intruso',
+        passwordHash: '$argon2id$intruso',
+        roleId: newId(),
+      }),
+  },
+  user_branches: {
+    tenantColumn: 'empresa_id',
+    match: t => sql`id = ${t.userBranchId}`,
+    mutation: sql`branch_id = branch_id`,
+    probe: sql`branch_id`,
+    insertWith: (tx, empresaId) => tx.insert(userBranches).values({ id: newId(), empresaId, userId: newId(), branchId: newId() }),
+  },
+  refresh_tokens: {
+    tenantColumn: 'empresa_id',
+    match: t => sql`id = ${t.refreshTokenId}`,
+    mutation: sql`revoked_at = now()`,
+    probe: sql`revoked_at`,
+    insertWith: (tx, empresaId) =>
+      tx.insert(refreshTokens).values({
+        id: newId(),
+        empresaId,
+        userId: newId(),
+        familyId: newId(),
+        tokenHash: '0'.repeat(64),
+        expiresAt: sql`now() + interval '1 day'`,
+      }),
+  },
+  login_attempts: {
+    tenantColumn: 'empresa_id',
+    match: t => sql`user_id = ${t.userId}`,
+    mutation: sql`failed_count = failed_count + 100`,
+    probe: sql`failed_count`,
+    insertWith: (tx, empresaId) =>
+      tx.insert(loginAttempts).values({ empresaId, userId: newId(), failedCount: 1, windowStartedAt: sql`now()` }),
   },
 }
 
@@ -112,11 +193,16 @@ async function createTenant(label: string): Promise<Tenant> {
   const tenant: Tenant = {
     companyId: newId(),
     branchId: newId(),
+    roleId: newId(),
+    permissionId: newId(),
     userId: newId(),
+    userBranchId: newId(),
+    refreshTokenId: newId(),
     idempotencyKey: newId(),
     auditId: newId(),
     label,
   }
+  const passwordHash = await testPasswordHash()
   await db.withTenant(tenant.companyId, async tx => {
     await tx
       .insert(companies)
@@ -129,6 +215,32 @@ async function createTenant(label: string): Promise<Tenant> {
       city: 'Córdoba',
       address: 'Calle 1',
     })
+    await tx.insert(roles).values({ id: tenant.roleId, empresaId: tenant.companyId, name: `rol ${label}` })
+    await tx
+      .insert(rolePermissions)
+      .values({ id: tenant.permissionId, empresaId: tenant.companyId, roleId: tenant.roleId, module: 'orders', action: 'ver' })
+    await tx.insert(users).values({
+      id: tenant.userId,
+      empresaId: tenant.companyId,
+      email: `isolation-${label}-${tenant.userId}@sdgpd.test`.toLowerCase(),
+      fullName: `usuario ${label}`,
+      passwordHash,
+      roleId: tenant.roleId,
+    })
+    await tx
+      .insert(userBranches)
+      .values({ id: tenant.userBranchId, empresaId: tenant.companyId, userId: tenant.userId, branchId: tenant.branchId })
+    await tx.insert(refreshTokens).values({
+      id: tenant.refreshTokenId,
+      empresaId: tenant.companyId,
+      userId: tenant.userId,
+      familyId: newId(),
+      tokenHash: createHash('sha256').update(tenant.refreshTokenId).digest('hex'),
+      expiresAt: sql`now() + interval '1 day'`,
+    })
+    await tx
+      .insert(loginAttempts)
+      .values({ empresaId: tenant.companyId, userId: tenant.userId, failedCount: 1, windowStartedAt: sql`now()` })
     await tx.insert(idempotencyKeys).values({
       empresaId: tenant.companyId,
       userId: tenant.userId,
@@ -139,27 +251,42 @@ async function createTenant(label: string): Promise<Tenant> {
       responseBody: {},
       expiresAt: sql`now() + interval '1 hour'`,
     })
-    await tx.insert(auditLog).values(auditRow(tenant.companyId, tenant.auditId))
+    await tx.insert(auditLog).values(auditRow(tenant.companyId, tenant.userId, tenant.auditId))
     await tx.insert(documentCounters).values({ empresaId: tenant.companyId, series: 'PED', lastValue: 5 })
   })
   return tenant
 }
 
-/** Borra la empresa de prueba. audit_log no se puede borrar (append-only): su fila queda, por diseño. */
+/**
+ * Borra la empresa de prueba. audit_log no se puede borrar (append-only): su fila queda, por diseño.
+ * Desde BE-1a esa fila tiene FK al usuario, así que el usuario, su rol y la empresa tampoco se pueden
+ * borrar: la verificación exige que quede EXACTAMENTE eso, y que borrar al usuario falle por la FK.
+ */
 async function removeTenant(t: Tenant | undefined): Promise<void> {
   if (t === undefined) return
   await db.withTenant(t.companyId, async tx => {
     await tx.delete(idempotencyKeys).where(eq(idempotencyKeys.empresaId, t.companyId))
     await tx.delete(documentCounters).where(eq(documentCounters.empresaId, t.companyId))
+    await tx.delete(loginAttempts).where(eq(loginAttempts.empresaId, t.companyId))
+    await tx.delete(refreshTokens).where(eq(refreshTokens.empresaId, t.companyId))
+    await tx.delete(userBranches).where(eq(userBranches.empresaId, t.companyId))
+    await tx.delete(rolePermissions).where(eq(rolePermissions.empresaId, t.companyId))
     await tx.delete(branches).where(eq(branches.empresaId, t.companyId))
-    await tx.delete(companies).where(eq(companies.id, t.companyId))
     // Con FORCE RLS nadie ve todas las filas, ni el dueño: la limpieza se verifica dentro del tenant.
     const left = await tx.execute(
-      sql`select (select count(*) from ${branches})::int + (select count(*) from ${companies})::int
-                + (select count(*) from ${idempotencyKeys})::int + (select count(*) from ${documentCounters})::int as n`,
+      sql`select (select count(*) from ${branches})::int + (select count(*) from ${idempotencyKeys})::int
+                + (select count(*) from ${documentCounters})::int + (select count(*) from ${loginAttempts})::int
+                + (select count(*) from ${refreshTokens})::int + (select count(*) from ${userBranches})::int
+                + (select count(*) from ${rolePermissions})::int as n,
+              (select count(*) from ${users})::int as users, (select count(*) from ${roles})::int as roles,
+              (select count(*) from ${companies})::int as companies`,
     )
-    if (left.rows[0]?.n !== 0) throw new Error(`quedaron filas de la empresa de test ${t.label}`)
+    if (JSON.stringify(left.rows[0]) !== JSON.stringify({ n: 0, users: 1, roles: 1, companies: 1 })) {
+      throw new Error(`la limpieza de la empresa de test ${t.label} dejó otra cosa: ${JSON.stringify(left.rows[0])}`)
+    }
   })
+  const blocked = await db.withTenant(t.companyId, tx => tx.delete(users).where(eq(users.id, t.userId))).catch((e: unknown) => e)
+  if (pgCode(blocked) !== '23503') throw new Error(`borrar un usuario auditado tenía que fallar por FK (23503): ${String(blocked)}`)
 }
 
 const ident = (name: string) => sql.identifier(name)

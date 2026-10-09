@@ -9,7 +9,7 @@ import { canonicalJson, payloadHash } from '../../src/db/idempotency.ts'
 import { auditLog, branches, idempotencyKeys } from '../../src/db/schema/index.ts'
 import { actorHeaders, createProbeApp, type ProbeApp } from '../support/probe-app.ts'
 import { rawTestClient } from '../support/db.ts'
-import { createTestCompany, removeTestCompany, type TestTenant } from '../support/tenants.ts'
+import { createTestCompany, createTestUser, removeTestCompany, type TestTenant } from '../support/tenants.ts'
 
 let probe: ProbeApp
 let A: TestTenant
@@ -102,7 +102,8 @@ describe('Idempotency-Key', () => {
 
   it('la clave es por usuario y por operación: otro usuario u otra ruta con la misma clave ejecutan', async () => {
     const key = newId()
-    const otherUser = { ...A, userId: newId() }
+    // Desde BE-1a el usuario tiene que existir (FK de idempotency_keys.user_id): otro usuario real de A.
+    const otherUser = { ...A, userId: await createTestUser(probe.database, A.empresaId, 'idem-otro') }
     expect((await post('/probe/branches', A, key, { name: 'u1', code: `U1-${key.slice(-8)}` })).status).toBe(201)
     expect((await post('/probe/branches', otherUser, key, { name: 'u2', code: `U2-${key.slice(-8)}` })).status).toBe(201)
     expect((await post('/probe/numbers', A, key, { series: 'PED' })).status).toBe(201)

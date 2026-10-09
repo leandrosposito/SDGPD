@@ -3,13 +3,30 @@ import { ConfigError, loadConfig } from '../../src/config/config.ts'
 
 const CA = process.env.DATABASE_CA_CERT
 const URL_WITH_SECRET = 'postgresql://sdgpd_app.ref:s3cr3t-pw@db.example.test:5432/postgres'
+/** Clave de prueba (no es la de .env): 32 bytes en base64url. Desde BE-1a, JWT_SECRET es obligatoria. */
+const JWT_SECRET = Buffer.alloc(32, 7).toString('base64url')
 
 describe('loadConfig', () => {
   it('con todas las variables, devuelve la config tipada', () => {
-    const config = loadConfig({ PORT: '3000', DATABASE_URL: URL_WITH_SECRET, DATABASE_CA_CERT: CA })
+    const config = loadConfig({ PORT: '3000', DATABASE_URL: URL_WITH_SECRET, DATABASE_CA_CERT: CA, JWT_SECRET })
     expect(config.port).toBe(3000)
     expect(config.database.url).toBe(URL_WITH_SECRET)
     expect(config.database.caCert).toContain('BEGIN CERTIFICATE')
+    expect(config.auth.jwtSecret).toHaveLength(32)
+  })
+
+  it('sin JWT_SECRET, o con una de menos de 32 bytes, falla nombrándola y sin mostrar el valor', () => {
+    const base = { PORT: '3000', DATABASE_URL: URL_WITH_SECRET, DATABASE_CA_CERT: CA }
+    expect(() => loadConfig(base)).toThrow(/JWT_SECRET/)
+    const short = Buffer.alloc(16, 9).toString('base64url')
+    let message = ''
+    try {
+      loadConfig({ ...base, JWT_SECRET: short })
+    } catch (err) {
+      message = err instanceof Error ? err.message : ''
+    }
+    expect(message).toMatch(/JWT_SECRET/)
+    expect(message).not.toContain(short)
   })
 
   it('si falta una variable, falla nombrándola', () => {

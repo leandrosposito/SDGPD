@@ -1,5 +1,6 @@
-import { index, integer, jsonb, pgTable, primaryKey, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { foreignKey, index, integer, jsonb, pgTable, primaryKey, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 import { companies } from './companies.ts'
+import { users } from './identity.ts'
 
 /**
  * Claves de idempotencia (ADR-BE-005 › Idempotencia). Alcance: empresa + usuario + operación + clave.
@@ -28,5 +29,6 @@ export const idempotencyKeys = pgTable(
   t => [
     primaryKey({ name: 'idempotency_keys_pk', columns: [t.empresaId, t.userId, t.operation, t.key] }),
     index('idempotency_keys_expires_at_idx').on(t.expiresAt),
+    foreignKey({ name: 'idempotency_keys_user_fk', columns: [t.empresaId, t.userId], foreignColumns: [users.empresaId, users.id] }),
   ],
 )

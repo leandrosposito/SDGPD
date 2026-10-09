@@ -1,6 +1,9 @@
 // App de prueba de BE-0b: AppModule completo + un guard y controllers que SOLO existen en test/.
-// El guard fija el actor desde headers de prueba (x-test-empresa, x-test-user): en src/ no existe
-// ninguna forma de hacerlo (el actor lo va a fijar la autenticación de BE-1, con bindActor).
+// El guard reemplaza al AuthGuard real (overrideProvider) y fija el actor desde headers de prueba
+// (x-test-empresa, x-test-user): en src/ no existe ninguna forma de hacerlo (lo fija la autenticación
+// de BE-1a, con bindActor). Desde BE-1a toda ruta declara su política (la verificación de arranque
+// corre también acá): las de prueba exigen settings.editar, que este guard no mira, y /auth/probe se
+// agrega a las rutas públicas solo en esta app.
 import 'reflect-metadata'
 import type { Server } from 'node:http'
 import {
@@ -17,12 +20,13 @@ import {
   Put,
   Query,
 } from '@nestjs/common'
-import { APP_GUARD } from '@nestjs/core'
 import { Test } from '@nestjs/testing'
 import { cursorListQuerySchema, offsetListQuerySchema } from '@sdgpd/contracts'
 import { and, count, eq, type SQL } from 'drizzle-orm'
 import { z } from 'zod'
 import { AppModule } from '../../src/app.module.ts'
+import { AuthGuard } from '../../src/auth/auth.guard.ts'
+import { DEFAULT_ROUTE_ALLOWLIST, Public, RequirePermission, ROUTE_ALLOWLIST } from '../../src/auth/route-policy.ts'
 import { type Actor, bindActor, CurrentActor } from '../../src/context/actor.ts'
 import { auditedEntity, type CommandTx } from '../../src/db/command.ts'
 import { Database } from '../../src/db/database.ts'
@@ -80,6 +84,7 @@ async function insertBranch(tx: CommandTx, body: z.infer<typeof createBranchSche
 }
 
 @Controller('probe')
+@RequirePermission('settings', 'editar')
 class ProbeController {
   constructor(private readonly database: Database) {}
 
@@ -181,6 +186,7 @@ class ProbeController {
 class AuthProbeController {
   @Post('probe')
   @HttpCode(200)
+  @Public()
   probe() {
     return { ok: true }
   }
@@ -192,8 +198,12 @@ export async function createProbeApp(maxConnections = 2): Promise<ProbeApp> {
   const moduleRef = await Test.createTestingModule({
     imports: [AppModule.register(testConfig(maxConnections))],
     controllers: [ProbeController, AuthProbeController],
-    providers: [{ provide: APP_GUARD, useClass: TestActorGuard }],
-  }).compile()
+  })
+    .overrideProvider(AuthGuard)
+    .useClass(TestActorGuard)
+    .overrideProvider(ROUTE_ALLOWLIST)
+    .useValue({ ...DEFAULT_ROUTE_ALLOWLIST, public: [...DEFAULT_ROUTE_ALLOWLIST.public, 'POST /auth/probe'] })
+    .compile()
   const app = moduleRef.createNestApplication<INestApplication<Server>>({ logger: false })
   await app.init()
   return { app, database: app.get(Database) }

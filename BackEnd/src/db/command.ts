@@ -4,6 +4,7 @@ import type { Actor } from '../context/actor.ts'
 import { ConflictError, NotFoundError } from '../http/errors.ts'
 import { nextNumber } from './counters.ts'
 import { newId } from './ids.ts'
+import { revokeUserRefreshTokens } from './refresh-tokens.ts'
 import { auditLog, type AuditAction, type DocumentSeries } from './schema/index.ts'
 import type { TenantTx } from './tenant-tx.ts'
 
@@ -109,6 +110,28 @@ export class CommandTx {
     const result = await this.#tx.delete(table).where(and(eq(table.id, id), eq(table.version, expectedVersion)))
     if (result.rowCount !== 1 || before === undefined) throw this.#missOrConflict(entity, before)
     await this.#audit('delete', entity, id, before, null)
+  }
+
+  /**
+   * Borra y audita una fila hija que no es un agregado (no tiene `version`): un permiso de la matriz
+   * de un rol, una sucursal habilitada de un usuario. Su concurrencia la controla la versión del
+   * agregado padre, que el comando actualiza con `update` en la misma transacción (BE-1a).
+   */
+  async removeChild<T extends TenantTable>(entity: AuditedEntity<T>, id: string): Promise<void> {
+    const before = await this.#row(entity, id, true)
+    if (before === undefined) throw new NotFoundError(entity.name)
+    const result = await this.#tx.delete(entity.table).where(eq(entity.table.id, id))
+    if (result.rowCount !== 1) throw new NotFoundError(entity.name)
+    await this.#audit('delete', entity, id, before, null)
+  }
+
+  /**
+   * Revoca los refresh tokens vigentes de un usuario en la transacción del comando (desactivarlo,
+   * BE-1a). Los tokens son infraestructura de la sesión y no se auditan: el registro es el `update`
+   * del usuario que lo desactiva.
+   */
+  revokeRefreshTokens(userId: string): Promise<void> {
+    return revokeUserRefreshTokens(this.#tx, userId)
   }
 
   /** Próximo número de la serie, en esta transacción: `PED-000001` (ADR-BE-006 §Decisión 4). */

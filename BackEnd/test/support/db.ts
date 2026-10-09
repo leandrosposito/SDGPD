@@ -14,6 +14,7 @@ export function testConfig(maxConnections = 2): AppConfig {
     PORT: '3000',
     DATABASE_URL: process.env.DATABASE_URL_TEST,
     DATABASE_CA_CERT: process.env.DATABASE_CA_CERT,
+    JWT_SECRET: process.env.JWT_SECRET,
   })
   return { ...config, database: { ...config.database, maxConnections } }
 }
