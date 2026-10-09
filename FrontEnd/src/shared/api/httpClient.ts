@@ -1,4 +1,6 @@
 import { createHttpClient } from './httpClientCore';
+import { parseHttpServices, type ServiceName } from './serviceModes';
+import { getAccessToken, notifySessionExpired, setAccessToken } from '@/shared/auth/tokenStore';
 
 // ============================================================
 // httpClient — Punto unico por el que pasa toda peticion del
@@ -42,14 +44,36 @@ import { createHttpClient } from './httpClientCore';
 // La logica vive en httpClientCore.ts (createHttpClient), sin
 // import.meta.env, para poder ejercitarla con `node` (BE-0b). Aca solo
 // se lee la configuracion de Vite.
+//
+// BE-1b: el modo es POR SERVICE. VITE_HTTP_SERVICES (serviceModes.ts) es
+// el UNICO lugar que dice que services van por http contra el backend; el
+// resto sigue en mock. VITE_API_MODE=http (modo global, de antes de BE-1b)
+// se conserva solo como escape para probar TODO contra un backend completo:
+// hoy romperia los modulos que el backend todavia no sirve.
+// VITE_API_BASE_URL: por defecto '/api', el prefijo global del backend, en el
+// mismo origen (en desarrollo, el proxy de Vite lo manda al backend sin
+// reescribir la ruta; ver vite.config.ts).
 export type { HttpMethod, HttpRequestConfig } from './httpClientCore';
 
 const API_MODE = (import.meta.env.VITE_API_MODE as string | undefined) ?? 'mock';
 
+export const httpServices: ReadonlySet<ServiceName> = parseHttpServices(
+  import.meta.env.VITE_HTTP_SERVICES as string | undefined
+);
+
+export function isHttpService(service: ServiceName): boolean {
+  return API_MODE === 'http' || httpServices.has(service);
+}
+
 export const httpClient = createHttpClient({
   mode: API_MODE === 'http' ? 'http' : 'mock',
-  baseUrl: (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? '',
+  baseUrl: (import.meta.env.VITE_API_BASE_URL as string | undefined) || '/api',
   mockLatencyMs: Number(import.meta.env.VITE_MOCK_LATENCY_MS ?? 300),
   mockFailureRate: Number(import.meta.env.VITE_MOCK_FAILURE_RATE ?? 0),
   debug: (import.meta.env.VITE_API_DEBUG as string | undefined) === 'true',
+  httpServices,
+  // Solo con auth por http hay token y refresh; en mock no se manda nada.
+  auth: isHttpService('auth')
+    ? { getAccessToken, setAccessToken, refreshPath: 'auth/refresh', onSessionExpired: notifySessionExpired }
+    : undefined,
 });

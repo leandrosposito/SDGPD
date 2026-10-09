@@ -21,7 +21,7 @@ import { Command } from '../http/command.interceptor.ts'
 import { NotFoundError } from '../http/errors.ts'
 import { ListQueryPipe } from '../http/list-query.pipe.ts'
 import { ZodValidationPipe } from '../http/zod-validation.pipe.ts'
-import { roleEntity, rolePermissionEntity, toRoles, userEntity } from './identity.queries.ts'
+import { assertAnAdminRemains, IDENTITY_LOCK, roleEntity, rolePermissionEntity, toRoles, userEntity } from './identity.queries.ts'
 
 const roleColumns = { id: roles.id, name: roles.name, version: roles.version }
 
@@ -54,6 +54,7 @@ export class RolesController {
    * Reemplaza la matriz del rol, con la versión leída (409 si cambió). Si la matriz cambia, sube
    * permissions_version de cada usuario del rol: sus access tokens dejan de valer en el próximo
    * request (el guard compara `ver`) y el refresh emite uno con los permisos nuevos.
+   * Si dejaría a la empresa sin un usuario activo con settings.editar: 422 `last-admin` (BE-1b).
    */
   @Put(':id/permissions')
   @RequirePermission('settings', 'editar')
@@ -62,6 +63,7 @@ export class RolesController {
     @Param('id', new ZodValidationPipe(idSchema)) id: string,
     @Body(new ZodValidationPipe(updateRolePermissionsRequestSchema)) body: UpdateRolePermissionsRequest,
   ): Promise<Role> {
+    await tx.lockScope(IDENTITY_LOCK)
     await tx.update(roleEntity, id, body.version, {})
     const wanted = new Map(body.permissions.map(p => [permissionKey(p.module, p.action), p]))
     const current = await tx
@@ -91,6 +93,7 @@ export class RolesController {
         await tx.update(userEntity, member.id, member.version, { permissionsVersion: member.permissionsVersion + 1 })
       }
     }
+    await assertAnAdminRemains(tx)
     const [role] = await toRoles(tx.select, await tx.select(roleColumns).from(roles).where(eq(roles.id, id)))
     if (role === undefined) throw new NotFoundError('role')
     return role

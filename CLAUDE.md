@@ -15,11 +15,11 @@ SDGPD is an ERP built around business domains (Core, Comercial, Inventario, Log�
 
 ## Commands
 
-- **Frontend:** todo corre desde `FrontEnd/`, incluido su `npm ci` (`FrontEnd` todavía no es un workspace). Ver `FrontEnd/CLAUDE.md`.
-- **Backend y `packages/contracts`:** desde la raíz (workspaces `BackEnd` y `packages/*`, lockfile en la raíz):
-  - `npm ci`
-  - `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`: todos los workspaces; con `-w @sdgpd/backend` o `-w @sdgpd/contracts`, uno solo.
-  - `npm run start -w @sdgpd/backend`: levanta el backend (`GET /health`).
+- **Instalación (desde BE-1b, 2026-10-09):** `npm ci` **una sola vez, en la raíz**. Hay tres workspaces (`packages/*`, `BackEnd` y `FrontEnd`) y **un único lockfile, `package-lock.json` de la raíz** (`FrontEnd/package-lock.json` ya no existe). Las dependencias del frontend viven anidadas en `FrontEnd/node_modules`, con las mismas versiones de antes.
+- **Frontend:** los comandos de desarrollo siguen corriendo desde `FrontEnd/` (`npm run dev | typecheck | lint | build`), o desde la raíz con `-w distribuidoragestion`. Ver `FrontEnd/CLAUDE.md`.
+- **Backend y `packages/contracts`:** desde la raíz:
+  - `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`: todos los workspaces (`--if-present`: el frontend no tiene `test`); con `-w @sdgpd/backend`, `-w @sdgpd/contracts` o `-w distribuidoragestion`, uno solo.
+  - `npm run start -w @sdgpd/backend`: levanta el backend. Desde BE-1b todas sus rutas llevan el prefijo `/api` (`GET /api/health`).
   - `npm run db:setup -w @sdgpd/backend`, `npm run db:migrate -w @sdgpd/backend`, `npm run db:generate -w @sdgpd/backend`, `npm run db:sql -w @sdgpd/backend -- <rol> "<sql>"`, `npm run db:seed-dev -w @sdgpd/backend`: base de datos (ver `BackEnd/docs/SETUP_SUPABASE.md`).
 
 ## Dónde buscar

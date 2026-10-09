@@ -1,5 +1,7 @@
 import { useState, useEffect, type FC } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { LogOut } from 'lucide-react';
+import { AUTH_IS_HTTP, useSessionStore } from '@/shared/state/useSessionStore';
 import { BranchSelector } from './BranchSelector';
 import { AlertsBell } from './AlertsBell';
 import './Header.css';
@@ -46,7 +48,21 @@ interface HeaderProps {
   onRefresh?: () => void;
 }
 
+function initialsOf(fullName: string): string {
+  const parts = fullName.trim().split(/\s+/).filter(Boolean);
+  return (parts.length > 1 ? `${parts[0][0]}${parts[parts.length - 1][0]}` : fullName.slice(0, 2)).toUpperCase();
+}
+
 export const Header: FC<HeaderProps> = ({ onRefresh }) => {
+  // BE-1b: el usuario y su rol salen de la sesion; con auth por http, logout.
+  const session = useSessionStore((s) => s.session);
+  const logout = useSessionStore((s) => s.logout);
+  const navigate = useNavigate();
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login', { replace: true });
+  };
+
   // Theme Toggle Logic
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
     const savedTheme = localStorage.getItem('app-theme');
@@ -149,13 +165,25 @@ export const Header: FC<HeaderProps> = ({ onRefresh }) => {
 
         <Link to="/settings" className="header__user" aria-label="Configuración de Usuario" style={{ textDecoration: 'none' }}>
           <div className="header__avatar" aria-hidden="true">
-            <span>AD</span>
+            <span>{session ? initialsOf(session.fullName) : 'AD'}</span>
           </div>
           <div className="header__user-info">
-            <span className="header__user-name">Admin</span>
-            <span className="header__user-role">Configuración</span>
+            <span className="header__user-name">{session?.fullName ?? 'Admin'}</span>
+            <span className="header__user-role">{session?.role.name ?? 'Configuración'}</span>
           </div>
         </Link>
+
+        {AUTH_IS_HTTP && (
+          <button
+            type="button"
+            className="header__action-btn"
+            onClick={() => void handleLogout()}
+            aria-label="Cerrar sesion"
+            title="Cerrar sesion"
+          >
+            <LogOut size={18} aria-hidden="true" />
+          </button>
+        )}
       </div>
     </header>
   );

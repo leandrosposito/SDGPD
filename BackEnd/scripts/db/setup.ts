@@ -6,7 +6,8 @@
 //   - los dos schemas sin privilegios para PUBLIC, anon, authenticated ni service_role.
 // Las contraseñas se generan acá (o se reusan las de BackEnd/.env) y se guardan SOLO en .env.
 // Al servidor viaja el verificador SCRAM, nunca la contraseña en claro (no queda en ningún log).
-// También genera los secretos de la aplicación que faltan en .env (JWT_SECRET, BE-1a): con
+// También genera los secretos de la aplicación que faltan en .env (JWT_SECRET, BE-1a;
+// IDEMPOTENCY_HMAC_KEY, BE-1b): con
 // `-- --secrets-only` hace solo eso, sin conectarse a la base.
 // Uso: npm run db:setup -w @sdgpd/backend [-- --secrets-only]
 import { createHash, createHmac, pbkdf2Sync, randomBytes } from 'node:crypto'
@@ -18,7 +19,7 @@ import {
   connectionUser,
   databaseUrl,
   enforceAppendOnly,
-  ensureJwtSecret,
+  ensureAppSecrets,
   envValue,
   hardenDefinerFunctions,
   pgErrorText,
@@ -56,7 +57,8 @@ function passwordFor(role: RoleKey, envLines: string[]): string {
 }
 
 async function main(): Promise<void> {
-  console.log(ensureJwtSecret() ? 'JWT_SECRET generada en .env' : 'JWT_SECRET ya estaba en .env')
+  const generated = ensureAppSecrets()
+  console.log(generated.length > 0 ? `generadas en .env: ${generated.join(', ')}` : 'las claves del servidor ya estaban en .env')
   if (process.argv.includes('--secrets-only')) return
 
   const envLines = readEnvFile()

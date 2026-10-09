@@ -4,6 +4,8 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { AppShell } from '../layouts/AppShell';
 import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary';
 import { queryClient } from '@/shared/api/queryClient';
+import { LoginPage } from '@/shared/auth/LoginPage';
+import { RequireSession } from '@/shared/auth/RequireSession';
 
 // ============================================================
 // AppRoutes — Application routes (React Router v6)
@@ -12,6 +14,10 @@ import { queryClient } from '@/shared/api/queryClient';
 // <Suspense> que cubre la carga vive en AppShell (alrededor de
 // <Outlet/>), no aca — ver el comentario en AppShell.tsx sobre por
 // que no se pone al nivel de <Routes>.
+//
+// BE-1b: /login es la UNICA ruta fuera de RequireSession. Todo lo demas
+// (incluido el catch-all) cuelga de AppShell, envuelto en RequireSession:
+// con auth por http, ninguna ruta de la app se muestra sin sesion.
 // ============================================================
 
 const DashboardPage = lazy(() =>
@@ -79,7 +85,16 @@ export function AppRoutes() {
             queryClient. */}
         <QueryClientProvider client={queryClient}>
           <Routes>
-            <Route element={<AppShell />}>
+            {/* Login (BE-1b): sin sesion. Con auth en mock redirige al inicio. */}
+            <Route path="login" element={<LoginPage />} />
+
+            <Route
+              element={
+                <RequireSession>
+                  <AppShell />
+                </RequireSession>
+              }
+            >
               {/* Dashboard */}
               <Route index element={<DashboardPage />} />
 

@@ -1,30 +1,52 @@
-import type { AuditLogItem, InvoiceRecord, PermissionMatrix, UserAccount } from '@/shared/types/settings.types';
+import type { Action, Module, Permission, Role, User } from '@sdgpd/contracts';
+import type { AuditLogItem, InvoiceRecord } from '@/shared/types/settings.types';
+import { MOCK_ALL_PERMISSIONS } from '@/data/mock/session.mock';
 
-export const SETTINGS_MOCK_USERS: UserAccount[] = [
-  { id: 'usr-1', name: 'Administrador General', email: 'admin@distribuidora.com', role: 'Admin', status: 'active' },
-  { id: 'usr-2', name: 'Vendedor Centro', email: 'ventas1@distribuidora.com', role: 'Vendedor', status: 'active' },
-  { id: 'usr-3', name: 'Vendedor Norte', email: 'ventas2@distribuidora.com', role: 'Vendedor', status: 'inactive' },
-  { id: 'usr-4', name: 'Chofer Principal', email: 'logistica@distribuidora.com', role: 'Chofer', status: 'active' },
-  { id: 'usr-5', name: 'Encargado Deposito', email: 'deposito@distribuidora.com', role: 'Deposito', status: 'active' },
+// BE-1b: usuarios y roles con la forma del contrato (@sdgpd/contracts). Los 4
+// roles iniciales y sus matrices son los mismos que siembra el backend
+// (BackEnd/src/auth/default-roles.ts); se repiten aca porque el mock no puede
+// importar codigo del backend. Las sucursales son las 4 de la empresa demo
+// (UUID fijos, session.mock.ts).
+const grant = (module: Module, ...actions: Action[]): Permission[] => actions.map((action) => ({ module, action }));
+const CENTRO = '0192f000-0000-7000-8000-000000000001';
+const NORTE = '0192f000-0000-7000-8000-000000000002';
+const SUR = '0192f000-0000-7000-8000-000000000003';
+
+export const SETTINGS_MOCK_ROLES: Role[] = [
+  { id: 'role-admin', name: 'Admin', version: 1, permissions: [...MOCK_ALL_PERMISSIONS] },
+  {
+    id: 'role-vendedor',
+    name: 'Vendedor',
+    version: 1,
+    permissions: [
+      ...grant('dashboard', 'ver'),
+      ...grant('orders', 'ver', 'crear', 'editar', 'anular'),
+      ...grant('clients', 'ver', 'crear', 'editar'),
+      ...grant('inventory', 'ver'),
+    ],
+  },
+  { id: 'role-chofer', name: 'Chofer', version: 1, permissions: grant('logistics', 'ver', 'editar') },
+  {
+    id: 'role-deposito',
+    name: 'Deposito',
+    version: 1,
+    permissions: [
+      ...grant('dashboard', 'ver'),
+      ...grant('inventory', 'ver', 'crear', 'editar'),
+      ...grant('logistics', 'ver', 'editar'),
+      ...grant('compras', 'ver', 'crear', 'editar'),
+      ...grant('suppliers', 'ver'),
+    ],
+  },
 ];
 
-export const SETTINGS_MOCK_PERMISSIONS: PermissionMatrix[] = [
-  {
-    role: 'Admin',
-    modules: { dashboard: true, pedidos: true, inventario: true, clientes: true, proveedores: true, logistica: true, caja: true, analitica: true }
-  },
-  {
-    role: 'Vendedor',
-    modules: { dashboard: true, pedidos: true, inventario: false, clientes: true, proveedores: false, logistica: false, caja: false, analitica: false }
-  },
-  {
-    role: 'Chofer',
-    modules: { dashboard: false, pedidos: false, inventario: false, clientes: false, proveedores: false, logistica: true, caja: false, analitica: false }
-  },
-  {
-    role: 'Deposito',
-    modules: { dashboard: false, pedidos: false, inventario: true, clientes: false, proveedores: true, logistica: false, caja: false, analitica: false }
-  }
+const CREATED = '2026-09-01T12:00:00.000Z';
+export const SETTINGS_MOCK_USERS: User[] = [
+  { id: 'usr-1', fullName: 'Administrador General', email: 'admin@distribuidora.com', roleId: 'role-admin', active: true, branchIds: [CENTRO, NORTE, SUR], version: 1, createdAt: CREATED },
+  { id: 'usr-2', fullName: 'Vendedor Centro', email: 'ventas1@distribuidora.com', roleId: 'role-vendedor', active: true, branchIds: [CENTRO], version: 1, createdAt: CREATED },
+  { id: 'usr-3', fullName: 'Vendedor Norte', email: 'ventas2@distribuidora.com', roleId: 'role-vendedor', active: false, branchIds: [NORTE], version: 1, createdAt: CREATED },
+  { id: 'usr-4', fullName: 'Chofer Principal', email: 'logistica@distribuidora.com', roleId: 'role-chofer', active: true, branchIds: [CENTRO, SUR], version: 1, createdAt: CREATED },
+  { id: 'usr-5', fullName: 'Encargado Deposito', email: 'deposito@distribuidora.com', roleId: 'role-deposito', active: true, branchIds: [SUR], version: 1, createdAt: CREATED },
 ];
 
 export const SETTINGS_MOCK_AUDIT: AuditLogItem[] = [

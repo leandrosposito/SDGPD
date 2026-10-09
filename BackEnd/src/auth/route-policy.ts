@@ -25,14 +25,14 @@ export const Public = () => SetMetadata(ROUTE_POLICY_METADATA, { kind: 'public' 
 /** Con sesión y sin permiso de módulo. Solo para las rutas de SESSION_ROUTES. */
 export const SessionOnly = () => SetMetadata(ROUTE_POLICY_METADATA, { kind: 'session' } satisfies RoutePolicy)
 
-/** Las únicas rutas públicas (`MÉTODO /path`). */
-export const PUBLIC_ROUTES: readonly string[] = ['GET /health', 'POST /auth/login', 'POST /auth/refresh', 'POST /auth/logout']
+/** Las únicas rutas públicas (`MÉTODO /path`, con el prefijo global /api, BE-1b). */
+export const PUBLIC_ROUTES: readonly string[] = ['GET /api/health', 'POST /api/auth/login', 'POST /api/auth/refresh', 'POST /api/auth/logout']
 
 /**
  * Las únicas rutas con sesión y sin permiso de módulo: la sesión misma y las sucursales, que todo
  * usuario necesita para elegir dónde opera (GET /branches filtra por permiso adentro).
  */
-export const SESSION_ROUTES: readonly string[] = ['GET /auth/session', 'GET /branches']
+export const SESSION_ROUTES: readonly string[] = ['GET /api/auth/session', 'GET /api/branches']
 
 /** Token de las listas de arriba: los tests de infraestructura agregan sus rutas de prueba. */
 export const ROUTE_ALLOWLIST = Symbol('ROUTE_ALLOWLIST')

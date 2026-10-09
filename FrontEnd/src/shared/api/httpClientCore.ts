@@ -17,6 +17,21 @@ import type { RequestOptions } from './types.ts';
 // - Reintentos: GET como antes; POST/PUT/PATCH/DELETE SOLO si llevan
 //   `idempotencyKey` (cierra A2 del lado del cliente: un reintento sin
 //   clave puede duplicar el efecto).
+//
+// Cambios de BE-1b (ADR-BE-003 › Consecuencias para el frontend):
+// - Modo POR SERVICE: cada request declara su `service`; va por http si
+//   ese service esta en `settings.httpServices` (VITE_HTTP_SERVICES, ver
+//   serviceModes.ts), o si el modo global es 'http'. El resto, mock.
+// - `Authorization: Bearer <token>` con el access token en memoria
+//   (`settings.auth.getAccessToken`, nunca storage), salvo `auth: 'none'`.
+// - Ante un 401 de un request con Bearer: UN solo refresh a la vez
+//   (single-flight: dos refresh en paralelo con la misma cookie cuentan
+//   como reuso y el servidor revoca la familia) y UN unico reintento del
+//   request. Si el refresh falla, el token se borra y se avisa
+//   `onSessionExpired` (la app vuelve al login); el refresh fallido no se
+//   reintenta.
+// - El refresh va a `settings.auth.refreshPath` con credentials 'include'
+//   (la cookie HttpOnly, Path=/api/auth/refresh) y X-Requested-With.
 // ============================================================
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
@@ -34,6 +49,25 @@ export interface HttpRequestConfig<T> extends RequestOptions {
   // simula latencia/fallo el mismo resolver: eso lo hace httpClient,
   // para no repetir esa logica en cada uno de los ~20 services.
   mock: () => Promise<T> | T;
+  // BE-1b: service al que pertenece el request (serviceModes.ts). Decide
+  // si va por http o por mock. Sin service, solo el modo global.
+  service?: string;
+  // 'none': sin Authorization y sin refresh ante un 401 (login, refresh).
+  auth?: 'bearer' | 'none';
+  // credentials 'include' (solo el refresh y el logout: la cookie HttpOnly).
+  withCredentials?: boolean;
+  headers?: Record<string, string>;
+}
+
+// BE-1b: como obtiene y renueva el access token. Solo existe cuando 'auth'
+// va por http; el token vive en memoria (shared/auth/tokenStore.ts).
+export interface HttpClientAuth {
+  getAccessToken(): string | null;
+  setAccessToken(token: string | null): void;
+  // Path del refresh, relativo a baseUrl (`auth/refresh`).
+  refreshPath: string;
+  // El refresh fallo: la sesion termino (el llamador vuelve al login).
+  onSessionExpired(): void;
 }
 
 export interface HttpClientSettings {
@@ -43,11 +77,20 @@ export interface HttpClientSettings {
   mockLatencyMs: number;
   mockFailureRate: number;
   debug: boolean;
+  // BE-1b: services que van por http (los demas, mock), y el manejo del token.
+  httpServices?: ReadonlySet<string>;
+  auth?: HttpClientAuth;
 }
 
 export interface HttpClient {
   request<T>(config: HttpRequestConfig<T>): Promise<T>;
+  // BE-1b: renueva el access token con la cookie de refresh. Single-flight:
+  // si ya hay un refresh en vuelo, devuelve ese mismo. true si lo renovo.
+  refreshAccessToken(): Promise<boolean>;
 }
+
+export const REQUESTED_WITH_HEADER = 'X-Requested-With';
+export const AUTHORIZATION_HEADER = 'Authorization';
 
 const DEFAULT_TIMEOUT_MS = 15_000;
 const DEFAULT_RETRIES = 2;
@@ -187,13 +230,20 @@ export function createHttpClient(settings: HttpClientSettings): HttpClient {
     return await mock();
   }
 
+  function isHttp(config: { service?: string }): boolean {
+    return settings.mode === 'http' || (config.service !== undefined && (settings.httpServices?.has(config.service) ?? false));
+  }
+
   async function runHttp<T>(config: HttpRequestConfig<T>, signal: AbortSignal): Promise<T> {
     // Base siempre con "/" final: new URL() trata un base sin "/" final
     // como si su ultimo segmento fuera un archivo y lo descarta al
     // resolver el path relativo (ej. ".../v1" + "suppliers" -> ".../suppliers",
     // perdiendo "v1") — normalizar evita ese gotcha el dia que
     // VITE_API_BASE_URL tenga un sufijo de version.
-    const base = (settings.baseUrl || window.location.origin).replace(/\/?$/, '/');
+    // BE-1b: baseUrl puede ser relativa al origin ('/api', el default de
+    // httpClient.ts, que el proxy de Vite manda al backend sin reescribir).
+    const origin = typeof window === 'undefined' ? undefined : window.location.origin;
+    const base = new URL((settings.baseUrl || '/').replace(/\/?$/, '/'), origin).toString();
     const url = new URL(config.path.replace(/^\//, ''), base);
     if (config.params) {
       for (const [key, value] of Object.entries(config.params)) {
@@ -201,9 +251,11 @@ export function createHttpClient(settings: HttpClientSettings): HttpClient {
       }
     }
 
-    const headers: Record<string, string> = {};
+    const headers: Record<string, string> = { ...config.headers };
     if (config.body) headers['Content-Type'] = 'application/json';
     if (config.idempotencyKey) headers[IDEMPOTENCY_KEY_HEADER] = config.idempotencyKey;
+    const token = config.auth === 'none' ? null : (settings.auth?.getAccessToken() ?? null);
+    if (token) headers[AUTHORIZATION_HEADER] = `Bearer ${token}`;
 
     let response: Response;
     try {
@@ -211,6 +263,7 @@ export function createHttpClient(settings: HttpClientSettings): HttpClient {
         method: config.method,
         headers,
         body: config.body ? JSON.stringify(config.body) : undefined,
+        credentials: config.withCredentials ? 'include' : 'same-origin',
         signal,
       });
     } catch (err) {
@@ -232,7 +285,7 @@ export function createHttpClient(settings: HttpClientSettings): HttpClient {
   async function requestOnce<T>(config: HttpRequestConfig<T>, timeoutMs: number): Promise<T> {
     const { signal, didTimeOut, cleanup } = withTimeout(config.signal, timeoutMs);
     try {
-      return settings.mode === 'http' ? await runHttp(config, signal) : await runMock(config.mock, signal);
+      return isHttp(config) ? await runHttp(config, signal) : await runMock(config.mock, signal);
     } catch (err) {
       throw toApiError(err, didTimeOut(), config.signal?.aborted ?? false);
     } finally {
@@ -240,9 +293,52 @@ export function createHttpClient(settings: HttpClientSettings): HttpClient {
     }
   }
 
-  return {
+  // Single-flight del refresh: todos los 401 que llegan mientras hay un
+  // refresh en vuelo esperan ESE mismo, en vez de disparar otro (dos refresh
+  // con la misma cookie: el segundo es un reuso y revoca la familia).
+  let refreshInFlight: Promise<boolean> | null = null;
+
+  async function runRefresh(auth: HttpClientAuth): Promise<boolean> {
+    try {
+      const body = await client.request<unknown>({
+        method: 'POST',
+        path: auth.refreshPath,
+        service: 'auth',
+        auth: 'none',
+        withCredentials: true,
+        headers: { [REQUESTED_WITH_HEADER]: 'XMLHttpRequest' },
+        retries: 0,
+        mock: () => {
+          throw new ApiError(0, 'UNKNOWN', 'El refresh no tiene mock: solo existe con auth por http.');
+        },
+      });
+      const token: unknown = typeof body === 'object' && body !== null ? Reflect.get(body, 'accessToken') : undefined;
+      if (typeof token !== 'string' || token === '') throw new ApiError(0, 'UNKNOWN', 'Respuesta de refresh sin accessToken.');
+      auth.setAccessToken(token);
+      return true;
+    } catch {
+      auth.setAccessToken(null);
+      auth.onSessionExpired();
+      return false;
+    }
+  }
+
+  function refreshAccessToken(): Promise<boolean> {
+    const auth = settings.auth;
+    if (!auth) return Promise.resolve(false);
+    refreshInFlight ??= runRefresh(auth).finally(() => {
+      refreshInFlight = null;
+    });
+    return refreshInFlight;
+  }
+
+  const client: HttpClient = {
+    refreshAccessToken,
+
     async request<T>(config: HttpRequestConfig<T>): Promise<T> {
       const timeoutMs = config.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+      // Un 401 de un request con Bearer dispara UN refresh y UN reintento.
+      let refreshed = false;
       const retries = canRetryMethod(config) ? (config.retries ?? DEFAULT_RETRIES) : 0;
       const requestId = nextRequestId();
       const startedAt = performance.now();
@@ -267,6 +363,16 @@ export function createHttpClient(settings: HttpClientSettings): HttpClient {
             throw apiError;
           }
 
+          if (apiError.status === 401 && !refreshed && config.auth !== 'none' && settings.auth && isHttp(config)) {
+            refreshed = true;
+            debugLog(requestId, 'retry', { attempt, cause: '401: refresh del access token' });
+            if (await refreshAccessToken()) {
+              attempt--; // el reintento tras el refresh no consume un reintento de red
+              continue;
+            }
+            throw apiError;
+          }
+
           const canRetry = attempt < retries && isRetryableApiError(apiError);
           if (!canRetry) {
             debugLog(requestId, 'error', { attempt, status: apiError.status, code: apiError.code, serverCode: apiError.serverCode, message: apiError.message });
@@ -288,4 +394,5 @@ export function createHttpClient(settings: HttpClientSettings): HttpClient {
       }
     },
   };
+  return client;
 }

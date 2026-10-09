@@ -56,7 +56,8 @@ interface TabStockCurrentProps {
   branchName: string;
   onOpenLots: (product: InventoryItem) => void;
   onEditProduct: (product: InventoryItem) => void;
-  userRole: 'ADMIN' | 'EMPLOYEE';
+  // BE-1b: permiso inventory.editar de la sesion (antes, USER_ROLE fijo).
+  canEdit: boolean;
 }
 
 function formatCurrency(value: number): string {
@@ -78,7 +79,7 @@ const stockExportColumns: ExportColumn<StockedInventoryItem>[] = [
   { header: 'Estado', accessor: (row) => (row.status === 'active' ? 'ACTIVO' : 'INACTIVO') },
 ];
 
-export const TabStockCurrent: FC<TabStockCurrentProps> = ({ branchId, branchName, onOpenLots, onEditProduct, userRole }) => {
+export const TabStockCurrent: FC<TabStockCurrentProps> = ({ branchId, branchName, onOpenLots, onEditProduct, canEdit }) => {
   const empresaId = useSessionStore((s) => s.session?.company.id);
 
   // Tanda 4 (corrida completa, A13): pagina y busqueda en la URL,
@@ -221,7 +222,7 @@ export const TabStockCurrent: FC<TabStockCurrentProps> = ({ branchId, branchName
                       >
                         Ver Lotes
                       </button>
-                      {userRole === 'ADMIN' && (
+                      {canEdit && (
                         <button
                           className="btn-action btn-action--ghost"
                           onClick={() => onEditProduct(row)}

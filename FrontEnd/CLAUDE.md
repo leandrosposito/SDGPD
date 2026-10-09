@@ -2,20 +2,25 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in `FrontEnd/`.
 
-The frontend currently runs entirely on mock data (`src/data/mock/`) since there is no backend to call.
+The frontend runs on mock data (`src/data/mock/`) except for the services declared to go over HTTP against the backend (see `FrontEnd/docs/ARQUITECTURA.md` and `BackEnd/docs/README.md`, BE-1b).
 
 ## Commands
 
-All commands run from this directory (`FrontEnd/`):
+**Install from the repo root, not from here** (since BE-1b, 2026-10-09): `FrontEnd` is an npm workspace of the monorepo (`packages/*`, `BackEnd`, `FrontEnd`), so `npm ci` runs once at the root and there is **a single lockfile, the root `package-lock.json`** — `FrontEnd/package-lock.json` no longer exists. The frontend's dependencies are installed nested in `FrontEnd/node_modules`, at exactly the versions they had before (verified with `npm ls --all`; `xlsx` keeps version and integrity).
 
-- `npm run dev` — start Vite dev server
+Day-to-day commands still run from this directory (`FrontEnd/`), or from the root with `-w distribuidoragestion`:
+
+- `npm run dev` — start Vite dev server (proxies `/api` to the backend, see below)
+- `npm run typecheck` — `tsc -b`
 - `npm run build` — type-check (`tsc -b`) then production build
 - `npm run lint` — ESLint over the whole project
 - `npm run preview` — preview a production build
 
+**`@sdgpd/contracts`** (`packages/contracts`, the HTTP contract shared with the backend) is a workspace dependency, consumed from its **sources** through the `sdgpd-source` export condition (`customConditions` in `tsconfig.app.json`, `resolve.conditions` in `vite.config.ts`) — the same mechanism the backend uses. A contract change that breaks the frontend fails `tsc` here without building `contracts` first.
+
 There is **no test script and no test infrastructure** (no vitest/jest/playwright config, no `*.test.ts` files anywhere). Don't assume tests exist or try to run `npm test`.
 
-Package manager is npm (`package-lock.json` present). Note: `package.json`'s `name` field is `distribuidoragestion` (legacy, pre-rebrand) — harmless but don't be confused by it.
+Package manager is npm (lockfile at the repo root, see above). Note: `package.json`'s `name` field is `distribuidoragestion` (legacy, pre-rebrand) — harmless but don't be confused by it.
 
 ## Architecture
 

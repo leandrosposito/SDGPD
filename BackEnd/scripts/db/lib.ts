@@ -143,18 +143,30 @@ export function writeEnvValues(values: Record<string, string>): void {
   writeFileSync(ENV_FILE, lines.join('\n'))
 }
 
-/** Bytes de la clave HS256 del access token (ADR-BE-003, sub-decisión 2; BE-1a): 256 bits. */
-export const JWT_SECRET_BYTES = 32
+/** Bytes de cada clave del servidor: 256 bits. */
+export const APP_SECRET_BYTES = 32
 
 /**
- * Genera JWT_SECRET en .env si falta (32 bytes aleatorios en base64url). Vive solo en .env: nunca se
- * imprime ni se versiona. Devuelve true si la generó.
+ * Claves del servidor que viven solo en .env (nunca se imprimen ni se versionan): la del access token
+ * (ADR-BE-003, sub-decisión 2; BE-1a) y la del HMAC del payload de idempotencia (ADR-BE-005; BE-1b).
  */
-export function ensureJwtSecret(): boolean {
-  const current = envValue(readEnvFile(), 'JWT_SECRET')
-  if (current !== undefined && Buffer.from(current, 'base64url').length >= JWT_SECRET_BYTES) return false
-  writeEnvValues({ JWT_SECRET: randomBytes(JWT_SECRET_BYTES).toString('base64url') })
-  return true
+export const APP_SECRETS = ['JWT_SECRET', 'IDEMPOTENCY_HMAC_KEY'] as const
+
+/**
+ * Genera en .env las claves de APP_SECRETS que faltan o tienen menos de 32 bytes (aleatorias, en
+ * base64url). Las que ya están no se tocan. Devuelve los nombres de las que generó.
+ */
+export function ensureAppSecrets(): string[] {
+  const lines = readEnvFile()
+  const missing: Record<string, string> = {}
+  for (const name of APP_SECRETS) {
+    const current = envValue(lines, name)
+    if (current === undefined || Buffer.from(current, 'base64url').length < APP_SECRET_BYTES) {
+      missing[name] = randomBytes(APP_SECRET_BYTES).toString('base64url')
+    }
+  }
+  if (Object.keys(missing).length > 0) writeEnvValues(missing)
+  return Object.keys(missing)
 }
 
 /** Mensaje de un error de Postgres sin datos de conexión. */

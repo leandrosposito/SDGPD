@@ -3,22 +3,25 @@ import {
   type CallHandler,
   createParamDecorator,
   type ExecutionContext,
+  Inject,
   Injectable,
   type NestInterceptor,
 } from '@nestjs/common'
 import { idSchema } from '@sdgpd/contracts'
 import { from, lastValueFrom, map, type Observable } from 'rxjs'
+import { APP_CONFIG, type AppConfig } from '../config/config.ts'
 import { requireActor } from '../context/actor.ts'
 import type { CommandTx } from '../db/command.ts'
 import { Database } from '../db/database.ts'
 import { payloadHash } from '../db/idempotency.ts'
+import { apiPath } from './api-prefix.ts'
 import { IdempotencyKeyRequiredError } from './errors.ts'
 
 export const IDEMPOTENCY_KEY_HEADER = 'idempotency-key'
 export const IDEMPOTENT_REPLAY_HEADER = 'Idempotent-Replayed'
 const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 /** `/auth/*` queda exento (ADR-BE-005, resolución de la objeción 1): sin idempotencia y sin transacción de comando. */
-const AUTH_PREFIX = '/auth/'
+const AUTH_PREFIX = `${apiPath('/auth')}/`
 
 type CommandRequest = {
   method?: string
@@ -50,7 +53,14 @@ function routeTemplate(request: CommandRequest): string {
  */
 @Injectable()
 export class CommandInterceptor implements NestInterceptor {
-  constructor(private readonly database: Database) {}
+  private readonly hmacKey: Uint8Array
+
+  constructor(
+    private readonly database: Database,
+    @Inject(APP_CONFIG) config: AppConfig,
+  ) {
+    this.hmacKey = config.idempotency.hmacKey
+  }
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     if (context.getType() !== 'http') return next.handle()
@@ -83,7 +93,7 @@ export class CommandInterceptor implements NestInterceptor {
     const idempotency = {
       operation: `${method} ${route}`,
       key: key.data,
-      payloadHash: payloadHash({ params: request.params ?? {}, body: request.body ?? null }),
+      payloadHash: payloadHash(this.hmacKey, { params: request.params ?? {}, body: request.body ?? null }),
     }
     return from(
       this.database.idempotentCommand(actor, idempotency, async tx => {

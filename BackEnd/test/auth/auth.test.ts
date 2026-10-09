@@ -75,7 +75,7 @@ describe('POST /auth/login', () => {
     expect(body.session.permissions).toHaveLength(70)
     expect(body.session.branches.map(b => b.id).sort()).toEqual([...A.branchIds].sort())
     const cookie = String(res.headers['set-cookie'])
-    expect(cookie).toMatch(/^sdgpd_refresh=[A-Za-z0-9_-]{43}; Path=\/auth\/refresh; HttpOnly; Secure; SameSite=Strict; Max-Age=2592000$/)
+    expect(cookie).toMatch(/^sdgpd_refresh=[A-Za-z0-9_-]{43}; Path=\/api\/auth\/refresh; HttpOnly; Secure; SameSite=Strict; Max-Age=2592000$/)
     const token = refreshFrom(res)
     expect(token).toBeDefined()
     expect(res.text).not.toContain(token)
@@ -128,14 +128,14 @@ describe('POST /auth/login', () => {
 
   it('clientType native: 501 not-implemented (la rama queda en el contrato)', async () => {
     const res = recorded(
-      await request(app.app.getHttpServer()).post('/auth/login').send({ email: A.admin.email, password: 'x', clientType: 'native' }),
+      await request(app.app.getHttpServer()).post('/api/auth/login').send({ email: A.admin.email, password: 'x', clientType: 'native' }),
     )
     expect(res.status).toBe(501)
     expect(errorBodySchema.parse(res.body).code).toBe('not-implemented')
   })
 
   it('un body inválido es 400 validation-error (y no exige Idempotency-Key: /auth/* está exento)', async () => {
-    const res = recorded(await request(app.app.getHttpServer()).post('/auth/login').send({ email: 'no-es-email', password: 'x' }))
+    const res = recorded(await request(app.app.getHttpServer()).post('/api/auth/login').send({ email: 'no-es-email', password: 'x' }))
     expect(res.status).toBe(400)
     expect(errorBodySchema.parse(res.body).code).toBe('validation-error')
   })
@@ -188,22 +188,22 @@ describe('POST /auth/logout', () => {
   it('con el access token: revoca la familia y borra la cookie; el refresh deja de servir', async () => {
     const session = await loginOk(app, A.admin.email)
     const res = recorded(
-      await request(app.app.getHttpServer()).post('/auth/logout').set('Authorization', `Bearer ${session.accessToken}`).send(),
+      await request(app.app.getHttpServer()).post('/api/auth/logout').set('Authorization', `Bearer ${session.accessToken}`).send(),
     )
     expect(res.status).toBe(204)
-    expect(String(res.headers['set-cookie'])).toMatch(/^sdgpd_refresh=; Path=\/auth\/refresh; .*Max-Age=0$/)
+    expect(String(res.headers['set-cookie'])).toMatch(/^sdgpd_refresh=; Path=\/api\/auth\/refresh; .*Max-Age=0$/)
     expect((await refresh(app, session.refreshToken)).status).toBe(401)
   })
 
   it('con la cookie: revoca su familia', async () => {
     const session = await loginOk(app, A.admin.email)
-    const res = recorded(await request(app.app.getHttpServer()).post('/auth/logout').set('Cookie', `sdgpd_refresh=${session.refreshToken}`).send())
+    const res = recorded(await request(app.app.getHttpServer()).post('/api/auth/logout').set('Cookie', `sdgpd_refresh=${session.refreshToken}`).send())
     expect(res.status).toBe(204)
     expect((await refresh(app, session.refreshToken)).status).toBe(401)
   })
 
   it('sin nada: 204 igual (se puede repetir sin efecto)', async () => {
-    expect(recorded(await request(app.app.getHttpServer()).post('/auth/logout').send()).status).toBe(204)
+    expect(recorded(await request(app.app.getHttpServer()).post('/api/auth/logout').send()).status).toBe(204)
   })
 })
 

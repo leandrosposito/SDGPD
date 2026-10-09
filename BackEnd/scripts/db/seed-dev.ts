@@ -4,7 +4,9 @@
 //   - la empresa A con las 4 sucursales del mock del frontend (FrontEnd/src/data/mock/session.mock.ts),
 //     los 4 roles iniciales y un usuario Admin con las 4 sucursales habilitadas;
 //   - la empresa B con una sucursal y su propio Admin, para probar el aislamiento a mano.
-// Los ids de las empresas, los emails y las contraseñas de los admins se generan la primera vez y
+// La empresa demo y sus 4 sucursales tienen ids FIJOS (scripts/db/demo-ids.ts, BE-1b), los mismos del
+// mock del frontend; si las sucursales ya existían con otros ids, se migran (o falla con un mensaje claro).
+// El id de la empresa B, los emails y las contraseñas de los admins se generan la primera vez y
 // quedan SOLO en BackEnd/.env (SEED_*). Nunca se imprimen. Si la contraseña de un admin no coincide
 // con la de .env, se vuelve a hashear con la de .env.
 // Las filas del seed no pasan por audit_log: no hay actor todavía (es preparación de datos).
@@ -13,19 +15,24 @@ import { randomBytes } from 'node:crypto'
 import type pg from 'pg'
 import { v7 } from 'uuid'
 import { DEFAULT_ROLES } from '../../src/auth/default-roles.ts'
+import { type DemoBranchOutcome, ensureDemoBranches } from './demo-branches.ts'
+import { DEMO_BRANCHES, DEMO_EMPRESA_ID, type DemoBranch } from './demo-ids.ts'
 import { hashPassword, verifyPassword } from '../../src/auth/passwords.ts'
 import { connectAs, envValue, pgErrorText, readEnvFile, ROLES, SCHEMAS, writeEnvValues } from './lib.ts'
 
 type SeedBranch = { name: string; code: string; city: string; address: string; status: 'active' | 'inactive' }
-type SeedCompany = { idVar: string; emailVar: string; passwordVar: string; name: string; branches: SeedBranch[] }
+type SeedCompany = {
+  idVar: string
+  emailVar: string
+  passwordVar: string
+  name: string
+  branches: readonly SeedBranch[]
+  /** Empresa demo (BE-1b): id y sucursales fijos, los mismos que el mock del frontend (demo-ids.ts). */
+  fixed?: { empresaId: string; branches: readonly DemoBranch[] }
+}
 
-/** Las 4 sucursales del mock de sesión del frontend: mismos nombres, códigos, ciudades y estado. */
-const MOCK_BRANCHES: SeedBranch[] = [
-  { name: 'Sucursal Centro', code: 'CTR', city: 'Cordoba', address: 'Av. Colon 1234', status: 'active' },
-  { name: 'Sucursal Norte', code: 'NOR', city: 'Cordoba', address: 'Av. Rafael Nunez 4567', status: 'active' },
-  { name: 'Sucursal Sur', code: 'SUR', city: 'Cordoba', address: 'Bv. Los Granaderos 890', status: 'active' },
-  { name: 'Sucursal Villa Maria (cerrada)', code: 'VMA', city: 'Villa Maria', address: 'Av. San Martin 210', status: 'inactive' },
-]
+/** Las 4 sucursales del mock de sesión del frontend, con sus ids fijos (scripts/db/demo-ids.ts). */
+const MOCK_BRANCHES: readonly SeedBranch[] = DEMO_BRANCHES
 
 const COMPANIES: SeedCompany[] = [
   {
@@ -34,6 +41,7 @@ const COMPANIES: SeedCompany[] = [
     passwordVar: 'SEED_ADMIN_PASSWORD',
     name: 'Distribuidora La Proveedora S.A.',
     branches: MOCK_BRANCHES,
+    fixed: { empresaId: DEMO_EMPRESA_ID, branches: DEMO_BRANCHES },
   },
   {
     idVar: 'SEED_EMPRESA_B_ID',
@@ -52,8 +60,15 @@ function ensureSeedEnv(): Record<string, string> {
   const missing: Record<string, string> = {}
   for (const company of COMPANIES) {
     const suffix = randomBytes(4).toString('hex')
+    const declaredId = envValue(lines, company.idVar)
+    if (company.fixed !== undefined && declaredId !== undefined && declaredId !== '' && declaredId !== company.fixed.empresaId) {
+      throw new Error(
+        `${company.idVar} en .env no es el id fijo de la empresa demo (scripts/db/demo-ids.ts). Desde BE-1b la empresa ` +
+          'demo tiene id fijo, el mismo que usa el mock del frontend: corregí o borrá esa línea de .env y volvé a correr el seed.',
+      )
+    }
     const generated: Record<string, string> = {
-      [company.idVar]: v7(),
+      [company.idVar]: company.fixed?.empresaId ?? v7(),
       [company.emailVar]: `admin.${company.idVar === 'SEED_EMPRESA_ID' ? 'a' : 'b'}.${suffix}@sdgpd.local`,
       [company.passwordVar]: randomBytes(18).toString('base64url'),
     }
@@ -79,12 +94,17 @@ async function seedCompany(client: pg.Client, company: SeedCompany, env: Record<
       company.name,
       TIMEZONE,
     ])
-    for (const b of company.branches) {
-      await client.query(
-        `insert into branches (id, empresa_id, name, code, city, address, status) values ($1, $2, $3, $4, $5, $6, $7)
-         on conflict (empresa_id, code) do nothing`,
-        [v7(), empresaId, b.name, b.code, b.city, b.address, b.status],
-      )
+    let migrated: DemoBranchOutcome[] = []
+    if (company.fixed !== undefined) {
+      migrated = (await ensureDemoBranches(client, empresaId, company.fixed.branches)).filter(o => o.outcome === 'migrated')
+    } else {
+      for (const b of company.branches) {
+        await client.query(
+          `insert into branches (id, empresa_id, name, code, city, address, status) values ($1, $2, $3, $4, $5, $6, $7)
+           on conflict (empresa_id, code) do nothing`,
+          [v7(), empresaId, b.name, b.code, b.city, b.address, b.status],
+        )
+      }
     }
     const roleIds = new Map<string, string>()
     for (const role of DEFAULT_ROLES) {
@@ -133,7 +153,8 @@ async function seedCompany(client: pg.Client, company: SeedCompany, env: Record<
     )
     await client.query('commit')
     const c = counts.rows[0]
-    return `${company.name}: ${c?.branches ?? '?'} sucursales, ${c?.roles ?? '?'} roles, admin con email en ${company.emailVar} y contraseña en ${company.passwordVar} (BackEnd/.env)`
+    const migration = migrated.length > 0 ? ` (migradas a id fijo: ${migrated.map(m => m.code).join(', ')})` : ''
+    return `${company.name}: ${c?.branches ?? '?'} sucursales${migration}, ${c?.roles ?? '?'} roles, admin con email en ${company.emailVar} y contraseña en ${company.passwordVar} (BackEnd/.env)`
   } catch (err) {
     await client.query('rollback').catch(() => undefined)
     throw err

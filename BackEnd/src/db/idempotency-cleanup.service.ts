@@ -25,14 +25,24 @@ export class IdempotencyCleanupService implements OnApplicationBootstrap, OnAppl
     clearInterval(this.timer)
   }
 
-  /** Una vuelta de limpieza. Nunca tira: un fallo se registra y se reintenta en la próxima vuelta. */
-  async runOnce(): Promise<number | null> {
+  /**
+   * Una vuelta de limpieza: claves de idempotencia vencidas y, desde BE-1b, refresh tokens vencidos.
+   * Cada limpieza tiene su advisory lock. Nunca tira: un fallo se registra y se reintenta en la próxima vuelta.
+   */
+  async runOnce(): Promise<{ idempotencyKeys: number | null; refreshTokens: number | null }> {
+    return {
+      idempotencyKeys: await this.#run('claves de idempotencia', () => this.database.cleanupExpiredIdempotencyKeys()),
+      refreshTokens: await this.#run('refresh tokens', () => this.database.cleanupExpiredRefreshTokens()),
+    }
+  }
+
+  async #run(what: string, cleanup: () => Promise<number | null>): Promise<number | null> {
     try {
-      const deleted = await this.database.cleanupExpiredIdempotencyKeys()
-      if (deleted !== null && deleted > 0) this.logger.log(`claves de idempotencia vencidas borradas: ${deleted}`)
+      const deleted = await cleanup()
+      if (deleted !== null && deleted > 0) this.logger.log(`${what} vencidos borrados: ${deleted}`)
       return deleted
     } catch (err) {
-      this.logger.error(`la limpieza de idempotencia falló: ${err instanceof Error ? err.message : String(err)}`)
+      this.logger.error(`la limpieza de ${what} falló: ${err instanceof Error ? err.message : String(err)}`)
       return null
     }
   }

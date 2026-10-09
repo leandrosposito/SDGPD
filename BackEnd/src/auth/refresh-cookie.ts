@@ -1,9 +1,10 @@
 /**
  * Cookie del refresh token, rama web (ADR-BE-003 §Decisión 1, sub-decisión 3): HttpOnly, Secure,
- * SameSite=Strict, Path=/auth/refresh. Se lee del header Cookie a mano (sin dependencias).
+ * SameSite=Strict, Path=/api/auth/refresh (con el prefijo global, BE-1b). Se lee del header Cookie a
+ * mano (sin dependencias).
  */
 export const REFRESH_COOKIE_NAME = 'sdgpd_refresh'
-export const REFRESH_COOKIE_PATH = '/auth/refresh'
+export const REFRESH_COOKIE_PATH = '/api/auth/refresh'
 const MAX_AGE_SECONDS = 30 * 24 * 60 * 60
 
 const ATTRIBUTES = `Path=${REFRESH_COOKIE_PATH}; HttpOnly; Secure; SameSite=Strict`

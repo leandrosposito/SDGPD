@@ -15,6 +15,7 @@ export function testConfig(maxConnections = 2): AppConfig {
     DATABASE_URL: process.env.DATABASE_URL_TEST,
     DATABASE_CA_CERT: process.env.DATABASE_CA_CERT,
     JWT_SECRET: process.env.JWT_SECRET,
+    IDEMPOTENCY_HMAC_KEY: process.env.IDEMPOTENCY_HMAC_KEY,
   })
   return { ...config, database: { ...config.database, maxConnections } }
 }

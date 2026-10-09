@@ -25,6 +25,7 @@ import { cursorListQuerySchema, offsetListQuerySchema } from '@sdgpd/contracts'
 import { and, count, eq, type SQL } from 'drizzle-orm'
 import { z } from 'zod'
 import { AppModule } from '../../src/app.module.ts'
+import { configureApp } from '../../src/http/api-prefix.ts'
 import { AuthGuard } from '../../src/auth/auth.guard.ts'
 import { DEFAULT_ROUTE_ALLOWLIST, Public, RequirePermission, ROUTE_ALLOWLIST } from '../../src/auth/route-policy.ts'
 import { type Actor, bindActor, CurrentActor } from '../../src/context/actor.ts'
@@ -202,9 +203,10 @@ export async function createProbeApp(maxConnections = 2): Promise<ProbeApp> {
     .overrideProvider(AuthGuard)
     .useClass(TestActorGuard)
     .overrideProvider(ROUTE_ALLOWLIST)
-    .useValue({ ...DEFAULT_ROUTE_ALLOWLIST, public: [...DEFAULT_ROUTE_ALLOWLIST.public, 'POST /auth/probe'] })
+    .useValue({ ...DEFAULT_ROUTE_ALLOWLIST, public: [...DEFAULT_ROUTE_ALLOWLIST.public, 'POST /api/auth/probe'] })
     .compile()
   const app = moduleRef.createNestApplication<INestApplication<Server>>({ logger: false })
+  configureApp(app)
   await app.init()
   return { app, database: app.get(Database) }
 }

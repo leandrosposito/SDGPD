@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import type { InventoryItem } from '@/shared/types/inventory.types';
 import { useSessionStore } from '@/shared/state/useSessionStore';
+import { usePermission } from '@/shared/auth/usePermission';
 import { useCachedQuery, CACHE_STALE_TIME } from '@/shared/hooks/useCachedQuery';
 import { cachedQueryKey } from '@/shared/api/queryKeys';
 import { Tabs, type TabItem } from '@/shared/components/ui/Tabs';
@@ -66,9 +67,14 @@ import './InventoryPage.css';
 // service.
 // ============================================================
 
-const USER_ROLE: 'ADMIN' | 'EMPLOYEE' = 'ADMIN';
-
+// BE-1b: USER_ROLE (un 'ADMIN' fijo) desaparecio. Los botones se ocultan por
+// permiso de la sesion (usePermission): crear (Registrar Compra, Nuevo
+// Producto) y editar (Editar en el stock). Solo oculta: la autorizacion
+// la hace el servidor.
 export const InventoryPage: FC = () => {
+  const canCreate = usePermission('inventory', 'crear');
+  const canEdit = usePermission('inventory', 'editar');
+  const roleName = useSessionStore((s) => s.session?.role.name);
   const [activeTab, setActiveTab] = useState<string>('stock');
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [isPurchaseEntryModalOpen, setIsPurchaseEntryModalOpen] = useState(false);
@@ -187,7 +193,7 @@ export const InventoryPage: FC = () => {
           branchName={activeBranchName}
           onOpenLots={handleOpenLotsPanel}
           onEditProduct={handleOpenProductModal}
-          userRole={USER_ROLE}
+          canEdit={canEdit}
         />
       )
     },
@@ -269,12 +275,12 @@ export const InventoryPage: FC = () => {
         <div>
           <div className="page-header__title-group">
             <h2 className="page-header__title">Inventario y Compras</h2>
-            <Badge label={`Role: ${USER_ROLE}`} variant="accent" />
+            {roleName && <Badge label={`Rol: ${roleName}`} variant="accent" />}
           </div>
           <p className="page-header__subtitle">Control de stock, movimientos y reposicion</p>
         </div>
         <div className="inventory-page__header-actions" style={{ display: 'flex', gap: 'var(--space-3)' }}>
-          {USER_ROLE === 'ADMIN' && (
+          {canCreate && (
             <button
               className="client-modal-btn client-modal-btn--outline"
               onClick={() => setIsPurchaseEntryModalOpen(true)}
@@ -282,7 +288,7 @@ export const InventoryPage: FC = () => {
               Registrar Compra
             </button>
           )}
-          {USER_ROLE === 'ADMIN' && (
+          {canCreate && (
             <button
               className="client-modal-btn client-modal-btn--primary"
               onClick={() => handleOpenProductModal()}

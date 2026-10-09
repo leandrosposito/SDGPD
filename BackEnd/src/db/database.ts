@@ -126,6 +126,26 @@ export class Database implements OnModuleDestroy {
   }
 
   /**
+   * Borra los refresh tokens vencidos de TODAS las empresas (BE-1b). Igual que la limpieza de
+   * idempotencia: sin tenant, la política `expired_cleanup` (migración 0006) solo deja borrar los
+   * vencidos, el DELETE no lee filas, y un advisory lock propio por schema hace que corra en una sola
+   * instancia. Devuelve cuántos borró, o `null` si otra instancia tenía el lock.
+   */
+  async cleanupExpiredRefreshTokens(): Promise<number | null> {
+    return this.db.transaction(async tx => {
+      const lock = await tx.execute<{ locked: boolean; tenant: string | null }>(
+        sql`select pg_try_advisory_xact_lock(hashtext(current_schema() || ':refresh-tokens-cleanup')) as locked,
+                   nullif(current_setting('app.empresa_id', true), '') as tenant`,
+      )
+      const row = lock.rows[0]
+      if (row?.tenant !== null) throw new Error('la limpieza de refresh tokens no corre con un tenant fijado')
+      if (!row.locked) return null
+      const deleted = await tx.execute(sql`delete from ${schema.refreshTokens}`)
+      return deleted.rowCount ?? 0
+    })
+  }
+
+  /**
    * Login sin tenant (ADR-BE-002, sub-decisión 2): la función SECURITY DEFINER `auth_find_user`, que
    * devuelve solo id, empresa, hash y activo. Junto con `findRefreshToken`, es la ÚNICA lectura de
    * users o refresh_tokens sin tenant; cualquier otra consulta sin tenant ve cero filas (RLS).

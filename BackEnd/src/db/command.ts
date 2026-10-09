@@ -134,6 +134,16 @@ export class CommandTx {
     return revokeUserRefreshTokens(this.#tx, userId)
   }
 
+  /**
+   * Serializa, dentro de la empresa del actor, los comandos que comparten `scope`: un advisory lock de
+   * transacción (`pg_advisory_xact_lock`) que se suelta solo con el commit o el rollback. Sirve para
+   * invariantes que cruzan filas (la guarda de último admin, BE-1b), donde dos transacciones
+   * concurrentes podrían pasar cada una su chequeo y romperlo juntas (write skew).
+   */
+  async lockScope(scope: string): Promise<void> {
+    await this.#tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`${this.actor.empresaId}:${scope}`}))`)
+  }
+
   /** Próximo número de la serie, en esta transacción: `PED-000001` (ADR-BE-006 §Decisión 4). */
   nextNumber(series: DocumentSeries): Promise<string> {
     return nextNumber(this.#tx, this.actor.empresaId, series)
