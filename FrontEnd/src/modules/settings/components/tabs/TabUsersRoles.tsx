@@ -50,6 +50,9 @@ export const TabUsersRoles: FC = () => {
   const sessionUserId = useSessionStore((s) => s.session?.id);
   const sessionRoleId = useSessionStore((s) => s.session?.role.id);
   const refreshSession = useSessionStore((s) => s.refreshSession);
+  // Sin settings.ver el backend responde 403 a /api/users y /api/roles: no se
+  // consulta nada y se muestra un aviso (la autorizacion sigue en el servidor).
+  const canView = usePermission('settings', 'ver');
   const canCreate = usePermission('settings', 'crear');
   const canEdit = usePermission('settings', 'editar');
 
@@ -70,7 +73,7 @@ export const TabUsersRoles: FC = () => {
     setPageSize,
     refetch,
   } = usePagedQuery(getUsersPage, filters, {
-    enabled: Boolean(empresaId),
+    enabled: Boolean(empresaId) && canView,
     page: urlState.page,
     onPageChange: urlState.setPage,
   });
@@ -86,13 +89,13 @@ export const TabUsersRoles: FC = () => {
     refetch: refetchRoles,
   } = useCachedQuery('settings-roles', undefined, (signal) => getRoles(signal), {
     staleTime: CACHE_STALE_TIME.CATALOG,
-    enabled: Boolean(empresaId),
+    enabled: Boolean(empresaId) && canView,
   });
   const roles = rolesData ?? EMPTY_ROLES;
 
   const { data: branchesData } = useCachedQuery('settings-branches', undefined, (signal) => getBranches(signal), {
     staleTime: CACHE_STALE_TIME.CATALOG,
-    enabled: Boolean(empresaId) && (canCreate || canEdit),
+    enabled: Boolean(empresaId) && canView && (canCreate || canEdit),
   });
   const branches = branchesData ?? EMPTY_BRANCHES;
 
@@ -127,6 +130,15 @@ export const TabUsersRoles: FC = () => {
     { header: 'Rol', accessor: (u) => roleName(u.roleId) },
     { header: 'Estado', accessor: (u) => (u.active ? 'Activo' : 'Inactivo') },
   ];
+
+  if (!canView) {
+    return (
+      <>
+        <h3 className="settings-section-title">Usuarios y Roles</h3>
+        <p>No tenes permiso para ver usuarios y roles (hace falta settings.ver).</p>
+      </>
+    );
+  }
 
   return (
     <>
