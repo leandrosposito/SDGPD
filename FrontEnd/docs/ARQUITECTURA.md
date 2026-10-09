@@ -11,7 +11,7 @@ src/
 ├── modules/             9 módulos de negocio (ver abajo)
 ├── services/mock/       3 services que TODAVÍA no migraron a modules/<x>/api/
 ├── shared/
-│   ├── api/             httpClient, ApiError, queryClient/queryKeys + api/ de dominios transversales
+│   ├── api/             httpClient (+ httpClientCore), ApiError, queryClient/queryKeys + api/ de dominios transversales
 │   ├── components/ui/   15 componentes atómicos reutilizables
 │   ├── hooks/            8 hooks (usePagedQuery, useCachedQuery, etc.)
 │   ├── layouts/          5 layouts (AppShell, Header, Sidebar, BranchSelector, AlertsBell)
@@ -64,7 +64,7 @@ Se declaran en un único archivo: **`src/shared/routes/AppRoutes.tsx`** (no `App
 
 ## Capa `api/` — el patrón dto/mapper/service
 
-Donde existe (ver tabla arriba), son 3 archivos: `dto.ts` (forma de datos "del backend"), `mapper.ts` (dto↔dominio) y `<módulo>.service.ts` (llama a `httpClient`, con un `mock:` que resuelve contra `data/mock/`). El único dominio **transversal** (consumido por más de un módulo) es **productos**, y por eso NO vive dentro de ningún módulo: **`src/shared/api/products/`** (`dto.ts`, `mapper.ts`, `products.service.ts`, y desde 2026-09-30 `productUpdate.ts` — función pura `mergeProductUpdate` que arma el registro editado conservando los lotes, extraída para poder testearla con `node`, mismo criterio que `purchase-suggestions/filterSort.ts`). `shared/api/` también aloja: `httpClient.ts`/`ApiError.ts` (infraestructura de fetch mock), `queryClient.ts`/`queryKeys.ts` (TanStack Query), y 4 sub-dominios más chicos sin módulo propio (sin `dto.ts`/`mapper.ts`, solo un `.service.ts`): `alerts/`, `exports/`, `uploads/`, y `motivos/` (Tanda 9, ADR-010 sección 5 — catálogo de motivos de rechazo, hoy consumido solo por `logistics`, transversal por diseño para cuando otro módulo lo necesite).
+Donde existe (ver tabla arriba), son 3 archivos: `dto.ts` (forma de datos "del backend"), `mapper.ts` (dto↔dominio) y `<módulo>.service.ts` (llama a `httpClient`, con un `mock:` que resuelve contra `data/mock/`). El único dominio **transversal** (consumido por más de un módulo) es **productos**, y por eso NO vive dentro de ningún módulo: **`src/shared/api/products/`** (`dto.ts`, `mapper.ts`, `products.service.ts`, y desde 2026-09-30 `productUpdate.ts` — función pura `mergeProductUpdate` que arma el registro editado conservando los lotes, extraída para poder testearla con `node`, mismo criterio que `purchase-suggestions/filterSort.ts`). `shared/api/` también aloja: `httpClient.ts`/`ApiError.ts` (infraestructura de fetch mock; desde BE-0b, verificado 2026-10-09, la lógica de `httpClient.ts` vive en `httpClientCore.ts` — `createHttpClient`, sin `import.meta.env`, para correrla con `node` en `scripts/smoke/be-0b.smoke.mjs` — y `httpClient.ts` solo lee la configuración de Vite), `queryClient.ts`/`queryKeys.ts` (TanStack Query), y 4 sub-dominios más chicos sin módulo propio (sin `dto.ts`/`mapper.ts`, solo un `.service.ts`): `alerts/`, `exports/`, `uploads/`, y `motivos/` (Tanda 9, ADR-010 sección 5 — catálogo de motivos de rechazo, hoy consumido solo por `logistics`, transversal por diseño para cuando otro módulo lo necesite).
 
 ## Qué NO existe — no lo busques, no lo inventes
 

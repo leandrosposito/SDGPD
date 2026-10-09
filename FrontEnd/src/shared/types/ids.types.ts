@@ -11,6 +11,9 @@
 // lo unico que necesitaba de esta lista. ProductId queda pendiente
 // para cuando una tanda futura lo necesite.
 //
+// Formato aceptado: UUID (el del backend) o el prefijo legado del mock
+// (ver UUID_PATTERN mas abajo).
+//
 // Patron: interseccion con un campo fantasma (`__brand`), nunca existe
 // en runtime — el UNICO `as` aceptable del proyecto para estos tipos
 // es el que esta DENTRO de cada constructor `as<Tipo>Id`, justo
@@ -58,6 +61,18 @@ export type TripId = string & { readonly __brand: 'TripId' };
 export type StopId = string & { readonly __brand: 'StopId' };
 export type PodId = string & { readonly __brand: 'PodId' };
 
+// ADR-BE-004 (sub-decision 1, BE-0b): el backend genera UUID v7. Mientras
+// un modulo siga sobre el adaptador mock, sus ids legados tienen prefijo
+// (`ord-001`, `cli-001`...), asi que cada constructor acepta UUID O su
+// prefijo legado. El prefijo se elimina cuando el ultimo modulo este
+// conectado. Un UUID pasa el guard de cualquier tipo: la distincion entre
+// tipos de id la da el branded type del compilador, no el formato.
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function matchesIdFormat(legacyPrefix: RegExp, raw: string): boolean {
+  return UUID_PATTERN.test(raw) || legacyPrefix.test(raw);
+}
+
 const ORDER_ID_PATTERN = /^ord-/;
 const BRANCH_ID_PATTERN = /^branch-/;
 const ORDER_LINE_ID_PATTERN = /^oi-/;
@@ -72,7 +87,7 @@ const STOP_ID_PATTERN = /^stop-/;
 const POD_ID_PATTERN = /^pod-/;
 
 export function isOrderId(raw: string): raw is OrderId {
-  return ORDER_ID_PATTERN.test(raw);
+  return matchesIdFormat(ORDER_ID_PATTERN, raw);
 }
 
 export function asOrderId(raw: string): OrderId {
@@ -81,7 +96,7 @@ export function asOrderId(raw: string): OrderId {
 }
 
 export function isBranchId(raw: string): raw is BranchId {
-  return BRANCH_ID_PATTERN.test(raw);
+  return matchesIdFormat(BRANCH_ID_PATTERN, raw);
 }
 
 export function asBranchId(raw: string): BranchId {
@@ -90,7 +105,7 @@ export function asBranchId(raw: string): BranchId {
 }
 
 export function isOrderLineId(raw: string): raw is OrderLineId {
-  return ORDER_LINE_ID_PATTERN.test(raw);
+  return matchesIdFormat(ORDER_LINE_ID_PATTERN, raw);
 }
 
 export function asOrderLineId(raw: string): OrderLineId {
@@ -99,7 +114,7 @@ export function asOrderLineId(raw: string): OrderLineId {
 }
 
 export function isClientId(raw: string): raw is ClientId {
-  return CLIENT_ID_PATTERN.test(raw);
+  return matchesIdFormat(CLIENT_ID_PATTERN, raw);
 }
 
 export function asClientId(raw: string): ClientId {
@@ -108,7 +123,7 @@ export function asClientId(raw: string): ClientId {
 }
 
 export function isDeliveryId(raw: string): raw is DeliveryId {
-  return DELIVERY_ID_PATTERN.test(raw);
+  return matchesIdFormat(DELIVERY_ID_PATTERN, raw);
 }
 
 export function asDeliveryId(raw: string): DeliveryId {
@@ -117,7 +132,7 @@ export function asDeliveryId(raw: string): DeliveryId {
 }
 
 export function isDeliveryNoteId(raw: string): raw is DeliveryNoteId {
-  return DELIVERY_NOTE_ID_PATTERN.test(raw);
+  return matchesIdFormat(DELIVERY_NOTE_ID_PATTERN, raw);
 }
 
 export function asDeliveryNoteId(raw: string): DeliveryNoteId {
@@ -126,7 +141,7 @@ export function asDeliveryNoteId(raw: string): DeliveryNoteId {
 }
 
 export function isDeliveryHistoryEventId(raw: string): raw is DeliveryHistoryEventId {
-  return DELIVERY_HISTORY_EVENT_ID_PATTERN.test(raw);
+  return matchesIdFormat(DELIVERY_HISTORY_EVENT_ID_PATTERN, raw);
 }
 
 export function asDeliveryHistoryEventId(raw: string): DeliveryHistoryEventId {
@@ -135,7 +150,7 @@ export function asDeliveryHistoryEventId(raw: string): DeliveryHistoryEventId {
 }
 
 export function isVehicleId(raw: string): raw is VehicleId {
-  return VEHICLE_ID_PATTERN.test(raw);
+  return matchesIdFormat(VEHICLE_ID_PATTERN, raw);
 }
 
 export function asVehicleId(raw: string): VehicleId {
@@ -144,7 +159,7 @@ export function asVehicleId(raw: string): VehicleId {
 }
 
 export function isDriverId(raw: string): raw is DriverId {
-  return DRIVER_ID_PATTERN.test(raw);
+  return matchesIdFormat(DRIVER_ID_PATTERN, raw);
 }
 
 export function asDriverId(raw: string): DriverId {
@@ -153,7 +168,7 @@ export function asDriverId(raw: string): DriverId {
 }
 
 export function isTripId(raw: string): raw is TripId {
-  return TRIP_ID_PATTERN.test(raw);
+  return matchesIdFormat(TRIP_ID_PATTERN, raw);
 }
 
 export function asTripId(raw: string): TripId {
@@ -162,7 +177,7 @@ export function asTripId(raw: string): TripId {
 }
 
 export function isStopId(raw: string): raw is StopId {
-  return STOP_ID_PATTERN.test(raw);
+  return matchesIdFormat(STOP_ID_PATTERN, raw);
 }
 
 export function asStopId(raw: string): StopId {
@@ -171,7 +186,7 @@ export function asStopId(raw: string): StopId {
 }
 
 export function isPodId(raw: string): raw is PodId {
-  return POD_ID_PATTERN.test(raw);
+  return matchesIdFormat(POD_ID_PATTERN, raw);
 }
 
 export function asPodId(raw: string): PodId {

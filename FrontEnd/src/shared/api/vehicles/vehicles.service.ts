@@ -122,6 +122,7 @@ export async function createVehicle(
     method: 'POST',
     path: '/vehicles',
     body: { empresaId, idempotencyKey, ...input },
+    idempotencyKey,
     mock: () =>
       withIdempotency(idempotencyKey, () => {
         const patente = normalizePatente(input.patente);
@@ -151,6 +152,7 @@ export async function updateVehicle(
     method: 'PUT',
     path: `/vehicles/${vehicleId}`,
     body: { empresaId, idempotencyKey, ...input },
+    idempotencyKey,
     mock: () =>
       withIdempotency(idempotencyKey, () => {
         const existing = vehiclesStore.find((v) => v.id === vehicleId);
@@ -177,6 +179,7 @@ export async function toggleVehicleActivo(
     method: 'PUT',
     path: `/vehicles/${vehicleId}/toggle-activo`,
     body: { empresaId, idempotencyKey },
+    idempotencyKey,
     mock: () =>
       withIdempotency(idempotencyKey, () => {
         const existing = vehiclesStore.find((v) => v.id === vehicleId);
