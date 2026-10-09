@@ -35,14 +35,6 @@ export const PRESET_ORDER: readonly DateRangePreset[] = [
 
 type FixedPreset = 'today' | 'last7days' | 'thisMonth' | 'thisQuarter';
 
-// Re-exportado con el nombre historico (Fase 0.2 de la corrida completa,
-// delegado al helper unico de shared/utils/date.ts). Verificado en la
-// Tanda 22 (2026-10-09): ningun archivo lo importa desde aca — los
-// call-sites usan toLocalDateString de shared/utils/date.ts directo.
-// Este archivo lo usa adentro (computeDateRangeForPreset). El re-export
-// queda listado como resto en el reporte de la Tanda 22, sin borrar.
-export { toISODateString };
-
 // Rango [dateFrom, dateTo] de uno de los 4 presets fijos (no 'all', no
 // 'custom' — esos dos no tienen un rango calculado, ver defaultDateRangeValue).
 // dateTo es siempre HOY: el rango se abre hacia atras, nunca incluye

@@ -30,3 +30,7 @@
 ## Enmienda 2026-10-07
 
 Política de redondeo fijada: **half-up por línea**, total = suma de líneas; alícuota de IVA como atributo del producto; la función de cálculo vive en `packages/contracts` y el servidor calcula todos los importes — [ADR-BE-006](../../../BackEnd/docs/adr/ADR-BE-006-dinero-numeracion.md).
+
+## Enmienda 2026-10-09
+
+Money admite montos negativos (notas de crédito, egresos, saldos a favor); la no-negatividad es regla de cada formulario. El redondeo al centavo es simétrico: la mitad exacta se aleja del cero, para que un importe y su reverso se cancelen. La conversión desde la unidad principal desplaza la coma en base 10; nunca se multiplica por 100 en binario. `moneyFromNumber` es el único camino de conversión; `parseMoneyInput` valida y delega. (Implementado en `shared/utils/money.ts`, Tanda 23.)

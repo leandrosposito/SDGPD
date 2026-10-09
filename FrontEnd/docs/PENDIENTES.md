@@ -332,7 +332,22 @@ Registrado el 2026-10-09 (Tanda 22), como excepción del Gate 5 (`PROTOCOLO.md` 
   - `services/mock/purchaseOrders.service.ts:61` — `l.quantity * l.unitPrice`
 - **Disparador:** la conexión de cada módulo al backend (ADR-BE-006 §49-51). Cada módulo pasa sus importes a `Money`, y los totales vienen del servidor o de la función de `packages/contracts`.
 - **Decisión:** no se migran antes.
-- Relacionado (Tanda 22): `moneyFromNumber` (`money.ts`, un consumidor en `dashboardAggregates.service.ts:106`) convierte con `value * 100` y pierde la mitad exacta por error binario (`1.005` → 100 centavos, no 101). `parseMoneyInput` ya no pasa por ahí (corregido en la Tanda 22). `moneyFromNumber` no se tocó porque tiene consumidor de producción.
+
+### 22. Respuestas de `httpClient.request<T>` de viajes, entregas, vehículos y choferes tipan ids branded sin validarlos — Severidad: Media (hoy en mock), Alta al conectar
+
+Registrado el 2026-10-09 (Tanda 23; punto ciego G1 de la Tanda 22). Estos 4 services no tienen DTO ni mapper: el genérico de `httpClient.request<T>` declara el tipo de dominio (con `TripId`, `DeliveryId`, `VehicleId`, etc.) sobre un JSON que en modo `http` nadie valida. `clients`/`orders` sí construyen los ids con `as<Tipo>Id(dto.id)` en su mapper.
+
+- `modules/logistics/services/trips.service.ts`: 134, 176, 226, 322, 430, 470, 529, 639, 754, 778.
+- `modules/logistics/services/deliveries.service.ts`: 228, 296, 356, 425, 537, 702, 769, 788.
+- `shared/api/vehicles/vehicles.service.ts`: 57, 121, 151, 178, 200.
+- `shared/api/drivers/drivers.service.ts`: 48, 101, 121, 140, 161.
+- Mismo caso, fuera de la lista pedida: `modules/logistics/services/pod.service.ts:63` (`Pod | null`).
+- **Disparador:** la conexión de cada módulo al backend, con un DTO y un mapper que construya los ids con `as<Tipo>Id` (ADR-006, ADR-BE-004).
+- **Decisión:** no se hace antes.
+
+### 23. `'' as Trip['id']` en `TripDetailPanel.tsx:119` — Severidad: Baja (sin efecto: la consulta está deshabilitada sin viaje)
+
+Registrado el 2026-10-09 (Tanda 23, 23.2 no hecho). Centinela vacío casteado a `TripId` por tipo indexado, que la regla `no-restricted-syntax` de la Tanda 22 no ve. Para modelar "no hay id todavía" como `undefined` habría que cambiar `TripPositionQueryFilters.tripId` (el parámetro de `getTripPosition`), y eso es cambiar la firma de un service. La extensión de la regla al cast por tipo indexado quedó probada (marca exactamente `TripDetailPanel.tsx:119`) y revertida hasta que se decida el fix. Ver `REPORTE_2026-10-09_tandas23-24.md`.
 
 ## Reportados pero no reproducidos (verificados y descartados)
 
@@ -399,5 +414,7 @@ escáner físico normalmente no dispara dos `Enter` en un intervalo tan corto.
 | 19 | 5 líneas de pedido del seed con SKU inexistente; `createOrder` acepta SKUs desconocidos | **Cerrado** (Tandas 20/21; V17 en verde) | — |
 | 20 | SKUs/nombres huérfanos en `analytics.data`, `alerts.data`, `suppliers.data` | Vigente | Media / Baja |
 | 21 | `sumMoney`/`multiplyMoney`/`parseMoneyInput` sin consumidor de producción + 3 multiplicaciones de dinero en float | Vigente — se conecta con cada módulo (ADR-BE-006 §49-51) | Media |
+| 22 | `httpClient.request<T>` de viajes/entregas/vehículos/choferes tipan ids branded sin validar (sin DTO ni mapper) | Vigente — se resuelve al conectar cada módulo | Media / Alta al conectar |
+| 23 | `'' as Trip['id']` en `TripDetailPanel.tsx:119` (la regla de ESLint no ve el cast indexado) | Vigente — el fix pide cambiar la firma de `getTripPosition` | Baja |
 | — | `NewTransactionModal` formato de hora | No reproduce | — |
 | — | `OrderProductsSection` `await` faltante | No reproduce (resuelto o nunca existió así) | — |

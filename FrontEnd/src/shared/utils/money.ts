@@ -15,6 +15,14 @@ import type { Currency } from '@/shared/types/client.types';
 // usa), fuera de alcance de esta tanda — ver `moneyFromNumber` mas
 // abajo, que es el puente temporal para consumir esos campos desde el
 // tablero sin migrar el dominio entero.
+//
+// SIGNO Y REDONDEO (ADR-008, enmienda 2026-10-09, Tanda 23): `Money`
+// admite centavos negativos (notas de credito, egresos, saldos a
+// favor); que un importe no sea negativo es regla de cada schema de
+// formulario, no de este modulo. El redondeo al centavo es simetrico
+// (la mitad exacta se aleja del cero) y ocurre solo en money(). La
+// conversion desde la unidad principal desplaza la coma en base 10 y
+// pasa siempre por moneyFromNumber.
 // ============================================================
 
 export interface Money {
@@ -29,8 +37,13 @@ export class MoneyCurrencyMismatchError extends Error {
   }
 }
 
+// UNICO punto de redondeo de todo el modulo (ADR-008: "el redondeo
+// ocurre en un solo lugar"). Al centavo mas cercano; la mitad exacta se
+// aleja del cero (+100.5 -> 101, -100.5 -> -101), para que un importe
+// y su reverso se cancelen. Math.round solo no sirve: lleva -100.5 a
+// -100. El `+ 0` normaliza -0 a 0.
 export function money(centavos: number, moneda: Currency): Money {
-  return { centavos: Math.round(centavos), moneda };
+  return { centavos: Math.sign(centavos) * Math.round(Math.abs(centavos)) + 0, moneda };
 }
 
 // Suma dos Money de la MISMA moneda — nunca colapsa monedas distintas
@@ -42,52 +55,52 @@ export function sumMoney(a: Money, b: Money): Money {
   return money(a.centavos + b.centavos, a.moneda);
 }
 
-// Redondeo: al centavo mas cercano, mitad hacia arriba (Math.round) —
-// UNICO punto de redondeo de todo el modulo, documentado como pide
-// ADR-008 ("el redondeo ocurre en un solo lugar"). `factor` no tiene
-// por que ser entero (ej. una cantidad fraccionable o un porcentaje de
-// descuento) — el redondeo final siempre cae en centavos enteros.
+// `factor` no tiene por que ser entero (ej. una cantidad fraccionable o
+// un porcentaje de descuento) — el redondeo final lo hace money(), y
+// siempre cae en centavos enteros.
 export function multiplyMoney(m: Money, factor: number): Money {
   return money(m.centavos * factor, m.moneda);
 }
 
-// Puente temporal: convierte un `number` de un campo de dominio que
-// TODAVIA no migro a Money (ej. AgingBucketAggregate.totalOverdue) a
-// Money, para que el tablero pueda mostrarlo con el modulo nuevo sin
-// esperar la migracion completa del dominio. `value` se asume en la
-// unidad PRINCIPAL de la moneda (ej. 1234.5 = $1234,50), como son hoy
-// todos los campos monetarios `number` del proyecto.
+// Unidad principal -> centavos SIN redondear, desplazando la coma en
+// base 10 (notacion exponencial) en vez de multiplicar en binario:
+// 1.005 * 100 da 100.49999999999999 (redondea a 100, mal), mientras que
+// Number('1.005e2') da 100.5 (redondea a 101). Vale igual con signo
+// (-1.005 -> -100.5).
+function principalToUnroundedCentavos(value: number): number {
+  const [mantissa, exponent = '0'] = String(value).split('e');
+  return Number(`${mantissa}e${Number(exponent) + 2}`);
+}
+
+// UNICO camino de conversion desde la unidad principal. Puente temporal
+// para un `number` de un campo de dominio que TODAVIA no migro a Money
+// (ej. AgingBucketAggregate.totalOverdue): el tablero lo muestra con el
+// modulo nuevo sin esperar la migracion completa del dominio. `value`
+// se asume en la unidad PRINCIPAL de la moneda (ej. 1234.5 = $1234,50),
+// como son hoy todos los campos monetarios `number` del proyecto. Lanza
+// si `value` no es finito: un NaN/Infinity nunca llega a centavos.
 export function moneyFromNumber(value: number, moneda: Currency): Money {
-  return money(value * 100, moneda);
+  if (!Number.isFinite(value)) {
+    throw new Error(`Monto invalido: ${value} no es un numero finito.`);
+  }
+  return money(principalToUnroundedCentavos(value), moneda);
 }
 
 export function formatMoney(m: Money): string {
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: m.moneda }).format(m.centavos / 100);
 }
 
-// Unidad principal -> centavos SIN redondear, desplazando la coma en
-// base 10 (notacion exponencial) en vez de multiplicar en binario:
-// 1.005 * 100 da 100.49999999999999 (Math.round -> 100, mal), mientras
-// que Number('1.005e2') da 100.5 (Math.round -> 101, half-up). El
-// redondeo sigue ocurriendo solo en money(). Tanda 22: lo usa
-// parseMoneyInput; moneyFromNumber conserva `value * 100` (tiene un
-// consumidor en dashboard, ver el reporte de la Tanda 22).
-function principalToUnroundedCentavos(value: number): number {
-  const [mantissa, exponent = '0'] = String(value).split('e');
-  return Number(`${mantissa}e${Number(exponent) + 2}`);
-}
-
 // Parseo desde un input de formulario (string del DOM) — coercion +
 // validacion explicita, mismo criterio que los 2 schemas Zod ya
-// migrados (ProductFormModal/PurchaseOrderFormModal, AUDIT_9). Lanza
-// si el string no es un numero valido (vacio, solo espacios, no
-// numerico, o no finito como "Infinity"), nunca devuelve NaN en
-// silencio. El valor se lee en la unidad principal, igual que
-// moneyFromNumber, y se redondea half-up al centavo.
+// migrados (ProductFormModal/PurchaseOrderFormModal, AUDIT_9). Valida
+// el STRING (vacio, solo espacios, no numerico o no finito como
+// "Infinity" lanzan; nunca devuelve NaN en silencio) y delega la
+// conversion en moneyFromNumber. Acepta negativos: la no-negatividad la
+// pone el schema de cada formulario.
 export function parseMoneyInput(raw: string, moneda: Currency): Money {
   const parsed = Number(raw);
   if (raw.trim() === '' || !Number.isFinite(parsed)) {
     throw new Error(`Monto invalido: "${raw}" no es un numero.`);
   }
-  return money(principalToUnroundedCentavos(parsed), moneda);
+  return moneyFromNumber(parsed, moneda);
 }
