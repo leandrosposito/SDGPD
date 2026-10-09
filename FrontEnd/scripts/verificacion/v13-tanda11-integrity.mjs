@@ -93,8 +93,8 @@ for (const o of ORDERS_MOCK_DATA) {
 console.log('');
 if (failures > 0) {
   console.log(`${failures} verificacion(es) de integridad fallaron.`);
-  process.exit(1);
+  process.exitCode = 1;
 } else {
   console.log('Toda la integridad verificada paso.');
-  process.exit(0);
+  process.exitCode = 0;
 }

@@ -31,4 +31,4 @@ Los ids pasan a ser **UUID v7 generados por el servidor**; los branded types se 
 
 ## Enmienda 2026-10-09
 
-Cada ID branded expone `as<Tipo>Id` (lanza; para valores de origen confiable) e `is<Tipo>Id` (type guard; obligatorio para todo valor que entra desde afuera: URL, storage, respuesta sin validar). `as <Tipo>Id` fuera de `ids.types.ts` está prohibido y lo hace cumplir ESLint (`no-restricted-syntax`, `FrontEnd/eslint.config.js`, Tanda 22).
+Cada ID branded expone `as<Tipo>Id` (lanza; para valores de origen confiable) e `is<Tipo>Id` (type guard; obligatorio para todo valor que entra desde afuera: URL, storage, respuesta sin validar). `as <Tipo>Id` fuera de `ids.types.ts` está prohibido y lo hace cumplir ESLint (`no-restricted-syntax`, `FrontEnd/eslint.config.js`, Tanda 22). La prohibición incluye la forma indexada, `as <Entidad>['id']` (clave `id` o terminada en `Id`, directa o dentro de una unión), que la regla marca desde la Tanda 25.

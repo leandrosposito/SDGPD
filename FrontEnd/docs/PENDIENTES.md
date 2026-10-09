@@ -345,9 +345,17 @@ Registrado el 2026-10-09 (Tanda 23; punto ciego G1 de la Tanda 22). Estos 4 serv
 - **Disparador:** la conexión de cada módulo al backend, con un DTO y un mapper que construya los ids con `as<Tipo>Id` (ADR-006, ADR-BE-004).
 - **Decisión:** no se hace antes.
 
-### 23. `'' as Trip['id']` en `TripDetailPanel.tsx:119` — Severidad: Baja (sin efecto: la consulta está deshabilitada sin viaje)
+### 23. `'' as Trip['id']` en `TripDetailPanel.tsx:119` — CERRADO (Tanda 25, 2026-10-09) — Severidad original: Baja
+
+**Cierre (Tanda 25):** opción (b), sin cambiar ninguna firma. La consulta de posición y el bloque "Posición actual" pasaron al subcomponente `TripLivePosition` (mismo archivo), que recibe `tripId: TripId` obligatorio y solo se monta con el panel abierto y el viaje `'EnTransito'` (la misma condición que antes era el `enabled`). El centinela no existe más. La query key y el intervalo (`TRIP_LIVE_INTERVAL_MS`) son idénticos. `getTripPosition`/`TripPositionQueryFilters` no se tocaron. La regla `no-restricted-syntax` ahora también marca el cast por tipo indexado (`x as Trip['id']`, clave `id` o terminada en `Id`, directo y en unión). Ver `REPORTE_2026-10-09_tanda25.md`.
+
+Texto original:
 
 Registrado el 2026-10-09 (Tanda 23, 23.2 no hecho). Centinela vacío casteado a `TripId` por tipo indexado, que la regla `no-restricted-syntax` de la Tanda 22 no ve. Para modelar "no hay id todavía" como `undefined` habría que cambiar `TripPositionQueryFilters.tripId` (el parámetro de `getTripPosition`), y eso es cambiar la firma de un service. La extensión de la regla al cast por tipo indexado quedó probada (marca exactamente `TripDetailPanel.tsx:119`) y revertida hasta que se decida el fix. Ver `REPORTE_2026-10-09_tandas23-24.md`.
+
+### 24. Rango de un preset fijo memoizado entre días — Severidad: Baja
+
+Registrado el 2026-10-09 (Tanda 25). El rango de un preset fijo se calcula al renderizar y queda memoizado: una pantalla abierta de un día para otro (p. ej. Logística con 'Hoy') sigue filtrando por la fecha del día anterior hasta recargar o tocar un filtro. Preexistente a la Tanda 24. Sin disparador definido; decisión pendiente.
 
 ## Reportados pero no reproducidos (verificados y descartados)
 
@@ -415,6 +423,7 @@ escáner físico normalmente no dispara dos `Enter` en un intervalo tan corto.
 | 20 | SKUs/nombres huérfanos en `analytics.data`, `alerts.data`, `suppliers.data` | Vigente | Media / Baja |
 | 21 | `sumMoney`/`multiplyMoney`/`parseMoneyInput` sin consumidor de producción + 3 multiplicaciones de dinero en float | Vigente — se conecta con cada módulo (ADR-BE-006 §49-51) | Media |
 | 22 | `httpClient.request<T>` de viajes/entregas/vehículos/choferes tipan ids branded sin validar (sin DTO ni mapper) | Vigente — se resuelve al conectar cada módulo | Media / Alta al conectar |
-| 23 | `'' as Trip['id']` en `TripDetailPanel.tsx:119` (la regla de ESLint no ve el cast indexado) | Vigente — el fix pide cambiar la firma de `getTripPosition` | Baja |
+| 23 | `'' as Trip['id']` en `TripDetailPanel.tsx:119` (la regla de ESLint no veía el cast indexado) | **Cerrado** (Tanda 25: subcomponente `TripLivePosition` + regla extendida) | — |
+| 24 | Rango de preset fijo memoizado: una pantalla abierta de un día para otro filtra por el día anterior | Vigente — sin disparador, decisión pendiente | Baja |
 | — | `NewTransactionModal` formato de hora | No reproduce | — |
 | — | `OrderProductsSection` `await` faltante | No reproduce (resuelto o nunca existió así) | — |

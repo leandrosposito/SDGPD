@@ -11,7 +11,7 @@ import type { Vehicle } from '@/shared/types/vehicle.types';
 import type { Driver } from '@/shared/types/driver.types';
 import type { Delivery } from '@/shared/types/logistics.types';
 import type { Pod } from '@/shared/types/pod.types';
-import type { DeliveryId, StopId } from '@/shared/types/ids.types';
+import type { DeliveryId, StopId, TripId } from '@/shared/types/ids.types';
 import {
   getTripById,
   transitionTrip,
@@ -59,6 +59,35 @@ function formatPosition(position: TripPosition | undefined): string {
   const hora = new Date(position.timestampDispositivo).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
   return `lat ${position.lat.toFixed(5)}, lng ${position.lng.toFixed(5)} — ${hora}`;
 }
+
+// Posicion en vivo de un viaje En transito (Tanda 25, PENDIENTES #23).
+// Se monta solo con el panel abierto y el viaje 'EnTransito' (la misma
+// condicion que antes era el `enabled` de la consulta), asi que siempre
+// tiene un tripId real: no hace falta un centinela para "todavia no hay
+// viaje". Query key e intervalo identicos a los de antes: mismo
+// fetchPage (getTripPosition), mismos filtros { empresaId, tripId },
+// mismo TRIP_LIVE_INTERVAL_MS. Al desmontarse (panel cerrado o el viaje
+// sale de 'EnTransito') TanStack Query deja de refetchear.
+interface TripLivePositionProps {
+  empresaId: string;
+  tripId: TripId;
+  fallback: TripPosition | undefined;
+}
+
+const TripLivePosition: FC<TripLivePositionProps> = ({ empresaId, tripId, fallback }) => {
+  const positionFilters: TripPositionQueryFilters = useMemo(() => ({ empresaId, tripId }), [empresaId, tripId]);
+  const { items: positionItems } = useLiveQuery(getTripPosition, positionFilters, {
+    intervalMs: TRIP_LIVE_INTERVAL_MS,
+  });
+  const livePosition = positionItems[0] as TripPosition | undefined;
+
+  return (
+    <div className="trip-detail__meta-field trip-detail__meta-field--full">
+      <span className="trip-detail__meta-label">Posición actual (sin mapa)</span>
+      <span className="trip-detail__meta-value">{formatPosition(livePosition ?? fallback)}</span>
+    </div>
+  );
+};
 
 interface TripDetailPanelProps {
   trip: Trip | null;
@@ -115,13 +144,6 @@ export const TripDetailPanel: FC<TripDetailPanelProps> = ({ trip, isOpen, onClos
     { enabled: isOpen && Boolean(localTrip) && Boolean(empresaId), staleTime: CACHE_STALE_TIME.OPERATIONAL }
   );
   const podsByDeliveryId = podsData ?? new Map<string, Pod | null>();
-
-  const positionFilters: TripPositionQueryFilters = useMemo(() => ({ empresaId, tripId: localTrip?.id ?? ('' as Trip['id']) }), [empresaId, localTrip?.id]);
-  const { items: positionItems } = useLiveQuery(getTripPosition, positionFilters, {
-    enabled: isOpen && localTrip?.estado === 'EnTransito' && Boolean(localTrip),
-    intervalMs: TRIP_LIVE_INTERVAL_MS,
-  });
-  const livePosition = positionItems[0] as TripPosition | undefined;
 
   const [podTarget, setPodTarget] = useState<{ deliveryId: DeliveryId; stopId: StopId } | null>(null);
   const [noEntregaTarget, setNoEntregaTarget] = useState<{ stopId: StopId; label: string } | null>(null);
@@ -215,11 +237,8 @@ export const TripDetailPanel: FC<TripDetailPanelProps> = ({ trip, isOpen, onClos
               {localTrip.sobrecargado && <Badge label="Sobrecargado" variant="warning" />}
             </span>
           </div>
-          {localTrip.estado === 'EnTransito' && (
-            <div className="trip-detail__meta-field trip-detail__meta-field--full">
-              <span className="trip-detail__meta-label">Posición actual (sin mapa)</span>
-              <span className="trip-detail__meta-value">{formatPosition(livePosition ?? localTrip.posicionActual)}</span>
-            </div>
+          {isOpen && localTrip.estado === 'EnTransito' && (
+            <TripLivePosition empresaId={empresaId} tripId={localTrip.id} fallback={localTrip.posicionActual} />
           )}
         </div>
 
