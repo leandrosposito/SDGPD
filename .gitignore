@@ -21,3 +21,6 @@ packages/*/dist/
 # Documentación pesada — solo se leen los extractos .md/.txt derivados
 Documentacion/**/*.docx
 Documentacion/**/*.pdf
+
+# Salida de Graphify (herramienta externa de análisis, piloto 2026-10-09) — se regenera, no se versiona
+graphify-out/
