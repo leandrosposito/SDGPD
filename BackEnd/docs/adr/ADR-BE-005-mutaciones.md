@@ -22,6 +22,7 @@
 
 ### Idempotencia
 - Por header **`Idempotency-Key`, obligatoria en todo POST**, **con una sola excepción: `/auth/*`** (resolución de la objeción 1). Login y logout se pueden repetir sin efecto, y refresh ya tiene rotación y detección de reuso (ADR-BE-003).
+- **En PUT, PATCH y DELETE la clave es opcional y, si viene, se honra** con las mismas reglas que en POST (resolución de la objeción 3, 2026-10-09).
 - **Alcance:** empresa + usuario + operación + clave, con **hash del payload** y **TTL de 48 h**.
 
 | Situación | Respuesta |
@@ -69,8 +70,8 @@ Las dos cosas:
 ## Consecuencias para el frontend (al conectar cada módulo)
 
 - **`httpClient`:**
-  - Manda `Idempotency-Key` como header en los POST.
-  - Deja de reintentar los PUT/PATCH/DELETE, y los POST que no tengan clave.
+  - Manda `Idempotency-Key` como header en los POST, y en los PUT/PATCH/DELETE que tengan clave.
+  - Reintenta solo GET y mutaciones con clave (cualquier método); no reintenta ninguna mutación sin clave. *(Corregido el 2026-10-09, resolución de la objeción 3: el texto original decía "deja de reintentar los PUT/PATCH/DELETE", contra §Decisión y contra lo que BE-0b implementó.)*
   - Las mutaciones que hoy mandan `idempotencyKey` en el body dejan de hacerlo.
   - `shared/utils/idempotency.ts` (el `Map`) desaparece del adaptador `http`; queda solo para el mock.
 - **Generación de la clave al abrir la acción** en los 6 lugares que hoy la generan al enviar: `TripDetailPanel.tsx:135`, `LogisticsPage.tsx:148`, `DriversPage.tsx:67,75` y `VehiclesPage.tsx:68,80`. Mismo patrón que `RegistrarEntregaModal.tsx:72`.
@@ -122,3 +123,7 @@ Las dos cosas:
 
    **Resolución (2026-10-08):** **un solo camino a `FINALIZADO`, confirmado.** El formulario de POD del chofer pasa a incluir las líneas, con la **cantidad despachada precargada como entregada**, así que el chofer solo toca las líneas con novedad (lo rechazado o lo que no entró). La precarga es posible porque la entrega tiene líneas con cantidad despachada desde que se crea (ADR-BE-008, resolución de su objeción 1). Es un **cambio de UI que se hace al conectar logística (BE-7)**, anotado en el plan de tandas del README.
 3. **Reintento de PUT con clave (objeción nueva, BE-0b, 2026-10-09; abierta, resolver antes de BE-2).** El §Decisión dice "`httpClient` reintenta solo GET y mutaciones con clave", y BE-0b lo implementó así (POST/PUT/PATCH/DELETE con `idempotencyKey` se reintentan). Pero las consecuencias para el frontend dicen "deja de reintentar los PUT/PATCH/DELETE", y el backend de BE-0b solo deduplica por clave los POST. Hoy no hay daño, porque el frontend sigue sobre el mock y su `withIdempotency` deduplica también los PUT. Al conectar un módulo, en cambio, un PUT reintentado tras un timeout cuya primera ejecución sí se confirmó no duplica el efecto (la versión o la máquina de estados lo frenan), pero le devuelve al usuario un 409 o un 422 espurio. Hay dos salidas: (a) el backend honra `Idempotency-Key` también en PUT/PATCH/DELETE cuando viene, o (b) el frontend no reintenta las mutaciones que no son POST, como dicen las consecuencias.
+
+   **Resolución (2026-10-09, sesión BE-1a, Paso 0): salida (a).** El backend honra `Idempotency-Key` también en PUT, PATCH y DELETE cuando viene. En POST sigue siendo obligatoria; en el resto es opcional. Con clave rigen las mismas reglas que en POST: replay de la respuesta original (con `Idempotent-Replayed: true`) y 422 `idempotency-key-reused` con otro payload; sin clave, la mutación se ejecuta como hasta ahora (comando simple, con su 409 de versión). Una clave que no es UUID es 400 `idempotency-key-required` en cualquier método. El frontend no cambia: ya reintenta solo GET y mutaciones con clave. Se corrigió el texto de las consecuencias para el frontend. Implementado en `CommandInterceptor`; probado en `test/db/idempotency-mutations.test.ts`.
+
+   **Sub-decisión tomada al implementarla (sin consulta, PROTOCOLO regla 2.9):** el hash del payload cubre el body **y los parámetros de la ruta** (`{ params, body }`, canonicalizado), en todos los métodos. La operación es la plantilla de la ruta (sub-decisión 1: `PUT /users/:id`), así que sin los parámetros la misma clave y el mismo body sobre otro `:id` harían replay de la respuesta del primero. Con los parámetros en el hash, eso es un 422. El mismo agujero existía en BE-0b para los POST con `:id` (`POST /orders/:id/cancel`), y queda cerrado igual. Cambia lo que se hashea respecto de la sub-decisión 2, no cómo.

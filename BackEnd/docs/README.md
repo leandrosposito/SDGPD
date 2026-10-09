@@ -147,8 +147,8 @@ Todas resueltas el **2026-10-08**. El texto original de cada objeción se conser
 | BE-002, objeción 3 | El alcance EMPRESA gana "listas de precios", pero la enumeración de alcances de `PROTOCOLO.md` §1 no la incluye | `PROTOCOLO.md` §1 la incluye |
 | BE-004, objeción 3 | La consigna de cierre ubica `allowedTransitions` en el §1 de ADR-010 y está en el §3 | Verificado: la enmienda quedó contra §3 (`ADR-010-modelo-logistico.md:224`). Cerrada sin cambios |
 
-**Objeción nueva de BE-0b (2026-10-09), abierta: resolver antes de BE-2:**
+**Objeción nueva de BE-0b (2026-10-09), resuelta en el Paso 0 de BE-1a (2026-10-09):**
 
 | ADR | Objeción | Estado |
 |---|---|---|
-| BE-005, objeción 3 | `httpClient` reintenta PUT/PATCH/DELETE con clave (§Decisión y consigna de BE-0b), pero las consecuencias para el frontend dicen que deja de reintentarlos, y el backend solo deduplica por clave los POST. Conectado, un PUT reintentado tras un timeout no duplica el efecto, pero puede devolver un 409 o un 422 espurio | Abierta. Dos salidas: el backend honra la clave también en PUT/PATCH/DELETE, o el frontend no reintenta mutaciones que no son POST |
+| BE-005, objeción 3 | `httpClient` reintenta PUT/PATCH/DELETE con clave (§Decisión y consigna de BE-0b), pero las consecuencias para el frontend dicen que deja de reintentarlos, y el backend solo deduplica por clave los POST. Conectado, un PUT reintentado tras un timeout no duplica el efecto, pero puede devolver un 409 o un 422 espurio | **Resuelta, salida (a):** el backend honra `Idempotency-Key` también en PUT/PATCH/DELETE cuando viene (en POST sigue obligatoria), con las mismas reglas; el hash cubre body y parámetros de la ruta. El frontend no cambia. Corregidas las consecuencias para el frontend de ADR-BE-005 |

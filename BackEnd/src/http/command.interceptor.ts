@@ -24,6 +24,7 @@ type CommandRequest = {
   method?: string
   headers: Record<string, string | string[] | undefined>
   body?: unknown
+  params?: Record<string, string>
   route?: { path?: unknown }
 }
 
@@ -40,7 +41,9 @@ function routeTemplate(request: CommandRequest): string {
  * Toda mutación (POST, PUT, PATCH, DELETE) fuera de `/auth/*` es un comando: una transacción con el
  * tenant del actor (ADR-BE-005 › Transacciones), cuyo CommandTx recibe el handler con `@Command()`.
  * Todo POST, además, es idempotente: exige `Idempotency-Key` (UUID) y registra la clave en la misma
- * transacción. Sin actor, 401; sin clave válida, 400 `idempotency-key-required`.
+ * transacción. PUT, PATCH y DELETE honran la clave cuando viene (ADR-BE-005, objeción 3): replay de
+ * la respuesta original, 422 con otro payload; sin clave se ejecutan como comando simple. Sin actor,
+ * 401; con una clave que no es UUID (o sin clave en un POST), 400 `idempotency-key-required`.
  *
  * El status guardado es el que fijó la ruta (Nest lo aplica antes de los interceptores) y en el
  * replay Nest vuelve a aplicar el de la ruta: coinciden mientras la ruta no cambie su @HttpCode.
@@ -69,12 +72,19 @@ export class CommandInterceptor implements NestInterceptor {
       }
     }
 
-    if (method !== 'POST') return from(this.database.command(actor, runHandler))
-
+    // POST: la clave es obligatoria. PUT/PATCH/DELETE: opcional; si viene, mismas reglas que en POST
+    // (ADR-BE-005, resolución de la objeción 3).
     const header = request.headers[IDEMPOTENCY_KEY_HEADER]
+    if (method !== 'POST' && header === undefined) return from(this.database.command(actor, runHandler))
     const key = idSchema.safeParse(header)
     if (!key.success) throw new IdempotencyKeyRequiredError()
-    const idempotency = { operation: `${method} ${route}`, key: key.data, payloadHash: payloadHash(request.body) }
+    // El hash cubre el body y los parámetros de la ruta: la operación es la plantilla (`PUT /users/:id`),
+    // así que sin los parámetros la misma clave sobre otro :id haría replay de una respuesta ajena.
+    const idempotency = {
+      operation: `${method} ${route}`,
+      key: key.data,
+      payloadHash: payloadHash({ params: request.params ?? {}, body: request.body ?? null }),
+    }
     return from(
       this.database.idempotentCommand(actor, idempotency, async tx => {
         const body = await runHandler(tx)
