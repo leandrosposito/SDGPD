@@ -102,6 +102,7 @@ export async function createDriver(empresaId: string, idempotencyKey: string, in
     method: 'POST',
     path: '/drivers',
     body: { empresaId, idempotencyKey, ...input },
+    idempotencyKey,
     mock: () =>
       withIdempotency(idempotencyKey, () => {
         const driver: Driver = { id: asDriverId(`drv-${Date.now()}`), nombre: input.nombre, licencia: input.licencia, telefono: input.telefono, activo: true };
@@ -121,6 +122,7 @@ export async function updateDriver(
     method: 'PUT',
     path: `/drivers/${driverId}`,
     body: { empresaId, idempotencyKey, ...input },
+    idempotencyKey,
     mock: () =>
       withIdempotency(idempotencyKey, () => {
         const existing = driversStore.find((d) => d.id === driverId);
@@ -139,6 +141,7 @@ export async function toggleDriverActivo(empresaId: string, idempotencyKey: stri
     method: 'PUT',
     path: `/drivers/${driverId}/toggle-activo`,
     body: { empresaId, idempotencyKey },
+    idempotencyKey,
     mock: () =>
       withIdempotency(idempotencyKey, () => {
         const existing = driversStore.find((d) => d.id === driverId);

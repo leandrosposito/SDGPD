@@ -357,6 +357,7 @@ export async function transitionDelivery(
     method: 'PUT',
     path: `/deliveries/${deliveryId}/transition`,
     body: { empresaId, idempotencyKey, hasta, quien },
+    idempotencyKey,
     mock: () =>
       withIdempotency(idempotencyKey, () => {
         const delivery = deliveriesStore.find((d) => d.id === deliveryId);
@@ -425,6 +426,7 @@ export async function reprogramDelivery(
     method: 'PUT',
     path: `/deliveries/${deliveryId}/reprogram`,
     body: { empresaId, idempotencyKey, ...input },
+    idempotencyKey,
     mock: async () =>
       withIdempotency(idempotencyKey, async () => {
         // Tanda 15 (hallazgo MEDIO, mismo patron corregido en
@@ -536,6 +538,7 @@ export async function registrarEntrega(
     method: 'POST',
     path: `/deliveries/${deliveryId}/notes`,
     body: { empresaId, idempotencyKey, lines, evidenciaIds, creadoPor },
+    idempotencyKey,
     mock: async () =>
       withIdempotency(idempotencyKey, async () => {
         // Tanda 15 (hallazgo MEDIO, mismo patron corregido en
@@ -700,6 +703,7 @@ export async function createDelivery(
     method: 'POST',
     path: '/deliveries',
     body: { empresaId, idempotencyKey, orderId, ...input },
+    idempotencyKey,
     mock: async () =>
       withIdempotency(idempotencyKey, async () => {
         // Tanda 15 (hallazgo MEDIO, mismo patron corregido en

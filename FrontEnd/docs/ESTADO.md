@@ -1,12 +1,32 @@
 # Estado — SDGPD Frontend
 
-**Corresponde a: 2026-10-08, rama `lean` (hasta `sesion-be0a-2026-10-08` incluida — backend BE-0a, ver `docs/historial/reportes/REPORTE_2026-10-08.md`; frontend hasta `sesion-seed-skus-2026-10-07`, Tandas 17-21 — ver `docs/historial/reportes/REPORTE_2026-10-07.md` y `REPORTE_2026-10-07b.md`).** Este es el único snapshot vigente del proyecto — reemplaza a `docs/historial/auditorias/AUDIT_00_RESUMEN.md` (que quedó fijado al 2026-09-06 y ya no describe el estado real) como lectura de entrada. **Reescribilo al cerrar cada sesión** — no alcanza con dejar el `REPORTE_<fecha>.md`, ese documenta lo que se hizo, este documenta dónde está el proyecto AHORA.
+**Corresponde a: 2026-10-09, rama `lean` (hasta `sesion-be0b-2026-10-08` incluida — backend BE-0b, ver `docs/historial/reportes/REPORTE_2026-10-09.md`, y BE-0a, ver `REPORTE_2026-10-08.md`; frontend hasta `sesion-seed-skus-2026-10-07`, Tandas 17-21 — ver `docs/historial/reportes/REPORTE_2026-10-07.md` y `REPORTE_2026-10-07b.md`).** Este es el único snapshot vigente del proyecto — reemplaza a `docs/historial/auditorias/AUDIT_00_RESUMEN.md` (que quedó fijado al 2026-09-06 y ya no describe el estado real) como lectura de entrada. **Reescribilo al cerrar cada sesión** — no alcanza con dejar el `REPORTE_<fecha>.md`, ese documenta lo que se hizo, este documenta dónde está el proyecto AHORA.
 
 ## Tandas — todas cerradas hasta acá (verificado contra `git log --oneline lean` + la sesión en curso)
 
 Tanda 0 (contención de errores) → Tanda 1 (capa `api/`, piloto `suppliers`) → Tanda 2 (cache TanStack Query) → Tanda 2.5 (`useCachedQuery`, `httpClient` unificado) → Tandas 3a-3g (migración de `orders`, `cash`, `settings`, `clients`, `inventory` completo incluida Reposición) → Tanda 4 (contexto de sucursal + estado en URL) → Tanda 5 (IDs tipados) → Tanda 6 (exportación server-side) → Tanda 7 (tablero/analítica) → Tanda 8 (entregas) → Tanda B/C1/C2 (funciones huérfanas + export en el resto de los listados) → ADR-009 (alcance del dashboard) → barrido de `empresaId` en los 17 services → reorganización física de la documentación (`historial/`, `negocio/`, `_archivo/`) → ADR-010/ADR-011 Aceptados (con correcciones 2026-09-09) + Tanda 9, modelo logístico base (ver `docs/historial/verificaciones/VERIFICACION_TANDA_9.md`) → ADR-012 Aceptado + Tanda 10A, code-splitting por ruta (ver `docs/historial/verificaciones/VERIFICACION_TANDA_10A.md`) → Tanda 10B, operación logística (vehículos, choferes, viajes, POD) sobre ADR-011 (ver `docs/historial/verificaciones/VERIFICACION_TANDA_10B.md`) → ADR-013/ADR-014 Aceptados + Tanda 11, ajustes de logística y pedidos (ver `docs/historial/verificaciones/VERIFICACION_TANDA_11.md`) → Tanda 12, ajustes de pedidos/inventario/clientes/proveedores (ver `docs/historial/verificaciones/VERIFICACION_TANDA_12.md`) → Tanda 13, hallazgo ALTO en `markStopNoVisitada` + trazabilidad de `ReprogramacionEvent` (enmienda ADR-013) (ver `docs/historial/verificaciones/VERIFICACION_TANDA_13.md`) → **Tandas 14/15/16: productos `inactive` excluidos de pedidos/OC/reposición, precondiciones de idempotencia movidas adentro de `withIdempotency` (hallazgo MEDIO), y los 10 campos fantasma restantes de `CreateClientModal` conectados (`PENDIENTES.md` ítem 15, cerrado)** (ver `docs/historial/reportes/REPORTE_2026-09-11_tanda14-16.md` y `docs/historial/verificaciones/VERIFICACION_TANDA_{14,15,16}.md`) → **sesión avance-2026-09-30: checklist unificado, lotes conservados al editar un producto, join por `Map` en Reposición, auditoría IAM/notificaciones** (ver `docs/historial/reportes/REPORTE_2026-09-30.md`) → **Tandas 17/18/19 (2026-10-07): clientes dados de baja fuera del alta de pedidos (ADR-015), estado Activo/Inactivo en el Directorio, ADR-016 sobre la deuda de `fetchProducts`** (ver `docs/historial/reportes/REPORTE_2026-10-07.md`) → **Tandas 20/21 (2026-10-07b): SKUs huérfanos del seed de pedidos corregidos, `createOrder` rechaza SKUs inexistentes (`product-not-found`, enmienda ADR-015)** (ver `docs/historial/reportes/REPORTE_2026-10-07b.md`).
 
 **No hay ninguna tanda "a medias"**: todo lo de arriba tiene commit real, mergeado a `lean`. Lo que sigue abajo no son tandas sin cerrar, son hallazgos que esas tandas no atacaron (fuera de su alcance declarado) o verificación en navegador que nunca se corrió.
+
+## Backend — BE-0b hecha (2026-10-09, `sesion-be0b-2026-10-08`)
+
+La infraestructura de mutaciones que usan todos los módulos, más su arrastre en el frontend. Sigue sin endpoints de negocio y sin autenticación (BE-1). El detalle está en `docs/historial/reportes/REPORTE_2026-10-09.md`, la estructura en `BackEnd/docs/ARQUITECTURA.md` y las sub-decisiones nuevas en ADR-BE-004 (9-12), ADR-BE-005 (9-13) y ADR-BE-006 (8).
+
+- **Backend:**
+  - `CommandInterceptor` global: toda mutación fuera de `/auth/*` es una transacción con el tenant del actor, y todo POST exige `Idempotency-Key` (UUID), registrada en la misma transacción: replay, 422 con otro payload, una sola ejecución con requests concurrentes y TTL de 48 h con limpieza por `setInterval` y advisory lock.
+  - `CommandTx`: escrituras siempre auditadas en `audit_log` (append-only, sin UPDATE ni DELETE para la aplicación), `version` con 409 `version-conflict` y `details.currentVersion`, y `nextNumber` (`PED-000001`…).
+  - Paginación offset y cursor, con listas blancas en `contracts` (400 `invalid-query`).
+  - El actor se fija solo con `bindActor`, que en BE-0b no llama nada de `src/`.
+- **Frontend:**
+  - `httpClient` lee el cuerpo de error (`ApiError.serverCode`/`details`) y manda `Idempotency-Key`.
+  - Las mutaciones se reintentan **solo si llevan clave**: logística, vehículos y choferes sí; pedidos, clientes, proveedores, productos, caja, compras, alertas, usuarios y `updateStopOrder` ya no se reintentan ante un 5xx o un timeout.
+  - Los ids aceptan UUID o el prefijo legado.
+  - La lógica de `httpClient` vive en `httpClientCore.ts`.
+- **Tests:** 86 del backend y 18 de `contracts` (eran 39 y 12). Hay 32 scripts del frontend en verde, incluido el smoke nuevo `be-0b.smoke.mjs`.
+- **Checklist sin ejecutar:** `FrontEnd/docs/historial/verificaciones/VERIFICACION_BE-0b.md` (modo mock, sin cambios visibles esperados).
+- **Abierto, a resolver antes de BE-2:** ADR-BE-005, objeción 3. `httpClient` reintenta PUT con clave, pero el backend solo deduplica por clave los POST. Conectado, un PUT reintentado puede devolver un 409 o un 422 espurio.
+- **Riesgo residual documentado:** la auditoría obligatoria se garantiza por la API tipada y por lint (V2). SQL crudo dentro de `src/db/`, o una reflexión ofuscada que el lint no ve, quedan a la revisión de código.
+- **Sigue:** BE-1. Agrega la FK de `user_id` en `idempotency_keys` y `audit_log` y llama a `bindActor` desde la autenticación.
 
 ## Backend — BE-0a hecha (2026-10-08, `sesion-be0a-2026-10-08`)
 
@@ -18,7 +38,7 @@ La base del backend, sin endpoints de negocio y sin autenticación. Detalle en `
 - **Base:** Supabase como Postgres 17.11, por el session pooler (el host directo es solo IPv6), con SSL verificado. Roles `sdgpd_migrator`, `sdgpd_app` y `sdgpd_app_test`; schemas `sdgpd` y `sdgpd_test`, con las mismas migraciones. `companies` y `branches` con RLS forzado, y `withTenant` con `set_config(..., true)`. UUID v7 generados por la aplicación.
 - **Tests:** 39 del backend y 12 de `contracts`, incluidas la suite de catálogo (cubre sola cualquier tabla futura) y la funcional de aislamiento, que falla si una tabla con RLS no tiene caso.
 - **Checklist sin ejecutar:** `BackEnd/docs/verificaciones/VERIFICACION_BE-0a.md` (lo corre Leandro).
-- **Sigue:** **BE-0b** (idempotencia, `version`, auditoría, contadores por serie, helpers de paginación y el arrastre de `httpClient` en el frontend) y después BE-1.
+- **Sigue:** BE-0b, hecha el 2026-10-09 (sección anterior).
 - **Deuda abierta de BE-0a:** las FK que genera `drizzle-kit` traen `"public".` y hay que sacarlo a mano (si se olvida, el runner rechaza la migración). Express manda `X-Powered-By`. `companies.timezone` no se valida contra IANA hasta BE-1. Smart App Control impide usar `@swc/core` en la máquina de desarrollo.
 
 ## ADRs de backend (cerrados el 2026-10-08) — las 26 decisiones de la auditoría, tomadas y documentadas
@@ -150,9 +170,9 @@ Quedó explícitamente fuera de alcance (documentado en ADR-010/011 y en `VERIFI
 
 ## Checklists de verificación en navegador — sin evidencia de haberse ejecutado
 
-Ningún commit en el historial dice "confirmado en navegador" sobre ninguno de los checklists de `docs/historial/verificaciones/` (36 archivos, incluidos `VERIFICACION_TANDA_9.md` a `VERIFICACION_TANDA_21.md` y los 2 de la sesión 2026-09-30: `VERIFICACION_2026-09-30_T2_lotes.md` y `VERIFICACION_2026-09-30_T4_reposicion.md`). Hay que asumir que **todos** siguen pendientes de que Leandro los corra, no solo los que dicen explícitamente "PENDIENTE"/"NO EJECUTADA" en su propio texto.
+Ningún commit en el historial dice "confirmado en navegador" sobre ninguno de los checklists de `docs/historial/verificaciones/` (37 archivos, incluidos `VERIFICACION_TANDA_9.md` a `VERIFICACION_TANDA_21.md`, `VERIFICACION_BE-0b.md` y los 2 de la sesión 2026-09-30: `VERIFICACION_2026-09-30_T2_lotes.md` y `VERIFICACION_2026-09-30_T4_reposicion.md`). Hay que asumir que **todos** siguen pendientes de que Leandro los corra, no solo los que dicen explícitamente "PENDIENTE"/"NO EJECUTADA" en su propio texto.
 
-**Por dónde empezar:** `docs/VERIFICACION_PENDIENTE_UNIFICADA.md` junta en 42 puntos, ordenados por riesgo, todo lo pendiente de las Tandas 0/1, 3a-3d, 3g, 4-8, ADR-009 y el barrido de `empresaId`. Quedan fuera del unificado, pendientes en su archivo original: Tandas 2, 2.5, 3e, 3f, 9, 10A, 10B, 11-18, 20, 21, B, C1, C2 y los 2 de 2026-09-30.
+**Por dónde empezar:** `docs/VERIFICACION_PENDIENTE_UNIFICADA.md` junta en 42 puntos, ordenados por riesgo, todo lo pendiente de las Tandas 0/1, 3a-3d, 3g, 4-8, ADR-009 y el barrido de `empresaId`. Quedan fuera del unificado, pendientes en su archivo original: Tandas 2, 2.5, 3e, 3f, 9, 10A, 10B, 11-18, 20, 21, B, C1, C2, los 2 de 2026-09-30 y BE-0b (más `BackEnd/docs/verificaciones/VERIFICACION_BE-0a.md`).
 
 ## Deuda técnica viva
 

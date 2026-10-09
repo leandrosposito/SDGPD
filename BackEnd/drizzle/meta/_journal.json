@@ -15,6 +15,20 @@
       "when": 1791485985894,
       "tag": "0001_rls_companies_branches",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791492354393,
+      "tag": "0002_mutations_infra",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791492355676,
+      "tag": "0003_rls_mutations_infra",
+      "breakpoints": true
     }
   ]
 }

@@ -29,4 +29,10 @@ export interface RequestOptions {
   timeoutMs?: number;
   retries?: number;
   signal?: AbortSignal;
+  // BE-0b (ADR-BE-005 › Idempotencia): clave de la intencion, generada por
+  // cada modulo al formarla. En modo http viaja como header
+  // `Idempotency-Key`. Ademas habilita los reintentos de una mutacion:
+  // POST/PUT/PATCH/DELETE SOLO se reintentan si la llevan (cierra A2 del
+  // lado del cliente); GET se reintenta siempre, como antes.
+  idempotencyKey?: string;
 }

@@ -9,13 +9,13 @@ export const DEV_SCHEMA = 'sdgpd'
 export const DEV_ROLE = 'sdgpd_app'
 
 /** Config de la aplicación apuntada a la base de tests, con un pool chico: la base es remota. */
-export function testConfig(): AppConfig {
+export function testConfig(maxConnections = 2): AppConfig {
   const config = loadConfig({
     PORT: '3000',
     DATABASE_URL: process.env.DATABASE_URL_TEST,
     DATABASE_CA_CERT: process.env.DATABASE_CA_CERT,
   })
-  return { ...config, database: { ...config.database, maxConnections: 2 } }
+  return { ...config, database: { ...config.database, maxConnections } }
 }
 
 /** Conexión directa como sdgpd_app_test, SIN tenant: para el catálogo y los casos "sin tenant". */

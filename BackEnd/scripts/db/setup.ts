@@ -15,6 +15,7 @@ import {
   connectUrl,
   connectionUser,
   databaseUrl,
+  enforceAppendOnly,
   envValue,
   pgErrorText,
   readEnvFile,
@@ -135,6 +136,7 @@ async function main(): Promise<void> {
       await admin.query(`grant select, insert, update, delete on all tables in schema ${schema} to ${role}`)
       await admin.query(`revoke all on all tables in schema ${schema} from ${revokeFrom}`)
       await admin.query(`revoke all on ${schema}.schema_migrations from ${role}`)
+      await enforceAppendOnly(admin, APP_ROLE_SCHEMA[key])
     }
     await admin.query('reset role')
 

@@ -9,7 +9,7 @@ import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import type pg from 'pg'
 import { z } from 'zod'
-import { connectAs, isSchemaName, pgErrorText, SCHEMA_NAMES, type SchemaName } from './lib.ts'
+import { connectAs, enforceAppendOnly, isSchemaName, pgErrorText, SCHEMA_NAMES, type SchemaName } from './lib.ts'
 
 const MIGRATIONS_DIR = 'drizzle'
 const BREAKPOINT = '--> statement-breakpoint'
@@ -71,6 +71,7 @@ async function migrateSchema(client: pg.Client, schema: SchemaName, migrations: 
       await client.query('insert into schema_migrations (tag, hash) values ($1, $2)', [m.tag, m.hash])
       done.push(m.tag)
     }
+    await enforceAppendOnly(client, schema)
     await client.query('commit')
     console.log(`${schema}: ${done.length ? `aplicadas ${done.join(', ')}` : 'sin migraciones pendientes'} (${migrations.length} en total)`)
   } catch (err) {

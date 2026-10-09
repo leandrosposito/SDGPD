@@ -26,6 +26,24 @@ export function isRoleKey(value: string): value is RoleKey {
 
 /** Schema al que está atado cada rol de aplicación (search_path por rol, ADR-BE-002 sub-decisión 8). */
 export const APP_ROLE_SCHEMA = { app: SCHEMAS.dev, app_test: SCHEMAS.test } as const
+/** Rol de aplicación de cada schema (la inversa de APP_ROLE_SCHEMA). */
+export const SCHEMA_APP_ROLE: Record<SchemaName, string> = { sdgpd: 'sdgpd_app', sdgpd_test: 'sdgpd_app_test' }
+
+/**
+ * Tablas append-only (ADR-BE-005 › Auditoría): el rol de aplicación tiene solo SELECT e INSERT.
+ * Los default privileges conceden también UPDATE y DELETE a toda tabla nueva, y las migraciones no
+ * pueden nombrar roles, así que la revocación la aplican setup.ts y migrate.ts después de cada corrida.
+ */
+export const APPEND_ONLY_TABLES = ['audit_log'] as const
+
+export async function enforceAppendOnly(client: pg.Client, schema: SchemaName): Promise<void> {
+  const role = client.escapeIdentifier(SCHEMA_APP_ROLE[schema])
+  for (const table of APPEND_ONLY_TABLES) {
+    const qualified = `${client.escapeIdentifier(schema)}.${client.escapeIdentifier(table)}`
+    const exists = await client.query<{ t: string | null }>('select to_regclass($1)::text as t', [qualified])
+    if (exists.rows[0]?.t !== null) await client.query(`revoke update, delete, truncate on ${qualified} from ${role}`)
+  }
+}
 
 export const ENV_FILE = '.env'
 

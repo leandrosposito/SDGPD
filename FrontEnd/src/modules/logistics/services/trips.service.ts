@@ -227,6 +227,7 @@ export async function createTrip(
     method: 'POST',
     path: '/trips',
     body: { empresaId, idempotencyKey, ...input },
+    idempotencyKey,
     mock: () =>
       withIdempotency(idempotencyKey, () => {
         const vehicle = getVehicleById(input.vehicleId);
@@ -322,6 +323,7 @@ export async function assignDeliveriesToStop(
     method: 'POST',
     path: `/trips/${tripId}/stops/${stopId}/assign`,
     body: { empresaId, idempotencyKey, tripId, stopId, input, ...options },
+    idempotencyKey,
     mock: () =>
       withIdempotency(idempotencyKey, () => {
         const trip = tripsStore.find((t) => t.id === tripId);
@@ -429,6 +431,7 @@ export async function transitionTrip(
     method: 'PUT',
     path: `/trips/${tripId}/transition`,
     body: { empresaId, idempotencyKey, hasta, quien },
+    idempotencyKey,
     mock: () =>
       withIdempotency(idempotencyKey, () => {
         void quien;
@@ -527,6 +530,7 @@ export async function registerPod(
     method: 'POST',
     path: `/trips/${tripId}/stops/${stopId}/pod`,
     body: { empresaId, idempotencyKey, deliveryId, stopId, ...input, creadoPor: quien },
+    idempotencyKey,
     mock: () =>
       withIdempotency(idempotencyKey, async () => {
         const trip = tripsStore.find((t) => t.id === tripId);
@@ -636,6 +640,7 @@ export async function markStopNoVisitada(
     method: 'POST',
     path: `/trips/${tripId}/stops/${stopId}/no-visitada`,
     body: { empresaId, idempotencyKey, ...input },
+    idempotencyKey,
     mock: async () =>
       withIdempotency(idempotencyKey, async () => {
         // Tanda 15 (hallazgo MEDIO): las precondiciones tienen que

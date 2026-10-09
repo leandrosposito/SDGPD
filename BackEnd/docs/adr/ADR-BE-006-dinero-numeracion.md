@@ -74,6 +74,10 @@ RETURNING last_value;
 6. **Fusión de OC desde sugerencia** (`generatePurchaseOrderFromSuggestion`): solo fusiona en un borrador **de la misma moneda**. Si no hay, crea uno nuevo.
 7. **Cantidades:** enteras en la unidad mínima (ADR-008). Las unidades fraccionables quedan para el ADR de unidades de medida (RF-PRD-004).
 
+## Sub-decisiones de BE-0b (tomadas al implementar, 2026-10-08; sin consulta, PROTOCOLO regla 2.9)
+
+8. **Contador perezoso:** la fila `(empresa_id, series)` de `document_counters` se crea la primera vez que se pide un número (`INSERT … ON CONFLICT DO UPDATE … RETURNING`), no al dar de alta la empresa. La fila queda bloqueada hasta el commit del comando: los comandos concurrentes de la misma serie se serializan, y un rollback no deja hueco. Pasado `999999`, el número sigue creciendo con más dígitos, sin cortar.
+
 ## Objeciones
 
 1. **El precio depende de la lista de precios elegida en el modal, y la decisión dice que el cliente no manda precios.** Hoy `OrderProductsSection.tsx:59` aplica `modifier = priceList === 'Mayorista' ? 0.9 : priceList === 'Distribuidor' ? 0.8 : 1` sobre el precio del producto, con un selector de lista en `CreateOrderModal` (`priceList`, `useState('Mayorista')`). Si el cliente manda solo `productId`, cantidad y descuento, el servidor no sabe qué lista aplicar. Las listas de precios (RF-PRI-001) no tienen ADR. Opciones sin decidir: tomar la lista de `ClientAccount.priceList` (`client.types.ts:69`), aceptar `priceList` en el comando, o congelar el precio base hasta el ADR de precios.

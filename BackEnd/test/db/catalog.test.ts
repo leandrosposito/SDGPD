@@ -12,6 +12,8 @@ const APP_ROLES = [DEV_ROLE, TEST_ROLE]
 const FOREIGN_ROLES = ['public', 'anon', 'authenticated', 'service_role']
 const SCHEMAS = [DEV_SCHEMA, TEST_SCHEMA]
 const TABLE_PRIVILEGES = 'SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER'
+/** Tablas append-only (scripts/db/lib.ts, APPEND_ONLY_TABLES): los roles de aplicación solo leen e insertan. */
+const APPEND_ONLY = ['audit_log']
 
 type TableRow = {
   schema: string
@@ -118,6 +120,31 @@ describe('roles de aplicación', () => {
       [APP_ROLES, SCHEMAS, CONTROL_TABLE, TABLE_PRIVILEGES],
     )
     expect(rows).toEqual([])
+  })
+})
+
+describe('tablas append-only', () => {
+  it('en los dos schemas, los roles de aplicación tienen INSERT y SELECT, y no UPDATE, DELETE ni TRUNCATE', async () => {
+    const { rows } = await client.query<{ role: string; schema: string; table: string; privileges: string }>(
+      `select r as role, n.nspname as schema, c.relname as table,
+              concat_ws(',',
+                case when has_table_privilege(r, c.oid, 'SELECT') then 'SELECT' end,
+                case when has_table_privilege(r, c.oid, 'INSERT') then 'INSERT' end,
+                case when has_table_privilege(r, c.oid, 'UPDATE') then 'UPDATE' end,
+                case when has_table_privilege(r, c.oid, 'DELETE') then 'DELETE' end,
+                case when has_table_privilege(r, c.oid, 'TRUNCATE') then 'TRUNCATE' end) as privileges
+         from unnest($1::text[]) r
+         cross join pg_class c join pg_namespace n on n.oid = c.relnamespace
+        where n.nspname = any($2) and c.relname = any($3)
+        order by 1, 2, 3`,
+      [APP_ROLES, SCHEMAS, APPEND_ONLY],
+    )
+    expect(rows).toEqual([
+      { role: DEV_ROLE, schema: DEV_SCHEMA, table: 'audit_log', privileges: 'SELECT,INSERT' },
+      { role: DEV_ROLE, schema: TEST_SCHEMA, table: 'audit_log', privileges: '' },
+      { role: TEST_ROLE, schema: DEV_SCHEMA, table: 'audit_log', privileges: '' },
+      { role: TEST_ROLE, schema: TEST_SCHEMA, table: 'audit_log', privileges: 'SELECT,INSERT' },
+    ])
   })
 })
 

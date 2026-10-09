@@ -25,6 +25,30 @@ export class ValidationError extends AppError {
   }
 }
 
+/** 400: falta la Idempotency-Key de un POST, o no es UUID (ADR-BE-005 › Idempotencia). */
+export class IdempotencyKeyRequiredError extends AppError {
+  readonly status = 400
+  constructor() {
+    super('idempotency-key-required' satisfies TransversalErrorCode, 'Todo POST lleva el header Idempotency-Key con un UUID')
+  }
+}
+
+/** 400: query fuera de la lista blanca del recurso (ADR-BE-004 › Orden y filtros). */
+export class InvalidQueryError extends AppError {
+  readonly status = 400
+  constructor(details?: Details) {
+    super('invalid-query' satisfies TransversalErrorCode, 'Los parámetros del listado no son válidos', details)
+  }
+}
+
+/** 401: el request no tiene actor (sin sesión; la autenticación llega en BE-1). */
+export class UnauthenticatedError extends AppError {
+  readonly status = 401
+  constructor() {
+    super('unauthenticated' satisfies TransversalErrorCode, 'Hace falta una sesión')
+  }
+}
+
 /** 404: el recurso no existe (o no es del tenant, que para el cliente es lo mismo). */
 export class NotFoundError extends AppError {
   readonly status = 404
@@ -36,6 +60,14 @@ export class NotFoundError extends AppError {
 /** 409: conflicto de versión o de concurrencia. */
 export class ConflictError extends AppError {
   readonly status = 409
+}
+
+/** 422: misma Idempotency-Key con otro payload. */
+export class IdempotencyKeyReusedError extends AppError {
+  readonly status = 422
+  constructor() {
+    super('idempotency-key-reused' satisfies TransversalErrorCode, 'La Idempotency-Key ya se usó con otro payload')
+  }
 }
 
 /** 422: regla de negocio. El `code` es el del vocabulario del recurso (ADR-BE-004, sub-decisión 3). */
