@@ -69,6 +69,9 @@ interface SessionState {
   loadSession: () => Promise<SessionLoadResult>;
   login: (email: string, password: string) => Promise<LoginResult>;
   logout: () => Promise<void>;
+  // Vuelve a pedir la sesion (con auth por http): despues de cambiar el rol
+  // propio o la matriz del rol propio, para que la UI oculte lo que corresponde.
+  refreshSession: () => Promise<void>;
   setActiveBranch: (branchId: Branch['id']) => SetActiveBranchResult;
 }
 
@@ -139,6 +142,19 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
       if (err instanceof ApiError && err.serverCode === 'invalid-credentials') return { success: false, reason: 'invalid-credentials' };
       if (err instanceof ApiError && (err.code === 'NETWORK_ERROR' || err.code === 'TIMEOUT')) return { success: false, reason: 'network' };
       return { success: false, reason: 'unknown' };
+    }
+  },
+
+  refreshSession: async () => {
+    if (!AUTH_IS_HTTP || get().status !== 'authenticated') return;
+    try {
+      const session = await authService.fetchCurrentSession();
+      const activeBranchId = session.branches.some((b) => b.id === get().activeBranchId && b.status === 'active')
+        ? get().activeBranchId
+        : resolveInitialBranchId(session);
+      set({ session, activeBranchId });
+    } catch {
+      // Si fallo por la sesion, onSessionExpired ya la cerro; si no, la sesion anterior sigue.
     }
   },
 

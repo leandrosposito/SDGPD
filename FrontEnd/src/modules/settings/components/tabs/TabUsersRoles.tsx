@@ -1,5 +1,6 @@
-import { useEffect, useMemo, type FC } from 'react';
+import { useEffect, useMemo, useState, type FC } from 'react';
 import { toast } from 'sonner';
+import type { Branch, Role, User } from '@sdgpd/contracts';
 import { Table } from '@/shared/components/ui/Table';
 import { Badge } from '@/shared/components/ui/Badge';
 import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary';
@@ -12,47 +13,48 @@ import { usePagedQuery } from '@/shared/hooks/usePagedQuery';
 import { useUrlListState } from '@/shared/hooks/useUrlListState';
 import { useCachedQuery, CACHE_STALE_TIME } from '@/shared/hooks/useCachedQuery';
 import { useSessionStore } from '@/shared/state/useSessionStore';
-import type { PermissionMatrix, UserAccount } from '@/shared/types/settings.types';
+import { usePermission } from '@/shared/auth/usePermission';
 import {
-  getUsersPage,
   exportUsers,
-  getPermissionsMatrix,
-  updateRolePermission,
+  getBranches,
+  getRoles,
+  getUsersPage,
+  usersExportAvailable,
   type UsersQueryFilters,
 } from '@/modules/settings/api/users-roles/users-roles.service';
+import { UserFormModal } from '@/modules/settings/components/users-roles/UserFormModal';
+import { RolePermissionsEditor } from '@/modules/settings/components/users-roles/RolePermissionsEditor';
 import '@/modules/settings/SettingsPage.css';
 
 // ============================================================
-// TabUsersRoles — Usuarios y Roles (Tanda 3c de escalabilidad).
-// Directorio de Usuarios: usePagedQuery (listado real, aunque chico).
-// Matriz de Permisos: useCachedQuery (4 roles, siempre visible entera,
-// no tiene sentido paginarla) — ver DECISIONES_TECNICAS.md.
-// "Nuevo Usuario"/"Password"/"2FA"/"Guardar Matriz" siguen sin
-// `onClick`: eran decorativos antes de esta tanda, no se les inventa
-// una acción acá.
+// TabUsersRoles — Usuarios y Roles (BE-1b, conectado a /api/users y
+// /api/roles cuando 'users'/'roles' van por http; si no, el mock del
+// service con las mismas reglas).
+// - Directorio paginado (usePagedQuery), con rol, estado y sucursales.
+// - Alta y edicion (UserFormModal): rol, activo y sucursales, con version.
+//   La clave de idempotencia se genera AL ABRIR el formulario.
+// - Matriz modulo × accion de 10 modulos (RolePermissionsEditor).
+// - Los botones se ocultan por permiso (settings.crear / settings.editar);
+//   la autorizacion la hace el servidor.
+// - Errores 409 version-conflict y 422 last-admin con mensaje claro
+//   (settingsErrors.ts); un 409 recarga lo que se muestra.
 // ============================================================
 
-const IconCheck: FC = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="20 6 9 17 4 12"></polyline>
-  </svg>
-);
+const EMPTY_ROLES: Role[] = [];
+const EMPTY_BRANCHES: Branch[] = [];
 
-const IconSquare: FC = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-  </svg>
-);
-
-// Referencia estable: ver mismo patron en otros modulos migrados.
-const EMPTY_PERMISSIONS: PermissionMatrix[] = [];
+type FormState = { mode: 'create' } | { mode: 'edit'; user: User };
 
 export const TabUsersRoles: FC = () => {
   const empresaId = useSessionStore((s) => s.session?.company.id);
+  const sessionUserId = useSessionStore((s) => s.session?.id);
+  const sessionRoleId = useSessionStore((s) => s.session?.role.id);
+  const refreshSession = useSessionStore((s) => s.refreshSession);
+  const canCreate = usePermission('settings', 'crear');
+  const canEdit = usePermission('settings', 'editar');
 
   // Tanda 4 (corrida completa, A13): pagina en la URL, prefijo `usr_`.
   const urlState = useUrlListState({ prefix: 'usr' });
-
   const filters: UsersQueryFilters = useMemo(() => ({ empresaId: empresaId ?? '' }), [empresaId]);
 
   const {
@@ -78,41 +80,52 @@ export const TabUsersRoles: FC = () => {
   }, [error]);
 
   const {
-    data: permissionsData,
-    isLoading: isLoadingPermissions,
-    error: permissionsError,
-    refetch: refetchPermissions,
-  } = useCachedQuery(
-    'settings-permissions-matrix',
-    undefined,
-    (signal) => getPermissionsMatrix(empresaId ?? '', signal),
-    { staleTime: CACHE_STALE_TIME.CATALOG, enabled: Boolean(empresaId) }
-  );
-  const permissions = permissionsData ?? EMPTY_PERMISSIONS;
+    data: rolesData,
+    isLoading: isLoadingRoles,
+    error: rolesError,
+    refetch: refetchRoles,
+  } = useCachedQuery('settings-roles', undefined, (signal) => getRoles(signal), {
+    staleTime: CACHE_STALE_TIME.CATALOG,
+    enabled: Boolean(empresaId),
+  });
+  const roles = rolesData ?? EMPTY_ROLES;
+
+  const { data: branchesData } = useCachedQuery('settings-branches', undefined, (signal) => getBranches(signal), {
+    staleTime: CACHE_STALE_TIME.CATALOG,
+    enabled: Boolean(empresaId) && (canCreate || canEdit),
+  });
+  const branches = branchesData ?? EMPTY_BRANCHES;
 
   useEffect(() => {
-    if (permissionsError) toast.error('No se pudo cargar la matriz de permisos.');
-  }, [permissionsError]);
+    if (rolesError) toast.error('No se pudo cargar la matriz de permisos.');
+  }, [rolesError]);
 
-  // Reemplaza a togglePermission (mutaba SETTINGS_MOCK_PERMISSIONS
-  // in-place vía una referencia compartida sin clonar, ver
-  // DECISIONES_TECNICAS.md) — ahora es una mutación real contra el
-  // service, con refetch() explícito de la matriz.
-  const handleTogglePermission = async (matrix: PermissionMatrix, moduleKey: keyof PermissionMatrix['modules']) => {
-    if (!empresaId) return;
-    try {
-      await updateRolePermission(empresaId, matrix.role, moduleKey, !matrix.modules[moduleKey]);
-      refetchPermissions();
-    } catch {
-      toast.error('No se pudo actualizar el permiso.');
-    }
+  // Formulario abierto + su clave de idempotencia, generada al abrirlo.
+  const [form, setForm] = useState<(FormState & { idempotencyKey: string }) | null>(null);
+  const openCreate = () => setForm({ mode: 'create', idempotencyKey: crypto.randomUUID() });
+  const openEdit = (user: User) => setForm({ mode: 'edit', user, idempotencyKey: crypto.randomUUID() });
+
+  const roleName = (roleId: string) => roles.find((r) => r.id === roleId)?.name ?? '—';
+  const branchNames = (ids: string[]) =>
+    ids.length === 0 ? 'Ninguna' : ids.map((id) => branches.find((b) => b.id === id)?.code ?? id.slice(0, 8)).join(', ');
+
+  const handleUserSaved = (saved: User) => {
+    setForm(null);
+    refetch();
+    // Cambiar el propio rol cambia los permisos propios: la UI se pone al dia.
+    if (saved.id === sessionUserId) void refreshSession();
   };
 
-  const exportColumns: ExportColumn<UserAccount>[] = [
-    { header: 'Nombre', accessor: (u) => u.name },
+  const handleRoleSaved = (saved: Role) => {
+    refetchRoles();
+    if (saved.id === sessionRoleId) void refreshSession();
+  };
+
+  const exportColumns: ExportColumn<User>[] = [
+    { header: 'Nombre', accessor: (u) => u.fullName },
     { header: 'Email', accessor: (u) => u.email },
-    { header: 'Rol', accessor: (u) => u.role },
-    { header: 'Estado', accessor: (u) => (u.status === 'active' ? 'Activo' : 'Inactivo') },
+    { header: 'Rol', accessor: (u) => roleName(u.roleId) },
+    { header: 'Estado', accessor: (u) => (u.active ? 'Activo' : 'Inactivo') },
   ];
 
   return (
@@ -120,8 +133,12 @@ export const TabUsersRoles: FC = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h3 className="settings-section-title" style={{ marginBottom: 0, borderBottom: 'none' }}>Directorio de Usuarios</h3>
         <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
-          <ExportButton fileNamePrefix="usuarios" columns={exportColumns} fetchRows={() => exportUsers(filters)} />
-          <button className="client-modal-btn client-modal-btn--primary">Nuevo Usuario</button>
+          {usersExportAvailable && <ExportButton fileNamePrefix="usuarios" columns={exportColumns} fetchRows={() => exportUsers()} />}
+          {canCreate && (
+            <button type="button" className="client-modal-btn client-modal-btn--primary" onClick={openCreate} disabled={roles.length === 0}>
+              Nuevo Usuario
+            </button>
+          )}
         </div>
       </div>
 
@@ -131,35 +148,39 @@ export const TabUsersRoles: FC = () => {
         ) : error ? (
           <ErrorState message="No se pudo cargar el listado de usuarios." onRetry={refetch} />
         ) : (
-          <ErrorBoundary
-            fallbackTitle="No se pudo mostrar el listado de usuarios."
-            fallbackMessage="Intenta de nuevo o volve al inicio."
-          >
+          <ErrorBoundary fallbackTitle="No se pudo mostrar el listado de usuarios." fallbackMessage="Intenta de nuevo o volve al inicio.">
             <FetchingOverlay isFetching={isFetching}>
               <Table
                 data={users}
                 keyExtractor={(u) => u.id}
                 columns={[
-                  { header: 'Nombre', accessor: 'name' },
+                  { header: 'Nombre', accessor: 'fullName' },
                   { header: 'Email', accessor: 'email' },
                   {
                     header: 'Rol',
-                    accessor: (u) => <Badge label={u.role} variant={u.role === 'Admin' ? 'warning' : 'accent'} />
+                    accessor: (u) => <Badge label={roleName(u.roleId)} variant={roleName(u.roleId) === 'Admin' ? 'warning' : 'accent'} />,
                   },
                   {
                     header: 'Estado',
-                    accessor: (u) => <Badge label={u.status === 'active' ? 'Activo' : 'Inactivo'} variant={u.status === 'active' ? 'success' : 'danger'} />
+                    accessor: (u) => <Badge label={u.active ? 'Activo' : 'Inactivo'} variant={u.active ? 'success' : 'danger'} />,
                   },
+                  { header: 'Sucursales', accessor: (u) => branchNames(u.branchIds) },
                   {
                     header: 'Acciones',
                     align: 'right',
-                    accessor: () => (
-                      <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'flex-end' }}>
-                        <button className="client-modal-btn client-modal-btn--outline" style={{ padding: 'var(--space-1) var(--space-2)', fontSize: 'var(--font-size-xs)' }}>Password</button>
-                        <button className="client-modal-btn client-modal-btn--outline" style={{ padding: 'var(--space-1) var(--space-2)', fontSize: 'var(--font-size-xs)' }}>2FA</button>
-                      </div>
-                    )
-                  }
+                    accessor: (u) =>
+                      canEdit ? (
+                        <button
+                          type="button"
+                          className="client-modal-btn client-modal-btn--outline"
+                          style={{ padding: 'var(--space-1) var(--space-2)', fontSize: 'var(--font-size-xs)' }}
+                          onClick={() => openEdit(u)}
+                          disabled={roles.length === 0}
+                        >
+                          Editar
+                        </button>
+                      ) : null,
+                  },
                 ]}
               />
             </FetchingOverlay>
@@ -178,58 +199,29 @@ export const TabUsersRoles: FC = () => {
       <div className="divider"></div>
 
       <h3 className="settings-section-title">Matriz de Permisos por Rol</h3>
-      {!empresaId || isLoadingPermissions ? (
+      {!empresaId || isLoadingRoles ? (
         <LoadingState message="Cargando matriz de permisos..." />
-      ) : permissionsError ? (
-        <ErrorState message="No se pudo cargar la matriz de permisos." onRetry={refetchPermissions} />
+      ) : rolesError ? (
+        <ErrorState message="No se pudo cargar la matriz de permisos." onRetry={refetchRoles} />
       ) : (
-        <ErrorBoundary
-          fallbackTitle="No se pudo mostrar la matriz de permisos."
-          fallbackMessage="Intenta de nuevo o volve al inicio."
-        >
-          <div style={{ width: '100%', flexShrink: 0, overflowX: 'auto', background: 'var(--color-bg-base)', borderRadius: 'var(--radius-lg)', border: '0.0625rem solid var(--color-border)' }}>
-            <table className="settings-matrix-table" style={{ minWidth: '45rem', width: '100%' }}>
-              <thead>
-                <tr>
-                  <th>Rol</th>
-                  <th>Dashboard</th>
-                  <th>Pedidos</th>
-                  <th>Inventario</th>
-                  <th>Clientes</th>
-                  <th>Proveedores</th>
-                  <th>Logística</th>
-                  <th>Caja</th>
-                  <th>Analítica</th>
-                </tr>
-              </thead>
-              <tbody>
-                {permissions.map((p) => (
-                  <tr key={p.role}>
-                    <td>{p.role}</td>
-                    {Object.entries(p.modules).map(([modName, hasAccess]) => (
-                      <td key={modName}>
-                        <div
-                          className={`svg-checkbox ${hasAccess ? 'checked' : ''}`}
-                          onClick={() => handleTogglePermission(p, modName as keyof typeof p.modules)}
-                          role="checkbox"
-                          aria-checked={hasAccess}
-                          style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}
-                        >
-                          {hasAccess ? <IconCheck /> : <IconSquare />}
-                        </div>
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        <ErrorBoundary fallbackTitle="No se pudo mostrar la matriz de permisos." fallbackMessage="Intenta de nuevo o volve al inicio.">
+          <RolePermissionsEditor roles={roles} canEdit={canEdit} onSaved={handleRoleSaved} onConflict={refetchRoles} />
         </ErrorBoundary>
       )}
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 'var(--space-4)' }}>
-        <button className="client-modal-btn client-modal-btn--primary">Guardar Matriz</button>
-      </div>
+      {form && (
+        <UserFormModal
+          key={form.idempotencyKey}
+          mode={form.mode}
+          user={form.mode === 'edit' ? form.user : undefined}
+          roles={roles}
+          branches={branches}
+          idempotencyKey={form.idempotencyKey}
+          onClose={() => setForm(null)}
+          onSaved={handleUserSaved}
+          onConflict={refetch}
+        />
+      )}
     </>
   );
 };
