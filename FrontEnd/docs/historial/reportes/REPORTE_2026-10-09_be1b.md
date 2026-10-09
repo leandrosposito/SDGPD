@@ -112,7 +112,7 @@ Restaurado desde la copia (`cmp` sin diferencias); el smoke vuelve a dar `todos 
 - No hay `persist` de zustand (0 archivos con `zustand/middleware`).
 - El token vive en una variable de módulo (`tokenStore.ts`), que solo leen y escriben `auth.service.ts` y `httpClient(Core).ts`.
 
-**V5 y V6:** ver "V5/V6 desde cero" abajo (los corrí después de commitear la documentación, con el árbol limpio).
+**V5 y V6:** ver "V5/V6 desde cero" más abajo. Los corrí después de commitear la documentación, con el árbol limpio.
 
 **Otras verificaciones, con evidencia:**
 - **Proxy real:** backend levantado y `vite --port 5199` con `VITE_HTTP_SERVICES=auth,session,users,roles,branches`. Por el puerto de Vite: `/api/health` 200, `/api/auth/login` 200 con `set-cookie: sdgpd_refresh=<token>; Path=/api/auth/refresh; HttpOnly; Secure; SameSite=Strict; Max-Age=2592000`, `/api/auth/refresh` 200 con esa cookie, y `/login` 200.
@@ -134,6 +134,32 @@ Restaurado desde la copia (`cmp` sin diferencias); el smoke vuelve a dar `todos 
   - Con los ids viejos, su chequeo `filterOrdersForBranch` pasaba en vacío (0 contra 0).
 - **Rama de fallo de v13:** cambié `>= 2` por `>= 200` y dio `exit=1` con `FAIL tipo 'reprogramacion'…`, `FAIL tipo 'no-entrega'…` y `2 verificacion(es) de integridad fallaron`, sin el assert de libuv. Revertido (`git diff` vacío) y de nuevo en `exit=0`.
 - **Seed:** la primera corrida dio `4 sucursales (migradas a id fijo: CTR, NOR, SUR, VMA)` y las 4 filas de `user_branches` re-apuntadas. La segunda, sin migraciones. Las sucursales en `sdgpd`: `0192f000-0000-7000-8000-000000000001` (CTR) a `…0004` (VMA).
+
+### V5/V6 desde cero
+
+**Primer intento, cortado.** Lo corrí en segundo plano y Claude Code lo cortó por falta de memoria en la máquina (había 674 MB libres de 7.9 GB), al empezar los tests del backend. Hasta ahí, `npm ci` y typecheck, lint y build de la raíz habían dado exit 0. No era una falla de los gates. Lo frené ahí y lo reporté.
+
+**Segundo intento: completo, en secuencia y en primer plano**, a pedido de Leandro. Sobre `464f91b`, con `git status --porcelain` vacío:
+
+1. `rm -rf` de todos los `node_modules` y `dist`, y `npm ci` en la raíz: exit 0 (solo los avisos `allow-scripts` de esbuild).
+2. Raíz: typecheck, lint y build con exit 0. El lint da 0 errores y el warning de siempre (frontend).
+3. `contracts`: 27/27 en 3 archivos.
+4. Backend: **177/177 en los 13 archivos**, en tres tandas sucesivas en primer plano (cada comando tiene un tope de 10 minutos y la suite tarda unos 11):
+   - `auth` y `permissions`: 31 tests (357 s);
+   - `be1b-backend`: 10 (195 s);
+   - `db`, `http` y `config`: 136 (305 s).
+5. Frontend: tsc exit 0, lint con 0 errores y 1 warning, build OK.
+6. Los 31 scripts, uno por uno:
+   - **24 idénticos a la línea base**;
+   - **4 con la salida distinta solo por los ids** (`v11`, `v12`, `v16` y `v-adr009`, iguales a la corrida de la Parte 3, donde lo demostré re-mapeando los ids);
+   - **3 nuevos** (`be-1b` 20 OK, `be-1b-ui` 13 OK, `v18-ids-demo` 7 OK);
+   - ninguno con exit distinto de 0, ningún FAIL y ningún `UV_HANDLE_CLOSING`.
+
+**V6, sobre esa instalación limpia:**
+- `npm ls --all` del frontend contra la línea base: `solo en la base: ninguno`. Las únicas apariciones nuevas son `zod@4.6.5` (de `@sdgpd/contracts`), `esbuild@0.28.2`, `@esbuild/win32-x64@0.28.2` y `tsx@4.23.15` (peers opcionales visibles desde la raíz).
+- El único `npm error` es `invalid: ajv@6.15.0`, el peer opcional documentado más abajo.
+- `xlsx`: 0.20.3, con el mismo `resolved` e `integrity` que la línea base.
+- `git grep` de los 11 secretos de `BackEnd/.env` (ref, host del pooler, las tres contraseñas, `JWT_SECRET`, `IDEMPOTENCY_HMAC_KEY` y los emails y contraseñas del seed): **0 coincidencias en los 11**. Control: `sdgpd_refresh` aparece en 9 archivos de `HEAD`.
 
 ## Hallazgos MEDIO/BAJO documentados y no tocados
 
