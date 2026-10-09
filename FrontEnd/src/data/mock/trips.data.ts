@@ -31,8 +31,8 @@ export const TRIPS_MOCK_DATA: Trip[] = [
     id: asTripId('trip-001'),
     vehicleId: asVehicleId('veh-001'),
     driverId: asDriverId('drv-001'),
-    branchId: asBranchId('branch-001'),
-    empresaId: 'company-001',
+    branchId: asBranchId('0192f000-0000-7000-8000-000000000001'),
+    empresaId: '01a121ca-8df0-7552-9004-881c8ee2a687',
     fecha: TODAY_ISO,
     estado: 'Planificado',
     paradas: [
@@ -68,8 +68,8 @@ export const TRIPS_MOCK_DATA: Trip[] = [
     id: asTripId('trip-002'),
     vehicleId: asVehicleId('veh-002'),
     driverId: asDriverId('drv-002'),
-    branchId: asBranchId('branch-002'),
-    empresaId: 'company-001',
+    branchId: asBranchId('0192f000-0000-7000-8000-000000000002'),
+    empresaId: '01a121ca-8df0-7552-9004-881c8ee2a687',
     fecha: TODAY_ISO,
     estado: 'EnTransito',
     paradas: [

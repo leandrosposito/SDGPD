@@ -1,10 +1,23 @@
-import { defaultClientConditions, defineConfig } from 'vite'
+import { defaultClientConditions, defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import { fileURLToPath } from 'node:url'
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [react()],
+  server: {
+    // BE-1b: /api va al backend en desarrollo, SIN reescribir la ruta (el
+    // backend sirve todo bajo /api). Para el navegador es el mismo origen, asi
+    // que la cookie de refresh (SameSite=Strict, Path=/api/auth/refresh) viaja
+    // sin configuracion extra (ADR-BE-003, objecion 2). Destino:
+    // VITE_DEV_PROXY_TARGET, o el backend local por defecto (PORT=3000).
+    proxy: {
+      '/api': {
+        target: loadEnv(mode, process.cwd(), 'VITE_').VITE_DEV_PROXY_TARGET || 'http://localhost:3000',
+        changeOrigin: false,
+      },
+    },
+  },
   resolve: {
     // BE-1b (ADR-BE-001, sub-decision 8): @sdgpd/contracts se consume desde sus FUENTES, por la
     // condicion de export 'sdgpd-source', igual que el backend. Asi un cambio de contrato que rompe al
@@ -40,4 +53,4 @@ export default defineConfig({
       },
     },
   },
-})
+}))

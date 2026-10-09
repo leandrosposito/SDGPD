@@ -89,7 +89,7 @@ const SEEDS: DeliverySeed[] = [
   {
     id: 'del-001',
     orderId: 'ord-001',
-    branchId: 'branch-001',
+    branchId: '0192f000-0000-7000-8000-000000000001',
     clientName: 'Almacen La Esquina',
     address: 'Av. Belgrano 1234',
     date: TODAY_ISO,
@@ -102,7 +102,7 @@ const SEEDS: DeliverySeed[] = [
   {
     id: 'del-002',
     orderId: 'ord-002',
-    branchId: 'branch-002',
+    branchId: '0192f000-0000-7000-8000-000000000002',
     clientName: 'Supermercado Lider',
     address: 'San Martin 567',
     date: TODAY_ISO,
@@ -115,7 +115,7 @@ const SEEDS: DeliverySeed[] = [
   {
     id: 'del-003',
     orderId: 'ord-003',
-    branchId: 'branch-003',
+    branchId: '0192f000-0000-7000-8000-000000000003',
     clientName: 'Kiosco El Paso',
     address: 'Rivadavia 890',
     date: TODAY_ISO,
@@ -128,7 +128,7 @@ const SEEDS: DeliverySeed[] = [
   {
     id: 'del-004',
     orderId: 'ord-004',
-    branchId: 'branch-001',
+    branchId: '0192f000-0000-7000-8000-000000000001',
     clientName: 'Despensa Los Pinos',
     address: 'Sarmiento 111',
     date: TODAY_ISO,
@@ -141,7 +141,7 @@ const SEEDS: DeliverySeed[] = [
   {
     id: 'del-005',
     orderId: 'ord-005',
-    branchId: 'branch-002',
+    branchId: '0192f000-0000-7000-8000-000000000002',
     clientName: 'Maxikiosco Norte',
     address: 'Mitre 432',
     date: TODAY_ISO,
@@ -156,7 +156,7 @@ const SEEDS: DeliverySeed[] = [
   {
     id: 'del-006',
     orderId: 'ord-006',
-    branchId: 'branch-001',
+    branchId: '0192f000-0000-7000-8000-000000000001',
     clientName: 'Almacen La Esquina',
     address: 'Av. Belgrano 1234',
     date: TODAY_ISO,
@@ -169,7 +169,7 @@ const SEEDS: DeliverySeed[] = [
   {
     id: 'del-007',
     orderId: 'ord-001',
-    branchId: 'branch-003',
+    branchId: '0192f000-0000-7000-8000-000000000003',
     clientName: 'Minimarket Don Pedro',
     address: 'Av. Colon 220',
     date: TODAY_ISO,
@@ -182,7 +182,7 @@ const SEEDS: DeliverySeed[] = [
   {
     id: 'del-008',
     orderId: 'ord-002',
-    branchId: 'branch-001',
+    branchId: '0192f000-0000-7000-8000-000000000001',
     clientName: 'Kiosco Central',
     address: '25 de Mayo 45',
     date: TODAY_ISO,
@@ -195,7 +195,7 @@ const SEEDS: DeliverySeed[] = [
   {
     id: 'del-009',
     orderId: 'ord-003',
-    branchId: 'branch-002',
+    branchId: '0192f000-0000-7000-8000-000000000002',
     clientName: 'Almacen San Martin',
     address: 'Alem 300',
     date: TODAY_ISO,
@@ -208,7 +208,7 @@ const SEEDS: DeliverySeed[] = [
   {
     id: 'del-010',
     orderId: 'ord-004',
-    branchId: 'branch-001',
+    branchId: '0192f000-0000-7000-8000-000000000001',
     clientName: 'Supermercado El Sol',
     address: 'Peron 998',
     date: TODAY_ISO,
@@ -223,7 +223,7 @@ const SEEDS: DeliverySeed[] = [
   {
     id: 'del-011',
     orderId: 'ord-005',
-    branchId: 'branch-003',
+    branchId: '0192f000-0000-7000-8000-000000000003',
     clientName: 'Rotiseria La Pampa',
     address: 'Urquiza 77',
     date: TODAY_ISO,
@@ -236,7 +236,7 @@ const SEEDS: DeliverySeed[] = [
   {
     id: 'del-012',
     orderId: 'ord-006',
-    branchId: 'branch-001',
+    branchId: '0192f000-0000-7000-8000-000000000001',
     clientName: 'Almacen La Esquina',
     address: 'Av. Belgrano 1234',
     date: TODAY_ISO,
@@ -249,7 +249,7 @@ const SEEDS: DeliverySeed[] = [
   {
     id: 'del-013',
     orderId: 'ord-001',
-    branchId: 'branch-002',
+    branchId: '0192f000-0000-7000-8000-000000000002',
     clientName: 'Despensa Los Pinos',
     address: 'Sarmiento 111',
     date: TODAY_ISO,
@@ -262,7 +262,7 @@ const SEEDS: DeliverySeed[] = [
   {
     id: 'del-014',
     orderId: 'ord-002',
-    branchId: 'branch-001',
+    branchId: '0192f000-0000-7000-8000-000000000001',
     clientName: 'Kiosco El Paso',
     address: 'Rivadavia 890',
     date: TODAY_ISO,
@@ -277,7 +277,7 @@ const SEEDS: DeliverySeed[] = [
   {
     id: 'del-015',
     orderId: 'ord-003',
-    branchId: 'branch-002',
+    branchId: '0192f000-0000-7000-8000-000000000002',
     clientName: 'Maxikiosco Norte',
     address: 'Mitre 432',
     date: YESTERDAY_ISO,
@@ -290,7 +290,7 @@ const SEEDS: DeliverySeed[] = [
   {
     id: 'del-016',
     orderId: 'ord-004',
-    branchId: 'branch-003',
+    branchId: '0192f000-0000-7000-8000-000000000003',
     clientName: 'Supermercado Lider',
     address: 'San Martin 567',
     date: YESTERDAY_ISO,
@@ -305,7 +305,7 @@ const SEEDS: DeliverySeed[] = [
   {
     id: 'del-017',
     orderId: 'ord-005',
-    branchId: 'branch-001',
+    branchId: '0192f000-0000-7000-8000-000000000001',
     clientName: 'Almacen San Martin',
     address: 'Alem 300',
     date: TOMORROW_ISO,
@@ -318,7 +318,7 @@ const SEEDS: DeliverySeed[] = [
   {
     id: 'del-018',
     orderId: 'ord-006',
-    branchId: 'branch-002',
+    branchId: '0192f000-0000-7000-8000-000000000002',
     clientName: 'Kiosco Central',
     address: '25 de Mayo 45',
     date: TOMORROW_ISO,

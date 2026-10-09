@@ -91,18 +91,24 @@ check(
   zeroDeliveryOrders.length === 0
 );
 
+// BE-1b (2026-10-09, regla 2.5, cambio justificado): el mock paso a usar para la empresa demo y
+// sus sucursales los UUID fijos del seed del backend (BackEnd/scripts/db/demo-ids.ts). Los ids de
+// las sucursales de abajo se actualizaron de 'branch-001'..'branch-003' a esos UUID (Centro, Norte
+// y Sur, en ese orden); las aserciones no cambiaron. Con los ids viejos, este script daba 2 FAIL y
+// el chequeo de filterOrdersForBranch pasaba en vacio (0 contra 0). Los textos de los checks
+// conservan los nombres viejos para que la salida siga siendo comparable.
 // Doble conteo (punto (a) de la tarea): ord-004 tiene entregas reales
 // en 2 sucursales (branch-001 y branch-003) — confirma el ejemplo que
 // cita ADR-009.
 check(
   'ord-004 tiene entregas reales en branch-001 y branch-003 (ejemplo de doble conteo citado por ADR-009)',
-  byOrder.get('ord-004')?.has('branch-001') && byOrder.get('ord-004')?.has('branch-003')
+  byOrder.get('ord-004')?.has('0192f000-0000-7000-8000-000000000001') && byOrder.get('ord-004')?.has('0192f000-0000-7000-8000-000000000003')
 );
 
 // Consistencia cruzada: usar la funcion PURA real (no una reimplementacion)
 // para confirmar que el resultado por sucursal coincide con el link
 // crudo, para las 3 sucursales reales del mock.
-for (const branchId of ['branch-001', 'branch-002', 'branch-003']) {
+for (const branchId of ['0192f000-0000-7000-8000-000000000001', '0192f000-0000-7000-8000-000000000002', '0192f000-0000-7000-8000-000000000003']) {
   const viaFn = filterOrdersForBranch(
     ORDERS_MOCK_DATA.map((o) => ({ id: o.id })),
     links,
@@ -119,7 +125,7 @@ for (const branchId of ['branch-001', 'branch-002', 'branch-003']) {
 // pedido una vez por sucursal en la que aparece) siempre >= total de
 // empresa cuando todo pedido tiene entregas en 2+ sucursales, nunca al
 // reves mientras no exista ningun pedido con 0 entregas en el mock.
-const totalPorSucursalSumado = ['branch-001', 'branch-002', 'branch-003'].reduce(
+const totalPorSucursalSumado = ['0192f000-0000-7000-8000-000000000001', '0192f000-0000-7000-8000-000000000002', '0192f000-0000-7000-8000-000000000003'].reduce(
   (sum, b) => sum + ORDERS_MOCK_DATA.filter((o) => byOrder.get(o.id)?.has(b)).length,
   0
 );
