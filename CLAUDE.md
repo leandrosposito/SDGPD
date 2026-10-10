@@ -9,7 +9,7 @@ SDGPD is an ERP built around business domains (Core, Comercial, Inventario, Log�
 ## Structure
 
 - `FrontEnd/` — React app, actively developed (todavía sobre adaptadores mock). See `FrontEnd/CLAUDE.md` for stack, architecture, and implementation details.
-- `BackEnd/` — backend NestJS + PostgreSQL (monorepo, ADR-BE-001). **BE-0a hecha (2026-10-08):** esqueleto, Postgres en Supabase con RLS y suites de aislamiento. **BE-0b hecha (2026-10-09):** idempotencia, `version`, auditoría, contadores y paginación. **BE-1a hecha (2026-10-09):** autenticación (`/auth/*`, JWT + refresh rotativo), usuarios, roles y matriz de permisos, guard global; el frontend se conecta en BE-1b. Todavía sin endpoints de negocio. Read `BackEnd/CLAUDE.md` before touching it.
+- `BackEnd/` — backend NestJS + PostgreSQL (monorepo, ADR-BE-001). **BE-0a hecha (2026-10-08):** esqueleto, Postgres en Supabase con RLS y suites de aislamiento. **BE-0b hecha (2026-10-09):** idempotencia, `version`, auditoría, contadores y paginación. **BE-1a hecha (2026-10-09):** autenticación (`/auth/*`, JWT + refresh rotativo), usuarios, roles y matriz de permisos, guard global. **BE-1b hecha (2026-10-09):** el frontend se conecta a `auth`, `session`, `users`, `roles` y `branches`; el resto sigue en mock. **BE-2 está en curso en `sesion-be2-2026-10-10`, sin mergear.** Todavía sin endpoints de negocio mergeados. Read `BackEnd/CLAUDE.md` and `BackEnd/docs/plan/README.md` before touching it.
 - `packages/contracts/` — contrato HTTP compartido (Zod), consumido por `BackEnd` (y por `FrontEnd` cuando se sume a los workspaces).
 - `Documentacion/` — business/domain specs (Product Vision, Arquitectura Funcional del Negocio, Modelo Funcional del Dominio) as .docx/.pdf, plus some derived .md/.txt extracts. See `Documentacion/README.md` first — it maps which file is which and which ones are current vs. archived. Consult these for business rules and domain vocabulary (in Spanish) before inventing behavior for a module.
 
@@ -30,6 +30,7 @@ SDGPD is an ERP built around business domains (Core, Comercial, Inventario, Log�
 | Entender una decisión técnica ya tomada | `FrontEnd/docs/DECISIONES_TECNICAS.md` + `FrontEnd/docs/adr/` |
 | Saber el estado actual del proyecto (qué está cerrado, qué sigue abierto) | `FrontEnd/docs/ESTADO.md` |
 | Ver la deuda técnica viva | `FrontEnd/docs/PENDIENTES.md` |
+| Ejecutar una tanda pendiente del backend | `BackEnd/docs/plan/README.md` y la spec `BackEnd/docs/plan/BE-0N-*.md` |
 | Migrar un listado a la capa `api/` + `usePagedQuery` | `FrontEnd/docs/GUIA_MIGRACION_MODULO.md` |
 | El proceso de trabajo en sí (fases, gates, cuándo mergear) | `FrontEnd/docs/PROTOCOLO.md` |
 | Empezar o continuar el backend (ADRs, trazabilidad, plan de tandas BE-0 a BE-10) | `BackEnd/docs/README.md` |

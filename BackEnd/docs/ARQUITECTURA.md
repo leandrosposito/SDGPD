@@ -1,13 +1,13 @@
 # Arquitectura del backend
 
-**Verificado contra el filesystem el 2026-10-09** (tanda BE-1b; antes, BE-1a y BE-0b el mismo día y BE-0a el 2026-10-08; `find BackEnd packages -not -path '*/node_modules/*' -not -path '*/dist/*'`). Si leés esto después de esa fecha, reverificalo antes de confiar en él (PROTOCOLO.md regla 2.10).
+**Verificado contra el filesystem el 2026-10-10** (tanda BE-1c y plan documental; antes, BE-1b/BE-1a/BE-0b el 2026-10-09 y BE-0a el 2026-10-08; `find BackEnd packages FrontEnd -not -path '*/node_modules/*' -not -path '*/dist/*'`). Si leés esto después de esa fecha, reverificalo antes de confiar en él (PROTOCOLO.md regla 2.10).
 
 ## Monorepo
 
 | Ruta | Qué es |
 |---|---|
-| `package.json` (raíz) | Workspaces `packages/*` y `BackEnd`, en ese orden (contracts se compila primero). **`FrontEnd` todavía no es workspace** (ADR-BE-001, sub-decisión 14). Scripts `typecheck`, `lint`, `test` y `build`, que corren en todos los workspaces |
-| `package-lock.json` (raíz) | El único lockfile de los workspaces. `FrontEnd/package-lock.json` sigue siendo el del frontend |
+| `package.json` (raíz) | Workspaces `packages/*`, `BackEnd` y `FrontEnd`, en ese orden (contracts se compila primero). Scripts `typecheck`, `lint`, `test` y `build`, que corren en todos los workspaces |
+| `package-lock.json` (raíz) | El único lockfile del monorepo; `FrontEnd/package-lock.json` ya no existe desde BE-1b |
 | `packages/contracts/` | `@sdgpd/contracts`: schemas Zod y tipos inferidos del contrato HTTP |
 | `BackEnd/` | `@sdgpd/backend`: NestJS + Drizzle + Postgres con RLS |
 
@@ -47,7 +47,7 @@ Tiene el contrato transversal (ADR-BE-004 y ADR-BE-006) y, desde BE-1a, el de au
 
 ```
 BackEnd/
-  package.json            scripts: typecheck, lint, test, build, start, db:setup, db:generate, db:migrate, db:sql, db:seed-dev
+  package.json            scripts: typecheck, lint, test, build, start, db:setup, db:generate, db:migrate, db:sql, db:seed-dev, docs:check
   tsconfig.json           typecheck de todo (src, test, scripts, configs); customConditions: sdgpd-source
   tsconfig.build.json     build de src/ a dist/ (contra contracts/dist)
   eslint.config.mjs       único config de lint (también para contracts)
@@ -95,7 +95,7 @@ BackEnd/
       route-policy.ts     @RequirePermission(módulo, acción), @SessionOnly(), @Public(); PUBLIC_ROUTES, SESSION_ROUTES
       route-policy.check.ts   RoutePolicyCheck (onModuleInit): toda ruta declara política válida o la app no arranca
       tokens.ts           TokenService (JWT HS256 de 15 min: sub, emp, rol, ver, sid), refresh opaco y su SHA-256, Bearer
-      refresh-cookie.ts   cookie sdgpd_refresh (HttpOnly, Secure, SameSite=Strict, Path=/auth/refresh), lectura a mano
+      refresh-cookie.ts   cookie sdgpd_refresh (HttpOnly, Secure, SameSite=Strict, Path=/api/auth/refresh), lectura a mano
       passwords.ts        argon2id (m=19456, t=2, p=1, PHC), verificación, hash de relleno para emails inexistentes
       default-roles.ts    los 4 roles iniciales y su matriz (sin Nest: también lo importa scripts/db/seed-dev.ts)
     settings/             gestión de usuarios, roles y sucursales, módulo settings (BE-1a)
