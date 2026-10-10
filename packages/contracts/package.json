@@ -20,10 +20,11 @@
     "test": "vitest run --config ../../BackEnd/vitest.contracts.config.mts",
     "build": "tsc -p tsconfig.build.json"
   },
-  "dependencies": {
-    "zod": "4.6.5"
+  "peerDependencies": {
+    "zod": "4.4.3"
   },
   "devDependencies": {
-    "typescript": "6.0.3"
+    "typescript": "6.0.3",
+    "zod": "4.4.3"
   }
 }

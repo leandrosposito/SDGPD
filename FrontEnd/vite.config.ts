@@ -24,6 +24,9 @@ export default defineConfig(({ mode }) => ({
     // frontend falla en su tsc (customConditions en tsconfig.app.json) sin compilar contracts antes, y
     // Vite resuelve el mismo archivo. Las condiciones por defecto de Vite se conservan.
     conditions: ['sdgpd-source', ...defaultClientConditions],
+    // BE-1c: una sola copia de zod en el bundle, aunque algun paquete del monorepo
+    // resolviera otra (segunda barrera: el lockfile ya tiene una sola, en la raiz).
+    dedupe: ['zod'],
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
