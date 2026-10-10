@@ -4,6 +4,8 @@
 //   - la empresa A con las 4 sucursales del mock del frontend (FrontEnd/src/data/mock/session.mock.ts),
 //     los 4 roles iniciales y un usuario Admin con las 4 sucursales habilitadas;
 //   - la empresa B con una sucursal y su propio Admin, para probar el aislamiento a mano.
+//   - (BE-2) en la empresa demo, los proveedores, vehículos, choferes y motivos del mock del frontend, con
+//     ids FIJOS (scripts/db/demo-masters.ts), los mismos del mock.
 // La empresa demo y sus 4 sucursales tienen ids FIJOS (scripts/db/demo-ids.ts, BE-1b), los mismos del
 // mock del frontend; si las sucursales ya existían con otros ids, se migran (o falla con un mensaje claro).
 // El id de la empresa B, los emails y las contraseñas de los admins se generan la primera vez y
@@ -17,6 +19,7 @@ import { v7 } from 'uuid'
 import { DEFAULT_ROLES } from '../../src/auth/default-roles.ts'
 import { type DemoBranchOutcome, ensureDemoBranches } from './demo-branches.ts'
 import { DEMO_BRANCHES, DEMO_EMPRESA_ID, type DemoBranch } from './demo-ids.ts'
+import { type MasterCounts, seedDemoMasters } from './seed-masters.ts'
 import { hashPassword, verifyPassword } from '../../src/auth/passwords.ts'
 import { connectAs, envValue, pgErrorText, readEnvFile, ROLES, SCHEMAS, writeEnvValues } from './lib.ts'
 
@@ -95,8 +98,10 @@ async function seedCompany(client: pg.Client, company: SeedCompany, env: Record<
       TIMEZONE,
     ])
     let migrated: DemoBranchOutcome[] = []
+    let masters: MasterCounts | undefined
     if (company.fixed !== undefined) {
       migrated = (await ensureDemoBranches(client, empresaId, company.fixed.branches)).filter(o => o.outcome === 'migrated')
+      masters = await seedDemoMasters(client, empresaId)
     } else {
       for (const b of company.branches) {
         await client.query(
@@ -154,7 +159,8 @@ async function seedCompany(client: pg.Client, company: SeedCompany, env: Record<
     await client.query('commit')
     const c = counts.rows[0]
     const migration = migrated.length > 0 ? ` (migradas a id fijo: ${migrated.map(m => m.code).join(', ')})` : ''
-    return `${company.name}: ${c?.branches ?? '?'} sucursales${migration}, ${c?.roles ?? '?'} roles, admin con email en ${company.emailVar} y contraseña en ${company.passwordVar} (BackEnd/.env)`
+    const mastersText = masters === undefined ? '' : `, ${masters.suppliers} proveedores, ${masters.vehicles} vehículos, ${masters.drivers} choferes, ${masters.motivos} motivos`
+    return `${company.name}: ${c?.branches ?? '?'} sucursales${migration}, ${c?.roles ?? '?'} roles${mastersText}, admin con email en ${company.emailVar} y contraseña en ${company.passwordVar} (BackEnd/.env)`
   } catch (err) {
     await client.query('rollback').catch(() => undefined)
     throw err

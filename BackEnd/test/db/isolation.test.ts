@@ -13,13 +13,17 @@ import {
   branches,
   companies,
   documentCounters,
+  drivers,
   idempotencyKeys,
   loginAttempts,
+  motivos,
   refreshTokens,
   rolePermissions,
   roles,
+  suppliers,
   userBranches,
   users,
+  vehicles,
 } from '../../src/db/schema/index.ts'
 import { INSUFFICIENT_PRIVILEGE, pgCode, rawTestClient, testConfig } from '../support/db.ts'
 import { testPasswordHash } from '../support/tenants.ts'
@@ -34,6 +38,10 @@ type Tenant = {
   refreshTokenId: string
   idempotencyKey: string
   auditId: string
+  supplierId: string
+  vehicleId: string
+  driverId: string
+  motivoId: string
   label: string
 }
 
@@ -63,6 +71,19 @@ const auditRow = (empresaId: string, userId: string, id = newId()) => ({
   before: null,
   after: { probe: true },
   requestId: newId(),
+})
+
+/** Un vehículo de prueba (BE-2). */
+const vehicleRow = (empresaId: string, id: string, patente: string) => ({
+  id,
+  empresaId,
+  patente,
+  tipo: 'Camioneta',
+  capacidadBultos: 1,
+  capacidadPesoKg: 1,
+  capacidadVolumenM3: 1,
+  capacidadRefrigerado: false,
+  capacidadZonasHabilitadas: ['Centro'],
 })
 
 const ISOLATION_CASES: Record<string, IsolationCase> = {
@@ -181,6 +202,35 @@ const ISOLATION_CASES: Record<string, IsolationCase> = {
     insertWith: (tx, empresaId) =>
       tx.insert(loginAttempts).values({ empresaId, userId: newId(), failedCount: 1, windowStartedAt: sql`now()` }),
   },
+  // Maestros (BE-2).
+  suppliers: {
+    tenantColumn: 'empresa_id',
+    match: t => sql`id = ${t.supplierId}`,
+    mutation: sql`name = 'modificada por A'`,
+    probe: sql`name`,
+    insertWith: (tx, empresaId) => tx.insert(suppliers).values({ id: newId(), empresaId, name: 'intruso', cuit: '20123456789', category: 'x' }),
+  },
+  vehicles: {
+    tenantColumn: 'empresa_id',
+    match: t => sql`id = ${t.vehicleId}`,
+    mutation: sql`tipo = 'modificada por A'`,
+    probe: sql`tipo`,
+    insertWith: (tx, empresaId) => tx.insert(vehicles).values(vehicleRow(empresaId, newId(), 'ZZ999ZZ')),
+  },
+  drivers: {
+    tenantColumn: 'empresa_id',
+    match: t => sql`id = ${t.driverId}`,
+    mutation: sql`nombre = 'modificada por A'`,
+    probe: sql`nombre`,
+    insertWith: (tx, empresaId) => tx.insert(drivers).values({ id: newId(), empresaId, nombre: 'intruso', licencia: 'X-999', telefono: '1' }),
+  },
+  motivos: {
+    tenantColumn: 'empresa_id',
+    match: t => sql`id = ${t.motivoId}`,
+    mutation: sql`descripcion = 'modificada por A'`,
+    probe: sql`descripcion`,
+    insertWith: (tx, empresaId) => tx.insert(motivos).values({ id: newId(), empresaId, codigo: 'INTRUSO', tipo: 'rechazo', descripcion: 'intruso' }),
+  },
 }
 
 const runId = newId()
@@ -200,6 +250,10 @@ async function createTenant(label: string): Promise<Tenant> {
     refreshTokenId: newId(),
     idempotencyKey: newId(),
     auditId: newId(),
+    supplierId: newId(),
+    vehicleId: newId(),
+    driverId: newId(),
+    motivoId: newId(),
     label,
   }
   const passwordHash = await testPasswordHash()
@@ -253,6 +307,12 @@ async function createTenant(label: string): Promise<Tenant> {
     })
     await tx.insert(auditLog).values(auditRow(tenant.companyId, tenant.userId, tenant.auditId))
     await tx.insert(documentCounters).values({ empresaId: tenant.companyId, series: 'PED', lastValue: 5 })
+    await tx.insert(suppliers).values({ id: tenant.supplierId, empresaId: tenant.companyId, name: `proveedor ${label}`, cuit: '30-11111111-1', category: 'x' })
+    await tx.insert(vehicles).values(vehicleRow(tenant.companyId, tenant.vehicleId, 'AA111AA'))
+    await tx
+      .insert(drivers)
+      .values({ id: tenant.driverId, empresaId: tenant.companyId, nombre: `chofer ${label}`, licencia: 'B-111', telefono: '1', usuarioId: tenant.userId })
+    await tx.insert(motivos).values({ id: tenant.motivoId, empresaId: tenant.companyId, codigo: 'PRUEBA', tipo: 'rechazo', descripcion: `motivo ${label}` })
   })
   return tenant
 }
@@ -265,6 +325,10 @@ async function createTenant(label: string): Promise<Tenant> {
 async function removeTenant(t: Tenant | undefined): Promise<void> {
   if (t === undefined) return
   await db.withTenant(t.companyId, async tx => {
+    await tx.delete(drivers).where(eq(drivers.empresaId, t.companyId))
+    await tx.delete(vehicles).where(eq(vehicles.empresaId, t.companyId))
+    await tx.delete(suppliers).where(eq(suppliers.empresaId, t.companyId))
+    await tx.delete(motivos).where(eq(motivos.empresaId, t.companyId))
     await tx.delete(idempotencyKeys).where(eq(idempotencyKeys.empresaId, t.companyId))
     await tx.delete(documentCounters).where(eq(documentCounters.empresaId, t.companyId))
     await tx.delete(loginAttempts).where(eq(loginAttempts.empresaId, t.companyId))
@@ -277,7 +341,9 @@ async function removeTenant(t: Tenant | undefined): Promise<void> {
       sql`select (select count(*) from ${branches})::int + (select count(*) from ${idempotencyKeys})::int
                 + (select count(*) from ${documentCounters})::int + (select count(*) from ${loginAttempts})::int
                 + (select count(*) from ${refreshTokens})::int + (select count(*) from ${userBranches})::int
-                + (select count(*) from ${rolePermissions})::int as n,
+                + (select count(*) from ${rolePermissions})::int + (select count(*) from ${suppliers})::int
+                + (select count(*) from ${vehicles})::int + (select count(*) from ${drivers})::int
+                + (select count(*) from ${motivos})::int as n,
               (select count(*) from ${users})::int as users, (select count(*) from ${roles})::int as roles,
               (select count(*) from ${companies})::int as companies`,
     )

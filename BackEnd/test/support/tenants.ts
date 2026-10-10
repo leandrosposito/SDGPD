@@ -6,13 +6,17 @@ import {
   branches,
   companies,
   documentCounters,
+  drivers,
   idempotencyKeys,
   loginAttempts,
+  motivos,
   refreshTokens,
   rolePermissions,
   roles,
+  suppliers,
   userBranches,
   users,
+  vehicles,
 } from '../../src/db/schema/index.ts'
 import { pgCode } from './db.ts'
 
@@ -65,6 +69,11 @@ export async function removeTestCompany(db: Database, tenant: TestTenant | undef
   if (tenant === undefined) return
   const { empresaId } = tenant
   await db.withTenant(empresaId, async tx => {
+    // Maestros (BE-2): drivers antes que users (FK del usuario vinculado).
+    await tx.delete(drivers).where(eq(drivers.empresaId, empresaId))
+    await tx.delete(vehicles).where(eq(vehicles.empresaId, empresaId))
+    await tx.delete(suppliers).where(eq(suppliers.empresaId, empresaId))
+    await tx.delete(motivos).where(eq(motivos.empresaId, empresaId))
     await tx.delete(idempotencyKeys).where(eq(idempotencyKeys.empresaId, empresaId))
     await tx.delete(documentCounters).where(eq(documentCounters.empresaId, empresaId))
     await tx.delete(refreshTokens).where(eq(refreshTokens.empresaId, empresaId))

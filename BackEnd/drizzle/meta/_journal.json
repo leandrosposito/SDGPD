@@ -50,6 +50,20 @@
       "when": 1791582026607,
       "tag": "0006_refresh_tokens_cleanup",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791635365368,
+      "tag": "0007_masters",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791635374873,
+      "tag": "0008_rls_masters",
+      "breakpoints": true
     }
   ]
 }
