@@ -18,7 +18,7 @@
 
 ## Commits creados y merge
 
-Esta ejecución deja los cambios en la rama `sesion-plan-backend-2026-10-10`, derivada de `lean=e719e96c870244bc67756f3fa91f929315ef761c`. Al redactar este reporte todavía no se creó el commit de cierre ni se hizo merge: el siguiente paso de cierre es revisar el diff, crear commits propios por unidad, y solo mergear con `--no-ff` si se mantiene la línea base documental y `docs:check` continúa verde.
+Se crearon commits propios por U0, BE-02..BE-10 y cierre en `sesion-plan-backend-2026-10-10`, derivada de `lean=e719e96c870244bc67756f3fa91f929315ef761c`. La rama se mergeó a `lean` con `--no-ff` en el merge commit de cierre y se creó el tag local `post-sesion-plan-backend-2026-10-10`. El push a `origin` fue solicitado pero el clasificador de permisos lo rechazó por publicación externa; queda pendiente ejecutar `git push origin lean --tags` con autorización.
 
 ## Decisiones que tomé sin consultar
 
