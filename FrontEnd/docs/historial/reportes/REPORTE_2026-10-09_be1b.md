@@ -163,6 +163,8 @@ Restaurado desde la copia (`cmp` sin diferencias); el smoke vuelve a dar `todos 
 
 ## Hallazgos MEDIO/BAJO documentados y no tocados
 
+> **Los dos MEDIO de abajo se cerraron en BE-1c (2026-10-10, `REPORTE_2026-10-10_be1c.md`):** lock entre pestañas y una sola zod (`vendor-zod` 154.6 → 69.1 kB). El chunk de entrada sigue más grande que antes de BE-1b, por otra razón (schemas de `contracts` y código de auth en el arranque).
+
 - **MEDIO, tamaño del bundle:**
   - el chunk `vendor-zod` pasó de 64.6 a 154.6 kB y el de entrada (`index-`), de 117.5 a 169.2 kB;
   - el frontend empaqueta dos zod (su 4.4.3 y el 4.6.5 de `contracts`), más los schemas que el store carga al arrancar;
