@@ -357,6 +357,17 @@ Registrado el 2026-10-09 (Tanda 23, 23.2 no hecho). Centinela vacío casteado a 
 
 Registrado el 2026-10-09 (Tanda 25). El rango de un preset fijo se calcula al renderizar y queda memoizado: una pantalla abierta de un día para otro (p. ej. Logística con 'Hoy') sigue filtrando por la fecha del día anterior hasta recargar o tocar un filtro. Preexistente a la Tanda 24. Sin disparador definido; decisión pendiente.
 
+### 25. Ciclo de imports entre `orders.service.ts` y `deliveries.service.ts` — Severidad: Baja (deliberado, hoy seguro)
+
+Registrado el 2026-10-10 (sesión `ciclo-pedidos-entregas`), verificado con grep sobre `lean` en `e719e96`. Lo detectó el análisis de capas sobre el grafo de Graphify, cruzando las aristas a mano. **La sección "Import Cycles" del propio reporte de Graphify salió vacía: la herramienta no lo detecta sola.**
+
+- `modules/logistics/services/deliveries.service.ts:13` importa `applyDeliveryToOrderLines` y `getOrderById` de `orders.service.ts` (dirección original, Tanda 9).
+- `modules/orders/api/orders.service.ts:12` importa `getActiveDeliveriesForOrder` de `deliveries.service.ts`, para que `cancelOrder` (`:461`) devuelva `has-active-deliveries`. Entró con el commit `5167db8` (2026-09-09), fix del hallazgo ALTO de `VERIFICACION_TANDA_9.md`.
+- **Hoy es seguro:** ninguno de los dos lados usa el import a nivel de módulo, solo dentro del cuerpo de una función. La desviación está justificada en `deliveries.service.ts:91-99`. Lo único que estaba mal era `ARQUITECTURA.md`, que afirmaba "no hay ciclo" (corregido en la misma sesión).
+- **Riesgo si se toca:** si alguno de los dos archivos empieza a usar algo del otro al cargar (una constante derivada, un `const x = otraFuncion()` a nivel de módulo), el ciclo deja de ser inocuo y aparece un `undefined` en tiempo de carga.
+- **Disparador:** BE-5 (cancelación de pedidos en el servidor) y BE-6 (entregas). Cuando `cancelOrder` vaya por `http`, la validación de entregas activas la hace el servidor y el import inverso desaparece del frontend. Al encarar BE-5, revisar también si la regla sigue siendo "bloquear": ADR-BE-009 (§Cancelar pedido y caso 3, "cancelar un pedido con entregas ya despachadas") contempla cancelar liberando solo la reserva del pendiente.
+- **Decisión:** no se refactoriza antes. Romperlo hoy obliga a duplicar el criterio de "entrega activa" en `orders.service.ts` o a inyectarlo desde la UI, para un código que se reemplaza en BE-5/BE-6.
+
 ## Reportados pero no reproducidos (verificados y descartados)
 
 Estos dos ítems se investigaron con evidencia de código directa (no solo lectura
@@ -425,5 +436,6 @@ escáner físico normalmente no dispara dos `Enter` en un intervalo tan corto.
 | 22 | `httpClient.request<T>` de viajes/entregas/vehículos/choferes tipan ids branded sin validar (sin DTO ni mapper) | Vigente — se resuelve al conectar cada módulo | Media / Alta al conectar |
 | 23 | `'' as Trip['id']` en `TripDetailPanel.tsx:119` (la regla de ESLint no veía el cast indexado) | **Cerrado** (Tanda 25: subcomponente `TripLivePosition` + regla extendida) | — |
 | 24 | Rango de preset fijo memoizado: una pantalla abierta de un día para otro filtra por el día anterior | Vigente — sin disparador, decisión pendiente | Baja |
+| 25 | Ciclo de imports `orders.service` ↔ `deliveries.service` (deliberado, hoy seguro; `ARQUITECTURA.md` decía que no había ciclo) | Vigente — desaparece al conectar pedidos y entregas (BE-5/BE-6) | Baja |
 | — | `NewTransactionModal` formato de hora | No reproduce | — |
 | — | `OrderProductsSection` `await` faltante | No reproduce (resuelto o nunca existió así) | — |
