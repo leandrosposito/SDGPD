@@ -1,4 +1,4 @@
-import { createHttpClient } from './httpClientCore';
+import { createHttpClient, type RefreshLock } from './httpClientCore';
 import { parseHttpServices, type ServiceName } from './serviceModes';
 import { getAccessToken, notifySessionExpired, setAccessToken } from '@/shared/auth/tokenStore';
 
@@ -65,15 +65,37 @@ export function isHttpService(service: ServiceName): boolean {
   return API_MODE === 'http' || httpServices.has(service);
 }
 
+const API_DEBUG = (import.meta.env.VITE_API_DEBUG as string | undefined) === 'true';
+
+// BE-1c: el refresh se serializa entre pestanas con la Web Locks API. Si el
+// navegador no la tiene, se sigue sin lock (como en BE-1b) y se avisa UNA vez
+// por consola en modo debug. Sin polyfill.
+function browserRefreshLock(): RefreshLock | undefined {
+  if (typeof navigator !== 'undefined' && 'locks' in navigator && navigator.locks) {
+    const locks = navigator.locks;
+    return (name, fn) => locks.request(name, () => fn());
+  }
+  if (API_DEBUG) {
+    console.warn('[httpClient] navigator.locks no existe: el refresh no se coordina entre pestanas (dos a la vez pueden cerrar la sesion).');
+  }
+  return undefined;
+}
+
 export const httpClient = createHttpClient({
   mode: API_MODE === 'http' ? 'http' : 'mock',
   baseUrl: (import.meta.env.VITE_API_BASE_URL as string | undefined) || '/api',
   mockLatencyMs: Number(import.meta.env.VITE_MOCK_LATENCY_MS ?? 300),
   mockFailureRate: Number(import.meta.env.VITE_MOCK_FAILURE_RATE ?? 0),
-  debug: (import.meta.env.VITE_API_DEBUG as string | undefined) === 'true',
+  debug: API_DEBUG,
   httpServices,
   // Solo con auth por http hay token y refresh; en mock no se manda nada.
   auth: isHttpService('auth')
-    ? { getAccessToken, setAccessToken, refreshPath: 'auth/refresh', onSessionExpired: notifySessionExpired }
+    ? {
+        getAccessToken,
+        setAccessToken,
+        refreshPath: 'auth/refresh',
+        onSessionExpired: notifySessionExpired,
+        lock: browserRefreshLock(),
+      }
     : undefined,
 });

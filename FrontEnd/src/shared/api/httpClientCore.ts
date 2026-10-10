@@ -68,7 +68,20 @@ export interface HttpClientAuth {
   refreshPath: string;
   // El refresh fallo: la sesion termino (el llamador vuelve al login).
   onSessionExpired(): void;
+  // BE-1c: lock ENTRE PESTANAS del refresh (en el navegador, navigator.locks.request
+  // con REFRESH_LOCK_NAME): todas las pestanas comparten la cookie de refresh, y dos
+  // refresh a la vez con la misma cookie son un reuso para el servidor, que revoca la
+  // familia. Con el lock, el refresh de la segunda pestana espera al de la primera y
+  // sale con la cookie ya rotada. Sin lock (navigator.locks no existe), se refresca
+  // sin coordinar, como en BE-1b.
+  lock?: RefreshLock;
 }
+
+/** Corre `fn` con el lock `name` tomado y lo suelta al terminar (la forma de navigator.locks.request). */
+export type RefreshLock = (name: string, fn: () => Promise<boolean>) => Promise<boolean>;
+
+/** Nombre fijo del lock del refresh: uno solo en todo el navegador (BE-1c). */
+export const REFRESH_LOCK_NAME = 'sdgpd-auth-refresh';
 
 export interface HttpClientSettings {
   mode: 'mock' | 'http';
@@ -80,6 +93,9 @@ export interface HttpClientSettings {
   // BE-1b: services que van por http (los demas, mock), y el manejo del token.
   httpServices?: ReadonlySet<string>;
   auth?: HttpClientAuth;
+  // BE-1c: el fetch a usar (por defecto, el global). Solo para el smoke de
+  // pestanas, que simula dos pestanas con un frasco de cookies compartido.
+  fetchImpl?: typeof fetch;
 }
 
 export interface HttpClient {
@@ -259,7 +275,7 @@ export function createHttpClient(settings: HttpClientSettings): HttpClient {
 
     let response: Response;
     try {
-      response = await fetch(url.toString(), {
+      response = await (settings.fetchImpl ?? fetch)(url.toString(), {
         method: config.method,
         headers,
         body: config.body ? JSON.stringify(config.body) : undefined,
@@ -295,7 +311,9 @@ export function createHttpClient(settings: HttpClientSettings): HttpClient {
 
   // Single-flight del refresh: todos los 401 que llegan mientras hay un
   // refresh en vuelo esperan ESE mismo, en vez de disparar otro (dos refresh
-  // con la misma cookie: el segundo es un reuso y revoca la familia).
+  // con la misma cookie: el segundo es un reuso y revoca la familia). Eso
+  // cubre UNA pestana; entre pestanas lo cubre el lock (auth.lock, BE-1c),
+  // que envuelve al refresh de esta pestana.
   let refreshInFlight: Promise<boolean> | null = null;
 
   async function runRefresh(auth: HttpClientAuth): Promise<boolean> {
@@ -326,7 +344,8 @@ export function createHttpClient(settings: HttpClientSettings): HttpClient {
   function refreshAccessToken(): Promise<boolean> {
     const auth = settings.auth;
     if (!auth) return Promise.resolve(false);
-    refreshInFlight ??= runRefresh(auth).finally(() => {
+    const run = () => runRefresh(auth);
+    refreshInFlight ??= (auth.lock ? auth.lock(REFRESH_LOCK_NAME, run) : run()).finally(() => {
       refreshInFlight = null;
     });
     return refreshInFlight;

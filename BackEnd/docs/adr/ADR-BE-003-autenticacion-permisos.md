@@ -100,6 +100,7 @@ Hallazgo **B2** (`00_RESUMEN.md`; `04_TRANSVERSALES.md` §1 y §3).
     - el refresh y el login van con `credentials: 'include'`; el refresh, además, con `X-Requested-With: XMLHttpRequest`;
     - el logout manda el access token (el claim `sid` identifica la familia: la cookie no viaja a `/api/auth/logout`, sub-decisión 11);
     - la UI pregunta por permisos en **un solo lugar**, `usePermission(módulo, acción)`, y solo oculta.
+29. **Un solo refresh a la vez en todo el navegador (BE-1c, 2026-10-10, sin consulta).** El refresh del frontend (el que dispara un 401 y el del arranque) corre dentro de `navigator.locks.request('sdgpd-auth-refresh', …)`: todas las pestañas comparten la cookie de refresh, y dos refresh a la vez con la misma cookie son un reuso para el servidor, que revoca la familia (sub-decisión 14) y cierra la sesión en las dos. Con el lock, la segunda pestaña espera a la primera y refresca con la cookie ya rotada. El single-flight por pestaña (sub-decisión 28) sigue adentro del lock. Si `navigator.locks` no existe, se refresca sin lock (como en BE-1b) y se avisa una vez por consola en modo debug; sin polyfill. **La detección de reuso del servidor no cambia.** Probado con `FrontEnd/scripts/smoke/be-1c.smoke.mjs`, contra un servidor con la misma rotación y detección de reuso.
 
 ## Objeciones
 
