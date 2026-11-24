@@ -13,8 +13,7 @@ export const TabAdjustments: FC = () => {
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault()
-      // Aca iria la logica para buscar el producto por codigo de barras
-      console.log('Buscando producto:', productSearch)
+      // Pendiente: buscar el producto por codigo de barras (Enter solo evita enviar el form).
     }
   }
 

@@ -131,8 +131,7 @@ export const LogisticsPage: FC = () => {
   }, [error])
 
   const handlePrintRoute = () => {
-    // Mock print action
-    console.log('Imprimiendo hoja de ruta...')
+    // Pendiente: la impresion real de la hoja de ruta todavia no existe.
   }
 
   // ------------------------------------------------------------
