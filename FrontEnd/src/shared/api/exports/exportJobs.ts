@@ -78,7 +78,7 @@ export interface CreateExportJobParams<T> {
     columns: ExportColumn<T>[],
     formato: ExportFormat,
     fileNamePrefix: string
-  ) => BuildFileResult
+  ) => BuildFileResult | Promise<BuildFileResult>
   // Delay entre pasos en ms — solo para acortarlo en tests, default
   // DEFAULT_STEP_DELAY_MS en produccion.
   stepDelayMs?: number
@@ -113,7 +113,7 @@ export async function createExportJob<T>(
         return
       }
 
-      const { downloadUrl, fileName } = params.buildFile(
+      const { downloadUrl, fileName } = await params.buildFile(
         items,
         params.columns,
         params.formato,
