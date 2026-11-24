@@ -24,3 +24,19 @@ export function toLocalDateString(date: Date): string {
 export function todayLocalDateString(): string {
   return toLocalDateString(new Date())
 }
+
+// ¿La fecha cae dentro del rango [dateFrom, dateTo]? Ambos limites son
+// opcionales (filtro inactivo si no vienen) y se comparan contra la porcion
+// yyyy-MM-dd de `dateISO`, asi que sirve igual para una fecha pura que para
+// un ISO datetime: una orden creada hoy a cualquier hora cae en un rango cuyo
+// `dateTo` es hoy.
+export function isWithinDateRange(
+  dateISO: string,
+  dateFrom: string | undefined,
+  dateTo: string | undefined
+): boolean {
+  const day = dateISO.slice(0, 10)
+  if (dateFrom && day < dateFrom) return false
+  if (dateTo && day > dateTo) return false
+  return true
+}

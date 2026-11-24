@@ -7,6 +7,7 @@ import {
   asDeliveryId,
 } from '@/shared/types/ids.types'
 import type { Trip } from '@/shared/types/trip.types'
+import { toLocalDateString } from '@/shared/utils/date'
 
 // ============================================================
 // MOCK DATA — Viajes (Tanda 10B, ADR-011). 2 viajes sembrados, cada
@@ -23,14 +24,7 @@ import type { Trip } from '@/shared/types/trip.types'
 // actual.
 // ============================================================
 
-function toISODate(date: Date): string {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
-
-const TODAY_ISO = toISODate(new Date())
+const TODAY_ISO = toLocalDateString(new Date())
 const NOW_ISO = new Date().toISOString()
 
 export const TRIPS_MOCK_DATA: Trip[] = [

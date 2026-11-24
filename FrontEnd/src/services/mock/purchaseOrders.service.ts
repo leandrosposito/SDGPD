@@ -19,6 +19,7 @@ import type {
 import { PURCHASE_ORDERS_MOCK_DATA } from '@/data/mock/purchaseOrders.data'
 import { httpClient } from '@/shared/api/httpClient'
 import { fetchProducts } from '@/shared/api/products/products.service'
+import { isWithinDateRange } from '@/shared/utils/date'
 
 // Tanda 14 (hallazgo Tanda 12 a medias): "servidor a servidor" hacia
 // products.service.ts, mismo patron que
@@ -67,22 +68,6 @@ export function computePurchaseOrderTotal(lines: PurchaseOrderLine[]): number {
 function matchesSearch(orderId: string, search: string | undefined): boolean {
   if (!search || !search.trim()) return true
   return orderId.toLowerCase().includes(search.trim().toLowerCase())
-}
-
-// dateFrom/dateTo (DateRangeFilter, tarea transversal): comparan solo
-// la porcion yyyy-MM-dd de `createdAt` (ISO datetime completo) contra
-// los dos limites (ISO date puro) — asi una orden creada HOY a
-// cualquier hora cae dentro de un rango cuyo `dateTo` es hoy, en vez de
-// quedar afuera por la parte de hora del datetime.
-function isWithinDateRange(
-  dateISO: string,
-  dateFrom: string | undefined,
-  dateTo: string | undefined
-): boolean {
-  const day = dateISO.slice(0, 10)
-  if (dateFrom && day < dateFrom) return false
-  if (dateTo && day > dateTo) return false
-  return true
 }
 
 // Filtro compartido entre getPurchaseOrdersPage y exportPurchaseOrders
