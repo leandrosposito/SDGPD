@@ -2,7 +2,7 @@
    TYPOGRAPHY — Font import and scale definitions
    ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+/* Las fuentes (Inter y JetBrains Mono) se cargan desde index.html, no con @import: un @import en el CSS obliga a bajar primero este archivo para descubrirlas. */
 
 body {
   font-family: var(--font-family-base);
