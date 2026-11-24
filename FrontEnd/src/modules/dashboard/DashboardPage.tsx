@@ -1,11 +1,20 @@
-import type { FC } from 'react'
+import { lazy, Suspense, type FC } from 'react'
 import { useDashboard } from '@/shared/hooks/useDashboard'
 import { KpiGrid } from './components/KpiGrid'
-import { SalesChart } from './components/SalesChart'
-import { TopProductsChart } from './components/TopProductsChart'
+import { SkeletonLoader } from '@/shared/components/ui/SkeletonLoader'
 import { RecentOrdersTable } from './components/RecentOrdersTable'
 import { DashboardAggregatesSection } from './components/DashboardAggregatesSection'
 import './DashboardPage.css'
+
+// Los graficos usan recharts (~340 kB): se cargan aparte para que los KPIs y la
+// tabla de pedidos se pinten sin esperar esa descarga. Mientras llegan se muestra
+// un esqueleto con la altura aproximada del grafico, para que la pagina no salte.
+const SalesChart = lazy(() =>
+  import('./components/SalesChart').then(m => ({ default: m.SalesChart }))
+)
+const TopProductsChart = lazy(() =>
+  import('./components/TopProductsChart').then(m => ({ default: m.TopProductsChart }))
+)
 
 // ============================================================
 // DashboardPage — Main overview screen
@@ -56,10 +65,14 @@ export const DashboardPage: FC = () => {
       {/* Charts Row */}
       <div className="dashboard__charts-row">
         <div className="dashboard__chart-main">
-          <SalesChart data={data?.salesSeries ?? []} isLoading={isLoading} />
+          <Suspense fallback={<SkeletonLoader height="24rem" />}>
+            <SalesChart data={data?.salesSeries ?? []} isLoading={isLoading} />
+          </Suspense>
         </div>
         <div className="dashboard__chart-side">
-          <TopProductsChart products={data?.topProducts ?? []} isLoading={isLoading} />
+          <Suspense fallback={<SkeletonLoader height="24rem" />}>
+            <TopProductsChart products={data?.topProducts ?? []} isLoading={isLoading} />
+          </Suspense>
         </div>
       </div>
 
