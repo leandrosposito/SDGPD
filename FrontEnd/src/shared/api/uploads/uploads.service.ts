@@ -23,8 +23,6 @@ export const EVIDENCE_LIMITS = {
   acceptedTypes: ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'] as const,
 }
 
-export type AcceptedEvidenceType = (typeof EVIDENCE_LIMITS.acceptedTypes)[number]
-
 function delay(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms))
 }

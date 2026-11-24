@@ -3,16 +3,10 @@ import type { CashTransaction } from '@/shared/types/cash.types'
 import { Table } from '@/shared/components/ui/Table'
 import { Badge } from '@/shared/components/ui/Badge'
 import '../CashPage.css'
+import { formatCurrency } from '@/shared/utils/format'
 
 interface CashTransactionsTableProps {
   transactions: CashTransaction[]
-}
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: 'ARS',
-  }).format(value)
 }
 
 // Tanda 3b: ya no ordena en memoria — cash.service.ts#getCashTransactionsPage

@@ -25,6 +25,7 @@ import {
   type OrdersQueryFilters,
 } from './api/orders.service'
 import './OrdersPage.css'
+import { formatCurrency } from '@/shared/utils/format'
 
 // ============================================================
 // OrdersPage — Gestion de Pedidos y Ventas (Tanda 3a de escalabilidad)
@@ -57,10 +58,6 @@ const STATUS_VARIANT: Record<OrderStatus, 'neutral' | 'warning' | 'info' | 'succ
   delivered: 'success',
   invoiced: 'success',
   cancelled: 'danger',
-}
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(value)
 }
 
 function formatDate(iso: string): string {

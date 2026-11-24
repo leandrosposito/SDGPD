@@ -21,6 +21,7 @@ import {
   exportClientAccounts,
   type ClientAccountsQueryFilters,
 } from '@/modules/clients/api/clients.service'
+import { formatCurrency } from '@/shared/utils/format'
 
 // ============================================================
 // ClientAccountsTable — Cuentas Corrientes, paginada server-side
@@ -37,10 +38,6 @@ import {
 // rango), nunca recalcula totalDebit/totalCredit/currentBalance de la
 // fila. Default 'all': este listado hoy no filtraba por fecha.
 // ============================================================
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(value)
-}
 
 interface ClientAccountsTableProps {
   search: string

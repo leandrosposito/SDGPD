@@ -2,6 +2,7 @@ import { type FC } from 'react'
 import type { TopDebtor } from '@/shared/types/analytics.types'
 import { Badge } from '@/shared/components/ui/Badge'
 import './TopDebtorsTable.css'
+import { formatCurrency } from '@/shared/utils/format'
 
 // ============================================================
 // TopDebtorsTable — Compact top debtors table
@@ -9,10 +10,6 @@ import './TopDebtorsTable.css'
 
 interface TopDebtorsTableProps {
   data: TopDebtor[]
-}
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(value)
 }
 
 export const TopDebtorsTable: FC<TopDebtorsTableProps> = ({ data }) => {

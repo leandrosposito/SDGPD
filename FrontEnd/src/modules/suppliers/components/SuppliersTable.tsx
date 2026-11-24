@@ -4,16 +4,13 @@ import { Badge } from '@/shared/components/ui/Badge'
 import type { Supplier } from '@/shared/types/supplier.types'
 import type { SuppliersSortField } from '../api/suppliers.service'
 import type { PageSort } from '@/shared/types/pagination.types'
+import { formatCurrency } from '@/shared/utils/format'
 
 interface SuppliersTableProps {
   suppliers: Supplier[]
   onRowClick: (supplier: Supplier) => void
   sort: PageSort<SuppliersSortField> | undefined
   onSortChange: (sort: PageSort<SuppliersSortField> | undefined) => void
-}
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(value)
 }
 
 // Orden ahora server-side (Tanda 1, suppliers.service.ts#fetchSuppliersPage

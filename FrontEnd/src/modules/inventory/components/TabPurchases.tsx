@@ -24,6 +24,7 @@ import {
 } from '@/modules/inventory/api/purchase-suggestions/purchase-suggestions.service'
 import { generatePurchaseOrderFromSuggestion } from '@/services/mock/purchaseOrders.service'
 import './TabPurchases.css'
+import { formatCurrency } from '@/shared/utils/format'
 
 // ============================================================
 // TabPurchases — Sugerencias de compra POR SUCURSAL (E1/3.5),
@@ -49,13 +50,6 @@ interface TabPurchasesProps {
   branchId: Branch['id']
   products: InventoryItem[]
   suppliers: Supplier[]
-}
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: 'ARS',
-  }).format(value)
 }
 
 export const TabPurchases: FC<TabPurchasesProps> = ({

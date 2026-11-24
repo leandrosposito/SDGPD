@@ -14,6 +14,7 @@ import {
   computePurchaseOrderTotal,
 } from '@/services/mock/purchaseOrders.service'
 import './SupplierDetailPanel.css'
+import { formatCurrency, formatDate } from '@/shared/utils/format'
 
 // ============================================================
 // SupplierDetailPanel — Sliding detail view for a supplier
@@ -36,18 +37,6 @@ interface SupplierDetailPanelProps {
   // ya existia en SupplierFormModal.tsx, faltaba el boton que la
   // dispare con un `supplier` no-nulo.
   onEdit: () => void
-}
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(value)
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('es-AR', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  })
 }
 
 // Duplicado deliberado (no importado desde modules/compras/, R2): un

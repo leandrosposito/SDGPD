@@ -2,6 +2,7 @@ import { type FC } from 'react'
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts'
 import type { CashFlowData } from '@/shared/types/analytics.types'
 import './ChartCard.css'
+import { formatCurrency } from '@/shared/utils/format'
 
 // ============================================================
 // CashFlowDonut — Income vs Expenses doughnut chart
@@ -12,10 +13,6 @@ interface CashFlowDonutProps {
 }
 
 const COLORS = { income: '#8b5cf6', expenses: '#4b5563' }
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(value)
-}
 
 function renderTooltip(props: unknown) {
   const { active, payload } = props as {

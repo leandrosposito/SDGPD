@@ -3,9 +3,10 @@ import { Table } from '@/shared/components/ui/Table'
 import { Badge } from '@/shared/components/ui/Badge'
 import type { Branch } from '@/shared/types/session.types'
 import type { Supplier } from '@/shared/types/supplier.types'
-import type { Currency, PurchaseOrder } from '@/shared/types/purchaseOrder.types'
+import type { PurchaseOrder } from '@/shared/types/purchaseOrder.types'
 import { computePurchaseOrderTotal } from '@/services/mock/purchaseOrders.service'
 import { PURCHASE_ORDER_STATUS_LABEL, PURCHASE_ORDER_STATUS_VARIANT } from '../purchaseOrderLabels'
+import { formatCurrency, formatDate } from '@/shared/utils/format'
 
 // ============================================================
 // PurchaseOrdersTable — tabla "tonta" del listado paginado de Compras.
@@ -22,18 +23,6 @@ interface PurchaseOrdersTableProps {
   suppliersById: Map<Supplier['id'], Supplier>
   branchesById: Map<Branch['id'], Branch>
   onViewDetail: (order: PurchaseOrder) => void
-}
-
-function formatCurrency(value: number, currency: Currency): string {
-  return new Intl.NumberFormat('es-AR', { style: 'currency', currency }).format(value)
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('es-AR', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  })
 }
 
 export const PurchaseOrdersTable: FC<PurchaseOrdersTableProps> = ({

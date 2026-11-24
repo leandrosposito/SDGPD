@@ -41,9 +41,19 @@ modules/suppliers/
 | `clients`, `dashboard`, `orders`, `settings`, `suppliers` | sí | `dto.ts`/`mapper.ts`/`<módulo>.service.ts` en `modules/<x>/api/`. **Excepción desde BE-1b:** `settings/api/users-roles/` tiene solo `users-roles.service.ts`: el wire es el contrato de `@sdgpd/contracts` (`User`, `Role`, `Branch`), sin dto/mapper propios. Sus componentes están en `settings/components/users-roles/` (`UserFormModal`, `RolePermissionsEditor`, `settingsErrors`, `userForm.schema`, `UsersRoles.css`) |
 | `cash` | sí | igual patrón, sin sub-carpetas |
 | `inventory` | sí, con sub-dominios | `api/movements/`, `api/product-history/`, `api/purchase-suggestions/` — 3 sub-carpetas independientes, sin relación modelada entre sí |
-| `logistics` | **no** — usa `services/`, no `api/` | `modules/logistics/services/deliveries.service.ts`, sin `dto.ts`/`mapper.ts` separados. Desviación real del nombre de carpeta, no un error de este documento. |
+| `logistics` | **no** — usa `services/`, no `api/` | `modules/logistics/services/` (`deliveries.*`, `trips.*`, `pod.service.ts`), sin `dto.ts`/`mapper.ts` separados. Desviación real del nombre de carpeta, no un error de este documento. |
 | `compras` | **no existe ninguna** | su service vive en `src/services/mock/purchaseOrders.service.ts` (fuera del módulo) |
 | `analytics` | **no existe ninguna** | lee `data/mock/analytics.data.ts` directo, sin capa de service |
+
+**Servicios grandes divididos por responsabilidad (limpieza de código):** `clients`, `trips` y `deliveries` ya no son un solo archivo. Cada uno tiene un `<nombre>.service.ts` que solo **re-exporta la API pública** (los importadores no cambian) y archivos por responsabilidad:
+
+| Servicio | Archivos | Qué hace cada uno |
+|---|---|---|
+| `clients` (`modules/clients/api/`) | `clients.store.ts`, `clients.filters.ts`, `clients.directory.ts`, `clients.accounts.ts`, `clients.overdue.ts`, `clients.types.ts` | store único compartido por las 3 pestañas; filtros compartidos; Directorio; Cuentas Corrientes; Clientes Morosos |
+| `trips` (`modules/logistics/services/`) | `trips.store.ts`, `trips.queries.ts`, `trips.lifecycle.ts`, `trips.assignment.ts`, `trips.stops.ts`, `trips.types.ts` | store; lecturas; alta/transición/orden de paradas; asignación de entregas y liberación; POD y "no visitada" |
+| `deliveries` (`modules/logistics/services/`) | `deliveries.store.ts`, `deliveries.scope.ts`, `deliveries.lookups.ts`, `deliveries.queries.ts`, `deliveries.transitions.ts`, `deliveries.fulfillment.ts`, `deliveries.types.ts` | store; filtro/orden; lecturas síncronas servidor-a-servidor; lecturas paginadas; transiciones; remitos y alta |
+
+Convención: el arreglo mock vive **solo** en `<nombre>.store.ts` y nunca se exporta; el resto lo lee con `list…()`/`find…()` y lo modifica con `save…()`/`add…()`/`update…()`/`replace…()`. Los tipos de los servicios de `orders` y `products` también están en `*.types.ts` (re-exportados desde su service). Utilidades compartidas nuevas: `shared/utils/format.ts` (`formatCurrency`, `formatDate`) y `isWithinDateRange` en `shared/utils/date.ts`.
 
 `inventory` y `logistics` además tienen `state/` propio (zustand: `useReplenishmentStore.ts`, y el store de logística respectivamente) — un módulo usa `state/` solo si tiene estado compartido propio, no es obligatorio.
 

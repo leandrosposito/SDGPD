@@ -79,5 +79,3 @@ export interface CreateSupplierDTO {
   telefono: string
   contacto: Pick<SupplierContactDTO, 'email'>
 }
-
-export type UpdateSupplierDTO = CreateSupplierDTO

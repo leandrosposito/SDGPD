@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 import type { InventoryItem } from '@/shared/types/inventory.types'
 import { useSessionStore } from '@/shared/state/useSessionStore'
 import { getStockForBranch } from '@/shared/api/products/products.service'
+import { formatCurrency } from '@/shared/utils/format'
 
 // ============================================================
 // OrderProductsSection — Core product search and table
@@ -28,10 +29,6 @@ interface OrderProductsSectionProps {
   onItemsChange: (items: OrderProductItem[]) => void
   priceList: string
   products: InventoryItem[]
-}
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(value)
 }
 
 export const OrderProductsSection: FC<OrderProductsSectionProps> = ({

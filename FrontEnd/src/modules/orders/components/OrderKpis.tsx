@@ -1,6 +1,7 @@
 import type { FC } from 'react'
 import type { OrdersAggregates } from '../api/orders.service'
 import './OrderKpis.css'
+import { formatCurrency } from '@/shared/utils/format'
 
 // ============================================================
 // OrderKpis — Mini-Dashboard superior para métricas
@@ -15,13 +16,6 @@ import './OrderKpis.css'
 
 interface OrderKpisProps {
   aggregates: OrdersAggregates | undefined
-}
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: 'ARS',
-  }).format(value)
 }
 
 export const OrderKpis: FC<OrderKpisProps> = ({ aggregates }) => {

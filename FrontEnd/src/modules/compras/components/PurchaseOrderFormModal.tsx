@@ -190,6 +190,12 @@ export const PurchaseOrderFormModal: FC<PurchaseOrderFormModalProps> = ({
       }
     })
 
+  // watch() de react-hook-form no es compatible con el memoizado del React
+  // Compiler (el compilador se salta este componente, sin efecto funcional).
+  // Migrar a useWatch obliga a reescribir el efecto de reset de arriba, que
+  // corrige un bug real de timing con `suppliers`; queda para cuando haya
+  // pruebas de este formulario.
+  // eslint-disable-next-line react-hooks/incompatible-library
   const lines = watch('lines')
   const currency = watch('currency')
   const total = lines.reduce(

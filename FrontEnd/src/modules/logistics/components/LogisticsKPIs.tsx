@@ -1,6 +1,7 @@
 import { type FC } from 'react'
 import type { DeliveryAggregates } from '../services/deliveries.service'
 import '../LogisticsPage.css'
+import { formatCurrency } from '@/shared/utils/format'
 
 // ============================================================
 // LogisticsKPIs — Lee agregados calculados por el servicio (P3,
@@ -11,10 +12,6 @@ import '../LogisticsPage.css'
 
 interface LogisticsKPIsProps {
   aggregates: DeliveryAggregates | undefined
-}
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(value)
 }
 
 export const LogisticsKPIs: FC<LogisticsKPIsProps> = ({ aggregates }) => {

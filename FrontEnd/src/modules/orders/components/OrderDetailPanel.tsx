@@ -25,6 +25,7 @@ import {
 import { resolveOrderClient } from '@/shared/utils/resolveOrderClient'
 import { CreateDeliveryModal } from './CreateDeliveryModal'
 import './OrderDetailPanel.css'
+import { formatCurrency } from '@/shared/utils/format'
 
 // ============================================================
 // OrderDetailPanel — Side panel with order breakdown
@@ -68,10 +69,6 @@ interface OrderDetailPanelProps {
   onClose: () => void
   onAdvanceStatus: (order: Order) => void
   onCancel: (order: Order) => void
-}
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(value)
 }
 
 function formatDateFull(iso: string): string {

@@ -21,11 +21,11 @@ import { getOverdueClientsPage, exportOverdueClients } from '@/modules/clients/a
 import type {
   AgingBucket,
   AgingBucketAggregate,
-  Currency,
   OverdueClientRow,
   OverdueClientsQueryFilters,
 } from '@/shared/types/client.types'
 import { AGING_BUCKET_LABEL, AGING_BUCKET_VARIANT, AGING_BUCKET_ORDER } from '../agingLabels'
+import { formatCurrency } from '@/shared/utils/format'
 
 // ============================================================
 // ClientOverdueTable — "Clientes Morosos" (M7, DECISIONES_TECNICAS.md).
@@ -48,10 +48,6 @@ type BucketFilter = AgingBucket | 'all'
 // especificar la moneda del importe es exactamente el bug que se
 // arreglo en el servicio (mostrar un numero como si supieras que
 // moneda es, sin mirarla).
-function formatCurrency(value: number, currency: Currency): string {
-  return new Intl.NumberFormat('es-AR', { style: 'currency', currency }).format(value)
-}
-
 interface ClientOverdueTableProps {
   search: string
 }

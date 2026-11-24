@@ -5,13 +5,10 @@ import { Badge } from '@/shared/components/ui/Badge'
 import type { Branch } from '@/shared/types/session.types'
 import type { Supplier } from '@/shared/types/supplier.types'
 import type { InventoryItem } from '@/shared/types/inventory.types'
-import type {
-  Currency,
-  PurchaseOrder,
-  PurchaseOrderStatus,
-} from '@/shared/types/purchaseOrder.types'
+import type { PurchaseOrder, PurchaseOrderStatus } from '@/shared/types/purchaseOrder.types'
 import { computePurchaseOrderTotal } from '@/services/mock/purchaseOrders.service'
 import { PURCHASE_ORDER_STATUS_LABEL, PURCHASE_ORDER_STATUS_VARIANT } from '../purchaseOrderLabels'
+import { formatCurrency } from '@/shared/utils/format'
 
 // ============================================================
 // PurchaseOrderDetailPanel — detalle de UNA orden (3.4): sus lineas y
@@ -31,10 +28,6 @@ interface PurchaseOrderDetailPanelProps {
   productsById: Map<InventoryItem['id'], InventoryItem>
   onTransition: (order: PurchaseOrder, nextStatus: PurchaseOrderStatus) => void
   isTransitioning: boolean
-}
-
-function formatCurrency(value: number, currency: Currency): string {
-  return new Intl.NumberFormat('es-AR', { style: 'currency', currency }).format(value)
 }
 
 function formatDateFull(iso: string): string {

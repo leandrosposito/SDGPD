@@ -4,6 +4,7 @@ import { Table } from '@/shared/components/ui/Table'
 import { Badge } from '@/shared/components/ui/Badge'
 import type { InventoryItem } from '@/shared/types/inventory.types'
 import { isExpired, isExpiringSoon } from '@/shared/utils/lotExpiration'
+import { formatDate } from '@/shared/utils/format'
 
 // ============================================================
 // ProductLotsPanel — Visualiza los lotes de un producto
@@ -13,14 +14,6 @@ interface ProductLotsPanelProps {
   isOpen: boolean
   onClose: () => void
   product: InventoryItem | null
-}
-
-function formatDate(isoString: string): string {
-  return new Date(isoString).toLocaleDateString('es-AR', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  })
 }
 
 export const ProductLotsPanel: FC<ProductLotsPanelProps> = ({ isOpen, onClose, product }) => {

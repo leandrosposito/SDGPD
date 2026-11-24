@@ -5,6 +5,7 @@ import { Table } from '@/shared/components/ui/Table'
 import { Badge } from '@/shared/components/ui/Badge'
 import { DELIVERY_STATUS_LABEL, DELIVERY_STATUS_VARIANT } from '../deliveryStatusLabels'
 import '../LogisticsPage.css'
+import { formatCurrency } from '@/shared/utils/format'
 
 // ============================================================
 // DeliveriesTable — Tabla paginable de entregas del dia. Acciones
@@ -19,10 +20,6 @@ import '../LogisticsPage.css'
 
 function isPermitida(delivery: Delivery, transicion: DeliveryStatus): boolean {
   return delivery.allowedTransitions?.find(t => t.transicion === transicion)?.permitida ?? false
-}
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(value)
 }
 
 interface DeliveriesTableProps {

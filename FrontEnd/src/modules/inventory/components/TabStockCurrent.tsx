@@ -21,6 +21,7 @@ import { ProductSearchBar } from './ProductSearchBar'
 import type { InventoryItem, StockedInventoryItem } from '@/shared/types/inventory.types'
 import type { Branch } from '@/shared/types/session.types'
 import './TabStockCurrent.css'
+import { formatCurrency } from '@/shared/utils/format'
 
 // ============================================================
 // TabStockCurrent — Vista principal de stock con KPIs (Tanda 3e de
@@ -58,13 +59,6 @@ interface TabStockCurrentProps {
   onEditProduct: (product: InventoryItem) => void
   // BE-1b: permiso inventory.editar de la sesion (antes, USER_ROLE fijo).
   canEdit: boolean
-}
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: 'ARS',
-  }).format(value)
 }
 
 const stockExportColumns: ExportColumn<StockedInventoryItem>[] = [

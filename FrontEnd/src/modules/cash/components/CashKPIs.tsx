@@ -1,6 +1,7 @@
 import { type FC } from 'react'
 import type { CashAggregates } from '../api/cash.service'
 import '../CashPage.css'
+import { formatCurrency } from '@/shared/utils/format'
 
 // ============================================================
 // CashKPIs — Tanda 3b: recibe `aggregates`, ya calculados server-side
@@ -12,13 +13,6 @@ import '../CashPage.css'
 
 interface CashKPIsProps {
   aggregates: CashAggregates | undefined
-}
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: 'ARS',
-  }).format(value)
 }
 
 export const CashKPIs: FC<CashKPIsProps> = ({ aggregates }) => {

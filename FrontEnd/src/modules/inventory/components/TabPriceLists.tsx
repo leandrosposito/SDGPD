@@ -1,6 +1,7 @@
 import type { FC } from 'react'
 import { Table } from '@/shared/components/ui/Table'
 import './TabPriceLists.css'
+import { formatCurrency } from '@/shared/utils/format'
 
 // ============================================================
 // TabPriceLists — Administrar margenes y precios por tipo
@@ -54,10 +55,6 @@ const PRICE_LIST_MOCK: PriceListMock[] = [
     retailMargin: 30,
   },
 ]
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(value)
-}
 
 export const TabPriceLists: FC = () => {
   return (

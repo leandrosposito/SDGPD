@@ -5,6 +5,7 @@ import type {
   PurchaseOrdersAggregates,
 } from '@/shared/types/purchaseOrder.types'
 import { PURCHASE_ORDER_STATUS_LABEL, PURCHASE_ORDER_STATUS_ORDER } from '../purchaseOrderLabels'
+import { formatCurrency } from '@/shared/utils/format'
 
 // ============================================================
 // PurchaseOrderStatusSummary — resumen de OC por estado (O8), tambien
@@ -20,10 +21,6 @@ interface PurchaseOrderStatusSummaryProps {
   totalItems: number
   activeStatus: PurchaseOrderStatus | ''
   onStatusChange: (status: PurchaseOrderStatus | '') => void
-}
-
-function formatCurrency(value: number, currency: Currency): string {
-  return new Intl.NumberFormat('es-AR', { style: 'currency', currency }).format(value)
 }
 
 export const PurchaseOrderStatusSummary: FC<PurchaseOrderStatusSummaryProps> = ({
