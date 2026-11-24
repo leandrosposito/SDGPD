@@ -1,4 +1,4 @@
-import type { TransactionType, TransactionCategory } from '@/shared/types/cash.types';
+import type { TransactionType, TransactionCategory } from '@/shared/types/cash.types'
 
 // ============================================================
 // dto.ts (cash) — Forma que tendría la respuesta de un backend real
@@ -10,20 +10,20 @@ import type { TransactionType, TransactionCategory } from '@/shared/types/cash.t
 // ============================================================
 
 export interface CashTransactionDTO {
-  id: string;
-  hora: string;
-  tipo: TransactionType;
-  categoria: TransactionCategory;
-  entidad?: string;
-  comprobante?: string;
-  descripcion: string;
-  monto: number;
+  id: string
+  hora: string
+  tipo: TransactionType
+  categoria: TransactionCategory
+  entidad?: string
+  comprobante?: string
+  descripcion: string
+  monto: number
 }
 
 export interface CashTopCategoryDTO {
-  categoria: string;
-  monto: number;
-  porcentaje: number;
+  categoria: string
+  monto: number
+  porcentaje: number
 }
 
 // Agregados (P3, DECISIONES_TECNICAS.md): saldo inicial/ingresos/
@@ -40,38 +40,38 @@ export interface CashTopCategoryDTO {
 // (Tanda 3a): un hack preexistente que esta tanda no corrige, es de
 // paginación/cache, no de esa lógica de negocio.
 export interface CashAggregatesDTO {
-  saldo_inicial: number;
-  total_ingresos: number;
-  total_egresos: number;
-  saldo_actual: number;
+  saldo_inicial: number
+  total_ingresos: number
+  total_egresos: number
+  saldo_actual: number
   analisis_gastos: {
-    tendencia_etiqueta: string;
-    tendencia_porcentaje: number;
-    tendencia_es_negativa: boolean;
-    top_categorias: CashTopCategoryDTO[];
-  };
+    tendencia_etiqueta: string
+    tendencia_porcentaje: number
+    tendencia_es_negativa: boolean
+    top_categorias: CashTopCategoryDTO[]
+  }
 }
 
 // Envoltorio de lista — { data, meta } genérico del proyecto, con
 // `aggregates` dentro de `meta` (misma extensión que `OrdersPageDTO`).
 export interface CashPageDTO {
-  data: CashTransactionDTO[];
+  data: CashTransactionDTO[]
   meta: {
-    total: number;
-    page: number;
-    page_size: number;
-    aggregates: CashAggregatesDTO;
-  };
+    total: number
+    page: number
+    page_size: number
+    aggregates: CashAggregatesDTO
+  }
 }
 
 // Payload de alta (Nuevo Movimiento de Caja). Solo los campos que el
 // formulario pide — `id` lo genera el service.
 export interface CreateCashTransactionDTO {
-  hora: string;
-  tipo: TransactionType;
-  categoria: TransactionCategory;
-  entidad?: string;
-  comprobante?: string;
-  descripcion: string;
-  monto: number;
+  hora: string
+  tipo: TransactionType
+  categoria: TransactionCategory
+  entidad?: string
+  comprobante?: string
+  descripcion: string
+  monto: number
 }

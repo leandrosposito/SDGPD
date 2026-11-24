@@ -63,7 +63,9 @@
   border: 0.0625rem solid var(--color-border);
   border-radius: var(--radius-md);
   outline: none;
-  transition: border-color var(--transition-fast) ease, box-shadow var(--transition-fast) ease;
+  transition:
+    border-color var(--transition-fast) ease,
+    box-shadow var(--transition-fast) ease;
 }
 
 .order-filters__input--search {

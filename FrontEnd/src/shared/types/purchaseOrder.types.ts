@@ -5,20 +5,20 @@
 // siempre por ID tipado (R2), nunca por nombre/coincidencia de texto.
 // ============================================================
 
-import type { Branch } from '@/shared/types/session.types';
-import type { Supplier } from '@/shared/types/supplier.types';
-import type { InventoryItem } from '@/shared/types/inventory.types';
-import type { DateRangeQueryFilters } from '@/shared/types/pagination.types';
+import type { Branch } from '@/shared/types/session.types'
+import type { Supplier } from '@/shared/types/supplier.types'
+import type { InventoryItem } from '@/shared/types/inventory.types'
+import type { DateRangeQueryFilters } from '@/shared/types/pagination.types'
 // Currency no se duplica aca: se reusa desde client.types.ts, mismo
 // patron que Branch/Supplier ya importados en inventory.types.ts (un
 // tipo compartido en shared/types/ puede ser consumido por otro
 // archivo de shared/types/, no es "importar internals de un modulo").
 // Se re-exporta para que los consumidores de este archivo (servicio y
 // componentes de Compras) tengan un solo import de donde sacarlo.
-import type { Currency } from '@/shared/types/client.types';
-export type { Currency };
+import type { Currency } from '@/shared/types/client.types'
+export type { Currency }
 
-export type PurchaseOrderStatus = 'draft' | 'sent' | 'received' | 'cancelled';
+export type PurchaseOrderStatus = 'draft' | 'sent' | 'received' | 'cancelled'
 
 // Una linea de la orden: producto + cantidad + precio unitario. El
 // subtotal de la linea (quantity * unitPrice) NUNCA se persiste — se
@@ -28,10 +28,10 @@ export type PurchaseOrderStatus = 'draft' | 'sent' | 'received' | 'cancelled';
 // proveedor (SupplierProduct) — ver O2 en DECISIONES_TECNICAS.md para
 // el razonamiento completo de por que se eligio esa entidad.
 export interface PurchaseOrderLine {
-  id: string;
-  productId: InventoryItem['id'];
-  quantity: number;
-  unitPrice: number;
+  id: string
+  productId: InventoryItem['id']
+  quantity: number
+  unitPrice: number
 }
 
 // OrdenDeCompra (O1/O2). Sin campo `amount`/`total`: se deriva SIEMPRE
@@ -40,21 +40,21 @@ export interface PurchaseOrderLine {
 // exactamente el bug del modelo anterior (SupplierPurchaseOrder con
 // date/description/amount, sin lineas).
 export interface PurchaseOrder {
-  id: string;
-  supplierId: Supplier['id'];
+  id: string
+  supplierId: Supplier['id']
   // Sucursal de destino (O5): es un campo de la orden, no de la sesion
   // — una OC ya creada sigue apuntando a la misma sucursal aunque
   // despues se cambie la sucursal activa en el selector.
-  branchId: Branch['id'];
+  branchId: Branch['id']
   // Una sola moneda por orden (O6): a diferencia de las transacciones
   // de un cliente (que se acumulan en el tiempo y pueden mezclar
   // moneda entre facturas historicas), una orden de compra se emite de
   // una sola vez con un proveedor — no tiene sentido de negocio mezclar
   // ARS y USD dentro de la misma orden. Sin conversion ni cotizacion.
-  currency: Currency;
-  status: PurchaseOrderStatus;
-  createdAt: string;
-  lines: PurchaseOrderLine[];
+  currency: Currency
+  status: PurchaseOrderStatus
+  createdAt: string
+  lines: PurchaseOrderLine[]
 }
 
 // ============================================================
@@ -74,14 +74,14 @@ export interface PurchaseOrder {
 export interface PurchaseOrdersQueryFilters extends DateRangeQueryFilters {
   // Obligatorio (regla 3.5, PROTOCOLO.md): toda funcion de service de
   // datos de negocio lleva empresaId explicito. AUDIT_2026-09-08_empresaId-sweep.md.
-  empresaId: string;
-  search?: string;
-  supplierId?: Supplier['id'];
-  status?: PurchaseOrderStatus;
-  branchId?: Branch['id'];
+  empresaId: string
+  search?: string
+  supplierId?: Supplier['id']
+  status?: PurchaseOrderStatus
+  branchId?: Branch['id']
 }
 
-export type PurchaseOrdersSortField = 'createdAt' | 'total';
+export type PurchaseOrdersSortField = 'createdAt' | 'total'
 
 // Agregados por estado (O8): clave compuesta estado+moneda, mismo
 // patron que AgingBucketAggregate en client.types.ts (bucket+currency).
@@ -89,14 +89,14 @@ export type PurchaseOrdersSortField = 'createdAt' | 'total';
 // las ordenes de ese estado+moneda — nunca un numero calculado en el
 // cliente sobre `items` (P3).
 export interface PurchaseOrderStatusAggregate {
-  status: PurchaseOrderStatus;
-  currency: Currency;
-  count: number;
-  total: number;
+  status: PurchaseOrderStatus
+  currency: Currency
+  count: number
+  total: number
 }
 
 export interface PurchaseOrdersAggregates {
-  byStatus: PurchaseOrderStatusAggregate[];
+  byStatus: PurchaseOrderStatusAggregate[]
 }
 
 // ============================================================
@@ -112,20 +112,21 @@ export interface PurchaseOrdersAggregates {
 // PurchaseOrderFormModal.tsx ya filtra el buscador a productos
 // activos, esto es el rechazo server-side (unico punto que persiste
 // la OC).
-export type CreatePurchaseOrderReason = 'invalid-supplier' | 'no-lines' | 'invalid-line' | 'inactive-product';
+export type CreatePurchaseOrderReason =
+  'invalid-supplier' | 'no-lines' | 'invalid-line' | 'inactive-product'
 
 export interface CreatePurchaseOrderInput {
-  supplierId: Supplier['id'];
-  branchId: Branch['id'];
-  currency: Currency;
-  status?: Extract<PurchaseOrderStatus, 'draft' | 'sent'>;
-  lines: Array<Omit<PurchaseOrderLine, 'id'>>;
+  supplierId: Supplier['id']
+  branchId: Branch['id']
+  currency: Currency
+  status?: Extract<PurchaseOrderStatus, 'draft' | 'sent'>
+  lines: Array<Omit<PurchaseOrderLine, 'id'>>
 }
 
 export interface CreatePurchaseOrderResult {
-  success: boolean;
-  order?: PurchaseOrder;
-  reason?: CreatePurchaseOrderReason;
+  success: boolean
+  order?: PurchaseOrder
+  reason?: CreatePurchaseOrderReason
 }
 
 // ============================================================
@@ -133,12 +134,12 @@ export interface CreatePurchaseOrderResult {
 // servicio (unica fuente de verdad), no en la vista.
 // ============================================================
 
-export type PurchaseOrderTransitionReason = 'invalid-transition' | 'order-not-found';
+export type PurchaseOrderTransitionReason = 'invalid-transition' | 'order-not-found'
 
 export interface PurchaseOrderTransitionResult {
-  success: boolean;
-  order?: PurchaseOrder;
-  reason?: PurchaseOrderTransitionReason;
+  success: boolean
+  order?: PurchaseOrder
+  reason?: PurchaseOrderTransitionReason
 }
 
 // ============================================================
@@ -155,22 +156,22 @@ export interface PurchaseOrderTransitionResult {
 // motivo que CreatePurchaseOrderReason — TabPurchases.tsx ya excluye
 // productos inactivos de las sugerencias listadas, esto es el rechazo
 // server-side.
-export type GeneratePurchaseOrderReason = 'invalid-supplier' | 'inactive-product';
+export type GeneratePurchaseOrderReason = 'invalid-supplier' | 'inactive-product'
 
 export interface GeneratePurchaseOrderFromSuggestionInput {
-  supplierId: Supplier['id'];
-  branchId: Branch['id'];
-  productId: InventoryItem['id'];
-  quantity: number;
-  unitPrice: number;
-  currency: Currency;
+  supplierId: Supplier['id']
+  branchId: Branch['id']
+  productId: InventoryItem['id']
+  quantity: number
+  unitPrice: number
+  currency: Currency
 }
 
 export interface GeneratePurchaseOrderResult {
-  success: boolean;
-  order?: PurchaseOrder;
+  success: boolean
+  order?: PurchaseOrder
   // true si la linea se agrego a una OC draft existente para ese
   // proveedor+sucursal en vez de crear una orden nueva (O10).
-  merged: boolean;
-  reason?: GeneratePurchaseOrderReason;
+  merged: boolean
+  reason?: GeneratePurchaseOrderReason
 }

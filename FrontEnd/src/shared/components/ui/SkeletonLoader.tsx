@@ -1,15 +1,15 @@
-import type { FC, CSSProperties } from 'react';
-import './SkeletonLoader.css';
+import type { FC, CSSProperties } from 'react'
+import './SkeletonLoader.css'
 
 // ============================================================
 // SkeletonLoader — Animated content placeholder
 // ============================================================
 
 interface SkeletonLoaderProps {
-  width?: string;
-  height?: string;
-  borderRadius?: string;
-  style?: CSSProperties;
+  width?: string
+  height?: string
+  borderRadius?: string
+  style?: CSSProperties
 }
 
 export const SkeletonLoader: FC<SkeletonLoaderProps> = ({
@@ -30,14 +30,11 @@ export const SkeletonLoader: FC<SkeletonLoaderProps> = ({
         ...style,
       }}
     />
-  );
-};
+  )
+}
 
 // Convenience composites
-export const SkeletonTable: FC<{ rows?: number; cols?: number }> = ({
-  rows = 5,
-  cols = 5,
-}) => (
+export const SkeletonTable: FC<{ rows?: number; cols?: number }> = ({ rows = 5, cols = 5 }) => (
   <div className="skeleton-table">
     {Array.from({ length: rows }).map((_, r) => (
       <div key={r} className="skeleton-table__row">
@@ -47,4 +44,4 @@ export const SkeletonTable: FC<{ rows?: number; cols?: number }> = ({
       </div>
     ))}
   </div>
-);
+)

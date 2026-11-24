@@ -1,8 +1,8 @@
-import { useState } from 'react';
-import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import type { PageQuery, PageResult, PageSort } from '@/shared/types/pagination.types';
-import { pagedQueryKey } from '@/shared/api/queryKeys';
-import { useSessionStore } from '@/shared/state/useSessionStore';
+import { useState } from 'react'
+import { useQuery, keepPreviousData } from '@tanstack/react-query'
+import type { PageQuery, PageResult, PageSort } from '@/shared/types/pagination.types'
+import { pagedQueryKey } from '@/shared/api/queryKeys'
+import { useSessionStore } from '@/shared/state/useSessionStore'
 
 // ============================================================
 // usePagedQuery — Maneja el estado de una consulta paginada contra un
@@ -71,10 +71,10 @@ import { useSessionStore } from '@/shared/state/useSessionStore';
 // en vez de que cada consumidor lo repita.
 // ============================================================
 
-export const DEFAULT_PAGE_SIZE = 25;
+export const DEFAULT_PAGE_SIZE = 25
 
 export interface UsePagedQueryOptions<TSort extends string> {
-  pageSize?: number;
+  pageSize?: number
   // Sin onSortChange: `sort` es solo el valor INICIAL (comportamiento
   // historico, modo no controlado — el hook gestiona su propio
   // useState). Con onSortChange: `sort` pasa a ser el valor CONTROLADO
@@ -82,17 +82,17 @@ export interface UsePagedQueryOptions<TSort extends string> {
   // viva en la URL via useUrlListState en vez de en un useState interno
   // de este hook) — quien controla decide el valor real, este hook solo
   // lo refleja.
-  sort?: PageSort<TSort>;
-  onSortChange?: (sort: PageSort<TSort> | undefined) => void;
+  sort?: PageSort<TSort>
+  onSortChange?: (sort: PageSort<TSort> | undefined) => void
   // Mismo criterio que sort/onSortChange, para la pagina (Tanda 4).
   // Sin onPageChange: page es no controlado, useState interno (default
   // 1). Con onPageChange: page viene de afuera (ej. la URL) y este hook
   // nunca mantiene su propio numero de pagina.
-  page?: number;
-  onPageChange?: (page: number) => void;
+  page?: number
+  onPageChange?: (page: number) => void
   // Permite diferir el primer fetch (ej. todavia no hay sucursal activa
   // porque la sesion esta cargando). Default true.
-  enabled?: boolean;
+  enabled?: boolean
   // ADR-003 (Tanda 8, corrida completa): "tiempo real" es polling, no
   // WebSocket/SSE. `live: true` hace que este hook vuelva a pedir la
   // MISMA pagina paginada (nunca la lista completa) cada
@@ -100,53 +100,61 @@ export interface UsePagedQueryOptions<TSort extends string> {
   // plano. No se usa directo desde un componente — ver
   // shared/hooks/useLiveQuery.ts, el wrapper que expone esta opcion
   // con un nombre que documenta la intencion en el call-site.
-  live?: boolean;
+  live?: boolean
   // Enmienda 2026-09-09 de ADR-003 (Tanda 10B, ADR-011 seccion 4):
   // intervalo propio por consumidor, solo tiene efecto con `live: true`.
   // Default LIVE_REFETCH_INTERVAL_MS (30s) para TODOS los consumidores
   // existentes que no lo pasan (LogisticsPage sigue igual) — la
   // posicion del viaje es el unico consumidor que hoy pasa un valor
   // distinto (10-15s).
-  intervalMs?: number;
+  intervalMs?: number
 }
 
 // 30s por defecto (ADR-003) — constante nombrada, no un numero suelto
 // en cada consumidor.
-export const LIVE_REFETCH_INTERVAL_MS = 30_000;
+export const LIVE_REFETCH_INTERVAL_MS = 30_000
 
 export interface UsePagedQueryResult<TItem, TSort extends string, TAggregates> {
-  items: TItem[];
-  aggregates: TAggregates | undefined;
-  page: number;
-  pageSize: number;
-  totalItems: number;
-  totalPages: number;
-  sort: PageSort<TSort> | undefined;
+  items: TItem[]
+  aggregates: TAggregates | undefined
+  page: number
+  pageSize: number
+  totalItems: number
+  totalPages: number
+  sort: PageSort<TSort> | undefined
   // true solo hasta que llega la primera respuesta (exito o error) de
   // esta consulta — todavia no hay nada que mostrar.
-  isLoading: boolean;
+  isLoading: boolean
   // true mientras hay un pedido en vuelo, incluidos los disparados por
   // cambio de pagina/tamaño/orden/refetch (P5). `items` NO se vacia
   // mientras esto es true: quien consume el hook decide como mostrarlo
   // (ver shared/components/ui/FetchingOverlay).
-  isFetching: boolean;
-  error: string | null;
-  setPage: (page: number) => void;
-  setPageSize: (size: number) => void;
-  setSort: (sort: PageSort<TSort> | undefined) => void;
+  isFetching: boolean
+  error: string | null
+  setPage: (page: number) => void
+  setPageSize: (size: number) => void
+  setSort: (sort: PageSort<TSort> | undefined) => void
   // Vuelve a pedir la consulta actual sin cambiar pagina/filtros/orden
   // (P10: reflejar una mutacion del servidor pidiendo de nuevo la
   // pagina vigente, en vez de actualizar `items` a mano en el cliente).
-  refetch: () => void;
+  refetch: () => void
 }
 
-export function usePagedQuery<TItem, TFilters, TSort extends string = string, TAggregates = undefined>(
+export function usePagedQuery<
+  TItem,
+  TFilters,
+  TSort extends string = string,
+  TAggregates = undefined,
+>(
   // El segundo parametro (signal) hoy lo reciben todos los fetchPage
   // migrados a la capa api/ (httpClient) — antes de esta tanda algunos
   // no lo usaban de verdad, pero la firma siempre lo acepto (JS/TS
   // permite ignorar argumentos extra). Ahora el signal viene de
   // useQuery, no de un AbortController manual (ver mas abajo).
-  fetchPage: (query: PageQuery<TFilters, TSort>, signal: AbortSignal) => Promise<PageResult<TItem, TAggregates>>,
+  fetchPage: (
+    query: PageQuery<TFilters, TSort>,
+    signal: AbortSignal
+  ) => Promise<PageResult<TItem, TAggregates>>,
   filters: TFilters,
   options: UsePagedQueryOptions<TSort> = {}
 ): UsePagedQueryResult<TItem, TSort, TAggregates> {
@@ -159,19 +167,19 @@ export function usePagedQuery<TItem, TFilters, TSort extends string = string, TA
     enabled = true,
     live = false,
     intervalMs = LIVE_REFETCH_INTERVAL_MS,
-  } = options;
+  } = options
 
-  const empresaId = useSessionStore((s) => s.session?.company.id);
+  const empresaId = useSessionStore(s => s.session?.company.id)
 
-  const isPageControlled = pageOption !== undefined;
-  const isSortControlled = onSortChange !== undefined;
+  const isPageControlled = pageOption !== undefined
+  const isSortControlled = onSortChange !== undefined
 
-  const [uncontrolledPage, setUncontrolledPage] = useState(1);
-  const [pageSize, setPageSizeState] = useState(initialPageSize);
-  const [uncontrolledSort, setUncontrolledSort] = useState<PageSort<TSort> | undefined>(sortOption);
+  const [uncontrolledPage, setUncontrolledPage] = useState(1)
+  const [pageSize, setPageSizeState] = useState(initialPageSize)
+  const [uncontrolledSort, setUncontrolledSort] = useState<PageSort<TSort> | undefined>(sortOption)
 
-  const page = isPageControlled ? pageOption : uncontrolledPage;
-  const sort = isSortControlled ? sortOption : uncontrolledSort;
+  const page = isPageControlled ? pageOption : uncontrolledPage
+  const sort = isSortControlled ? sortOption : uncontrolledSort
 
   // Vuelve a pagina 1 cuando cambian los filtros (P9: branchId viaja
   // ahi, asi que un cambio de sucursal entra por esta misma via) —
@@ -188,15 +196,15 @@ export function usePagedQuery<TItem, TFilters, TSort extends string = string, TA
   // seguro de React (a diferencia de ajustar el propio estado interno,
   // que si lo es). En ese modo, es responsabilidad de quien construye
   // la URL volver a pagina 1 cuando cambia un filtro/busqueda/orden.
-  const [trackedFilters, setTrackedFilters] = useState(filters);
+  const [trackedFilters, setTrackedFilters] = useState(filters)
   if (filters !== trackedFilters) {
-    setTrackedFilters(filters);
+    setTrackedFilters(filters)
     if (!isPageControlled) {
-      setUncontrolledPage(1);
+      setUncontrolledPage(1)
     }
   }
 
-  const queryEnabled = enabled && Boolean(empresaId);
+  const queryEnabled = enabled && Boolean(empresaId)
 
   const query = useQuery({
     queryKey: pagedQueryKey({
@@ -221,7 +229,7 @@ export function usePagedQuery<TItem, TFilters, TSort extends string = string, TA
     // (mismo criterio que el resto de defaultOptions de queryClient.ts)
     // para que quede documentado que es una decision, no un olvido.
     ...(live ? { refetchInterval: intervalMs, refetchIntervalInBackground: false } : {}),
-  });
+  })
 
   // Alinea la pagina local a la que realmente devolvio el servidor
   // (PageResult#page puede diferir de la pedida si quedo fuera de
@@ -235,21 +243,25 @@ export function usePagedQuery<TItem, TFilters, TSort extends string = string, TA
   // filtros de arriba: en modo controlado la URL es la fuente de
   // verdad, y este hook no llama a onPageChange durante el render.
   if (!isPageControlled && query.data && query.data.page !== page) {
-    setUncontrolledPage(query.data.page);
+    setUncontrolledPage(query.data.page)
   }
 
-  const items = query.data?.items ?? [];
-  const aggregates = query.data?.aggregates;
-  const totalItems = query.data?.total ?? 0;
-  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const items = query.data?.items ?? []
+  const aggregates = query.data?.aggregates
+  const totalItems = query.data?.total ?? 0
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize))
 
   // Ver comentario del encabezado, punto 1: sin este OR, `enabled:
   // false` (options.enabled en false, o empresaId todavia sin cargar)
   // haria que isFetching cayera a false en vez de quedar "trabado" en
   // true como en la version anterior.
-  const isLoading = query.isPending;
-  const isFetching = !queryEnabled || query.isFetching;
-  const error = query.error ? (query.error instanceof Error ? query.error.message : 'No se pudo cargar la lista.') : null;
+  const isLoading = query.isPending
+  const isFetching = !queryEnabled || query.isFetching
+  const error = query.error
+    ? query.error instanceof Error
+      ? query.error.message
+      : 'No se pudo cargar la lista.'
+    : null
 
   // setPage/setPageSize/setSort corren en manejadores de eventos
   // (clicks, no efectos) — cambiar el estado local ya alcanza para que
@@ -260,37 +272,37 @@ export function usePagedQuery<TItem, TFilters, TSort extends string = string, TA
   // manejador de evento, no durante el render.
   function goToPage(next: number) {
     if (isPageControlled) {
-      onPageChange?.(next);
+      onPageChange?.(next)
     } else {
-      setUncontrolledPage(next);
+      setUncontrolledPage(next)
     }
   }
 
   function setPage(next: number) {
-    const clamped = Math.min(Math.max(1, next), totalPages);
-    if (clamped === page) return;
-    goToPage(clamped);
+    const clamped = Math.min(Math.max(1, next), totalPages)
+    if (clamped === page) return
+    goToPage(clamped)
   }
 
   function setPageSize(size: number) {
-    if (size === pageSize && page === 1) return;
-    setPageSizeState(size);
-    goToPage(1);
+    if (size === pageSize && page === 1) return
+    setPageSizeState(size)
+    goToPage(1)
   }
 
   function setSort(next: PageSort<TSort> | undefined) {
-    const same = next?.field === sort?.field && next?.direction === sort?.direction;
-    if (same) return;
+    const same = next?.field === sort?.field && next?.direction === sort?.direction
+    if (same) return
     if (isSortControlled) {
-      onSortChange?.(next);
+      onSortChange?.(next)
     } else {
-      setUncontrolledSort(next);
+      setUncontrolledSort(next)
     }
-    goToPage(1);
+    goToPage(1)
   }
 
   function refetch() {
-    void query.refetch();
+    void query.refetch()
   }
 
   return {
@@ -308,5 +320,5 @@ export function usePagedQuery<TItem, TFilters, TSort extends string = string, TA
     setPageSize,
     setSort,
     refetch,
-  };
+  }
 }

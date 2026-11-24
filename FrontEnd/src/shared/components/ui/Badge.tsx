@@ -1,21 +1,15 @@
-import type { FC } from 'react';
-import './Badge.css';
+import type { FC } from 'react'
+import './Badge.css'
 
 // ============================================================
 // Badge — Status pill component
 // ============================================================
 
-export type BadgeVariant =
-  | 'success'
-  | 'warning'
-  | 'danger'
-  | 'info'
-  | 'neutral'
-  | 'accent';
+export type BadgeVariant = 'success' | 'warning' | 'danger' | 'info' | 'neutral' | 'accent'
 
 interface BadgeProps {
-  label: string;
-  variant: BadgeVariant;
+  label: string
+  variant: BadgeVariant
 }
 
 export const Badge: FC<BadgeProps> = ({ label, variant }) => {
@@ -24,5 +18,5 @@ export const Badge: FC<BadgeProps> = ({ label, variant }) => {
       <span className="badge__dot" aria-hidden="true" />
       {label}
     </span>
-  );
-};
+  )
+}

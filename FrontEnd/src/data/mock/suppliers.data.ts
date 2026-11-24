@@ -1,4 +1,4 @@
-import type { Supplier } from '@/shared/types/supplier.types';
+import type { Supplier } from '@/shared/types/supplier.types'
 
 // ============================================================
 // MOCK DATA — Suppliers
@@ -21,8 +21,22 @@ export const SUPPLIERS_MOCK_DATA: Supplier[] = [
     currentBalance: 95000,
     hasOverdueDebt: false,
     products: [
-      { id: 'sp-101', sku: 'ACE-GIR-15', name: 'Aceite Girasol 1.5L', category: 'Aceites', cost: 1500, lastUpdate: '2026-06-01T00:00:00Z' },
-      { id: 'sp-102', sku: 'ACE-OLI-05', name: 'Aceite Oliva 500ml', category: 'Aceites', cost: 4200, lastUpdate: '2026-05-20T00:00:00Z' },
+      {
+        id: 'sp-101',
+        sku: 'ACE-GIR-15',
+        name: 'Aceite Girasol 1.5L',
+        category: 'Aceites',
+        cost: 1500,
+        lastUpdate: '2026-06-01T00:00:00Z',
+      },
+      {
+        id: 'sp-102',
+        sku: 'ACE-OLI-05',
+        name: 'Aceite Oliva 500ml',
+        category: 'Aceites',
+        cost: 4200,
+        lastUpdate: '2026-05-20T00:00:00Z',
+      },
     ],
   },
   {
@@ -41,8 +55,22 @@ export const SUPPLIERS_MOCK_DATA: Supplier[] = [
     currentBalance: 210000,
     hasOverdueDebt: true,
     products: [
-      { id: 'sp-201', sku: 'YER-TAR-1K', name: 'Yerba Taragui 1kg', category: 'Infusiones', cost: 2800, lastUpdate: '2026-06-05T00:00:00Z' },
-      { id: 'sp-202', sku: 'YER-UNI-05', name: 'Yerba Union 500g', category: 'Infusiones', cost: 1450, lastUpdate: '2026-05-28T00:00:00Z' },
+      {
+        id: 'sp-201',
+        sku: 'YER-TAR-1K',
+        name: 'Yerba Taragui 1kg',
+        category: 'Infusiones',
+        cost: 2800,
+        lastUpdate: '2026-06-05T00:00:00Z',
+      },
+      {
+        id: 'sp-202',
+        sku: 'YER-UNI-05',
+        name: 'Yerba Union 500g',
+        category: 'Infusiones',
+        cost: 1450,
+        lastUpdate: '2026-05-28T00:00:00Z',
+      },
     ],
   },
   {
@@ -61,7 +89,14 @@ export const SUPPLIERS_MOCK_DATA: Supplier[] = [
     currentBalance: 0,
     hasOverdueDebt: false,
     products: [
-      { id: 'sp-301', sku: 'GAL-SUR-200', name: 'Galletitas Surtidas 200g', category: 'Golosinas', cost: 680, lastUpdate: '2026-06-08T00:00:00Z' },
+      {
+        id: 'sp-301',
+        sku: 'GAL-SUR-200',
+        name: 'Galletitas Surtidas 200g',
+        category: 'Golosinas',
+        cost: 680,
+        lastUpdate: '2026-06-08T00:00:00Z',
+      },
     ],
   },
-];
+]

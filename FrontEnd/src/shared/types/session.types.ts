@@ -10,21 +10,21 @@
 // branding automaticamente via indexed access, sin tocar esos archivos.
 // ============================================================
 
-import type { Permission } from '@sdgpd/contracts';
-import type { BranchId } from './ids.types';
+import type { Permission } from '@sdgpd/contracts'
+import type { BranchId } from './ids.types'
 
 export interface Branch {
-  id: BranchId;
-  name: string;
-  code: string;
-  city: string;
-  address: string;
-  status: 'active' | 'inactive';
+  id: BranchId
+  name: string
+  code: string
+  city: string
+  address: string
+  status: 'active' | 'inactive'
 }
 
 export interface Company {
-  id: string;
-  name: string;
+  id: string
+  name: string
 }
 
 // BE-1b (ADR-BE-003 § Decision 3): la sesion trae rol, permisos efectivos
@@ -33,18 +33,18 @@ export interface Company {
 // ofrece solo esas. La UI usa los permisos solo para ocultar (usePermission);
 // la autorizacion la hace el servidor.
 export interface SessionRole {
-  id: string;
-  name: string;
+  id: string
+  name: string
 }
 
 export interface SessionUser {
-  id: string;
-  fullName: string;
-  email: string;
-  company: Company;
-  role: SessionRole;
-  permissions: readonly Permission[];
-  branches: Branch[];
+  id: string
+  fullName: string
+  email: string
+  company: Company
+  role: SessionRole
+  permissions: readonly Permission[]
+  branches: Branch[]
   // null: el usuario no tiene ninguna sucursal activa habilitada.
-  defaultBranchId: Branch['id'] | null;
+  defaultBranchId: Branch['id'] | null
 }

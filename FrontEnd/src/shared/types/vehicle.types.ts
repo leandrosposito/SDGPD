@@ -1,4 +1,4 @@
-import type { VehicleId } from './ids.types';
+import type { VehicleId } from './ids.types'
 
 // ============================================================
 // vehicle.types — Vehiculos de reparto (Tanda 10B, ADR-011).
@@ -15,21 +15,21 @@ import type { VehicleId } from './ids.types';
 // ============================================================
 
 export interface VehicleCapacity {
-  bultos: number;
-  pesoKg: number;
-  volumenM3: number;
-  refrigerado: boolean;
+  bultos: number
+  pesoKg: number
+  volumenM3: number
+  refrigerado: boolean
   // Codigos de zona habilitados para este vehiculo (mismo vocabulario
   // que Delivery.zone: 'Norte' | 'Centro' | 'Sur') — array de string,
   // no un enum cerrado, para no acoplar capacity a las 3 zonas de hoy
   // si el catalogo de zonas crece.
-  zonasHabilitadas: string[];
+  zonasHabilitadas: string[]
 }
 
 export interface Vehicle {
-  id: VehicleId;
-  patente: string;
-  tipo: string;
-  capacidad: VehicleCapacity;
-  activo: boolean;
+  id: VehicleId
+  patente: string
+  tipo: string
+  capacidad: VehicleCapacity
+  activo: boolean
 }

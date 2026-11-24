@@ -1,6 +1,6 @@
-import type { ProductHistoryEvent } from '@/shared/types/inventory.types';
-import { asBranchId } from '@/shared/types/ids.types';
-import type { ProductHistoryEventDTO } from './dto';
+import type { ProductHistoryEvent } from '@/shared/types/inventory.types'
+import { asBranchId } from '@/shared/types/ids.types'
+import type { ProductHistoryEventDTO } from './dto'
 
 // ============================================================
 // mapper.ts (product-history) — Único lugar que traduce DTO↔dominio.
@@ -17,7 +17,7 @@ export function productHistoryEventFromDTO(dto: ProductHistoryEventDTO): Product
     description: dto.descripcion,
     user: dto.usuario,
     branchId: asBranchId(dto.sucursal_id),
-  };
+  }
 }
 
 // Usada solo para sembrar el store desde data/mock/inventory.data.ts
@@ -32,5 +32,5 @@ export function productHistoryEventToDTO(event: ProductHistoryEvent): ProductHis
     descripcion: event.description,
     usuario: event.user,
     sucursal_id: event.branchId,
-  };
+  }
 }

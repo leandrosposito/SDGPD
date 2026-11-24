@@ -1,43 +1,46 @@
-import { type FC, useState, useMemo, useEffect } from 'react';
-import { toast } from 'sonner';
-import { useQueryClient } from '@tanstack/react-query';
-import { Modal } from '@/shared/components/ui/Modal';
-import { useCachedQuery, CACHE_STALE_TIME } from '@/shared/hooks/useCachedQuery';
-import { cachedQueryKey } from '@/shared/api/queryKeys';
-import { useSessionStore } from '@/shared/state/useSessionStore';
-import type { InventoryItem } from '@/shared/types/inventory.types';
-import type { Order } from '@/shared/types/order.types';
-import type { ClientAccount } from '@/shared/types/client.types';
-import { fetchProducts } from '@/shared/api/products/products.service';
-import { fetchClientsCatalog } from '@/modules/clients/api/clients.service';
-import { createOrder, type OrderFormInput } from '@/modules/orders/api/orders.service';
-import { todayLocalDateString } from '@/shared/utils/date';
-import { isClientSelectableForOrder, describeCreateOrderReason } from '@/shared/utils/orderEligibility';
+import { type FC, useState, useMemo, useEffect } from 'react'
+import { toast } from 'sonner'
+import { useQueryClient } from '@tanstack/react-query'
+import { Modal } from '@/shared/components/ui/Modal'
+import { useCachedQuery, CACHE_STALE_TIME } from '@/shared/hooks/useCachedQuery'
+import { cachedQueryKey } from '@/shared/api/queryKeys'
+import { useSessionStore } from '@/shared/state/useSessionStore'
+import type { InventoryItem } from '@/shared/types/inventory.types'
+import type { Order } from '@/shared/types/order.types'
+import type { ClientAccount } from '@/shared/types/client.types'
+import { fetchProducts } from '@/shared/api/products/products.service'
+import { fetchClientsCatalog } from '@/modules/clients/api/clients.service'
+import { createOrder, type OrderFormInput } from '@/modules/orders/api/orders.service'
+import { todayLocalDateString } from '@/shared/utils/date'
+import {
+  isClientSelectableForOrder,
+  describeCreateOrderReason,
+} from '@/shared/utils/orderEligibility'
 
 // Referencia estable: ver mismo patron en ComprasPage/InventoryPage.
-const EMPTY_PRODUCTS: InventoryItem[] = [];
-const EMPTY_CLIENTS: ClientAccount[] = [];
-import { OrderClientSection } from './OrderClientSection';
-import { OrderDatesSection } from './OrderDatesSection';
-import { OrderProductsSection, type OrderProductItem } from './OrderProductsSection';
-import { OrderDeliverySection } from './OrderDeliverySection';
-import { OrderTotalsSection } from './OrderTotalsSection';
-import './CreateOrder.css';
+const EMPTY_PRODUCTS: InventoryItem[] = []
+const EMPTY_CLIENTS: ClientAccount[] = []
+import { OrderClientSection } from './OrderClientSection'
+import { OrderDatesSection } from './OrderDatesSection'
+import { OrderProductsSection, type OrderProductItem } from './OrderProductsSection'
+import { OrderDeliverySection } from './OrderDeliverySection'
+import { OrderTotalsSection } from './OrderTotalsSection'
+import './CreateOrder.css'
 
 // ============================================================
 // CreateOrderModal — Unified full-screen order creation
 // ============================================================
 
 interface CreateOrderModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onConfirm?: (order: Order) => void;
+  isOpen: boolean
+  onClose: () => void
+  onConfirm?: (order: Order) => void
 }
 
 export const CreateOrderModal: FC<CreateOrderModalProps> = ({ isOpen, onClose, onConfirm }) => {
-  const empresaId = useSessionStore((s) => s.session?.company.id);
-  const queryClient = useQueryClient();
-  const [isSaving, setIsSaving] = useState(false);
+  const empresaId = useSessionStore(s => s.session?.company.id)
+  const queryClient = useQueryClient()
+  const [isSaving, setIsSaving] = useState(false)
 
   // Products available to add to the order (RF-PRD-001 master data).
   // Tanda 2.5, useCachedQuery: mismo queryName 'products' que
@@ -47,19 +50,22 @@ export const CreateOrderModal: FC<CreateOrderModalProps> = ({ isOpen, onClose, o
   const { data: productsData, error: productsError } = useCachedQuery(
     'products',
     undefined,
-    (signal) => fetchProducts(empresaId ?? '', signal),
+    signal => fetchProducts(empresaId ?? '', signal),
     { staleTime: CACHE_STALE_TIME.CATALOG }
-  );
+  )
   // Tanda 14 (hallazgo Tanda 12 a medias): un producto dado de baja
   // (estado inactive) no debe poder agregarse a un pedido nuevo — el
   // catalogo completo (con inactivos) sigue siendo el correcto para
   // InventoryPage/ComprasPage (administracion del catalogo), pero el
   // selector de este modal es un punto de alta, no de administracion.
-  const products = useMemo(() => (productsData ?? EMPTY_PRODUCTS).filter((p) => p.status === 'active'), [productsData]);
+  const products = useMemo(
+    () => (productsData ?? EMPTY_PRODUCTS).filter(p => p.status === 'active'),
+    [productsData]
+  )
 
   useEffect(() => {
-    if (productsError) toast.error('No se pudo cargar el listado de productos.');
-  }, [productsError]);
+    if (productsError) toast.error('No se pudo cargar el listado de productos.')
+  }, [productsError])
 
   // Clientes reales disponibles para elegir (Tanda 5,
   // AUDIT_4_IDS_RELACIONES.md hallazgo ALTO #1) — mismo criterio de
@@ -68,68 +74,79 @@ export const CreateOrderModal: FC<CreateOrderModalProps> = ({ isOpen, onClose, o
   const { data: clientsData, error: clientsError } = useCachedQuery(
     'clients-catalog',
     undefined,
-    (signal) => fetchClientsCatalog(empresaId ?? '', signal),
+    signal => fetchClientsCatalog(empresaId ?? '', signal),
     { staleTime: CACHE_STALE_TIME.CATALOG }
-  );
+  )
   // Tanda 17 (ADR-015 punto 1): un cliente dado de baja no recibe
   // pedidos nuevos. Se filtra aca y no en fetchClientsCatalog porque
   // OrderDetailPanel usa la MISMA cache para resolver el cliente de
   // pedidos viejos, y ese si tiene que encontrar a los inactivos.
-  const clients = useMemo(() => (clientsData ?? EMPTY_CLIENTS).filter(isClientSelectableForOrder), [clientsData]);
+  const clients = useMemo(
+    () => (clientsData ?? EMPTY_CLIENTS).filter(isClientSelectableForOrder),
+    [clientsData]
+  )
 
   useEffect(() => {
-    if (clientsError) toast.error('No se pudo cargar el listado de clientes.');
-  }, [clientsError]);
+    if (clientsError) toast.error('No se pudo cargar el listado de clientes.')
+  }, [clientsError])
 
   // Client Section State — selectedClient es la relacion tipada real
   // (Order.clientId), no texto libre (Tanda 5).
-  const [selectedClient, setSelectedClient] = useState<ClientAccount | null>(null);
-  const [seller, setSeller] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('');
-  const [priceList, setPriceList] = useState('Mayorista');
+  const [selectedClient, setSelectedClient] = useState<ClientAccount | null>(null)
+  const [seller, setSeller] = useState('')
+  const [paymentMethod, setPaymentMethod] = useState('')
+  const [priceList, setPriceList] = useState('Mayorista')
 
   // Alerta de deuda derivada del cliente REAL elegido (antes era un
   // match de texto contra lo que el usuario tipeaba, sin relacion con
   // ningun dato real) — currentBalance/creditLimit ya existen en
   // ClientAccount (client.types.ts).
-  const hasDebtAlert = selectedClient ? selectedClient.currentBalance > selectedClient.creditLimit : false;
+  const hasDebtAlert = selectedClient
+    ? selectedClient.currentBalance > selectedClient.creditLimit
+    : false
 
   // Dates Section State
-  const [orderDate, setOrderDate] = useState(todayLocalDateString());
-  const [deliveryDate, setDeliveryDate] = useState('');
-  const [initialStatus, setInitialStatus] = useState('pending');
+  const [orderDate, setOrderDate] = useState(todayLocalDateString())
+  const [deliveryDate, setDeliveryDate] = useState('')
+  const [initialStatus, setInitialStatus] = useState('pending')
 
   // Products Section State
-  const [items, setItems] = useState<OrderProductItem[]>([]);
+  const [items, setItems] = useState<OrderProductItem[]>([])
 
   // Delivery & Notes State
-  const [address, setAddress] = useState('');
-  const [locality, setLocality] = useState('');
-  const [contact, setContact] = useState('');
-  const [phone, setPhone] = useState('');
-  const [notes, setNotes] = useState('');
+  const [address, setAddress] = useState('')
+  const [locality, setLocality] = useState('')
+  const [contact, setContact] = useState('')
+  const [phone, setPhone] = useState('')
+  const [notes, setNotes] = useState('')
 
   // Totals Computation
-  const subtotal = useMemo(() => items.reduce((acc, item) => acc + (item.price * item.quantity), 0), [items]);
-  const discount = useMemo(() => items.reduce((acc, item) => acc + (item.discount * item.quantity), 0), [items]);
+  const subtotal = useMemo(
+    () => items.reduce((acc, item) => acc + item.price * item.quantity, 0),
+    [items]
+  )
+  const discount = useMemo(
+    () => items.reduce((acc, item) => acc + item.discount * item.quantity, 0),
+    [items]
+  )
 
   const handleClose = () => {
     // Reset state on close
-    setSelectedClient(null);
-    setSeller('');
-    setPaymentMethod('');
-    setPriceList('Mayorista');
-    setOrderDate(todayLocalDateString());
-    setDeliveryDate('');
-    setInitialStatus('pending');
-    setItems([]);
-    setAddress('');
-    setLocality('');
-    setContact('');
-    setPhone('');
-    setNotes('');
-    onClose();
-  };
+    setSelectedClient(null)
+    setSeller('')
+    setPaymentMethod('')
+    setPriceList('Mayorista')
+    setOrderDate(todayLocalDateString())
+    setDeliveryDate('')
+    setInitialStatus('pending')
+    setItems([])
+    setAddress('')
+    setLocality('')
+    setContact('')
+    setPhone('')
+    setNotes('')
+    onClose()
+  }
 
   // Tanda 3a: el pedido se crea contra orders.service.ts (httpClient +
   // store en memoria del service) en vez de armarse a mano acá con un
@@ -139,17 +156,17 @@ export const CreateOrderModal: FC<CreateOrderModalProps> = ({ isOpen, onClose, o
   // cliente.
   const handleConfirm = async () => {
     if (!empresaId) {
-      toast.error('Todavia no hay una sesion activa.');
-      return;
+      toast.error('Todavia no hay una sesion activa.')
+      return
     }
 
     if (!selectedClient) {
-      toast.error('Elegi un cliente antes de confirmar el pedido.');
-      return;
+      toast.error('Elegi un cliente antes de confirmar el pedido.')
+      return
     }
 
-    const tax = (subtotal - discount) * 0.21;
-    const totalAmount = subtotal - discount + tax;
+    const tax = (subtotal - discount) * 0.21
+    const totalAmount = subtotal - discount + tax
 
     const input: OrderFormInput = {
       clientId: selectedClient.id,
@@ -163,40 +180,44 @@ export const CreateOrderModal: FC<CreateOrderModalProps> = ({ isOpen, onClose, o
       tax,
       totalAmount,
       notes,
-      items: items.map((item) => ({
+      items: items.map(item => ({
         sku: item.sku,
         name: item.name,
         quantity: item.quantity,
         unitPrice: item.price,
         subtotal: item.subtotal,
       })),
-    };
+    }
 
-    setIsSaving(true);
+    setIsSaving(true)
     try {
-      const result = await createOrder(empresaId, input);
+      const result = await createOrder(empresaId, input)
       if (!result.success) {
-        toast.error(describeCreateOrderReason(result.reason, result.detail));
+        toast.error(describeCreateOrderReason(result.reason, result.detail))
         // El rechazo server-side significa que el catalogo cacheado
         // (hasta CACHE_STALE_TIME.CATALOG) quedo viejo: se refresca para
         // que el selector deje de ofrecer lo que el servidor rechaza.
         if (result.reason === 'inactive-client' || result.reason === 'client-not-found') {
-          setSelectedClient(null);
-          void queryClient.invalidateQueries({ queryKey: cachedQueryKey({ queryName: 'clients-catalog', empresaId }) });
+          setSelectedClient(null)
+          void queryClient.invalidateQueries({
+            queryKey: cachedQueryKey({ queryName: 'clients-catalog', empresaId }),
+          })
         } else if (result.reason === 'inactive-product' || result.reason === 'product-not-found') {
-          void queryClient.invalidateQueries({ queryKey: cachedQueryKey({ queryName: 'products', empresaId }) });
+          void queryClient.invalidateQueries({
+            queryKey: cachedQueryKey({ queryName: 'products', empresaId }),
+          })
         }
-        return;
+        return
       }
-      onConfirm?.(result.order);
-      toast.success('Pedido guardado con exito!');
-      handleClose();
+      onConfirm?.(result.order)
+      toast.success('Pedido guardado con exito!')
+      handleClose()
     } catch {
-      toast.error('No se pudo guardar el pedido.');
+      toast.error('No se pudo guardar el pedido.')
     } finally {
-      setIsSaving(false);
+      setIsSaving(false)
     }
-  };
+  }
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="Nuevo Pedido" size="xl">
@@ -231,11 +252,7 @@ export const CreateOrderModal: FC<CreateOrderModalProps> = ({ isOpen, onClose, o
           products={products}
         />
 
-        <OrderTotalsSection
-          subtotal={subtotal}
-          discount={discount}
-          taxRate={0.21}
-        />
+        <OrderTotalsSection subtotal={subtotal} discount={discount} taxRate={0.21} />
 
         <OrderDeliverySection
           address={address}
@@ -270,5 +287,5 @@ export const CreateOrderModal: FC<CreateOrderModalProps> = ({ isOpen, onClose, o
         </div>
       </div>
     </Modal>
-  );
-};
+  )
+}

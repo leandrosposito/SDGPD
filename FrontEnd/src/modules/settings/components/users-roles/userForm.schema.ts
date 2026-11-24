@@ -1,5 +1,5 @@
-import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from '@sdgpd/contracts';
-import { z } from 'zod';
+import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from '@sdgpd/contracts'
+import { z } from 'zod'
 
 // ============================================================
 // userForm.schema — formulario de alta y edicion de usuario (BE-1b).
@@ -14,7 +14,7 @@ const base = {
   roleId: z.string().min(1, 'Elegi un rol'),
   active: z.boolean(),
   branchIds: z.array(z.string()),
-};
+}
 
 export const createUserFormSchema = z.object({
   ...base,
@@ -23,8 +23,8 @@ export const createUserFormSchema = z.object({
     .string()
     .min(PASSWORD_MIN_LENGTH, `Al menos ${PASSWORD_MIN_LENGTH} caracteres`)
     .max(PASSWORD_MAX_LENGTH, `Maximo ${PASSWORD_MAX_LENGTH} caracteres`),
-});
+})
 
-export const editUserFormSchema = z.object({ ...base, email: z.string(), password: z.string() });
+export const editUserFormSchema = z.object({ ...base, email: z.string(), password: z.string() })
 
-export type UserFormValues = z.infer<typeof createUserFormSchema>;
+export type UserFormValues = z.infer<typeof createUserFormSchema>

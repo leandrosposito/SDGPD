@@ -1,21 +1,26 @@
-import type { Order, OrderStatus } from '@/shared/types/order.types';
-import type { OrderId, OrderLineId } from '@/shared/types/ids.types';
-import { asOrderId } from '@/shared/types/ids.types';
-import type { PageQuery, PageResult, DateRangeQueryFilters, ExportResult } from '@/shared/types/pagination.types';
-import { MAX_EXPORT_ROWS } from '@/shared/types/pagination.types';
-import { ORDERS_MOCK_DATA } from '@/data/mock/orders.data';
-import { httpClient } from '@/shared/api/httpClient';
-import { ApiError } from '@/shared/api/ApiError';
-import type { OrderDTO, OrdersPageDTO, OrdersAggregatesDTO, CreateOrderResponseDTO } from './dto';
-import { orderFromDTO, orderToDTO, orderFormInputToDTO, type OrderFormInput } from './mapper';
-import type { OrderProjectionForAggregation } from '@/modules/dashboard/api/dashboardAggregates';
-import { getActiveDeliveriesForOrder } from '@/modules/logistics/services/deliveries.service';
-import { fetchProducts } from '@/shared/api/products/products.service';
-import { getClientById } from '@/modules/clients/api/clients.service';
-import { getCreateOrderBlockReason, type CreateOrderReason } from '@/shared/utils/orderEligibility';
-import { maxOrderNumberSuffix, formatOrderNumber } from '@/shared/utils/orderNumber';
+import type { Order, OrderStatus } from '@/shared/types/order.types'
+import type { OrderId, OrderLineId } from '@/shared/types/ids.types'
+import { asOrderId } from '@/shared/types/ids.types'
+import type {
+  PageQuery,
+  PageResult,
+  DateRangeQueryFilters,
+  ExportResult,
+} from '@/shared/types/pagination.types'
+import { MAX_EXPORT_ROWS } from '@/shared/types/pagination.types'
+import { ORDERS_MOCK_DATA } from '@/data/mock/orders.data'
+import { httpClient } from '@/shared/api/httpClient'
+import { ApiError } from '@/shared/api/ApiError'
+import type { OrderDTO, OrdersPageDTO, OrdersAggregatesDTO, CreateOrderResponseDTO } from './dto'
+import { orderFromDTO, orderToDTO, orderFormInputToDTO, type OrderFormInput } from './mapper'
+import type { OrderProjectionForAggregation } from '@/modules/dashboard/api/dashboardAggregates'
+import { getActiveDeliveriesForOrder } from '@/modules/logistics/services/deliveries.service'
+import { fetchProducts } from '@/shared/api/products/products.service'
+import { getClientById } from '@/modules/clients/api/clients.service'
+import { getCreateOrderBlockReason, type CreateOrderReason } from '@/shared/utils/orderEligibility'
+import { maxOrderNumberSuffix, formatOrderNumber } from '@/shared/utils/orderNumber'
 
-export type { OrderFormInput };
+export type { OrderFormInput }
 
 // ============================================================
 // orders.service — Único punto del proyecto que habla con httpClient
@@ -42,14 +47,14 @@ export interface OrdersQueryFilters extends DateRangeQueryFilters {
   // ahora (mismo criterio que suppliers/products/clients) — hoy el
   // mock no filtra por él de verdad (una sola empresa), pero el
   // contrato ya lo exige para el día que exista backend real.
-  empresaId: string;
-  search?: string;
-  status?: OrderStatus;
-  seller?: string;
-  paymentMethod?: string;
+  empresaId: string
+  search?: string
+  status?: OrderStatus
+  seller?: string
+  paymentMethod?: string
 }
 
-export type OrdersSortField = 'date' | 'totalAmount' | 'clientName';
+export type OrdersSortField = 'date' | 'totalAmount' | 'clientName'
 
 // Agregados (P3, DECISIONES_TECNICAS.md): reemplaza el cálculo que
 // hacía OrderKpis.tsx en memoria sobre el array completo de pedidos —
@@ -63,11 +68,11 @@ export type OrdersSortField = 'date' | 'totalAmount' | 'clientName';
 // la empresa); esto es una alineación consciente con la convención ya
 // establecida en el resto del proyecto, no un cambio accidental.
 export interface OrdersAggregates {
-  todayCount: number;
-  pendingCount: number;
-  preparingCount: number;
-  dispatchedCount: number;
-  todayBilling: number;
+  todayCount: number
+  pendingCount: number
+  preparingCount: number
+  dispatchedCount: number
+  todayBilling: number
 }
 
 // ------------------------------------------------------------
@@ -76,34 +81,34 @@ export interface OrdersAggregates {
 // (nunca mutado in-place) en cada escritura, mismo patrón que el
 // resto de services/*.ts.
 // ------------------------------------------------------------
-let ordersDTOStore: OrderDTO[] = ORDERS_MOCK_DATA.map(orderToDTO);
+let ordersDTOStore: OrderDTO[] = ORDERS_MOCK_DATA.map(orderToDTO)
 
 // Fecha "hoy" simulada (preexistente en OrderKpis.tsx antes de esta
 // tanda, movida acá tal cual — no se corrige en esta migración,
 // que es sobre paginación/cache, no sobre esta lógica de negocio):
 // en un sistema real se usaría la fecha actual real.
-const FAKE_TODAY = '2026-06-13';
+const FAKE_TODAY = '2026-06-13'
 
 function matchesFilters(dto: OrderDTO, filters: OrdersQueryFilters): boolean {
-  const search = filters.search?.trim().toLowerCase();
-  const matchesSearch = !search || dto.cliente.nombre.toLowerCase().includes(search);
-  const matchesSeller = !filters.seller || dto.vendedor === filters.seller;
-  const matchesPayment = !filters.paymentMethod || dto.forma_pago === filters.paymentMethod;
-  const day = dto.fecha.slice(0, 10);
-  const matchesDateFrom = !filters.dateFrom || day >= filters.dateFrom;
-  const matchesDateTo = !filters.dateTo || day <= filters.dateTo;
-  return matchesSearch && matchesSeller && matchesPayment && matchesDateFrom && matchesDateTo;
+  const search = filters.search?.trim().toLowerCase()
+  const matchesSearch = !search || dto.cliente.nombre.toLowerCase().includes(search)
+  const matchesSeller = !filters.seller || dto.vendedor === filters.seller
+  const matchesPayment = !filters.paymentMethod || dto.forma_pago === filters.paymentMethod
+  const day = dto.fecha.slice(0, 10)
+  const matchesDateFrom = !filters.dateFrom || day >= filters.dateFrom
+  const matchesDateTo = !filters.dateTo || day <= filters.dateTo
+  return matchesSearch && matchesSeller && matchesPayment && matchesDateFrom && matchesDateTo
 }
 
 function compareOrders(a: OrderDTO, b: OrderDTO, field: OrdersSortField): number {
   switch (field) {
     case 'totalAmount':
-      return a.importes.total - b.importes.total;
+      return a.importes.total - b.importes.total
     case 'clientName':
-      return a.cliente.nombre.localeCompare(b.cliente.nombre);
+      return a.cliente.nombre.localeCompare(b.cliente.nombre)
     case 'date':
     default:
-      return a.fecha.localeCompare(b.fecha);
+      return a.fecha.localeCompare(b.fecha)
   }
 }
 
@@ -113,16 +118,16 @@ function filterAndSortOrders(
   filters: OrdersQueryFilters,
   sort: { field: OrdersSortField; direction: 'asc' | 'desc' } | undefined
 ): OrderDTO[] {
-  const inScope = ordersDTOStore.filter((dto) => matchesFilters(dto, filters));
-  const sortField = sort?.field ?? 'date';
-  const direction = sort?.direction ?? 'desc'; // pedidos mas recientes primero, mismo orden que el mock
+  const inScope = ordersDTOStore.filter(dto => matchesFilters(dto, filters))
+  const sortField = sort?.field ?? 'date'
+  const direction = sort?.direction ?? 'desc' // pedidos mas recientes primero, mismo orden que el mock
   return [...inScope].sort((a, b) => {
-    const cmp = compareOrders(a, b, sortField);
-    const primary = direction === 'asc' ? cmp : -cmp;
+    const cmp = compareOrders(a, b, sortField)
+    const primary = direction === 'asc' ? cmp : -cmp
     // Desempate estable por id: evita que el mismo pedido aparezca en
     // dos paginas o en ninguna si el campo de orden empata.
-    return primary !== 0 ? primary : a.id.localeCompare(b.id);
-  });
+    return primary !== 0 ? primary : a.id.localeCompare(b.id)
+  })
 }
 
 // Devuelve forma DTO (snake_case) a proposito: este helper opera del
@@ -130,39 +135,41 @@ function filterAndSortOrders(
 // dominio (OrdersAggregates) pasa por getOrdersPage, igual que el
 // resto de la respuesta paginada.
 function computeAggregates(inScope: OrderDTO[]): OrdersAggregatesDTO {
-  const todayScope = inScope.filter((dto) => dto.fecha.startsWith(FAKE_TODAY));
+  const todayScope = inScope.filter(dto => dto.fecha.startsWith(FAKE_TODAY))
   return {
     pedidos_hoy: todayScope.length,
-    pendientes: inScope.filter((dto) => dto.estado === 'pending').length,
-    preparando: inScope.filter((dto) => dto.estado === 'preparing').length,
-    despachados: inScope.filter((dto) => dto.estado === 'dispatched').length,
+    pendientes: inScope.filter(dto => dto.estado === 'pending').length,
+    preparando: inScope.filter(dto => dto.estado === 'preparing').length,
+    despachados: inScope.filter(dto => dto.estado === 'dispatched').length,
     facturacion_hoy: todayScope
-      .filter((dto) => dto.estado !== 'cancelled')
+      .filter(dto => dto.estado !== 'cancelled')
       .reduce((sum, dto) => sum + dto.importes.total, 0),
-  };
+  }
 }
 
-function resolveMockOrdersPage(query: PageQuery<OrdersQueryFilters, OrdersSortField>): OrdersPageDTO {
+function resolveMockOrdersPage(
+  query: PageQuery<OrdersQueryFilters, OrdersSortField>
+): OrdersPageDTO {
   // Agregados sobre el scope SIN el filtro de estado (ver comentario
   // de OrdersAggregates) — se calcula antes de aplicar ese filtro.
-  const inScopeWithoutStatus = ordersDTOStore.filter((dto) =>
+  const inScopeWithoutStatus = ordersDTOStore.filter(dto =>
     matchesFilters(dto, { ...query.filters, status: undefined })
-  );
-  const aggregates = computeAggregates(inScopeWithoutStatus);
+  )
+  const aggregates = computeAggregates(inScopeWithoutStatus)
 
   const sorted = filterAndSortOrders(query.filters, query.sort).filter(
-    (dto) => !query.filters.status || dto.estado === query.filters.status
-  );
+    dto => !query.filters.status || dto.estado === query.filters.status
+  )
 
-  const total = sorted.length;
-  const totalPages = Math.max(1, Math.ceil(total / query.pageSize));
-  const safePage = Math.min(Math.max(1, query.page), totalPages);
-  const start = (safePage - 1) * query.pageSize;
+  const total = sorted.length
+  const totalPages = Math.max(1, Math.ceil(total / query.pageSize))
+  const safePage = Math.min(Math.max(1, query.page), totalPages)
+  const start = (safePage - 1) * query.pageSize
 
   return {
     data: sorted.slice(start, start + query.pageSize),
     meta: { total, page: safePage, page_size: query.pageSize, aggregates },
-  };
+  }
 }
 
 // fetchPage de usePagedQuery — firma exacta (query, signal?), nombre
@@ -190,7 +197,7 @@ export async function getOrdersPage(
     },
     signal,
     mock: () => resolveMockOrdersPage(query),
-  });
+  })
 
   return {
     items: pageDTO.data.map(orderFromDTO),
@@ -204,7 +211,7 @@ export async function getOrdersPage(
       dispatchedCount: pageDTO.meta.aggregates.despachados,
       todayBilling: pageDTO.meta.aggregates.facturacion_hoy,
     },
-  };
+  }
 }
 
 // Exportar (tarea transversal, ADR-004): TODO lo que matchea filtros+
@@ -217,34 +224,36 @@ export async function exportOrders(
   filters: OrdersQueryFilters,
   sort?: { field: OrdersSortField; direction: 'asc' | 'desc' }
 ): Promise<ExportResult<Order>> {
-  return httpClient.request<ExportResult<OrderDTO>>({
-    method: 'GET',
-    path: '/orders/export',
-    params: {
-      empresaId: filters.empresaId,
-      search: filters.search,
-      status: filters.status,
-      seller: filters.seller,
-      paymentMethod: filters.paymentMethod,
-      dateFrom: filters.dateFrom,
-      dateTo: filters.dateTo,
-    },
-    mock: () => {
-      const sorted = filterAndSortOrders(filters, sort).filter(
-        (dto) => !filters.status || dto.estado === filters.status
-      );
-      const truncated = sorted.length > MAX_EXPORT_ROWS;
-      const items = sorted.slice(0, MAX_EXPORT_ROWS);
-      return { items: structuredClone(items), truncated };
-    },
-  }).then((result) => ({ items: result.items.map(orderFromDTO), truncated: result.truncated }));
+  return httpClient
+    .request<ExportResult<OrderDTO>>({
+      method: 'GET',
+      path: '/orders/export',
+      params: {
+        empresaId: filters.empresaId,
+        search: filters.search,
+        status: filters.status,
+        seller: filters.seller,
+        paymentMethod: filters.paymentMethod,
+        dateFrom: filters.dateFrom,
+        dateTo: filters.dateTo,
+      },
+      mock: () => {
+        const sorted = filterAndSortOrders(filters, sort).filter(
+          dto => !filters.status || dto.estado === filters.status
+        )
+        const truncated = sorted.length > MAX_EXPORT_ROWS
+        const items = sorted.slice(0, MAX_EXPORT_ROWS)
+        return { items: structuredClone(items), truncated }
+      },
+    })
+    .then(result => ({ items: result.items.map(orderFromDTO), truncated: result.truncated }))
 }
 
 function nextOrderId(): string {
   // Devuelve string (no OrderId): OrderDTO.id es la forma "de red"
   // (plano), el branding ocurre en el mapper al volver a dominio
   // (orderFromDTO) — mismo criterio que el resto de los ids DTO.
-  return `ord-${Date.now()}`;
+  return `ord-${Date.now()}`
 }
 
 // Correlativo por empresa (Tanda 11, ADR-014) — reemplaza los ultimos
@@ -262,21 +271,23 @@ function nextOrderId(): string {
 // sola empresa en todos los modulos ya migrados, asi que en la
 // practica esta Map tiene una sola clave hoy. Queda lista para
 // multi-empresa real el dia que Order tenga el campo.
-const orderNumberCounters = new Map<string, number>();
-const ORDER_NUMBER_DIGITS = 6;
+const orderNumberCounters = new Map<string, number>()
+const ORDER_NUMBER_DIGITS = 6
 
 function nextOrderNumber(empresaId: string): string {
-  const current = orderNumberCounters.get(empresaId) ?? maxOrderNumberSuffix(ordersDTOStore.map((d) => d.numero_pedido));
-  const next = current + 1;
-  orderNumberCounters.set(empresaId, next);
-  return formatOrderNumber(next, ORDER_NUMBER_DIGITS);
+  const current =
+    orderNumberCounters.get(empresaId) ??
+    maxOrderNumberSuffix(ordersDTOStore.map(d => d.numero_pedido))
+  const next = current + 1
+  orderNumberCounters.set(empresaId, next)
+  return formatOrderNumber(next, ORDER_NUMBER_DIGITS)
 }
 
 // Id de linea (OrderLineId, Tanda 5/ADR-006) asignado por el service,
 // nunca por el cliente — `index` evita colisiones entre lineas del
 // mismo pedido creadas en el mismo milisegundo (Date.now() solo).
 function nextOrderLineId(index: number): string {
-  return `oi-${Date.now()}-${index}`;
+  return `oi-${Date.now()}-${index}`
 }
 
 // RF-PED-001: alta manual (CreateOrderModal). `source` siempre
@@ -287,12 +298,14 @@ function nextOrderLineId(index: number): string {
 // createPurchaseOrder. Antes eran `throw ApiError(400)` y
 // CreateOrderModal descartaba el mensaje en un catch generico.
 // ApiError queda solo para fallas de infraestructura.
-export type { CreateOrderReason };
+export type { CreateOrderReason }
 export type CreateOrderResult =
-  | { success: true; order: Order }
-  | { success: false; reason: CreateOrderReason; detail?: string };
+  { success: true; order: Order } | { success: false; reason: CreateOrderReason; detail?: string }
 
-export async function createOrder(empresaId: string, input: OrderFormInput): Promise<CreateOrderResult> {
+export async function createOrder(
+  empresaId: string,
+  input: OrderFormInput
+): Promise<CreateOrderResult> {
   const response = await httpClient.request<CreateOrderResponseDTO>({
     method: 'POST',
     path: '/orders',
@@ -303,7 +316,8 @@ export async function createOrder(empresaId: string, input: OrderFormInput): Pro
       // unico punto que persiste el pedido — valida existencia y
       // estado del cliente igual. Lookup de UN registro, no el
       // catalogo entero (ADR-015 punto 4, ADR-016).
-      const client = input.items.length === 0 ? null : await getClientById(empresaId, input.clientId);
+      const client =
+        input.items.length === 0 ? null : await getClientById(empresaId, input.clientId)
       // Tanda 14 (hallazgo Tanda 12 a medias): mismo razonamiento para
       // productos dados de baja (OrderItem no tiene productId, solo
       // sku — ver order.types.ts). DEUDA (ADR-016): fetchProducts trae
@@ -311,27 +325,32 @@ export async function createOrder(empresaId: string, input: OrderFormInput): Pro
       // Tanda 21 (PENDIENTES 19): un sku que no resuelve a ningun
       // producto se rechaza como 'product-not-found' — antes el
       // `find(...)?.status === 'inactive'` lo dejaba pasar en silencio.
-      let unknownItem: OrderFormInput['items'][number] | undefined;
-      let inactiveItem: OrderFormInput['items'][number] | undefined;
+      let unknownItem: OrderFormInput['items'][number] | undefined
+      let inactiveItem: OrderFormInput['items'][number] | undefined
       if (client?.isActive) {
-        const products = await fetchProducts(empresaId);
-        const statusBySku = new Map(products.map((p) => [p.sku, p.status]));
-        unknownItem = input.items.find((item) => !statusBySku.has(item.sku));
-        inactiveItem = input.items.find((item) => statusBySku.get(item.sku) === 'inactive');
+        const products = await fetchProducts(empresaId)
+        const statusBySku = new Map(products.map(p => [p.sku, p.status]))
+        unknownItem = input.items.find(item => !statusBySku.has(item.sku))
+        inactiveItem = input.items.find(item => statusBySku.get(item.sku) === 'inactive')
       }
       const reason = getCreateOrderBlockReason({
         itemCount: input.items.length,
         client,
         hasUnknownProduct: unknownItem !== undefined,
         hasInactiveProduct: inactiveItem !== undefined,
-      });
+      })
       if (reason) {
-        const offending = reason === 'product-not-found' ? unknownItem : reason === 'inactive-product' ? inactiveItem : undefined;
+        const offending =
+          reason === 'product-not-found'
+            ? unknownItem
+            : reason === 'inactive-product'
+              ? inactiveItem
+              : undefined
         return offending
           ? { success: false, reason, detail: `"${offending.name}" (${offending.sku})` }
-          : { success: false, reason };
+          : { success: false, reason }
       }
-      const now = new Date().toISOString();
+      const now = new Date().toISOString()
       const newDTO: OrderDTO = {
         id: nextOrderId(),
         numero_pedido: nextOrderNumber(empresaId),
@@ -365,15 +384,22 @@ export async function createOrder(empresaId: string, input: OrderFormInput): Pro
           subtotal: item.subtotal,
           cantidad_entregada: 0,
         })),
-        historial: [{ id: `h-${Date.now()}`, fecha: now, estado: 'pending', descripcion: 'Pedido creado manualmente' }],
-      };
-      ordersDTOStore = [newDTO, ...ordersDTOStore];
-      return { success: true, pedido: newDTO };
+        historial: [
+          {
+            id: `h-${Date.now()}`,
+            fecha: now,
+            estado: 'pending',
+            descripcion: 'Pedido creado manualmente',
+          },
+        ],
+      }
+      ordersDTOStore = [newDTO, ...ordersDTOStore]
+      return { success: true, pedido: newDTO }
     },
-  });
+  })
   return response.success
     ? { success: true, order: orderFromDTO(response.pedido) }
-    : { success: false, reason: response.reason, detail: response.detail };
+    : { success: false, reason: response.reason, detail: response.detail }
 }
 
 // Flujo lineal de estados (mismo comportamiento que STATUS_FLOW en
@@ -385,7 +411,7 @@ const ORDER_STATUS_FLOW: Partial<Record<OrderStatus, OrderStatus>> = {
   preparing: 'dispatched',
   dispatched: 'delivered',
   delivered: 'invoiced',
-};
+}
 
 // 'has-active-deliveries'/'invalid-status-for-cancel' solo los produce
 // cancelOrder — advanceOrderStatus nunca los devuelve, pero comparten
@@ -397,35 +423,46 @@ const ORDER_STATUS_FLOW: Partial<Record<OrderStatus, OrderStatus>> = {
 // tiene siguiente paso ahi (fluye a invoiced), pero igual esta
 // prohibido CANCELAR un pedido ya entregado (regla de negocio propia
 // de cancelar, no de avanzar).
-export type OrderStatusTransitionReason = 'not-found' | 'terminal-status' | 'has-active-deliveries' | 'invalid-status-for-cancel';
+export type OrderStatusTransitionReason =
+  'not-found' | 'terminal-status' | 'has-active-deliveries' | 'invalid-status-for-cancel'
 
 export interface OrderStatusTransitionResult {
-  success: boolean;
-  orderId: string;
-  previousStatus?: OrderStatus;
-  newStatus?: OrderStatus;
-  reason?: OrderStatusTransitionReason;
+  success: boolean
+  orderId: string
+  previousStatus?: OrderStatus
+  newStatus?: OrderStatus
+  reason?: OrderStatusTransitionReason
 }
 
-export async function advanceOrderStatus(empresaId: string, orderId: string): Promise<OrderStatusTransitionResult> {
+export async function advanceOrderStatus(
+  empresaId: string,
+  orderId: string
+): Promise<OrderStatusTransitionResult> {
   return httpClient.request<OrderStatusTransitionResult>({
     method: 'PUT',
     path: `/orders/${orderId}/advance`,
     params: { empresaId },
     mock: () => {
-      const existing = ordersDTOStore.find((dto) => dto.id === orderId);
+      const existing = ordersDTOStore.find(dto => dto.id === orderId)
       if (!existing) {
-        return { success: false, orderId, reason: 'not-found' };
+        return { success: false, orderId, reason: 'not-found' }
       }
-      const nextStatus = ORDER_STATUS_FLOW[existing.estado];
+      const nextStatus = ORDER_STATUS_FLOW[existing.estado]
       if (!nextStatus) {
-        return { success: false, orderId, previousStatus: existing.estado, reason: 'terminal-status' };
+        return {
+          success: false,
+          orderId,
+          previousStatus: existing.estado,
+          reason: 'terminal-status',
+        }
       }
-      const previousStatus = existing.estado;
-      ordersDTOStore = ordersDTOStore.map((dto) => (dto.id === orderId ? { ...dto, estado: nextStatus } : dto));
-      return { success: true, orderId, previousStatus, newStatus: nextStatus };
+      const previousStatus = existing.estado
+      ordersDTOStore = ordersDTOStore.map(dto =>
+        dto.id === orderId ? { ...dto, estado: nextStatus } : dto
+      )
+      return { success: true, orderId, previousStatus, newStatus: nextStatus }
     },
-  });
+  })
 }
 
 // No cancela desde CUALQUIER estado (correccion de esta tanda — ver
@@ -444,36 +481,53 @@ export async function advanceOrderStatus(empresaId: string, orderId: string): Pr
 // ocultando el boton para no mostrar una accion que el servidor va a
 // rechazar igual (mismo criterio que ya se aplicaba para
 // has-active-deliveries).
-const NON_CANCELLABLE_ORDER_STATUSES: readonly OrderStatus[] = ['delivered', 'invoiced', 'cancelled'];
-export async function cancelOrder(empresaId: string, orderId: string): Promise<OrderStatusTransitionResult> {
+const NON_CANCELLABLE_ORDER_STATUSES: readonly OrderStatus[] = [
+  'delivered',
+  'invoiced',
+  'cancelled',
+]
+export async function cancelOrder(
+  empresaId: string,
+  orderId: string
+): Promise<OrderStatusTransitionResult> {
   return httpClient.request<OrderStatusTransitionResult>({
     method: 'PUT',
     path: `/orders/${orderId}/cancel`,
     params: { empresaId },
     mock: () => {
-      const existing = ordersDTOStore.find((dto) => dto.id === orderId);
+      const existing = ordersDTOStore.find(dto => dto.id === orderId)
       if (!existing) {
-        return { success: false, orderId, reason: 'not-found' };
+        return { success: false, orderId, reason: 'not-found' }
       }
       if (NON_CANCELLABLE_ORDER_STATUSES.includes(existing.estado)) {
-        return { success: false, orderId, previousStatus: existing.estado, reason: 'invalid-status-for-cancel' };
+        return {
+          success: false,
+          orderId,
+          previousStatus: existing.estado,
+          reason: 'invalid-status-for-cancel',
+        }
       }
       if (getActiveDeliveriesForOrder(asOrderId(orderId)).length > 0) {
-        return { success: false, orderId, previousStatus: existing.estado, reason: 'has-active-deliveries' };
+        return {
+          success: false,
+          orderId,
+          previousStatus: existing.estado,
+          reason: 'has-active-deliveries',
+        }
       }
-      const previousStatus = existing.estado;
+      const previousStatus = existing.estado
       // Tanda 9 (ADR-010 seccion 1): cancelar SI es un evento del eje
       // comercial real — a diferencia de advanceOrderStatus (que sigue
       // escribiendo solo el `estado` legado, ver order.types.ts), esta
       // mutacion escribe los dos: `estado` porque el resto de la UI
       // todavia lo lee (no migro esta tanda), `estado_comercial` porque
       // es, genuinamente, la fuente nueva para este hecho.
-      ordersDTOStore = ordersDTOStore.map((dto) =>
+      ordersDTOStore = ordersDTOStore.map(dto =>
         dto.id === orderId ? { ...dto, estado: 'cancelled', estado_comercial: 'Cancelado' } : dto
-      );
-      return { success: true, orderId, previousStatus, newStatus: 'cancelled' };
+      )
+      return { success: true, orderId, previousStatus, newStatus: 'cancelled' }
     },
-  });
+  })
 }
 
 // ------------------------------------------------------------
@@ -486,13 +540,13 @@ export async function cancelOrder(empresaId: string, orderId: string): Promise<O
 // dashboardAggregates.ts necesitan, no el DTO completo.
 // ------------------------------------------------------------
 export function getOrdersSnapshotForAggregation(): OrderProjectionForAggregation[] {
-  return ordersDTOStore.map((dto) => ({
+  return ordersDTOStore.map(dto => ({
     id: asOrderId(dto.id),
     status: dto.estado,
     date: dto.fecha,
     zone: dto.cliente.zona,
     totalAmount: dto.importes.total,
-  }));
+  }))
 }
 
 // ------------------------------------------------------------
@@ -515,14 +569,14 @@ export async function getOrderById(
     path: `/orders/${orderId}`,
     params: { empresaId },
     signal,
-    mock: () => ordersDTOStore.find((d) => d.id === orderId),
-  });
-  return dto ? orderFromDTO(dto) : undefined;
+    mock: () => ordersDTOStore.find(d => d.id === orderId),
+  })
+  return dto ? orderFromDTO(dto) : undefined
 }
 
 export interface OrderLineDeliveryDelta {
-  orderLineId: OrderLineId;
-  cantidadEntregada: number;
+  orderLineId: OrderLineId
+  cantidadEntregada: number
 }
 
 // ------------------------------------------------------------
@@ -538,24 +592,31 @@ export interface OrderLineDeliveryDelta {
 // red — httpClient existe para el trafico cliente-servidor, no para
 // llamadas entre dos servicios del mismo "servidor" mock.
 // ------------------------------------------------------------
-export async function applyDeliveryToOrderLines(orderId: OrderId, deltas: OrderLineDeliveryDelta[]): Promise<Order> {
-  const existing = ordersDTOStore.find((dto) => dto.id === orderId);
+export async function applyDeliveryToOrderLines(
+  orderId: OrderId,
+  deltas: OrderLineDeliveryDelta[]
+): Promise<Order> {
+  const existing = ordersDTOStore.find(dto => dto.id === orderId)
   if (!existing) {
-    throw new ApiError(404, 'CLIENT_ERROR', `No se encontro el pedido ${orderId} para aplicar el remito.`);
+    throw new ApiError(
+      404,
+      'CLIENT_ERROR',
+      `No se encontro el pedido ${orderId} para aplicar el remito.`
+    )
   }
 
-  const deltaByLine = new Map(deltas.map((d) => [d.orderLineId as string, d.cantidadEntregada]));
+  const deltaByLine = new Map(deltas.map(d => [d.orderLineId as string, d.cantidadEntregada]))
 
   const updated: OrderDTO = {
     ...existing,
-    items: existing.items.map((item) => {
-      const delta = deltaByLine.get(item.id);
-      if (!delta) return item;
-      return { ...item, cantidad_entregada: item.cantidad_entregada + delta };
+    items: existing.items.map(item => {
+      const delta = deltaByLine.get(item.id)
+      if (!delta) return item
+      return { ...item, cantidad_entregada: item.cantidad_entregada + delta }
     }),
-  };
+  }
 
-  ordersDTOStore = ordersDTOStore.map((dto) => (dto.id === orderId ? updated : dto));
+  ordersDTOStore = ordersDTOStore.map(dto => (dto.id === orderId ? updated : dto))
 
-  return orderFromDTO(updated);
+  return orderFromDTO(updated)
 }

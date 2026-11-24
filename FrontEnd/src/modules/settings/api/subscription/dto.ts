@@ -9,18 +9,18 @@
 // ============================================================
 
 export interface InvoiceRecordDTO {
-  id: string;
-  fecha: string;
-  monto: number;
-  estado: 'paid' | 'pending';
-  plan: string;
+  id: string
+  fecha: string
+  monto: number
+  estado: 'paid' | 'pending'
+  plan: string
 }
 
 export interface InvoicesPageDTO {
-  data: InvoiceRecordDTO[];
+  data: InvoiceRecordDTO[]
   meta: {
-    total: number;
-    page: number;
-    page_size: number;
-  };
+    total: number
+    page: number
+    page_size: number
+  }
 }

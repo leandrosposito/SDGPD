@@ -1,11 +1,11 @@
-import type { ProductHistoryEvent } from '@/shared/types/inventory.types';
-import type { Branch } from '@/shared/types/session.types';
-import type { PageQuery, PageResult, ExportResult } from '@/shared/types/pagination.types';
-import { MAX_EXPORT_ROWS } from '@/shared/types/pagination.types';
-import { INVENTORY_MOCK_DATA } from '@/data/mock/inventory.data';
-import { httpClient } from '@/shared/api/httpClient';
-import type { ProductHistoryEventDTO, ProductHistoryPageDTO } from './dto';
-import { productHistoryEventFromDTO, productHistoryEventToDTO } from './mapper';
+import type { ProductHistoryEvent } from '@/shared/types/inventory.types'
+import type { Branch } from '@/shared/types/session.types'
+import type { PageQuery, PageResult, ExportResult } from '@/shared/types/pagination.types'
+import { MAX_EXPORT_ROWS } from '@/shared/types/pagination.types'
+import { INVENTORY_MOCK_DATA } from '@/data/mock/inventory.data'
+import { httpClient } from '@/shared/api/httpClient'
+import type { ProductHistoryEventDTO, ProductHistoryPageDTO } from './dto'
+import { productHistoryEventFromDTO, productHistoryEventToDTO } from './mapper'
 
 // ============================================================
 // product-history.service — Auditoría de eventos de producto (cambios
@@ -27,21 +27,22 @@ import { productHistoryEventFromDTO, productHistoryEventToDTO } from './mapper';
 // `const`, no `let`: sin mutadores todavía (ningún flujo de la app
 // genera un evento de historial nuevo hoy — ver DECISIONES_TECNICAS.md,
 // evaluación de invalidación cruzada de esta tanda).
-const productHistoryDTOStore: ProductHistoryEventDTO[] = INVENTORY_MOCK_DATA.history.map(productHistoryEventToDTO);
+const productHistoryDTOStore: ProductHistoryEventDTO[] =
+  INVENTORY_MOCK_DATA.history.map(productHistoryEventToDTO)
 
 export interface ProductHistoryQueryFilters {
-  empresaId: string;
-  branchId: Branch['id'];
-  search?: string;
+  empresaId: string
+  branchId: Branch['id']
+  search?: string
 }
 
-export type ProductHistorySortField = 'date' | 'productName';
+export type ProductHistorySortField = 'date' | 'productName'
 
 function matchesSearch(event: ProductHistoryEventDTO, search: string | undefined): boolean {
-  if (!search) return true;
-  const q = search.trim().toLowerCase();
-  if (!q) return true;
-  return event.sku.toLowerCase().includes(q) || event.nombre_producto.toLowerCase().includes(q);
+  if (!search) return true
+  const q = search.trim().toLowerCase()
+  if (!q) return true
+  return event.sku.toLowerCase().includes(q) || event.nombre_producto.toLowerCase().includes(q)
 }
 
 function compareProductHistory(
@@ -51,10 +52,10 @@ function compareProductHistory(
 ): number {
   switch (field) {
     case 'productName':
-      return a.nombre_producto.localeCompare(b.nombre_producto);
+      return a.nombre_producto.localeCompare(b.nombre_producto)
     case 'date':
     default:
-      return a.fecha.localeCompare(b.fecha);
+      return a.fecha.localeCompare(b.fecha)
   }
 }
 
@@ -63,19 +64,19 @@ function filterAndSortProductHistory(
   sort: { field: ProductHistorySortField; direction: 'asc' | 'desc' } | undefined
 ): ProductHistoryEventDTO[] {
   const inScope = productHistoryDTOStore.filter(
-    (e) => e.sucursal_id === filters.branchId && matchesSearch(e, filters.search)
-  );
+    e => e.sucursal_id === filters.branchId && matchesSearch(e, filters.search)
+  )
 
   // Default mas reciente primero (mismo criterio que
   // movements.service#filterAndSortMovements).
-  const sortField = sort?.field ?? 'date';
-  const direction = sort?.direction ?? 'desc';
+  const sortField = sort?.field ?? 'date'
+  const direction = sort?.direction ?? 'desc'
   return [...inScope].sort((a, b) => {
-    const cmp = compareProductHistory(a, b, sortField);
-    const primary = direction === 'asc' ? cmp : -cmp;
+    const cmp = compareProductHistory(a, b, sortField)
+    const primary = direction === 'asc' ? cmp : -cmp
     // Desempate estable por id.
-    return primary !== 0 ? primary : a.id.localeCompare(b.id);
-  });
+    return primary !== 0 ? primary : a.id.localeCompare(b.id)
+  })
 }
 
 // fetchPage de usePagedQuery — firma exacta (query, signal?).
@@ -97,26 +98,26 @@ export async function getProductHistoryPage(
     },
     signal,
     mock: () => {
-      const sorted = filterAndSortProductHistory(query.filters, query.sort);
+      const sorted = filterAndSortProductHistory(query.filters, query.sort)
 
-      const total = sorted.length;
-      const totalPages = Math.max(1, Math.ceil(total / query.pageSize));
-      const safePage = Math.min(Math.max(1, query.page), totalPages);
-      const start = (safePage - 1) * query.pageSize;
+      const total = sorted.length
+      const totalPages = Math.max(1, Math.ceil(total / query.pageSize))
+      const safePage = Math.min(Math.max(1, query.page), totalPages)
+      const start = (safePage - 1) * query.pageSize
 
       return {
         data: sorted.slice(start, start + query.pageSize),
         meta: { total, page: safePage, page_size: query.pageSize },
-      };
+      }
     },
-  });
+  })
 
   return {
     items: pageDTO.data.map(productHistoryEventFromDTO),
     total: pageDTO.meta.total,
     page: pageDTO.meta.page,
     pageSize: pageDTO.meta.page_size,
-  };
+  }
 }
 
 // Exportar (mismo patron que exportMovements): reusa
@@ -130,10 +131,10 @@ export async function exportProductHistory(
     path: '/inventory/product-history/export',
     params: { empresaId: filters.empresaId, branchId: filters.branchId, search: filters.search },
     mock: () => {
-      const sorted = filterAndSortProductHistory(filters, sort).map(productHistoryEventFromDTO);
-      const truncated = sorted.length > MAX_EXPORT_ROWS;
-      const items = sorted.slice(0, MAX_EXPORT_ROWS);
-      return { items: structuredClone(items), truncated };
+      const sorted = filterAndSortProductHistory(filters, sort).map(productHistoryEventFromDTO)
+      const truncated = sorted.length > MAX_EXPORT_ROWS
+      const items = sorted.slice(0, MAX_EXPORT_ROWS)
+      return { items: structuredClone(items), truncated }
     },
-  });
+  })
 }

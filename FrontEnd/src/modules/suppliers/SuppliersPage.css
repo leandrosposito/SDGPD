@@ -32,7 +32,9 @@
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   border: 0.0625rem solid var(--color-accent-light);
-  transition: background-color var(--transition-fast), color var(--transition-fast);
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast);
 }
 
 .suppliers-page__btn-order:hover {
@@ -136,12 +138,12 @@
   height: 1.5rem;
   border-radius: var(--radius-full);
   background: rgba(37, 211, 102, 0.1);
-  color: #25D366;
+  color: #25d366;
   transition: all var(--transition-fast) ease;
 }
 
 .suppliers-table__wa-btn:hover {
-  background: #25D366;
+  background: #25d366;
   color: white;
   transform: scale(1.1);
 }

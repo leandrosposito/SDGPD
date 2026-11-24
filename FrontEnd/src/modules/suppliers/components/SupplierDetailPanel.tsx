@@ -1,16 +1,19 @@
-import { useEffect, useMemo, useState, type FC } from 'react';
-import { toast } from 'sonner';
-import { SidePanel } from '@/shared/components/ui/SidePanel';
-import { Tabs, type TabItem } from '@/shared/components/ui/Tabs';
-import { Table } from '@/shared/components/ui/Table';
-import { Badge } from '@/shared/components/ui/Badge';
-import { useSessionStore } from '@/shared/state/useSessionStore';
-import { useCachedQuery, CACHE_STALE_TIME } from '@/shared/hooks/useCachedQuery';
-import type { Branch } from '@/shared/types/session.types';
-import type { Supplier } from '@/shared/types/supplier.types';
-import type { PurchaseOrder } from '@/shared/types/purchaseOrder.types';
-import { getPurchaseOrdersBySupplierId, computePurchaseOrderTotal } from '@/services/mock/purchaseOrders.service';
-import './SupplierDetailPanel.css';
+import { useEffect, useMemo, useState, type FC } from 'react'
+import { toast } from 'sonner'
+import { SidePanel } from '@/shared/components/ui/SidePanel'
+import { Tabs, type TabItem } from '@/shared/components/ui/Tabs'
+import { Table } from '@/shared/components/ui/Table'
+import { Badge } from '@/shared/components/ui/Badge'
+import { useSessionStore } from '@/shared/state/useSessionStore'
+import { useCachedQuery, CACHE_STALE_TIME } from '@/shared/hooks/useCachedQuery'
+import type { Branch } from '@/shared/types/session.types'
+import type { Supplier } from '@/shared/types/supplier.types'
+import type { PurchaseOrder } from '@/shared/types/purchaseOrder.types'
+import {
+  getPurchaseOrdersBySupplierId,
+  computePurchaseOrderTotal,
+} from '@/services/mock/purchaseOrders.service'
+import './SupplierDetailPanel.css'
 
 // ============================================================
 // SupplierDetailPanel — Sliding detail view for a supplier
@@ -25,22 +28,26 @@ import './SupplierDetailPanel.css';
 // ============================================================
 
 interface SupplierDetailPanelProps {
-  supplier: Supplier | null;
-  isOpen: boolean;
-  onClose: () => void;
-  onNewOrder: () => void;
+  supplier: Supplier | null
+  isOpen: boolean
+  onClose: () => void
+  onNewOrder: () => void
   // PENDIENTES.md item 1 (cerrado en Tanda 12): la logica de edicion
   // ya existia en SupplierFormModal.tsx, faltaba el boton que la
   // dispare con un `supplier` no-nulo.
-  onEdit: () => void;
+  onEdit: () => void
 }
 
 function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(value);
+  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(value)
 }
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' });
+  return new Date(iso).toLocaleDateString('es-AR', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  })
 }
 
 // Duplicado deliberado (no importado desde modules/compras/, R2): un
@@ -55,22 +62,25 @@ const PURCHASE_ORDER_STATUS_LABEL: Record<PurchaseOrder['status'], string> = {
   sent: 'Enviada',
   received: 'Recibida',
   cancelled: 'Cancelada',
-};
+}
 
-const PURCHASE_ORDER_STATUS_VARIANT: Record<PurchaseOrder['status'], 'neutral' | 'info' | 'success' | 'danger'> = {
+const PURCHASE_ORDER_STATUS_VARIANT: Record<
+  PurchaseOrder['status'],
+  'neutral' | 'info' | 'success' | 'danger'
+> = {
   draft: 'neutral',
   sent: 'info',
   received: 'success',
   cancelled: 'danger',
-};
+}
 
 // Referencia estable para `branches` de mas abajo (ver regla de
 // selectores en DECISIONES_TECNICAS.md), para no invalidar el useMemo
 // de branchesById en cada render mientras la sesion todavia esta cargando.
-const EMPTY_BRANCHES: Branch[] = [];
+const EMPTY_BRANCHES: Branch[] = []
 // Mismo motivo que EMPTY_BRANCHES: referencia estable para el fallback
 // de useCachedQuery mientras no resolvio.
-const EMPTY_ORDERS: PurchaseOrder[] = [];
+const EMPTY_ORDERS: PurchaseOrder[] = []
 
 export const SupplierDetailPanel: FC<SupplierDetailPanelProps> = ({
   supplier,
@@ -79,13 +89,13 @@ export const SupplierDetailPanel: FC<SupplierDetailPanelProps> = ({
   onNewOrder,
   onEdit,
 }) => {
-  const [activeTab, setActiveTab] = useState('basics');
-  const session = useSessionStore((s) => s.session);
-  const empresaId = session?.company.id;
-  const branches = session?.branches ?? EMPTY_BRANCHES;
-  const branchesById = useMemo(() => new Map(branches.map((b) => [b.id, b])), [branches]);
+  const [activeTab, setActiveTab] = useState('basics')
+  const session = useSessionStore(s => s.session)
+  const empresaId = session?.company.id
+  const branches = session?.branches ?? EMPTY_BRANCHES
+  const branchesById = useMemo(() => new Map(branches.map(b => [b.id, b])), [branches])
 
-  const supplierId = supplier?.id ?? null;
+  const supplierId = supplier?.id ?? null
 
   // Historial de OC por proveedor (Tanda 2.5, useCachedQuery — ver
   // RELEVAMIENTO_CACHE.md/DECISIONES_TECNICAS.md). keyParams=supplierId:
@@ -102,16 +112,16 @@ export const SupplierDetailPanel: FC<SupplierDetailPanelProps> = ({
   } = useCachedQuery(
     'purchase-orders-by-supplier',
     supplierId,
-    (signal) => getPurchaseOrdersBySupplierId(empresaId ?? '', supplierId ?? '', signal),
+    signal => getPurchaseOrdersBySupplierId(empresaId ?? '', supplierId ?? '', signal),
     { staleTime: CACHE_STALE_TIME.OPERATIONAL, enabled: isOpen && supplierId !== null }
-  );
-  const orders = ordersData ?? EMPTY_ORDERS;
+  )
+  const orders = ordersData ?? EMPTY_ORDERS
 
   useEffect(() => {
-    if (ordersError) toast.error('No se pudo cargar el historial de ordenes de compra.');
-  }, [ordersError]);
+    if (ordersError) toast.error('No se pudo cargar el historial de ordenes de compra.')
+  }, [ordersError])
 
-  if (!supplier) return null;
+  if (!supplier) return null
 
   const tabs: TabItem[] = [
     {
@@ -144,7 +154,9 @@ export const SupplierDetailPanel: FC<SupplierDetailPanelProps> = ({
               </div>
               <div className="supplier-detail__field supplier-detail__field--full">
                 <span className="supplier-detail__label">Direccion</span>
-                <span className="supplier-detail__value">{supplier.address}, {supplier.city}</span>
+                <span className="supplier-detail__value">
+                  {supplier.address}, {supplier.city}
+                </span>
               </div>
             </div>
           </section>
@@ -157,7 +169,9 @@ export const SupplierDetailPanel: FC<SupplierDetailPanelProps> = ({
               </div>
               <div className="supplier-detail__field">
                 <span className="supplier-detail__label">Saldo Actual</span>
-                <span className={`supplier-detail__value font-bold ${supplier.currentBalance > 0 ? 'text-danger' : ''}`}>
+                <span
+                  className={`supplier-detail__value font-bold ${supplier.currentBalance > 0 ? 'text-danger' : ''}`}
+                >
                   {formatCurrency(supplier.currentBalance)}
                 </span>
               </div>
@@ -173,15 +187,21 @@ export const SupplierDetailPanel: FC<SupplierDetailPanelProps> = ({
         <div className="supplier-detail__tab-content">
           <Table
             data={supplier.products}
-            keyExtractor={(p) => p.id}
+            keyExtractor={p => p.id}
             columns={[
-              { header: 'SKU', accessor: (p) => <span className="font-mono text-xs">{p.sku}</span> },
+              { header: 'SKU', accessor: p => <span className="font-mono text-xs">{p.sku}</span> },
               { header: 'Producto', accessor: 'name' },
-              { header: 'Categoria', accessor: (p) => <span className="text-tertiary">{p.category}</span> },
-              { header: 'Costo', align: 'right', accessor: (p) => formatCurrency(p.cost) },
-              { header: 'Actualizado', accessor: (p) => (
-                <span className="text-tertiary text-xs">{formatDate(p.lastUpdate)}</span>
-              )},
+              {
+                header: 'Categoria',
+                accessor: p => <span className="text-tertiary">{p.category}</span>,
+              },
+              { header: 'Costo', align: 'right', accessor: p => formatCurrency(p.cost) },
+              {
+                header: 'Actualizado',
+                accessor: p => (
+                  <span className="text-tertiary text-xs">{formatDate(p.lastUpdate)}</span>
+                ),
+              },
             ]}
           />
         </div>
@@ -194,44 +214,53 @@ export const SupplierDetailPanel: FC<SupplierDetailPanelProps> = ({
         <div className="supplier-detail__tab-content">
           <div className="supplier-detail__balance-card">
             <span className="supplier-detail__balance-label">Saldo en Cuenta Corriente</span>
-            <span className={`supplier-detail__balance-amount ${supplier.hasOverdueDebt ? 'text-danger' : ''}`}>
+            <span
+              className={`supplier-detail__balance-amount ${supplier.hasOverdueDebt ? 'text-danger' : ''}`}
+            >
               {formatCurrency(supplier.currentBalance)}
             </span>
-            {supplier.hasOverdueDebt && (
-              <Badge label="Deuda Vencida" variant="danger" />
-            )}
+            {supplier.hasOverdueDebt && <Badge label="Deuda Vencida" variant="danger" />}
           </div>
           {isLoadingOrders ? (
             <p className="text-secondary text-sm">Cargando ordenes de compra...</p>
           ) : (
             <Table
               data={orders}
-              keyExtractor={(o) => o.id}
+              keyExtractor={o => o.id}
               emptyMessage="Este proveedor todavia no tiene ordenes de compra."
               columns={[
-                { header: 'OC', accessor: (o) => <span className="font-mono text-xs">{o.id}</span> },
-                { header: 'Fecha', accessor: (o) => formatDate(o.createdAt) },
-                { header: 'Sucursal', accessor: (o) => branchesById.get(o.branchId)?.name ?? 'Sucursal no disponible' },
+                { header: 'OC', accessor: o => <span className="font-mono text-xs">{o.id}</span> },
+                { header: 'Fecha', accessor: o => formatDate(o.createdAt) },
+                {
+                  header: 'Sucursal',
+                  accessor: o => branchesById.get(o.branchId)?.name ?? 'Sucursal no disponible',
+                },
                 {
                   header: 'Monto',
                   align: 'right',
-                  accessor: (o) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: o.currency }).format(
-                    computePurchaseOrderTotal(o.lines)
+                  accessor: o =>
+                    new Intl.NumberFormat('es-AR', {
+                      style: 'currency',
+                      currency: o.currency,
+                    }).format(computePurchaseOrderTotal(o.lines)),
+                },
+                {
+                  header: 'Estado',
+                  align: 'center',
+                  accessor: o => (
+                    <Badge
+                      label={PURCHASE_ORDER_STATUS_LABEL[o.status]}
+                      variant={PURCHASE_ORDER_STATUS_VARIANT[o.status]}
+                    />
                   ),
                 },
-                { header: 'Estado', align: 'center', accessor: (o) => (
-                  <Badge
-                    label={PURCHASE_ORDER_STATUS_LABEL[o.status]}
-                    variant={PURCHASE_ORDER_STATUS_VARIANT[o.status]}
-                  />
-                )},
               ]}
             />
           )}
         </div>
       ),
     },
-  ];
+  ]
 
   return (
     <SidePanel
@@ -252,5 +281,5 @@ export const SupplierDetailPanel: FC<SupplierDetailPanelProps> = ({
     >
       <Tabs tabs={tabs} activeTabId={activeTab} onChange={setActiveTab} />
     </SidePanel>
-  );
-};
+  )
+}

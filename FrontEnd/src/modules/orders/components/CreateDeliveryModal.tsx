@@ -1,13 +1,13 @@
-import { useState, type FC } from 'react';
-import { toast } from 'sonner';
-import { Modal } from '@/shared/components/ui/Modal';
-import { useSessionStore } from '@/shared/state/useSessionStore';
-import { todayLocalDateString } from '@/shared/utils/date';
-import type { Order } from '@/shared/types/order.types';
-import type { Delivery } from '@/shared/types/logistics.types';
-import { asBranchId } from '@/shared/types/ids.types';
-import { createDelivery } from '@/modules/logistics/services/deliveries.service';
-import './CreateDeliveryModal.css';
+import { useState, type FC } from 'react'
+import { toast } from 'sonner'
+import { Modal } from '@/shared/components/ui/Modal'
+import { useSessionStore } from '@/shared/state/useSessionStore'
+import { todayLocalDateString } from '@/shared/utils/date'
+import type { Order } from '@/shared/types/order.types'
+import type { Delivery } from '@/shared/types/logistics.types'
+import { asBranchId } from '@/shared/types/ids.types'
+import { createDelivery } from '@/modules/logistics/services/deliveries.service'
+import './CreateDeliveryModal.css'
 
 // ============================================================
 // CreateDeliveryModal — Tanda 9, hallazgo A15#1 (el item mas
@@ -33,30 +33,39 @@ import './CreateDeliveryModal.css';
 // ============================================================
 
 interface CreateDeliveryModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  order: Order | null;
-  onCreated: (delivery: Delivery) => void;
+  isOpen: boolean
+  onClose: () => void
+  order: Order | null
+  onCreated: (delivery: Delivery) => void
 }
 
-const ZONES: Delivery['zone'][] = ['Norte', 'Centro', 'Sur'];
-const PRIORITIES: Delivery['priority'][] = ['high', 'medium', 'low'];
-const PRIORITY_LABEL: Record<Delivery['priority'], string> = { high: 'Alta', medium: 'Media', low: 'Baja' };
+const ZONES: Delivery['zone'][] = ['Norte', 'Centro', 'Sur']
+const PRIORITIES: Delivery['priority'][] = ['high', 'medium', 'low']
+const PRIORITY_LABEL: Record<Delivery['priority'], string> = {
+  high: 'Alta',
+  medium: 'Media',
+  low: 'Baja',
+}
 
-export const CreateDeliveryModal: FC<CreateDeliveryModalProps> = ({ isOpen, onClose, order, onCreated }) => {
-  const fullName = useSessionStore((s) => s.session?.fullName) ?? 'Usuario';
-  const empresaId = useSessionStore((s) => s.session?.company.id);
-  const branches = useSessionStore((s) => s.session?.branches) ?? [];
-  const activeBranchId = useSessionStore((s) => s.activeBranchId);
+export const CreateDeliveryModal: FC<CreateDeliveryModalProps> = ({
+  isOpen,
+  onClose,
+  order,
+  onCreated,
+}) => {
+  const fullName = useSessionStore(s => s.session?.fullName) ?? 'Usuario'
+  const empresaId = useSessionStore(s => s.session?.company.id)
+  const branches = useSessionStore(s => s.session?.branches) ?? []
+  const activeBranchId = useSessionStore(s => s.activeBranchId)
 
-  const [branchId, setBranchId] = useState(activeBranchId ?? branches[0]?.id ?? '');
-  const [date, setDate] = useState(todayLocalDateString());
-  const [estimatedTime, setEstimatedTime] = useState('09:00 - 11:00');
-  const [zone, setZone] = useState<Delivery['zone']>('Centro');
-  const [priority, setPriority] = useState<Delivery['priority']>('medium');
-  const [collectionAmount, setCollectionAmount] = useState(0);
-  const [isSaving, setIsSaving] = useState(false);
-  const [idempotencyKey, setIdempotencyKey] = useState('');
+  const [branchId, setBranchId] = useState(activeBranchId ?? branches[0]?.id ?? '')
+  const [date, setDate] = useState(todayLocalDateString())
+  const [estimatedTime, setEstimatedTime] = useState('09:00 - 11:00')
+  const [zone, setZone] = useState<Delivery['zone']>('Centro')
+  const [priority, setPriority] = useState<Delivery['priority']>('medium')
+  const [collectionAmount, setCollectionAmount] = useState(0)
+  const [isSaving, setIsSaving] = useState(false)
+  const [idempotencyKey, setIdempotencyKey] = useState('')
 
   // Ajuste de estado durante el render (react.dev/learn/you-might-not-
   // need-an-effect): cuando `openTrigger` cambia (el modal pasa a
@@ -66,25 +75,25 @@ export const CreateDeliveryModal: FC<CreateDeliveryModalProps> = ({ isOpen, onCl
   // `collectionAmount` se precarga del pedido — sigue disparando una
   // sola vez por apertura porque `openTrigger` solo cambia con
   // isOpen/order.id, no con cada render.
-  const openTrigger = isOpen ? (order?.id ?? '') : null;
-  const [lastOpenTrigger, setLastOpenTrigger] = useState<string | null>(null);
+  const openTrigger = isOpen ? (order?.id ?? '') : null
+  const [lastOpenTrigger, setLastOpenTrigger] = useState<string | null>(null)
   if (openTrigger !== null && openTrigger !== lastOpenTrigger && order) {
-    setLastOpenTrigger(openTrigger);
-    setIdempotencyKey(crypto.randomUUID());
-    setBranchId(activeBranchId ?? branches[0]?.id ?? '');
-    setDate(todayLocalDateString());
-    setEstimatedTime('09:00 - 11:00');
-    setZone('Centro');
-    setPriority('medium');
-    setCollectionAmount(order.paymentMethod === 'Cuenta Corriente' ? 0 : order.totalAmount);
+    setLastOpenTrigger(openTrigger)
+    setIdempotencyKey(crypto.randomUUID())
+    setBranchId(activeBranchId ?? branches[0]?.id ?? '')
+    setDate(todayLocalDateString())
+    setEstimatedTime('09:00 - 11:00')
+    setZone('Centro')
+    setPriority('medium')
+    setCollectionAmount(order.paymentMethod === 'Cuenta Corriente' ? 0 : order.totalAmount)
   }
 
-  if (!order) return null;
+  if (!order) return null
 
   async function handleConfirm() {
-    if (!order || !empresaId || !branchId || !idempotencyKey) return;
+    if (!order || !empresaId || !branchId || !idempotencyKey) return
 
-    setIsSaving(true);
+    setIsSaving(true)
     try {
       const result = await createDelivery(
         empresaId,
@@ -92,22 +101,22 @@ export const CreateDeliveryModal: FC<CreateDeliveryModalProps> = ({ isOpen, onCl
         order.id,
         { branchId, date, estimatedTime, zone, priority, collectionAmount },
         fullName
-      );
+      )
       if (result.success && result.delivery) {
-        toast.success(`Entrega ${result.delivery.id} creada para el pedido ${order.orderNumber}.`);
-        onCreated(result.delivery);
-        onClose();
-        return;
+        toast.success(`Entrega ${result.delivery.id} creada para el pedido ${order.orderNumber}.`)
+        onCreated(result.delivery)
+        onClose()
+        return
       }
       const message =
         result.reason === 'order-not-confirmado'
           ? 'Solo un pedido confirmado puede generar una entrega.'
-          : 'No se encontró el pedido.';
-      toast.error(message);
+          : 'No se encontró el pedido.'
+      toast.error(message)
     } catch {
-      toast.error('No se pudo crear la entrega.');
+      toast.error('No se pudo crear la entrega.')
     } finally {
-      setIsSaving(false);
+      setIsSaving(false)
     }
   }
 
@@ -119,10 +128,20 @@ export const CreateDeliveryModal: FC<CreateDeliveryModalProps> = ({ isOpen, onCl
       size="sm"
       footer={
         <>
-          <button type="button" className="create-delivery__cancel" onClick={onClose} disabled={isSaving}>
+          <button
+            type="button"
+            className="create-delivery__cancel"
+            onClick={onClose}
+            disabled={isSaving}
+          >
             Cancelar
           </button>
-          <button type="button" className="create-delivery__confirm" onClick={handleConfirm} disabled={isSaving || !branchId}>
+          <button
+            type="button"
+            className="create-delivery__confirm"
+            onClick={handleConfirm}
+            disabled={isSaving || !branchId}
+          >
             {isSaving ? 'Creando...' : 'Crear entrega'}
           </button>
         </>
@@ -131,8 +150,8 @@ export const CreateDeliveryModal: FC<CreateDeliveryModalProps> = ({ isOpen, onCl
       <div className="create-delivery">
         <label className="create-delivery__field">
           Sucursal
-          <select value={branchId} onChange={(e) => setBranchId(asBranchId(e.target.value))}>
-            {branches.map((b) => (
+          <select value={branchId} onChange={e => setBranchId(asBranchId(e.target.value))}>
+            {branches.map(b => (
               <option key={b.id} value={b.id}>
                 {b.name}
               </option>
@@ -141,16 +160,21 @@ export const CreateDeliveryModal: FC<CreateDeliveryModalProps> = ({ isOpen, onCl
         </label>
         <label className="create-delivery__field">
           Fecha
-          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          <input type="date" value={date} onChange={e => setDate(e.target.value)} />
         </label>
         <label className="create-delivery__field">
           Horario estimado
-          <input type="text" value={estimatedTime} onChange={(e) => setEstimatedTime(e.target.value)} placeholder="09:00 - 11:00" />
+          <input
+            type="text"
+            value={estimatedTime}
+            onChange={e => setEstimatedTime(e.target.value)}
+            placeholder="09:00 - 11:00"
+          />
         </label>
         <label className="create-delivery__field">
           Zona
-          <select value={zone} onChange={(e) => setZone(e.target.value as Delivery['zone'])}>
-            {ZONES.map((z) => (
+          <select value={zone} onChange={e => setZone(e.target.value as Delivery['zone'])}>
+            {ZONES.map(z => (
               <option key={z} value={z}>
                 {z}
               </option>
@@ -159,8 +183,11 @@ export const CreateDeliveryModal: FC<CreateDeliveryModalProps> = ({ isOpen, onCl
         </label>
         <label className="create-delivery__field">
           Prioridad
-          <select value={priority} onChange={(e) => setPriority(e.target.value as Delivery['priority'])}>
-            {PRIORITIES.map((p) => (
+          <select
+            value={priority}
+            onChange={e => setPriority(e.target.value as Delivery['priority'])}
+          >
+            {PRIORITIES.map(p => (
               <option key={p} value={p}>
                 {PRIORITY_LABEL[p]}
               </option>
@@ -173,10 +200,10 @@ export const CreateDeliveryModal: FC<CreateDeliveryModalProps> = ({ isOpen, onCl
             type="number"
             min={0}
             value={collectionAmount}
-            onChange={(e) => setCollectionAmount(Number(e.target.value))}
+            onChange={e => setCollectionAmount(Number(e.target.value))}
           />
         </label>
       </div>
     </Modal>
-  );
-};
+  )
+}

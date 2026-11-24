@@ -1,22 +1,26 @@
-import { type FC } from 'react';
+import { type FC } from 'react'
 
 // ============================================================
 // OrderTotalsSection — Financial breakdown
 // ============================================================
 
 interface OrderTotalsSectionProps {
-  subtotal: number;
-  discount: number;
-  taxRate: number; // e.g. 0.21
+  subtotal: number
+  discount: number
+  taxRate: number // e.g. 0.21
 }
 
 function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(value);
+  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(value)
 }
 
-export const OrderTotalsSection: FC<OrderTotalsSectionProps> = ({ subtotal, discount, taxRate }) => {
-  const tax = (subtotal - discount) * taxRate;
-  const total = subtotal - discount + tax;
+export const OrderTotalsSection: FC<OrderTotalsSectionProps> = ({
+  subtotal,
+  discount,
+  taxRate,
+}) => {
+  const tax = (subtotal - discount) * taxRate
+  const total = subtotal - discount + tax
 
   return (
     <section className="co-section co-section--totals">
@@ -39,5 +43,5 @@ export const OrderTotalsSection: FC<OrderTotalsSectionProps> = ({ subtotal, disc
         </div>
       </div>
     </section>
-  );
-};
+  )
+}

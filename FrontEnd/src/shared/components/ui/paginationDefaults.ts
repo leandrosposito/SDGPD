@@ -5,4 +5,4 @@
 // deliveryStatusLabels.ts separado de DeliveriesTable.tsx.
 // ============================================================
 
-export const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
+export const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const

@@ -13,22 +13,22 @@
 // (evita el ciclo store -> service -> httpClient -> store).
 // ============================================================
 
-let accessToken: string | null = null;
-const expiredListeners = new Set<() => void>();
+let accessToken: string | null = null
+const expiredListeners = new Set<() => void>()
 
 export function getAccessToken(): string | null {
-  return accessToken;
+  return accessToken
 }
 
 export function setAccessToken(token: string | null): void {
-  accessToken = token;
+  accessToken = token
 }
 
 export function onSessionExpired(listener: () => void): () => void {
-  expiredListeners.add(listener);
-  return () => expiredListeners.delete(listener);
+  expiredListeners.add(listener)
+  return () => expiredListeners.delete(listener)
 }
 
 export function notifySessionExpired(): void {
-  for (const listener of expiredListeners) listener();
+  for (const listener of expiredListeners) listener()
 }

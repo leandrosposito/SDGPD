@@ -1,19 +1,23 @@
-import { useEffect, useMemo, type FC } from 'react';
-import { toast } from 'sonner';
-import { Table } from '@/shared/components/ui/Table';
-import { Badge } from '@/shared/components/ui/Badge';
-import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary';
-import { ErrorState } from '@/shared/components/ui/ErrorState';
-import { LoadingState } from '@/shared/components/ui/LoadingState';
-import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay';
-import { Pagination } from '@/shared/components/ui/Pagination';
-import { ExportButton, type ExportColumn } from '@/shared/components/ui/ExportButton';
-import { usePagedQuery } from '@/shared/hooks/usePagedQuery';
-import { useUrlListState } from '@/shared/hooks/useUrlListState';
-import { useSessionStore } from '@/shared/state/useSessionStore';
-import { getInvoicesPage, exportInvoices, type InvoicesQueryFilters } from '@/modules/settings/api/subscription/subscription.service';
-import type { InvoiceRecord } from '@/shared/types/settings.types';
-import '@/modules/settings/SettingsPage.css';
+import { useEffect, useMemo, type FC } from 'react'
+import { toast } from 'sonner'
+import { Table } from '@/shared/components/ui/Table'
+import { Badge } from '@/shared/components/ui/Badge'
+import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary'
+import { ErrorState } from '@/shared/components/ui/ErrorState'
+import { LoadingState } from '@/shared/components/ui/LoadingState'
+import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay'
+import { Pagination } from '@/shared/components/ui/Pagination'
+import { ExportButton, type ExportColumn } from '@/shared/components/ui/ExportButton'
+import { usePagedQuery } from '@/shared/hooks/usePagedQuery'
+import { useUrlListState } from '@/shared/hooks/useUrlListState'
+import { useSessionStore } from '@/shared/state/useSessionStore'
+import {
+  getInvoicesPage,
+  exportInvoices,
+  type InvoicesQueryFilters,
+} from '@/modules/settings/api/subscription/subscription.service'
+import type { InvoiceRecord } from '@/shared/types/settings.types'
+import '@/modules/settings/SettingsPage.css'
 
 // ============================================================
 // TabSubscription — Suscripción y Facturación (Tanda 3c de
@@ -26,13 +30,13 @@ import '@/modules/settings/SettingsPage.css';
 // ============================================================
 
 export const TabSubscription: FC = () => {
-  const empresaId = useSessionStore((s) => s.session?.company.id);
+  const empresaId = useSessionStore(s => s.session?.company.id)
 
   // Tanda 4 (corrida completa, A13): pagina en la URL, prefijo `sub_`
   // (Settings tiene varias tabs con su propio listado paginado).
-  const urlState = useUrlListState({ prefix: 'sub' });
+  const urlState = useUrlListState({ prefix: 'sub' })
 
-  const filters: InvoicesQueryFilters = useMemo(() => ({ empresaId: empresaId ?? '' }), [empresaId]);
+  const filters: InvoicesQueryFilters = useMemo(() => ({ empresaId: empresaId ?? '' }), [empresaId])
 
   const {
     items: invoices,
@@ -50,43 +54,95 @@ export const TabSubscription: FC = () => {
     enabled: Boolean(empresaId),
     page: urlState.page,
     onPageChange: urlState.setPage,
-  });
+  })
 
   useEffect(() => {
-    if (error) toast.error('No se pudo cargar el historial de cobros.');
-  }, [error]);
+    if (error) toast.error('No se pudo cargar el historial de cobros.')
+  }, [error])
 
   const exportColumns: ExportColumn<InvoiceRecord>[] = [
-    { header: 'Fecha', accessor: (i) => i.date },
-    { header: 'Plan', accessor: (i) => i.plan },
-    { header: 'Monto', accessor: (i) => i.amount },
-    { header: 'Estado', accessor: (i) => (i.status === 'paid' ? 'Pagado' : 'Pendiente') },
-  ];
+    { header: 'Fecha', accessor: i => i.date },
+    { header: 'Plan', accessor: i => i.plan },
+    { header: 'Monto', accessor: i => i.amount },
+    { header: 'Estado', accessor: i => (i.status === 'paid' ? 'Pagado' : 'Pendiente') },
+  ]
 
   return (
     <>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h3 className="settings-section-title">Suscripción y Facturación SaaS</h3>
-        <ExportButton fileNamePrefix="facturas" columns={exportColumns} fetchRows={() => exportInvoices(filters)} />
+        <ExportButton
+          fileNamePrefix="facturas"
+          columns={exportColumns}
+          fetchRows={() => exportInvoices(filters)}
+        />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-6)' }}>
-        <div style={{ background: 'var(--color-bg-base)', padding: 'var(--space-6)', borderRadius: 'var(--radius-lg)', border: '0.0625rem solid var(--color-accent-light)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
+        <div
+          style={{
+            background: 'var(--color-bg-base)',
+            padding: 'var(--space-6)',
+            borderRadius: 'var(--radius-lg)',
+            border: '0.0625rem solid var(--color-accent-light)',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: 'var(--space-4)',
+            }}
+          >
             <div>
-              <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: 'var(--letter-spacing-wide)' }}>Plan Actual</div>
-              <div style={{ fontSize: 'var(--font-size-3xl)', fontWeight: 'var(--font-weight-bold)', color: 'var(--color-text-primary)' }}>Premium</div>
+              <div
+                style={{
+                  fontSize: 'var(--font-size-sm)',
+                  color: 'var(--color-text-secondary)',
+                  textTransform: 'uppercase',
+                  letterSpacing: 'var(--letter-spacing-wide)',
+                }}
+              >
+                Plan Actual
+              </div>
+              <div
+                style={{
+                  fontSize: 'var(--font-size-3xl)',
+                  fontWeight: 'var(--font-weight-bold)',
+                  color: 'var(--color-text-primary)',
+                }}
+              >
+                Premium
+              </div>
             </div>
             <Badge label="Activo" variant="success" />
           </div>
-          <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)', marginBottom: 'var(--space-6)' }}>
+          <div
+            style={{
+              fontSize: 'var(--font-size-sm)',
+              color: 'var(--color-text-secondary)',
+              marginBottom: 'var(--space-6)',
+            }}
+          >
             Facturación mensual. Próximo cobro el 01/07/2026 por $15.000 (ARS).
           </div>
-          <button className="client-modal-btn client-modal-btn--primary" style={{ width: '100%' }}>Actualizar Medio de Pago</button>
+          <button className="client-modal-btn client-modal-btn--primary" style={{ width: '100%' }}>
+            Actualizar Medio de Pago
+          </button>
         </div>
 
         <div>
-          <h4 style={{ fontSize: 'var(--font-size-md)', fontWeight: 'var(--font-weight-semibold)', color: 'var(--color-text-primary)', marginBottom: 'var(--space-3)' }}>Historial de Cobros</h4>
+          <h4
+            style={{
+              fontSize: 'var(--font-size-md)',
+              fontWeight: 'var(--font-weight-semibold)',
+              color: 'var(--color-text-primary)',
+              marginBottom: 'var(--space-3)',
+            }}
+          >
+            Historial de Cobros
+          </h4>
           {!empresaId || isLoading ? (
             <LoadingState message="Cargando historial de cobros..." />
           ) : error ? (
@@ -96,20 +152,34 @@ export const TabSubscription: FC = () => {
               fallbackTitle="No se pudo mostrar el historial de cobros."
               fallbackMessage="Intenta de nuevo o volve al inicio."
             >
-              <div style={{ border: '0.0625rem solid var(--color-border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
+              <div
+                style={{
+                  border: '0.0625rem solid var(--color-border)',
+                  borderRadius: 'var(--radius-lg)',
+                  overflow: 'hidden',
+                }}
+              >
                 <FetchingOverlay isFetching={isFetching}>
                   <Table
                     data={invoices}
-                    keyExtractor={(i) => i.id}
+                    keyExtractor={i => i.id}
                     columns={[
                       { header: 'Fecha', accessor: 'date' },
                       { header: 'Plan', accessor: 'plan' },
-                      { header: 'Monto', accessor: (row) => `$${row.amount.toLocaleString('es-AR')}` },
+                      {
+                        header: 'Monto',
+                        accessor: row => `$${row.amount.toLocaleString('es-AR')}`,
+                      },
                       {
                         header: 'Estado',
                         align: 'right',
-                        accessor: (row) => <Badge label={row.status === 'paid' ? 'Pagado' : 'Pendiente'} variant={row.status === 'paid' ? 'success' : 'warning'} />
-                      }
+                        accessor: row => (
+                          <Badge
+                            label={row.status === 'paid' ? 'Pagado' : 'Pendiente'}
+                            variant={row.status === 'paid' ? 'success' : 'warning'}
+                          />
+                        ),
+                      },
                     ]}
                   />
                 </FetchingOverlay>
@@ -127,5 +197,5 @@ export const TabSubscription: FC = () => {
         </div>
       </div>
     </>
-  );
-};
+  )
+}

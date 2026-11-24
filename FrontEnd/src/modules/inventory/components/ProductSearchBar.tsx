@@ -1,15 +1,15 @@
-﻿import type { FC, ChangeEvent } from 'react';
-import './ProductSearchBar.css';
+﻿import type { FC, ChangeEvent } from 'react'
+import './ProductSearchBar.css'
 
 interface ProductSearchBarProps {
-  searchQuery: string;
-  onSearchChange: (query: string) => void;
+  searchQuery: string
+  onSearchChange: (query: string) => void
 }
 
 export const ProductSearchBar: FC<ProductSearchBarProps> = ({ searchQuery, onSearchChange }) => {
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
-    onSearchChange(e.target.value);
-  };
+    onSearchChange(e.target.value)
+  }
 
   return (
     <div className="product-search-bar">
@@ -38,5 +38,5 @@ export const ProductSearchBar: FC<ProductSearchBarProps> = ({ searchQuery, onSea
         />
       </div>
     </div>
-  );
-};
+  )
+}

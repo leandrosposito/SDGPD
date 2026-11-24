@@ -29,7 +29,9 @@
   border: 0.0625rem solid var(--color-border);
   border-radius: var(--radius-full);
   cursor: pointer;
-  transition: background var(--transition-fast) ease, border-color var(--transition-fast) ease,
+  transition:
+    background var(--transition-fast) ease,
+    border-color var(--transition-fast) ease,
     color var(--transition-fast) ease;
 }
 

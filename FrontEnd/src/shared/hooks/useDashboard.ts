@@ -1,7 +1,7 @@
-import type { DashboardData } from '../types/dashboard.types';
-import { fetchDashboardData } from '@/services/mock/dashboard.service';
-import { useCachedQuery, CACHE_STALE_TIME } from './useCachedQuery';
-import { useSessionStore } from '@/shared/state/useSessionStore';
+import type { DashboardData } from '../types/dashboard.types'
+import { fetchDashboardData } from '@/services/mock/dashboard.service'
+import { useCachedQuery, CACHE_STALE_TIME } from './useCachedQuery'
+import { useSessionStore } from '@/shared/state/useSessionStore'
 
 // ============================================================
 // useDashboard — Datos del Dashboard, via useCachedQuery (Tanda 2.5,
@@ -19,21 +19,21 @@ import { useSessionStore } from '@/shared/state/useSessionStore';
 // ============================================================
 
 interface UseDashboardReturn {
-  data: DashboardData | null;
-  isLoading: boolean;
-  error: string | null;
-  refetch: () => void;
+  data: DashboardData | null
+  isLoading: boolean
+  error: string | null
+  refetch: () => void
 }
 
 export function useDashboard(): UseDashboardReturn {
-  const empresaId = useSessionStore((s) => s.session?.company.id);
+  const empresaId = useSessionStore(s => s.session?.company.id)
 
   const { data, isLoading, error, refetch } = useCachedQuery(
     'dashboard',
     undefined,
-    (signal) => fetchDashboardData(empresaId ?? '', signal),
+    signal => fetchDashboardData(empresaId ?? '', signal),
     { staleTime: CACHE_STALE_TIME.DERIVED, enabled: Boolean(empresaId) }
-  );
+  )
 
-  return { data: data ?? null, isLoading, error, refetch };
+  return { data: data ?? null, isLoading, error, refetch }
 }

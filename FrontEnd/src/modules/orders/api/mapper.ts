@@ -1,6 +1,6 @@
-import type { Order, OrderItem, OrderHistoryEvent } from '@/shared/types/order.types';
-import { asOrderId, asOrderLineId, asClientId } from '@/shared/types/ids.types';
-import type { OrderDTO, OrderItemDTO, OrderHistoryEventDTO, CreateOrderDTO } from './dto';
+import type { Order, OrderItem, OrderHistoryEvent } from '@/shared/types/order.types'
+import { asOrderId, asOrderLineId, asClientId } from '@/shared/types/ids.types'
+import type { OrderDTO, OrderItemDTO, OrderHistoryEventDTO, CreateOrderDTO } from './dto'
 
 // ============================================================
 // mapper.ts (orders) — Único lugar que traduce DTO↔dominio. Nada
@@ -40,8 +40,8 @@ export type OrderFormInput = Pick<
   | 'totalAmount'
   | 'notes'
 > & {
-  items: Array<Omit<OrderItem, 'id' | 'cantidadEntregada'>>;
-};
+  items: Array<Omit<OrderItem, 'id' | 'cantidadEntregada'>>
+}
 
 function orderItemFromDTO(dto: OrderItemDTO): OrderItem {
   return {
@@ -52,7 +52,7 @@ function orderItemFromDTO(dto: OrderItemDTO): OrderItem {
     unitPrice: dto.precio_unitario,
     subtotal: dto.subtotal,
     cantidadEntregada: dto.cantidad_entregada,
-  };
+  }
 }
 
 function orderItemToDTO(item: OrderItem): OrderItemDTO {
@@ -64,7 +64,7 @@ function orderItemToDTO(item: OrderItem): OrderItemDTO {
     precio_unitario: item.unitPrice,
     subtotal: item.subtotal,
     cantidad_entregada: item.cantidadEntregada,
-  };
+  }
 }
 
 function historyEventFromDTO(dto: OrderHistoryEventDTO): OrderHistoryEvent {
@@ -73,7 +73,7 @@ function historyEventFromDTO(dto: OrderHistoryEventDTO): OrderHistoryEvent {
     date: dto.fecha,
     status: dto.estado,
     description: dto.descripcion,
-  };
+  }
 }
 
 function historyEventToDTO(event: OrderHistoryEvent): OrderHistoryEventDTO {
@@ -82,7 +82,7 @@ function historyEventToDTO(event: OrderHistoryEvent): OrderHistoryEventDTO {
     fecha: event.date,
     estado: event.status,
     descripcion: event.description,
-  };
+  }
 }
 
 export function orderFromDTO(dto: OrderDTO): Order {
@@ -106,7 +106,7 @@ export function orderFromDTO(dto: OrderDTO): Order {
     notes: dto.notas,
     items: dto.items.map(orderItemFromDTO),
     history: dto.historial.map(historyEventFromDTO),
-  };
+  }
 }
 
 // Usada SOLO para sembrar el mock desde data/mock/orders.data.ts
@@ -137,7 +137,7 @@ export function orderToDTO(order: Order): OrderDTO {
     notas: order.notes,
     items: order.items.map(orderItemToDTO),
     historial: order.history.map(historyEventToDTO),
-  };
+  }
 }
 
 export function orderFormInputToDTO(input: OrderFormInput): CreateOrderDTO {
@@ -162,7 +162,7 @@ export function orderFormInputToDTO(input: OrderFormInput): CreateOrderDTO {
     // criterio que ya usaba para id/numero_pedido del pedido en si.
     // cantidad_entregada siempre 0: un pedido recien creado no tiene
     // ningun remito aplicado todavia (Tanda 8, ADR-001).
-    items: input.items.map((item) => ({
+    items: input.items.map(item => ({
       id: '',
       sku: item.sku,
       nombre: item.name,
@@ -171,5 +171,5 @@ export function orderFormInputToDTO(input: OrderFormInput): CreateOrderDTO {
       subtotal: item.subtotal,
       cantidad_entregada: 0,
     })),
-  };
+  }
 }

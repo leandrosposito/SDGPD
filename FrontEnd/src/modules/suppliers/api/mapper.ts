@@ -1,5 +1,5 @@
-import type { Supplier, SupplierProduct } from '@/shared/types/supplier.types';
-import type { CreateSupplierDTO, SupplierDTO, SupplierProductDTO } from './dto';
+import type { Supplier, SupplierProduct } from '@/shared/types/supplier.types'
+import type { CreateSupplierDTO, SupplierDTO, SupplierProductDTO } from './dto'
 
 // ============================================================
 // mapper.ts — Unico lugar del proyecto que sabe traducir entre la
@@ -14,7 +14,10 @@ import type { CreateSupplierDTO, SupplierDTO, SupplierProductDTO } from './dto';
 // importandola desde el service, que es su punto de entrada publico.
 // ============================================================
 
-export type SupplierFormInput = Pick<Supplier, 'name' | 'cuit' | 'category' | 'phone' | 'contactEmail'>;
+export type SupplierFormInput = Pick<
+  Supplier,
+  'name' | 'cuit' | 'category' | 'phone' | 'contactEmail'
+>
 
 function productFromDTO(dto: SupplierProductDTO): SupplierProduct {
   return {
@@ -24,7 +27,7 @@ function productFromDTO(dto: SupplierProductDTO): SupplierProduct {
     category: dto.rubro,
     cost: dto.costo,
     lastUpdate: dto.actualizado_en,
-  };
+  }
 }
 
 export function supplierFromDTO(dto: SupplierDTO): Supplier {
@@ -44,7 +47,7 @@ export function supplierFromDTO(dto: SupplierDTO): Supplier {
     currentBalance: dto.cuenta.saldo_actual,
     hasOverdueDebt: dto.cuenta.tiene_deuda_vencida,
     products: dto.productos.map(productFromDTO),
-  };
+  }
 }
 
 // Direccion inversa (dominio -> DTO), usada solo para sembrar el mock
@@ -69,7 +72,7 @@ export function supplierToDTO(supplier: Supplier): SupplierDTO {
       saldo_actual: supplier.currentBalance,
       tiene_deuda_vencida: supplier.hasOverdueDebt,
     },
-    productos: supplier.products.map((p) => ({
+    productos: supplier.products.map(p => ({
       id: p.id,
       sku: p.sku,
       nombre: p.name,
@@ -77,13 +80,16 @@ export function supplierToDTO(supplier: Supplier): SupplierDTO {
       costo: p.cost,
       actualizado_en: p.lastUpdate,
     })),
-  };
+  }
 }
 
 // Dominio (input de formulario) -> DTO de alta/edicion. `empresaId`
 // viaja explicito (no se lee de ningun store aca — mismo criterio que
 // branchId en el resto de los services, ver DECISIONES_TECNICAS.md).
-export function supplierFormInputToDTO(empresaId: string, input: SupplierFormInput): CreateSupplierDTO {
+export function supplierFormInputToDTO(
+  empresaId: string,
+  input: SupplierFormInput
+): CreateSupplierDTO {
   return {
     empresa_id: empresaId,
     razon_social: input.name,
@@ -91,5 +97,5 @@ export function supplierFormInputToDTO(empresaId: string, input: SupplierFormInp
     rubro: input.category,
     telefono: input.phone,
     contacto: { email: input.contactEmail },
-  };
+  }
 }

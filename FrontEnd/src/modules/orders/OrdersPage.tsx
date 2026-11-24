@@ -1,24 +1,30 @@
-import { useEffect, useMemo, useState, type FC } from 'react';
-import { toast } from 'sonner';
-import type { Order, OrderStatus } from '@/shared/types/order.types';
-import { Table } from '@/shared/components/ui/Table';
-import { Badge } from '@/shared/components/ui/Badge';
-import { Pagination } from '@/shared/components/ui/Pagination';
-import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary';
-import { ErrorState } from '@/shared/components/ui/ErrorState';
-import { LoadingState } from '@/shared/components/ui/LoadingState';
-import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay';
-import { ExportButton, type ExportColumn } from '@/shared/components/ui/ExportButton';
-import { usePagedQuery } from '@/shared/hooks/usePagedQuery';
-import { useUrlListState } from '@/shared/hooks/useUrlListState';
-import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
-import { useSessionStore } from '@/shared/state/useSessionStore';
-import { OrderFilters } from './components/OrderFilters';
-import { OrderDetailPanel } from './components/OrderDetailPanel';
-import { CreateOrderModal } from './components/create-order/CreateOrderModal';
-import { OrderKpis } from './components/OrderKpis';
-import { getOrdersPage, exportOrders, advanceOrderStatus, cancelOrder, type OrdersQueryFilters } from './api/orders.service';
-import './OrdersPage.css';
+import { useEffect, useMemo, useState, type FC } from 'react'
+import { toast } from 'sonner'
+import type { Order, OrderStatus } from '@/shared/types/order.types'
+import { Table } from '@/shared/components/ui/Table'
+import { Badge } from '@/shared/components/ui/Badge'
+import { Pagination } from '@/shared/components/ui/Pagination'
+import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary'
+import { ErrorState } from '@/shared/components/ui/ErrorState'
+import { LoadingState } from '@/shared/components/ui/LoadingState'
+import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay'
+import { ExportButton, type ExportColumn } from '@/shared/components/ui/ExportButton'
+import { usePagedQuery } from '@/shared/hooks/usePagedQuery'
+import { useUrlListState } from '@/shared/hooks/useUrlListState'
+import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue'
+import { useSessionStore } from '@/shared/state/useSessionStore'
+import { OrderFilters } from './components/OrderFilters'
+import { OrderDetailPanel } from './components/OrderDetailPanel'
+import { CreateOrderModal } from './components/create-order/CreateOrderModal'
+import { OrderKpis } from './components/OrderKpis'
+import {
+  getOrdersPage,
+  exportOrders,
+  advanceOrderStatus,
+  cancelOrder,
+  type OrdersQueryFilters,
+} from './api/orders.service'
+import './OrdersPage.css'
 
 // ============================================================
 // OrdersPage — Gestion de Pedidos y Ventas (Tanda 3a de escalabilidad)
@@ -36,25 +42,25 @@ import './OrdersPage.css';
 // ============================================================
 
 const STATUS_LABEL: Record<OrderStatus, string> = {
-  pending:    'Pendiente',
-  preparing:  'Preparando',
+  pending: 'Pendiente',
+  preparing: 'Preparando',
   dispatched: 'Despachado',
-  delivered:  'Entregado',
-  invoiced:   'Facturado',
-  cancelled:  'Cancelado',
-};
+  delivered: 'Entregado',
+  invoiced: 'Facturado',
+  cancelled: 'Cancelado',
+}
 
 const STATUS_VARIANT: Record<OrderStatus, 'neutral' | 'warning' | 'info' | 'success' | 'danger'> = {
-  pending:    'neutral',
-  preparing:  'warning',
+  pending: 'neutral',
+  preparing: 'warning',
   dispatched: 'info',
-  delivered:  'success',
-  invoiced:   'success',
-  cancelled:  'danger',
-};
+  delivered: 'success',
+  invoiced: 'success',
+  cancelled: 'danger',
+}
 
 function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(value);
+  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(value)
 }
 
 function formatDate(iso: string): string {
@@ -63,31 +69,32 @@ function formatDate(iso: string): string {
     month: 'short',
     hour: '2-digit',
     minute: '2-digit',
-  });
+  })
 }
 
 export const OrdersPage: FC = () => {
-  const empresaId = useSessionStore((s) => s.session?.company.id);
+  const empresaId = useSessionStore(s => s.session?.company.id)
 
   // Tanda 4 (corrida completa, A13): pagina y todos los filtros en la
   // URL — unico listado de esta pagina, sin prefijo.
   const urlState = useUrlListState<never, 'q' | 'status' | 'seller' | 'payment' | 'from' | 'to'>({
     filterKeys: ['q', 'status', 'seller', 'payment', 'from', 'to'],
-  });
+  })
 
-  const activeStatus = (urlState.filters.status ?? 'all') as OrderStatus | 'all';
-  const setActiveStatus = (value: OrderStatus | 'all') => urlState.setFilter('status', value === 'all' ? undefined : value);
+  const activeStatus = (urlState.filters.status ?? 'all') as OrderStatus | 'all'
+  const setActiveStatus = (value: OrderStatus | 'all') =>
+    urlState.setFilter('status', value === 'all' ? undefined : value)
 
-  const [searchQuery, setSearchQuery] = useState(urlState.filters.q ?? '');
-  const debouncedSearchQuery = useDebouncedValue(searchQuery, 300);
+  const [searchQuery, setSearchQuery] = useState(urlState.filters.q ?? '')
+  const debouncedSearchQuery = useDebouncedValue(searchQuery, 300)
 
   useEffect(() => {
-    const current = urlState.filters.q ?? '';
+    const current = urlState.filters.q ?? ''
     if (debouncedSearchQuery !== current) {
-      urlState.setFilter('q', debouncedSearchQuery || undefined);
+      urlState.setFilter('q', debouncedSearchQuery || undefined)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- solo debe reaccionar al valor debounceado
-  }, [debouncedSearchQuery]);
+  }, [debouncedSearchQuery])
 
   // V3 de VERIFICACION_CORRIDA_COMPLETA.md: si la URL cambia externamente
   // (back/forward del navegador) mientras el componente sigue montado,
@@ -97,21 +104,21 @@ export const OrdersPage: FC = () => {
     // Microtask (mismo patron ya usado en ReprogramarModal/AlertsBell/
     // RegistrarEntregaModal) para no disparar setState sincronico en
     // el cuerpo del efecto.
-    Promise.resolve().then(() => setSearchQuery(urlState.filters.q ?? ''));
-  }, [urlState.filters.q]);
+    Promise.resolve().then(() => setSearchQuery(urlState.filters.q ?? ''))
+  }, [urlState.filters.q])
 
-  const dateFrom = urlState.filters.from ?? '';
-  const setDateFrom = (value: string) => urlState.setFilter('from', value || undefined);
-  const dateTo = urlState.filters.to ?? '';
-  const setDateTo = (value: string) => urlState.setFilter('to', value || undefined);
-  const seller = urlState.filters.seller ?? '';
-  const setSeller = (value: string) => urlState.setFilter('seller', value || undefined);
-  const paymentMethod = urlState.filters.payment ?? '';
-  const setPaymentMethod = (value: string) => urlState.setFilter('payment', value || undefined);
+  const dateFrom = urlState.filters.from ?? ''
+  const setDateFrom = (value: string) => urlState.setFilter('from', value || undefined)
+  const dateTo = urlState.filters.to ?? ''
+  const setDateTo = (value: string) => urlState.setFilter('to', value || undefined)
+  const seller = urlState.filters.seller ?? ''
+  const setSeller = (value: string) => urlState.setFilter('seller', value || undefined)
+  const paymentMethod = urlState.filters.payment ?? ''
+  const setPaymentMethod = (value: string) => urlState.setFilter('payment', value || undefined)
 
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [isPanelOpen, setIsPanelOpen] = useState(false);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
+  const [isPanelOpen, setIsPanelOpen] = useState(false)
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
 
   // Los filtros que antes corrian en memoria (OrdersPage.tsx original)
   // pasan al service — busqueda, estado, vendedor, forma de pago y
@@ -126,8 +133,16 @@ export const OrdersPage: FC = () => {
       dateFrom: urlState.filters.from || undefined,
       dateTo: urlState.filters.to || undefined,
     }),
-    [empresaId, urlState.filters.q, urlState.filters.status, urlState.filters.seller, urlState.filters.payment, urlState.filters.from, urlState.filters.to]
-  );
+    [
+      empresaId,
+      urlState.filters.q,
+      urlState.filters.status,
+      urlState.filters.seller,
+      urlState.filters.payment,
+      urlState.filters.from,
+      urlState.filters.to,
+    ]
+  )
 
   const {
     items: orders,
@@ -146,16 +161,16 @@ export const OrdersPage: FC = () => {
     enabled: Boolean(empresaId),
     page: urlState.page,
     onPageChange: urlState.setPage,
-  });
+  })
 
   useEffect(() => {
-    if (error) toast.error('No se pudo cargar el listado de pedidos.');
-  }, [error]);
+    if (error) toast.error('No se pudo cargar el listado de pedidos.')
+  }, [error])
 
   const handleRowClick = (order: Order) => {
-    setSelectedOrder(order);
-    setIsPanelOpen(true);
-  };
+    setSelectedOrder(order)
+    setIsPanelOpen(true)
+  }
 
   // P10 (DECISIONES_TECNICAS.md): tras una mutacion se vuelve a pedir
   // la pagina vigente al service, en vez de actualizar `orders` a mano
@@ -165,26 +180,26 @@ export const OrdersPage: FC = () => {
   // instante, sin esperar al refetch.
   const handleAdvanceStatus = async (order: Order) => {
     if (!empresaId) {
-      toast.error('Todavia no hay una sesion activa.');
-      return;
+      toast.error('Todavia no hay una sesion activa.')
+      return
     }
-    const result = await advanceOrderStatus(empresaId, order.id);
+    const result = await advanceOrderStatus(empresaId, order.id)
     if (!result.success || !result.newStatus) {
-      toast.error('No se pudo actualizar el estado del pedido.');
-      return;
+      toast.error('No se pudo actualizar el estado del pedido.')
+      return
     }
-    const newStatus = result.newStatus;
-    toast.success(`Pedido ${order.orderNumber} actualizado a "${STATUS_LABEL[newStatus]}".`);
-    setSelectedOrder((prev) => (prev?.id === order.id ? { ...prev, status: newStatus } : prev));
-    refetch();
-  };
+    const newStatus = result.newStatus
+    toast.success(`Pedido ${order.orderNumber} actualizado a "${STATUS_LABEL[newStatus]}".`)
+    setSelectedOrder(prev => (prev?.id === order.id ? { ...prev, status: newStatus } : prev))
+    refetch()
+  }
 
   const handleCancel = async (order: Order) => {
     if (!empresaId) {
-      toast.error('Todavia no hay una sesion activa.');
-      return;
+      toast.error('Todavia no hay una sesion activa.')
+      return
     }
-    const result = await cancelOrder(empresaId, order.id);
+    const result = await cancelOrder(empresaId, order.id)
     if (!result.success) {
       // Fix del hallazgo ALTO de Fase 3 (Tanda 9) + Tanda 12 (estado
       // invalido, ahora autoritativo server-side): mensaje especifico
@@ -196,32 +211,32 @@ export const OrdersPage: FC = () => {
           : result.reason === 'invalid-status-for-cancel'
             ? 'No se puede cancelar: el pedido ya está entregado, facturado o cancelado.'
             : 'No se pudo cancelar el pedido.'
-      );
-      return;
+      )
+      return
     }
-    toast.success(`Pedido ${order.orderNumber} cancelado.`);
-    setSelectedOrder((prev) => (prev?.id === order.id ? { ...prev, status: 'cancelled' } : prev));
-    refetch();
-  };
+    toast.success(`Pedido ${order.orderNumber} cancelado.`)
+    setSelectedOrder(prev => (prev?.id === order.id ? { ...prev, status: 'cancelled' } : prev))
+    refetch()
+  }
 
   // RF-PED-001: CreateOrderModal ya crea el pedido contra
   // orders.service.ts (ver ese componente) — acá solo se refresca el
   // listado para que aparezca, mismo criterio P10 que las mutaciones
   // de arriba.
   const handleCreateOrder = () => {
-    refetch();
-  };
+    refetch()
+  }
 
   const exportColumns: ExportColumn<Order>[] = [
-    { header: 'N Pedido', accessor: (o) => o.orderNumber },
-    { header: 'Fecha', accessor: (o) => formatDate(o.date) },
-    { header: 'Cliente', accessor: (o) => o.clientName },
-    { header: 'Zona', accessor: (o) => o.clientZone },
-    { header: 'Vendedor', accessor: (o) => o.sellerName },
-    { header: 'Forma de Pago', accessor: (o) => o.paymentMethod },
-    { header: 'Estado', accessor: (o) => STATUS_LABEL[o.status] },
-    { header: 'Importe', accessor: (o) => o.totalAmount },
-  ];
+    { header: 'N Pedido', accessor: o => o.orderNumber },
+    { header: 'Fecha', accessor: o => formatDate(o.date) },
+    { header: 'Cliente', accessor: o => o.clientName },
+    { header: 'Zona', accessor: o => o.clientZone },
+    { header: 'Vendedor', accessor: o => o.sellerName },
+    { header: 'Forma de Pago', accessor: o => o.paymentMethod },
+    { header: 'Estado', accessor: o => STATUS_LABEL[o.status] },
+    { header: 'Importe', accessor: o => o.totalAmount },
+  ]
 
   return (
     <div className="orders-page page-enter">
@@ -231,7 +246,11 @@ export const OrdersPage: FC = () => {
           <p className="page-header__subtitle">Ingreso, seguimiento y gestion de pedidos</p>
         </div>
         <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
-          <ExportButton fileNamePrefix="pedidos" columns={exportColumns} fetchRows={() => exportOrders(filters)} />
+          <ExportButton
+            fileNamePrefix="pedidos"
+            columns={exportColumns}
+            fetchRows={() => exportOrders(filters)}
+          />
           <button
             className="client-modal-btn client-modal-btn--primary"
             onClick={() => setIsCreateModalOpen(true)}
@@ -271,24 +290,24 @@ export const OrdersPage: FC = () => {
             <FetchingOverlay isFetching={isFetching}>
               <Table
                 data={orders}
-                keyExtractor={(o) => o.id}
+                keyExtractor={o => o.id}
                 emptyMessage="No se encontraron pedidos con los filtros aplicados."
                 columns={[
                   {
                     header: 'N Pedido',
-                    accessor: (o) => (
+                    accessor: o => (
                       <span className="orders-page__order-number">{o.orderNumber}</span>
                     ),
                   },
                   {
                     header: 'Fecha',
-                    accessor: (o) => (
+                    accessor: o => (
                       <span className="font-mono text-xs text-secondary">{formatDate(o.date)}</span>
                     ),
                   },
                   {
                     header: 'Cliente',
-                    accessor: (o) => (
+                    accessor: o => (
                       <div className="orders-page__client-cell">
                         <span className="font-medium">{o.clientName}</span>
                       </div>
@@ -296,30 +315,30 @@ export const OrdersPage: FC = () => {
                   },
                   {
                     header: 'Vendedor',
-                    accessor: 'sellerName'
+                    accessor: 'sellerName',
                   },
                   {
                     header: 'Forma de Pago',
-                    accessor: 'paymentMethod'
+                    accessor: 'paymentMethod',
                   },
                   {
                     header: 'Importe',
                     align: 'right',
-                    accessor: (o) => (
+                    accessor: o => (
                       <span className="font-bold">{formatCurrency(o.totalAmount)}</span>
                     ),
                   },
                   {
                     header: 'Estado',
                     align: 'center',
-                    accessor: (o) => (
+                    accessor: o => (
                       <Badge label={STATUS_LABEL[o.status]} variant={STATUS_VARIANT[o.status]} />
                     ),
                   },
                   {
                     header: 'Acciones',
                     align: 'right',
-                    accessor: (o) => (
+                    accessor: o => (
                       <button
                         className="orders-page__row-btn"
                         onClick={() => handleRowClick(o)}
@@ -358,5 +377,5 @@ export const OrdersPage: FC = () => {
         onConfirm={handleCreateOrder}
       />
     </div>
-  );
-};
+  )
+}

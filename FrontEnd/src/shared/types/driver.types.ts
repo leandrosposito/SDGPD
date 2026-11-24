@@ -1,4 +1,4 @@
-import type { DriverId } from './ids.types';
+import type { DriverId } from './ids.types'
 
 // ============================================================
 // driver.types — Choferes (Tanda 10B, ADR-011). Alcance EMPRESA, mismo
@@ -6,9 +6,9 @@ import type { DriverId } from './ids.types';
 // ============================================================
 
 export interface Driver {
-  id: DriverId;
-  nombre: string;
-  licencia: string;
-  telefono: string;
-  activo: boolean;
+  id: DriverId
+  nombre: string
+  licencia: string
+  telefono: string
+  activo: boolean
 }

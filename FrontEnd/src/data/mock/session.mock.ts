@@ -1,6 +1,6 @@
-import type { Action, Module, Permission } from '@sdgpd/contracts';
-import type { SessionUser } from '@/shared/types/session.types';
-import { asBranchId } from '@/shared/types/ids.types';
+import type { Action, Module, Permission } from '@sdgpd/contracts'
+import type { SessionUser } from '@/shared/types/session.types'
+import { asBranchId } from '@/shared/types/ids.types'
 
 // ============================================================
 // MOCK DATA — Session (empresa, usuario y sucursales)
@@ -32,7 +32,7 @@ const ALL_MODULES: Record<Module, true> = {
   orders: true,
   settings: true,
   suppliers: true,
-};
+}
 const ALL_ACTIONS: Record<Action, true> = {
   ver: true,
   crear: true,
@@ -41,13 +41,13 @@ const ALL_ACTIONS: Record<Action, true> = {
   aprobar: true,
   exportar: true,
   forzar: true,
-};
-function keysOf<K extends string>(record: Record<K, true>): K[] {
-  return Object.keys(record).filter((k): k is K => k in record);
 }
-export const MOCK_ALL_PERMISSIONS: readonly Permission[] = keysOf(ALL_MODULES).flatMap((module) =>
-  keysOf(ALL_ACTIONS).map((action) => ({ module, action }))
-);
+function keysOf<K extends string>(record: Record<K, true>): K[] {
+  return Object.keys(record).filter((k): k is K => k in record)
+}
+export const MOCK_ALL_PERMISSIONS: readonly Permission[] = keysOf(ALL_MODULES).flatMap(module =>
+  keysOf(ALL_ACTIONS).map(action => ({ module, action }))
+)
 
 export const SESSION_MOCK_DATA: SessionUser = {
   id: 'user-001',
@@ -94,4 +94,4 @@ export const SESSION_MOCK_DATA: SessionUser = {
     },
   ],
   defaultBranchId: asBranchId('0192f000-0000-7000-8000-000000000001'),
-};
+}

@@ -1,26 +1,26 @@
-import { useEffect, useMemo, useState, type FC } from 'react';
-import { toast } from 'sonner';
-import { Table } from '@/shared/components/ui/Table';
-import { Badge } from '@/shared/components/ui/Badge';
-import { Pagination } from '@/shared/components/ui/Pagination';
-import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary';
-import { ErrorState } from '@/shared/components/ui/ErrorState';
-import { LoadingState } from '@/shared/components/ui/LoadingState';
-import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay';
-import { ExportButton, type ExportColumn } from '@/shared/components/ui/ExportButton';
-import { usePagedQuery } from '@/shared/hooks/usePagedQuery';
-import { useUrlListState } from '@/shared/hooks/useUrlListState';
-import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
-import { useSessionStore } from '@/shared/state/useSessionStore';
+import { useEffect, useMemo, useState, type FC } from 'react'
+import { toast } from 'sonner'
+import { Table } from '@/shared/components/ui/Table'
+import { Badge } from '@/shared/components/ui/Badge'
+import { Pagination } from '@/shared/components/ui/Pagination'
+import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary'
+import { ErrorState } from '@/shared/components/ui/ErrorState'
+import { LoadingState } from '@/shared/components/ui/LoadingState'
+import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay'
+import { ExportButton, type ExportColumn } from '@/shared/components/ui/ExportButton'
+import { usePagedQuery } from '@/shared/hooks/usePagedQuery'
+import { useUrlListState } from '@/shared/hooks/useUrlListState'
+import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue'
+import { useSessionStore } from '@/shared/state/useSessionStore'
 import {
   getStockedProductsPage,
   exportStockedProducts,
   type StockedProductsQueryFilters,
-} from '@/shared/api/products/products.service';
-import { ProductSearchBar } from './ProductSearchBar';
-import type { InventoryItem, StockedInventoryItem } from '@/shared/types/inventory.types';
-import type { Branch } from '@/shared/types/session.types';
-import './TabStockCurrent.css';
+} from '@/shared/api/products/products.service'
+import { ProductSearchBar } from './ProductSearchBar'
+import type { InventoryItem, StockedInventoryItem } from '@/shared/types/inventory.types'
+import type { Branch } from '@/shared/types/session.types'
+import './TabStockCurrent.css'
 
 // ============================================================
 // TabStockCurrent — Vista principal de stock con KPIs (Tanda 3e de
@@ -49,56 +49,62 @@ import './TabStockCurrent.css';
 // padre.
 // ============================================================
 
-const SEARCH_DEBOUNCE_MS = 300;
+const SEARCH_DEBOUNCE_MS = 300
 
 interface TabStockCurrentProps {
-  branchId: Branch['id'];
-  branchName: string;
-  onOpenLots: (product: InventoryItem) => void;
-  onEditProduct: (product: InventoryItem) => void;
+  branchId: Branch['id']
+  branchName: string
+  onOpenLots: (product: InventoryItem) => void
+  onEditProduct: (product: InventoryItem) => void
   // BE-1b: permiso inventory.editar de la sesion (antes, USER_ROLE fijo).
-  canEdit: boolean;
+  canEdit: boolean
 }
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat('es-AR', {
     style: 'currency',
     currency: 'ARS',
-  }).format(value);
+  }).format(value)
 }
 
 const stockExportColumns: ExportColumn<StockedInventoryItem>[] = [
-  { header: 'Codigo', accessor: (row) => row.sku },
-  { header: 'Cod. Barras', accessor: (row) => row.barcode },
-  { header: 'Nombre', accessor: (row) => row.name },
-  { header: 'Categoria', accessor: (row) => row.category },
-  { header: 'U.M.', accessor: (row) => row.unitOfMeasure },
-  { header: 'Stock Actual', accessor: (row) => row.stock },
-  { header: 'Costo', accessor: (row) => row.cost },
-  { header: 'Valor Stock', accessor: (row) => row.stock * row.cost },
-  { header: 'Estado', accessor: (row) => (row.status === 'active' ? 'ACTIVO' : 'INACTIVO') },
-];
+  { header: 'Codigo', accessor: row => row.sku },
+  { header: 'Cod. Barras', accessor: row => row.barcode },
+  { header: 'Nombre', accessor: row => row.name },
+  { header: 'Categoria', accessor: row => row.category },
+  { header: 'U.M.', accessor: row => row.unitOfMeasure },
+  { header: 'Stock Actual', accessor: row => row.stock },
+  { header: 'Costo', accessor: row => row.cost },
+  { header: 'Valor Stock', accessor: row => row.stock * row.cost },
+  { header: 'Estado', accessor: row => (row.status === 'active' ? 'ACTIVO' : 'INACTIVO') },
+]
 
-export const TabStockCurrent: FC<TabStockCurrentProps> = ({ branchId, branchName, onOpenLots, onEditProduct, canEdit }) => {
-  const empresaId = useSessionStore((s) => s.session?.company.id);
+export const TabStockCurrent: FC<TabStockCurrentProps> = ({
+  branchId,
+  branchName,
+  onOpenLots,
+  onEditProduct,
+  canEdit,
+}) => {
+  const empresaId = useSessionStore(s => s.session?.company.id)
 
   // Tanda 4 (corrida completa, A13): pagina y busqueda en la URL,
   // prefijo `stock_`. Sin orden: esta tab no tiene columnas clickeables.
   const urlState = useUrlListState<never, 'q'>({
     prefix: 'stock',
     filterKeys: ['q'],
-  });
+  })
 
-  const [searchQuery, setSearchQuery] = useState(urlState.filters.q ?? '');
-  const debouncedSearchQuery = useDebouncedValue(searchQuery, SEARCH_DEBOUNCE_MS);
+  const [searchQuery, setSearchQuery] = useState(urlState.filters.q ?? '')
+  const debouncedSearchQuery = useDebouncedValue(searchQuery, SEARCH_DEBOUNCE_MS)
 
   useEffect(() => {
-    const current = urlState.filters.q ?? '';
+    const current = urlState.filters.q ?? ''
     if (debouncedSearchQuery !== current) {
-      urlState.setFilter('q', debouncedSearchQuery || undefined);
+      urlState.setFilter('q', debouncedSearchQuery || undefined)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- solo debe reaccionar al valor debounceado
-  }, [debouncedSearchQuery]);
+  }, [debouncedSearchQuery])
 
   // V3 de VERIFICACION_CORRIDA_COMPLETA.md: si la URL cambia externamente
   // (back/forward del navegador) mientras el componente sigue montado,
@@ -108,13 +114,13 @@ export const TabStockCurrent: FC<TabStockCurrentProps> = ({ branchId, branchName
     // Microtask (mismo patron ya usado en ReprogramarModal/AlertsBell/
     // RegistrarEntregaModal) para no disparar setState sincronico en
     // el cuerpo del efecto.
-    Promise.resolve().then(() => setSearchQuery(urlState.filters.q ?? ''));
-  }, [urlState.filters.q]);
+    Promise.resolve().then(() => setSearchQuery(urlState.filters.q ?? ''))
+  }, [urlState.filters.q])
 
   const filters: StockedProductsQueryFilters = useMemo(
     () => ({ empresaId: empresaId ?? '', branchId, search: urlState.filters.q || undefined }),
     [empresaId, branchId, urlState.filters.q]
-  );
+  )
 
   const {
     items: data,
@@ -133,19 +139,19 @@ export const TabStockCurrent: FC<TabStockCurrentProps> = ({ branchId, branchName
     enabled: Boolean(empresaId) && Boolean(branchId),
     page: urlState.page,
     onPageChange: urlState.setPage,
-  });
+  })
 
   useEffect(() => {
-    if (error) toast.error('No se pudo cargar el stock de la sucursal.');
-  }, [error]);
+    if (error) toast.error('No se pudo cargar el stock de la sucursal.')
+  }, [error])
 
   // Mismo criterio que OrderKpis (Tanda 3a): las tarjetas se muestran
   // siempre, con 0 mientras `aggregates` todavía no resolvió (primera
   // carga) — no se ocultan detrás de `isLoading`.
-  const totalProducts = aggregates?.totalProducts ?? 0;
-  const lowStock = aggregates?.lowStock ?? 0;
-  const outOfStock = aggregates?.outOfStock ?? 0;
-  const totalValue = aggregates?.totalValue ?? 0;
+  const totalProducts = aggregates?.totalProducts ?? 0
+  const lowStock = aggregates?.lowStock ?? 0
+  const outOfStock = aggregates?.outOfStock ?? 0
+  const totalValue = aggregates?.totalValue ?? 0
 
   return (
     <div className="tab-stock">
@@ -194,44 +200,94 @@ export const TabStockCurrent: FC<TabStockCurrentProps> = ({ branchId, branchName
             <div className="tab-stock__content">
               <Table
                 data={data}
-                keyExtractor={(item) => item.id}
+                keyExtractor={item => item.id}
                 columns={[
-                  { header: 'Codigo', accessor: (row) => <span className="font-mono text-xs">{row.sku}</span> },
-                  { header: 'Cod. Barras', accessor: (row) => <span className="font-mono text-xs text-tertiary">{row.barcode}</span> },
+                  {
+                    header: 'Codigo',
+                    accessor: row => <span className="font-mono text-xs">{row.sku}</span>,
+                  },
+                  {
+                    header: 'Cod. Barras',
+                    accessor: row => (
+                      <span className="font-mono text-xs text-tertiary">{row.barcode}</span>
+                    ),
+                  },
                   { header: 'Nombre', accessor: 'name' },
-                  { header: 'Categoria', accessor: (row) => <span className="text-tertiary">{row.category}</span> },
-                  { header: 'U.M.', accessor: (row) => <span className="text-tertiary">{row.unitOfMeasure}</span> },
-                  { header: 'Stock Actual', align: 'right', accessor: (row) => (
-                    <span className={row.stock === 0 ? 'text-danger font-bold' : row.stock <= row.minStock ? 'text-warning font-bold' : 'font-medium'}>
-                      {row.stock}
-                    </span>
-                  )},
-                  { header: 'Costo', align: 'right', accessor: (row) => <span className="text-secondary">{formatCurrency(row.cost)}</span> },
-                  { header: 'Valor Stock', align: 'right', accessor: (row) => <span className="text-accent font-medium">{formatCurrency(row.stock * row.cost)}</span> },
-                  { header: 'Estado', align: 'center', accessor: (row) => (
-                    <Badge
-                      label={row.status === 'active' ? 'ACTIVO' : 'INACTIVO'}
-                      variant={row.status === 'active' ? 'success' : 'neutral'}
-                    />
-                  )},
-                  { header: 'Acciones', align: 'center', accessor: (row) => (
-                    <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'center' }}>
-                      <button
-                        className="btn-action btn-action--ghost"
-                        onClick={() => onOpenLots(row)}
+                  {
+                    header: 'Categoria',
+                    accessor: row => <span className="text-tertiary">{row.category}</span>,
+                  },
+                  {
+                    header: 'U.M.',
+                    accessor: row => <span className="text-tertiary">{row.unitOfMeasure}</span>,
+                  },
+                  {
+                    header: 'Stock Actual',
+                    align: 'right',
+                    accessor: row => (
+                      <span
+                        className={
+                          row.stock === 0
+                            ? 'text-danger font-bold'
+                            : row.stock <= row.minStock
+                              ? 'text-warning font-bold'
+                              : 'font-medium'
+                        }
                       >
-                        Ver Lotes
-                      </button>
-                      {canEdit && (
+                        {row.stock}
+                      </span>
+                    ),
+                  },
+                  {
+                    header: 'Costo',
+                    align: 'right',
+                    accessor: row => (
+                      <span className="text-secondary">{formatCurrency(row.cost)}</span>
+                    ),
+                  },
+                  {
+                    header: 'Valor Stock',
+                    align: 'right',
+                    accessor: row => (
+                      <span className="text-accent font-medium">
+                        {formatCurrency(row.stock * row.cost)}
+                      </span>
+                    ),
+                  },
+                  {
+                    header: 'Estado',
+                    align: 'center',
+                    accessor: row => (
+                      <Badge
+                        label={row.status === 'active' ? 'ACTIVO' : 'INACTIVO'}
+                        variant={row.status === 'active' ? 'success' : 'neutral'}
+                      />
+                    ),
+                  },
+                  {
+                    header: 'Acciones',
+                    align: 'center',
+                    accessor: row => (
+                      <div
+                        style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'center' }}
+                      >
                         <button
                           className="btn-action btn-action--ghost"
-                          onClick={() => onEditProduct(row)}
+                          onClick={() => onOpenLots(row)}
                         >
-                          Editar
+                          Ver Lotes
                         </button>
-                      )}
-                    </div>
-                  )},
+                        {canEdit && (
+                          <button
+                            className="btn-action btn-action--ghost"
+                            onClick={() => onEditProduct(row)}
+                          >
+                            Editar
+                          </button>
+                        )}
+                      </div>
+                    ),
+                  },
                 ]}
               />
             </div>
@@ -247,5 +303,5 @@ export const TabStockCurrent: FC<TabStockCurrentProps> = ({ branchId, branchName
         </ErrorBoundary>
       )}
     </div>
-  );
-};
+  )
+}

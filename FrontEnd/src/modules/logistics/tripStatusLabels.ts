@@ -1,5 +1,5 @@
-import type { TripStatus } from '@/shared/types/trip.types';
-import type { BadgeVariant } from '@/shared/components/ui/Badge';
+import type { TripStatus } from '@/shared/types/trip.types'
+import type { BadgeVariant } from '@/shared/components/ui/Badge'
 
 // ============================================================
 // Etiquetas y variantes de presentacion para TripStatus (Tanda 10B).
@@ -14,7 +14,7 @@ export const TRIP_STATUS_LABEL: Record<TripStatus, string> = {
   EnTransito: 'En Tránsito',
   Rendido: 'Rendido',
   Cancelado: 'Cancelado',
-};
+}
 
 export const TRIP_STATUS_VARIANT: Record<TripStatus, BadgeVariant> = {
   Planificado: 'neutral',
@@ -22,4 +22,4 @@ export const TRIP_STATUS_VARIANT: Record<TripStatus, BadgeVariant> = {
   EnTransito: 'info',
   Rendido: 'success',
   Cancelado: 'danger',
-};
+}

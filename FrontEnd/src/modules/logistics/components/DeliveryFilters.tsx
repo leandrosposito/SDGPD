@@ -1,9 +1,9 @@
-import type { FC } from 'react';
-import { Filter } from 'lucide-react';
-import type { DeliveryStatus } from '@/shared/types/logistics.types';
-import type { DeliveryAggregates } from '../services/deliveries.service';
-import { DELIVERY_STATUS_LABEL } from '../deliveryStatusLabels';
-import './DeliveryFilters.css';
+import type { FC } from 'react'
+import { Filter } from 'lucide-react'
+import type { DeliveryStatus } from '@/shared/types/logistics.types'
+import type { DeliveryAggregates } from '../services/deliveries.service'
+import { DELIVERY_STATUS_LABEL } from '../deliveryStatusLabels'
+import './DeliveryFilters.css'
 
 // ============================================================
 // DeliveryFilters — Filtro rapido de entregas por estado. Los contadores
@@ -13,41 +13,41 @@ import './DeliveryFilters.css';
 // estado — asi no cambian segun cual opcion este seleccionada.
 // ============================================================
 
-export type DeliveryStatusFilter = DeliveryStatus | 'all';
+export type DeliveryStatusFilter = DeliveryStatus | 'all'
 
 interface DeliveryFiltersProps {
-  aggregates: DeliveryAggregates | undefined;
-  activeStatus: DeliveryStatusFilter;
-  onStatusChange: (status: DeliveryStatusFilter) => void;
+  aggregates: DeliveryAggregates | undefined
+  activeStatus: DeliveryStatusFilter
+  onStatusChange: (status: DeliveryStatusFilter) => void
 }
 
 // REPROGRAMADO no aparece como opcion de filtro (Tanda 8, ADR-002):
 // es transitorio, una entrega nunca queda "parada" en ese estado (ver
 // deliveryStatus.types.ts) — no tiene sentido poder filtrar por algo
 // que nunca se observa persistido.
-const STATUS_ORDER: DeliveryStatus[] = ['CREADO', 'EN_TRANSITO', 'FINALIZADO', 'CANCELADO'];
+const STATUS_ORDER: DeliveryStatus[] = ['CREADO', 'EN_TRANSITO', 'FINALIZADO', 'CANCELADO']
 
 export const DeliveryFilters: FC<DeliveryFiltersProps> = ({
   aggregates,
   activeStatus,
   onStatusChange,
 }) => {
-  const countByStatus = aggregates?.countByStatus;
+  const countByStatus = aggregates?.countByStatus
   const options: { value: DeliveryStatusFilter; label: string; count: number }[] = [
     { value: 'all', label: 'Todas', count: aggregates?.totalForScope ?? 0 },
-    ...STATUS_ORDER.map((status) => ({
+    ...STATUS_ORDER.map(status => ({
       value: status,
       label: DELIVERY_STATUS_LABEL[status],
       count: countByStatus?.[status] ?? 0,
     })),
-  ];
+  ]
 
   return (
     <div className="delivery-filters" role="group" aria-label="Filtrar entregas por estado">
       <span className="delivery-filters__icon" aria-hidden="true">
         <Filter size={16} />
       </span>
-      {options.map((opt) => (
+      {options.map(opt => (
         <button
           key={opt.value}
           type="button"
@@ -62,5 +62,5 @@ export const DeliveryFilters: FC<DeliveryFiltersProps> = ({
         </button>
       ))}
     </div>
-  );
-};
+  )
+}

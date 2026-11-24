@@ -1,11 +1,11 @@
-import type { Vehicle, VehicleCapacity } from '@/shared/types/vehicle.types';
-import type { VehicleId } from '@/shared/types/ids.types';
-import { asVehicleId } from '@/shared/types/ids.types';
-import type { PageQuery, PageResult } from '@/shared/types/pagination.types';
-import { VEHICLES_MOCK_DATA } from '@/data/mock/vehicles.data';
-import { httpClient } from '@/shared/api/httpClient';
-import { withIdempotency } from '@/shared/utils/idempotency';
-import { normalizePatente } from '@/shared/utils/patente';
+import type { Vehicle, VehicleCapacity } from '@/shared/types/vehicle.types'
+import type { VehicleId } from '@/shared/types/ids.types'
+import { asVehicleId } from '@/shared/types/ids.types'
+import type { PageQuery, PageResult } from '@/shared/types/pagination.types'
+import { VEHICLES_MOCK_DATA } from '@/data/mock/vehicles.data'
+import { httpClient } from '@/shared/api/httpClient'
+import { withIdempotency } from '@/shared/utils/idempotency'
+import { normalizePatente } from '@/shared/utils/patente'
 
 // ============================================================
 // vehicles.service — Flota de vehiculos (Tanda 10B, ADR-011). Vive en
@@ -15,30 +15,31 @@ import { normalizePatente } from '@/shared/utils/patente';
 // shared/utils/idempotency.ts en esta misma tanda).
 // ============================================================
 
-let vehiclesStore: Vehicle[] = structuredClone(VEHICLES_MOCK_DATA);
+let vehiclesStore: Vehicle[] = structuredClone(VEHICLES_MOCK_DATA)
 
 export interface VehiclesQueryFilters {
-  empresaId: string;
-  search?: string;
-  soloActivos?: boolean;
+  empresaId: string
+  search?: string
+  soloActivos?: boolean
 }
 
-export type VehiclesSortField = 'patente' | 'tipo';
+export type VehiclesSortField = 'patente' | 'tipo'
 
 function matchesFilters(v: Vehicle, filters: VehiclesQueryFilters): boolean {
-  const search = filters.search?.trim().toLowerCase();
-  const matchesSearch = !search || v.patente.toLowerCase().includes(search) || v.tipo.toLowerCase().includes(search);
-  const matchesActivo = !filters.soloActivos || v.activo;
-  return matchesSearch && matchesActivo;
+  const search = filters.search?.trim().toLowerCase()
+  const matchesSearch =
+    !search || v.patente.toLowerCase().includes(search) || v.tipo.toLowerCase().includes(search)
+  const matchesActivo = !filters.soloActivos || v.activo
+  return matchesSearch && matchesActivo
 }
 
 function compareVehicles(a: Vehicle, b: Vehicle, field: VehiclesSortField): number {
   switch (field) {
     case 'tipo':
-      return a.tipo.localeCompare(b.tipo);
+      return a.tipo.localeCompare(b.tipo)
     case 'patente':
     default:
-      return a.patente.localeCompare(b.patente);
+      return a.patente.localeCompare(b.patente)
   }
 }
 
@@ -68,49 +69,51 @@ export async function getVehiclesPage(
     },
     signal,
     mock: () => {
-      const inScope = vehiclesStore.filter((v) => matchesFilters(v, query.filters));
-      const sortField = query.sort?.field ?? 'patente';
-      const direction = query.sort?.direction ?? 'asc';
+      const inScope = vehiclesStore.filter(v => matchesFilters(v, query.filters))
+      const sortField = query.sort?.field ?? 'patente'
+      const direction = query.sort?.direction ?? 'asc'
       const sorted = [...inScope].sort((a, b) => {
-        const cmp = compareVehicles(a, b, sortField);
-        const primary = direction === 'asc' ? cmp : -cmp;
-        return primary !== 0 ? primary : a.id.localeCompare(b.id);
-      });
+        const cmp = compareVehicles(a, b, sortField)
+        const primary = direction === 'asc' ? cmp : -cmp
+        return primary !== 0 ? primary : a.id.localeCompare(b.id)
+      })
 
-      const total = sorted.length;
-      const totalPages = Math.max(1, Math.ceil(total / query.pageSize));
-      const safePage = Math.min(Math.max(1, query.page), totalPages);
-      const start = (safePage - 1) * query.pageSize;
+      const total = sorted.length
+      const totalPages = Math.max(1, Math.ceil(total / query.pageSize))
+      const safePage = Math.min(Math.max(1, query.page), totalPages)
+      const start = (safePage - 1) * query.pageSize
 
       return {
         items: structuredClone(sorted.slice(start, start + query.pageSize)),
         total,
         page: safePage,
         pageSize: query.pageSize,
-      };
+      }
     },
-  });
+  })
 }
 
 export interface VehicleFormInput {
-  patente: string;
-  tipo: string;
-  capacidad: VehicleCapacity;
+  patente: string
+  tipo: string
+  capacidad: VehicleCapacity
 }
 
-export type VehicleMutationReason = 'not-found' | 'patente-duplicada';
+export type VehicleMutationReason = 'not-found' | 'patente-duplicada'
 
 export interface VehicleMutationResult {
-  success: boolean;
-  vehicle?: Vehicle;
-  reason?: VehicleMutationReason;
+  success: boolean
+  vehicle?: Vehicle
+  reason?: VehicleMutationReason
 }
 
 // Tanda 11: patente unica por empresa, normalizada — ver
 // shared/utils/patente.ts para el razonamiento completo (extraida ahi
 // para poder ejercitarse con un smoke script puro).
 function isPatenteDuplicada(patenteNormalizada: string, excludeVehicleId?: VehicleId): boolean {
-  return vehiclesStore.some((v) => v.id !== excludeVehicleId && normalizePatente(v.patente) === patenteNormalizada);
+  return vehiclesStore.some(
+    v => v.id !== excludeVehicleId && normalizePatente(v.patente) === patenteNormalizada
+  )
 }
 
 export async function createVehicle(
@@ -125,9 +128,9 @@ export async function createVehicle(
     idempotencyKey,
     mock: () =>
       withIdempotency(idempotencyKey, () => {
-        const patente = normalizePatente(input.patente);
+        const patente = normalizePatente(input.patente)
         if (isPatenteDuplicada(patente)) {
-          return { success: false, reason: 'patente-duplicada' as const };
+          return { success: false, reason: 'patente-duplicada' as const }
         }
         const vehicle: Vehicle = {
           id: asVehicleId(`veh-${Date.now()}`),
@@ -135,11 +138,11 @@ export async function createVehicle(
           tipo: input.tipo,
           capacidad: input.capacidad,
           activo: true,
-        };
-        vehiclesStore = [...vehiclesStore, vehicle];
-        return { success: true, vehicle };
+        }
+        vehiclesStore = [...vehiclesStore, vehicle]
+        return { success: true, vehicle }
       }),
-  });
+  })
 }
 
 export async function updateVehicle(
@@ -155,19 +158,24 @@ export async function updateVehicle(
     idempotencyKey,
     mock: () =>
       withIdempotency(idempotencyKey, () => {
-        const existing = vehiclesStore.find((v) => v.id === vehicleId);
+        const existing = vehiclesStore.find(v => v.id === vehicleId)
         if (!existing) {
-          return { success: false, reason: 'not-found' as const };
+          return { success: false, reason: 'not-found' as const }
         }
-        const patente = normalizePatente(input.patente);
+        const patente = normalizePatente(input.patente)
         if (isPatenteDuplicada(patente, vehicleId)) {
-          return { success: false, reason: 'patente-duplicada' as const };
+          return { success: false, reason: 'patente-duplicada' as const }
         }
-        const updated: Vehicle = { ...existing, patente, tipo: input.tipo, capacidad: input.capacidad };
-        vehiclesStore = vehiclesStore.map((v) => (v.id === vehicleId ? updated : v));
-        return { success: true, vehicle: updated };
+        const updated: Vehicle = {
+          ...existing,
+          patente,
+          tipo: input.tipo,
+          capacidad: input.capacidad,
+        }
+        vehiclesStore = vehiclesStore.map(v => (v.id === vehicleId ? updated : v))
+        return { success: true, vehicle: updated }
       }),
-  });
+  })
 }
 
 export async function toggleVehicleActivo(
@@ -182,28 +190,31 @@ export async function toggleVehicleActivo(
     idempotencyKey,
     mock: () =>
       withIdempotency(idempotencyKey, () => {
-        const existing = vehiclesStore.find((v) => v.id === vehicleId);
+        const existing = vehiclesStore.find(v => v.id === vehicleId)
         if (!existing) {
-          return { success: false, reason: 'not-found' as const };
+          return { success: false, reason: 'not-found' as const }
         }
-        const updated: Vehicle = { ...existing, activo: !existing.activo };
-        vehiclesStore = vehiclesStore.map((v) => (v.id === vehicleId ? updated : v));
-        return { success: true, vehicle: updated };
+        const updated: Vehicle = { ...existing, activo: !existing.activo }
+        vehiclesStore = vehiclesStore.map(v => (v.id === vehicleId ? updated : v))
+        return { success: true, vehicle: updated }
       }),
-  });
+  })
 }
 
 // Consumido por CreateTripModal (dropdown de vehiculo con capacidad
 // visible) — sin paginar, mismo criterio que fetchSuppliers: universo
 // chico (flota de la empresa), no un listado que crezca sin techo.
-export async function fetchActiveVehicles(empresaId: string, signal?: AbortSignal): Promise<Vehicle[]> {
+export async function fetchActiveVehicles(
+  empresaId: string,
+  signal?: AbortSignal
+): Promise<Vehicle[]> {
   return httpClient.request<Vehicle[]>({
     method: 'GET',
     path: '/vehicles/active',
     params: { empresaId },
     signal,
-    mock: () => structuredClone(vehiclesStore.filter((v) => v.activo)),
-  });
+    mock: () => structuredClone(vehiclesStore.filter(v => v.activo)),
+  })
 }
 
 // Llamada "servidor a servidor" (mismo criterio que
@@ -213,5 +224,5 @@ export async function fetchActiveVehicles(empresaId: string, signal?: AbortSigna
 // por httpClient (evita anidar latencia simulada en cada calculo de
 // capacidad).
 export function getVehicleById(vehicleId: VehicleId): Vehicle | undefined {
-  return vehiclesStore.find((v) => v.id === vehicleId);
+  return vehiclesStore.find(v => v.id === vehicleId)
 }

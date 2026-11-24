@@ -74,7 +74,9 @@
   color: var(--color-text-tertiary);
   padding: var(--space-1);
   border-radius: var(--radius-sm);
-  transition: color var(--transition-fast), background-color var(--transition-fast);
+  transition:
+    color var(--transition-fast),
+    background-color var(--transition-fast);
 }
 
 .side-panel__close-btn:hover {

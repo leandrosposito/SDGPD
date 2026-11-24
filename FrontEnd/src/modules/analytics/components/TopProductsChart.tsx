@@ -1,4 +1,4 @@
-import { type FC } from 'react';
+import { type FC } from 'react'
 import {
   ResponsiveContainer,
   BarChart,
@@ -8,35 +8,35 @@ import {
   CartesianGrid,
   Tooltip,
   Cell,
-} from 'recharts';
-import type { TopProduct } from '@/shared/types/analytics.types';
-import './ChartCard.css';
+} from 'recharts'
+import type { TopProduct } from '@/shared/types/analytics.types'
+import './ChartCard.css'
 
 // ============================================================
 // TopProductsChart — Horizontal bar chart for top 5 products
 // ============================================================
 
 interface TopProductsChartProps {
-  data: TopProduct[];
+  data: TopProduct[]
 }
 
-const BAR_COLORS = ['#a78bfa', '#8b5cf6', '#7c3aed', '#6d28d9', '#5b21b6'];
+const BAR_COLORS = ['#a78bfa', '#8b5cf6', '#7c3aed', '#6d28d9', '#5b21b6']
 
 function renderTooltip(props: unknown) {
-  const { active, payload } = props as { active: boolean; payload: Array<{ payload: TopProduct }> };
-  if (!active || !payload?.length) return null;
-  const d = payload[0].payload;
-  if (!d) return null;
+  const { active, payload } = props as { active: boolean; payload: Array<{ payload: TopProduct }> }
+  if (!active || !payload?.length) return null
+  const d = payload[0].payload
+  if (!d) return null
   return (
     <div className="chart-tooltip">
       <span className="chart-tooltip__label">{d.name}</span>
       <span className="chart-tooltip__value">{d.units.toLocaleString('es-AR')} unidades</span>
     </div>
-  );
+  )
 }
 
 function truncateName(name: string, max = 20): string {
-  return name.length > max ? name.slice(0, max - 1) + '.' : name;
+  return name.length > max ? name.slice(0, max - 1) + '.' : name
 }
 
 export const TopProductsChart: FC<TopProductsChartProps> = ({ data }) => {
@@ -53,7 +53,11 @@ export const TopProductsChart: FC<TopProductsChartProps> = ({ data }) => {
             layout="vertical"
             margin={{ top: 0, right: 16, left: 0, bottom: 0 }}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(167,139,250,0.1)" horizontal={false} />
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke="rgba(167,139,250,0.1)"
+              horizontal={false}
+            />
             <XAxis
               type="number"
               tick={{ fill: '#6b7280', fontSize: 11 }}
@@ -79,5 +83,5 @@ export const TopProductsChart: FC<TopProductsChartProps> = ({ data }) => {
         </ResponsiveContainer>
       </div>
     </div>
-  );
-};
+  )
+}

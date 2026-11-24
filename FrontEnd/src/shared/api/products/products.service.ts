@@ -1,11 +1,15 @@
-import type { InventoryItem, ProductStock, StockedInventoryItem } from '@/shared/types/inventory.types';
-import type { Branch } from '@/shared/types/session.types';
-import type { PageQuery, PageResult, ExportResult } from '@/shared/types/pagination.types';
-import { MAX_EXPORT_ROWS } from '@/shared/types/pagination.types';
-import { INVENTORY_MOCK_DATA } from '@/data/mock/inventory.data';
-import { PRODUCT_STOCK_MOCK_DATA } from '@/data/mock/productStock.data';
-import { httpClient } from '@/shared/api/httpClient';
-import { ApiError } from '@/shared/api/ApiError';
+import type {
+  InventoryItem,
+  ProductStock,
+  StockedInventoryItem,
+} from '@/shared/types/inventory.types'
+import type { Branch } from '@/shared/types/session.types'
+import type { PageQuery, PageResult, ExportResult } from '@/shared/types/pagination.types'
+import { MAX_EXPORT_ROWS } from '@/shared/types/pagination.types'
+import { INVENTORY_MOCK_DATA } from '@/data/mock/inventory.data'
+import { PRODUCT_STOCK_MOCK_DATA } from '@/data/mock/productStock.data'
+import { httpClient } from '@/shared/api/httpClient'
+import { ApiError } from '@/shared/api/ApiError'
 import type {
   ProductDTO,
   ProductStockDTO,
@@ -13,7 +17,7 @@ import type {
   StockedProductsPageDTO,
   StockAggregatesDTO,
   LowStockPageDTO,
-} from './dto';
+} from './dto'
 import {
   productFromDTO,
   productToDTO,
@@ -23,10 +27,10 @@ import {
   productFormInputToDTO,
   productLotToDTO,
   type ProductFormInput,
-} from './mapper';
-import { mergeProductUpdate } from './productUpdate';
+} from './mapper'
+import { mergeProductUpdate } from './productUpdate'
 
-export type { ProductFormInput };
+export type { ProductFormInput }
 
 // ============================================================
 // products.service — RF-PRD-001 (ABM Central de Productos) + stock por
@@ -77,59 +81,76 @@ export type { ProductFormInput };
 // data/mock/inventory.data.ts / productStock.data.ts (dominio) vía
 // productToDTO/productStockToDTO.
 // ------------------------------------------------------------
-let productsDTOStore: ProductDTO[] = INVENTORY_MOCK_DATA.items.map(productToDTO);
+let productsDTOStore: ProductDTO[] = INVENTORY_MOCK_DATA.items.map(productToDTO)
 
 // Stock por sucursal (E4): entidad separada del catálogo, sin
 // mutadores todavía (movimientos/ajustes de stock quedan fuera de
 // alcance de esta tanda, ver RELEVAMIENTO_INVENTORY.md) — `const`,
 // nunca reasignada, igual que en el archivo que reemplaza.
-const stockDTOStore: ProductStockDTO[] = PRODUCT_STOCK_MOCK_DATA.map(productStockToDTO);
+const stockDTOStore: ProductStockDTO[] = PRODUCT_STOCK_MOCK_DATA.map(productStockToDTO)
 
-export async function fetchProducts(empresaId: string, signal?: AbortSignal): Promise<InventoryItem[]> {
+export async function fetchProducts(
+  empresaId: string,
+  signal?: AbortSignal
+): Promise<InventoryItem[]> {
   return httpClient.request<InventoryItem[]>({
     method: 'GET',
     path: '/products',
     params: { empresaId },
     signal,
     mock: () => productsDTOStore.map(productFromDTO),
-  });
+  })
 }
 
-export async function createProduct(empresaId: string, input: ProductFormInput): Promise<InventoryItem> {
+export async function createProduct(
+  empresaId: string,
+  input: ProductFormInput
+): Promise<InventoryItem> {
   return httpClient.request<InventoryItem>({
     method: 'POST',
     path: '/products',
     body: { empresaId, ...productFormInputToDTO(input) },
     mock: () => {
-      const skuTaken = productsDTOStore.some((p) => p.sku.toLowerCase() === input.sku.toLowerCase());
-      if (skuTaken) throw new ApiError(400, 'CLIENT_ERROR', 'Este SKU ya existe.');
+      const skuTaken = productsDTOStore.some(p => p.sku.toLowerCase() === input.sku.toLowerCase())
+      if (skuTaken) throw new ApiError(400, 'CLIENT_ERROR', 'Este SKU ya existe.')
 
-      const barcodeTaken = productsDTOStore.some((p) => p.codigo_barras === input.barcode);
-      if (barcodeTaken) throw new ApiError(400, 'CLIENT_ERROR', 'Este codigo de barras ya existe.');
+      const barcodeTaken = productsDTOStore.some(p => p.codigo_barras === input.barcode)
+      if (barcodeTaken) throw new ApiError(400, 'CLIENT_ERROR', 'Este codigo de barras ya existe.')
 
-      const newDTO: ProductDTO = { ...productFormInputToDTO(input), id: `inv-${Date.now()}`, lotes: [] };
-      productsDTOStore = [...productsDTOStore, newDTO];
-      return productFromDTO(newDTO);
+      const newDTO: ProductDTO = {
+        ...productFormInputToDTO(input),
+        id: `inv-${Date.now()}`,
+        lotes: [],
+      }
+      productsDTOStore = [...productsDTOStore, newDTO]
+      return productFromDTO(newDTO)
     },
-  });
+  })
 }
 
-export async function updateProduct(empresaId: string, id: string, input: ProductFormInput): Promise<InventoryItem> {
+export async function updateProduct(
+  empresaId: string,
+  id: string,
+  input: ProductFormInput
+): Promise<InventoryItem> {
   return httpClient.request<InventoryItem>({
     method: 'PUT',
     path: `/products/${id}`,
     body: { empresaId, ...productFormInputToDTO(input) },
     mock: () => {
-      const previous = productsDTOStore.find((p) => p.id === id);
-      if (!previous) throw new ApiError(404, 'CLIENT_ERROR', 'El producto que intenta editar ya no existe.');
+      const previous = productsDTOStore.find(p => p.id === id)
+      if (!previous)
+        throw new ApiError(404, 'CLIENT_ERROR', 'El producto que intenta editar ya no existe.')
 
       const skuTaken = productsDTOStore.some(
-        (p) => p.sku.toLowerCase() === input.sku.toLowerCase() && p.id !== id
-      );
-      if (skuTaken) throw new ApiError(400, 'CLIENT_ERROR', 'Este SKU ya existe.');
+        p => p.sku.toLowerCase() === input.sku.toLowerCase() && p.id !== id
+      )
+      if (skuTaken) throw new ApiError(400, 'CLIENT_ERROR', 'Este SKU ya existe.')
 
-      const barcodeTaken = productsDTOStore.some((p) => p.codigo_barras === input.barcode && p.id !== id);
-      if (barcodeTaken) throw new ApiError(400, 'CLIENT_ERROR', 'Este codigo de barras ya existe.');
+      const barcodeTaken = productsDTOStore.some(
+        p => p.codigo_barras === input.barcode && p.id !== id
+      )
+      if (barcodeTaken) throw new ApiError(400, 'CLIENT_ERROR', 'Este codigo de barras ya existe.')
 
       // PENDIENTES.md #13 (cerrado, sesion avance-2026-09-30): antes el
       // registro se armaba con `lotes: []`, asi que editar un producto
@@ -137,12 +158,12 @@ export async function updateProduct(empresaId: string, id: string, input: Produc
       // salvo que el formulario mande `lots` explicito — ver
       // productUpdate.ts. `ProductFormValues` no tiene `lots`, asi que
       // desde ProductFormModal `input.lots` llega siempre `undefined`.
-      const editedLots = input.lots === undefined ? undefined : input.lots.map(productLotToDTO);
-      const updatedDTO = mergeProductUpdate(previous, productFormInputToDTO(input), editedLots);
-      productsDTOStore = productsDTOStore.map((p) => (p.id === id ? updatedDTO : p));
-      return productFromDTO(updatedDTO);
+      const editedLots = input.lots === undefined ? undefined : input.lots.map(productLotToDTO)
+      const updatedDTO = mergeProductUpdate(previous, productFormInputToDTO(input), editedLots)
+      productsDTOStore = productsDTOStore.map(p => (p.id === id ? updatedDTO : p))
+      return productFromDTO(updatedDTO)
     },
-  });
+  })
 }
 
 // Tanda 12 (hallazgo propio): baja LOGICA, no borrado del store — antes
@@ -164,12 +185,13 @@ export async function deleteProduct(empresaId: string, id: string): Promise<void
     path: `/products/${id}`,
     params: { empresaId },
     mock: () => {
-      const exists = productsDTOStore.some((p) => p.id === id);
-      if (!exists) throw new ApiError(404, 'CLIENT_ERROR', 'El producto que intenta eliminar ya no existe.');
+      const exists = productsDTOStore.some(p => p.id === id)
+      if (!exists)
+        throw new ApiError(404, 'CLIENT_ERROR', 'El producto que intenta eliminar ya no existe.')
 
-      productsDTOStore = productsDTOStore.map((p) => (p.id === id ? { ...p, estado: 'inactive' } : p));
+      productsDTOStore = productsDTOStore.map(p => (p.id === id ? { ...p, estado: 'inactive' } : p))
     },
-  });
+  })
 }
 
 // ============================================================
@@ -194,10 +216,12 @@ export async function getStockForBranch(
     params: { empresaId },
     signal,
     mock: () => {
-      const record = stockDTOStore.find((s) => s.producto_id === productId && s.sucursal_id === branchId);
-      return record ? productStockFromDTO(record) : undefined;
+      const record = stockDTOStore.find(
+        s => s.producto_id === productId && s.sucursal_id === branchId
+      )
+      return record ? productStockFromDTO(record) : undefined
     },
-  });
+  })
 }
 
 // E6: "bajo stock mínimo" es stock <= minStock, no < estricto. ÚNICO
@@ -206,7 +230,7 @@ export async function getStockForBranch(
 // de Stock Actual): las dos pantallas no pueden mostrar un número
 // distinto para el mismo dato (instrucción explícita de esta tanda).
 function isBelowMinStock(stock: number, minStock: number): boolean {
-  return stock <= minStock;
+  return stock <= minStock
 }
 
 // Une un producto con su registro de stock en una sucursal (E5: sin
@@ -223,22 +247,26 @@ function joinProductWithStock(
     sucursal_id: branchId,
     stock: record?.stock ?? 0,
     stock_minimo: record?.stock_minimo ?? 0,
-  };
+  }
 }
 
-export type StockedProductSortField = 'sku' | 'name' | 'stock' | 'minStock';
+export type StockedProductSortField = 'sku' | 'name' | 'stock' | 'minStock'
 
-function compareStockedProducts(a: StockedProductDTO, b: StockedProductDTO, field: StockedProductSortField): number {
+function compareStockedProducts(
+  a: StockedProductDTO,
+  b: StockedProductDTO,
+  field: StockedProductSortField
+): number {
   switch (field) {
     case 'name':
-      return a.nombre.localeCompare(b.nombre);
+      return a.nombre.localeCompare(b.nombre)
     case 'stock':
-      return a.stock - b.stock;
+      return a.stock - b.stock
     case 'minStock':
-      return a.stock_minimo - b.stock_minimo;
+      return a.stock_minimo - b.stock_minimo
     case 'sku':
     default:
-      return a.sku.localeCompare(b.sku);
+      return a.sku.localeCompare(b.sku)
   }
 }
 
@@ -251,9 +279,9 @@ function compareStockedProducts(a: StockedProductDTO, b: StockedProductDTO, fiel
 // ============================================================
 
 export interface StockedProductsQueryFilters {
-  empresaId: string;
-  branchId: Branch['id'];
-  search?: string;
+  empresaId: string
+  branchId: Branch['id']
+  search?: string
 }
 
 // Agregados (P3): reemplazan el cálculo que hacía TabStockCurrent.tsx
@@ -261,22 +289,22 @@ export interface StockedProductsQueryFilters {
 // outOfStock/totalValue) — se calculan sobre TODO lo que matchea la
 // búsqueda vigente en la sucursal, nunca sobre `items` de la página.
 export interface StockAggregates {
-  totalProducts: number;
-  lowStock: number;
-  outOfStock: number;
-  totalValue: number;
+  totalProducts: number
+  lowStock: number
+  outOfStock: number
+  totalValue: number
 }
 
 function matchesSearch(product: ProductDTO, search: string | undefined): boolean {
-  if (!search) return true;
-  const q = search.trim().toLowerCase();
-  if (!q) return true;
+  if (!search) return true
+  const q = search.trim().toLowerCase()
+  if (!q) return true
   return (
     product.sku.toLowerCase().includes(q) ||
     product.codigo_barras.toLowerCase().includes(q) ||
     product.nombre.toLowerCase().includes(q) ||
     (product.descripcion?.toLowerCase().includes(q) ?? false)
-  );
+  )
 }
 
 // Compartida entre getStockedProductsPage y computeStockAggregates (no
@@ -295,26 +323,26 @@ function filterAndSortStockedProducts(
   sort: { field: StockedProductSortField; direction: 'asc' | 'desc' } | undefined
 ): { sorted: StockedProductDTO[]; stockByProductId: Map<string, ProductStockDTO> } {
   const stockByProductId = new Map(
-    stockDTOStore.filter((s) => s.sucursal_id === filters.branchId).map((s) => [s.producto_id, s])
-  );
+    stockDTOStore.filter(s => s.sucursal_id === filters.branchId).map(s => [s.producto_id, s])
+  )
 
-  const joined: StockedProductDTO[] = [];
+  const joined: StockedProductDTO[] = []
   for (const product of productsDTOStore) {
-    if (!matchesSearch(product, filters.search)) continue;
-    joined.push(joinProductWithStock(product, stockByProductId.get(product.id), filters.branchId));
+    if (!matchesSearch(product, filters.search)) continue
+    joined.push(joinProductWithStock(product, stockByProductId.get(product.id), filters.branchId))
   }
 
-  const sortField = sort?.field ?? 'sku';
-  const direction = sort?.direction ?? 'asc';
+  const sortField = sort?.field ?? 'sku'
+  const direction = sort?.direction ?? 'asc'
   const sorted = joined.sort((a, b) => {
-    const cmp = compareStockedProducts(a, b, sortField);
-    const primary = direction === 'asc' ? cmp : -cmp;
+    const cmp = compareStockedProducts(a, b, sortField)
+    const primary = direction === 'asc' ? cmp : -cmp
     // Desempate estable por id (3.4): un orden ambiguo hace que el
     // mismo producto aparezca en dos páginas o en ninguna al paginar.
-    return primary !== 0 ? primary : a.id.localeCompare(b.id);
-  });
+    return primary !== 0 ? primary : a.id.localeCompare(b.id)
+  })
 
-  return { sorted, stockByProductId };
+  return { sorted, stockByProductId }
 }
 
 // "Stock Bajo" y "Sin Stock" responden dos preguntas DISTINTAS sobre el
@@ -346,24 +374,24 @@ function computeStockAggregates(
   joined: StockedProductDTO[],
   stockByProductId: Map<string, ProductStockDTO>
 ): StockAggregatesDTO {
-  let lowStock = 0;
-  let outOfStock = 0;
-  let totalValue = 0;
+  let lowStock = 0
+  let outOfStock = 0
+  let totalValue = 0
   for (const item of joined) {
     if (item.stock === 0) {
-      outOfStock += 1;
+      outOfStock += 1
     }
     if (stockByProductId.has(item.producto_id) && isBelowMinStock(item.stock, item.stock_minimo)) {
-      lowStock += 1;
+      lowStock += 1
     }
-    totalValue += item.stock * item.costo;
+    totalValue += item.stock * item.costo
   }
   return {
     total_productos: joined.length,
     stock_bajo: lowStock,
     sin_stock: outOfStock,
     valor_inventario: totalValue,
-  };
+  }
 }
 
 // fetchPage de usePagedQuery — firma exacta (query, signal?).
@@ -385,21 +413,21 @@ export async function getStockedProductsPage(
     },
     signal,
     mock: () => {
-      const { sorted, stockByProductId } = filterAndSortStockedProducts(query.filters, query.sort);
+      const { sorted, stockByProductId } = filterAndSortStockedProducts(query.filters, query.sort)
       // Agregados sobre TODO lo filtrado, antes de paginar (P3).
-      const aggregates = computeStockAggregates(sorted, stockByProductId);
+      const aggregates = computeStockAggregates(sorted, stockByProductId)
 
-      const total = sorted.length;
-      const totalPages = Math.max(1, Math.ceil(total / query.pageSize));
-      const safePage = Math.min(Math.max(1, query.page), totalPages);
-      const start = (safePage - 1) * query.pageSize;
+      const total = sorted.length
+      const totalPages = Math.max(1, Math.ceil(total / query.pageSize))
+      const safePage = Math.min(Math.max(1, query.page), totalPages)
+      const start = (safePage - 1) * query.pageSize
 
       return {
         data: sorted.slice(start, start + query.pageSize),
         meta: { total, page: safePage, page_size: query.pageSize, aggregates },
-      };
+      }
     },
-  });
+  })
 
   return {
     items: pageDTO.data.map(stockedProductFromDTO),
@@ -412,7 +440,7 @@ export async function getStockedProductsPage(
       outOfStock: pageDTO.meta.aggregates.sin_stock,
       totalValue: pageDTO.meta.aggregates.valor_inventario,
     },
-  };
+  }
 }
 
 // Exportar Stock Actual (mismo patron que exportLowStock, mas abajo):
@@ -426,12 +454,12 @@ export async function exportStockedProducts(
     path: '/products/stock-by-branch/export',
     params: { empresaId: filters.empresaId, branchId: filters.branchId, search: filters.search },
     mock: () => {
-      const { sorted } = filterAndSortStockedProducts(filters, sort);
-      const truncated = sorted.length > MAX_EXPORT_ROWS;
-      const items = sorted.slice(0, MAX_EXPORT_ROWS).map(stockedProductFromDTO);
-      return { items, truncated };
+      const { sorted } = filterAndSortStockedProducts(filters, sort)
+      const truncated = sorted.length > MAX_EXPORT_ROWS
+      const items = sorted.slice(0, MAX_EXPORT_ROWS).map(stockedProductFromDTO)
+      return { items, truncated }
     },
-  });
+  })
 }
 
 // ============================================================
@@ -452,34 +480,42 @@ export async function exportStockedProducts(
 // que `getStockedProductsPage`) — mismos 4 campos (sku/código de
 // barras/nombre/descripción), no se reimplementa el predicado.
 export interface LowStockQueryFilters {
-  empresaId: string;
-  branchId: Branch['id'];
-  search?: string;
+  empresaId: string
+  branchId: Branch['id']
+  search?: string
 }
 
 // `deficit` agregado (`stock_minimo - stock`, "cuánto falta para llegar
 // al mínimo"): no existe en `StockedProductSortField` (Stock Actual no
 // tiene esa columna) — se extiende el tipo en vez de tocar el de Stock
 // Actual, para no ofrecerle un orden que no tiene sentido ahí.
-export type LowStockSortField = StockedProductSortField | 'deficit';
+export type LowStockSortField = StockedProductSortField | 'deficit'
 
-function compareLowStock(a: StockedProductDTO, b: StockedProductDTO, field: LowStockSortField): number {
+function compareLowStock(
+  a: StockedProductDTO,
+  b: StockedProductDTO,
+  field: LowStockSortField
+): number {
   if (field === 'deficit') {
-    return (a.stock_minimo - a.stock) - (b.stock_minimo - b.stock);
+    return a.stock_minimo - a.stock - (b.stock_minimo - b.stock)
   }
-  return compareStockedProducts(a, b, field);
+  return compareStockedProducts(a, b, field)
 }
 
 function filterAndSortLowStock(
   filters: LowStockQueryFilters,
   sort: { field: LowStockSortField; direction: 'asc' | 'desc' } | undefined
 ): StockedProductDTO[] {
-  const productById = new Map(productsDTOStore.map((p) => [p.id, p]));
+  const productById = new Map(productsDTOStore.map(p => [p.id, p]))
 
-  const matches: StockedProductDTO[] = [];
+  const matches: StockedProductDTO[] = []
   for (const record of stockDTOStore) {
-    if (record.sucursal_id !== filters.branchId || !isBelowMinStock(record.stock, record.stock_minimo)) continue;
-    const product = productById.get(record.producto_id);
+    if (
+      record.sucursal_id !== filters.branchId ||
+      !isBelowMinStock(record.stock, record.stock_minimo)
+    )
+      continue
+    const product = productById.get(record.producto_id)
     // Tanda 14 (hallazgo Tanda 12 a medias): un producto dado de baja
     // (estado inactive) no necesita reposicion — a diferencia de Stock
     // Actual (getStockedProductsPage/computeStockAggregates), que sigue
@@ -487,18 +523,19 @@ function filterAndSortLowStock(
     // del inventario, no una lista accionable), Bajo Stock Minimo SI
     // excluye: es la lista de "que hay que reponer", y un producto
     // discontinuado no entra en esa pregunta.
-    if (!product || product.estado === 'inactive' || !matchesSearch(product, filters.search)) continue;
-    matches.push(joinProductWithStock(product, record, filters.branchId));
+    if (!product || product.estado === 'inactive' || !matchesSearch(product, filters.search))
+      continue
+    matches.push(joinProductWithStock(product, record, filters.branchId))
   }
 
-  const sortField = sort?.field ?? 'sku';
-  const direction = sort?.direction ?? 'asc';
+  const sortField = sort?.field ?? 'sku'
+  const direction = sort?.direction ?? 'asc'
   return matches.sort((a, b) => {
-    const cmp = compareLowStock(a, b, sortField);
-    const primary = direction === 'asc' ? cmp : -cmp;
+    const cmp = compareLowStock(a, b, sortField)
+    const primary = direction === 'asc' ? cmp : -cmp
     // Desempate estable por id (3.4).
-    return primary !== 0 ? primary : a.id.localeCompare(b.id);
-  });
+    return primary !== 0 ? primary : a.id.localeCompare(b.id)
+  })
 }
 
 export async function getLowStockPage(
@@ -519,31 +556,31 @@ export async function getLowStockPage(
     },
     signal,
     mock: () => {
-      const { filters, sort, page, pageSize } = query;
+      const { filters, sort, page, pageSize } = query
       // Agregados sobre TODO lo filtrado (búsqueda incluida), antes de
       // paginar — mismo criterio que getStockedProductsPage (P3): el
       // total tiene que reflejar el resultado filtrado, no el listado
       // completo de bajo stock.
-      const sorted = filterAndSortLowStock(filters, sort);
+      const sorted = filterAndSortLowStock(filters, sort)
 
-      const total = sorted.length;
-      const totalPages = Math.max(1, Math.ceil(total / pageSize));
-      const safePage = Math.min(Math.max(1, page), totalPages);
-      const start = (safePage - 1) * pageSize;
+      const total = sorted.length
+      const totalPages = Math.max(1, Math.ceil(total / pageSize))
+      const safePage = Math.min(Math.max(1, page), totalPages)
+      const start = (safePage - 1) * pageSize
 
       return {
         data: sorted.slice(start, start + pageSize),
         meta: { total, page: safePage, page_size: pageSize },
-      };
+      }
     },
-  });
+  })
 
   return {
     items: pageDTO.data.map(stockedProductFromDTO),
     total: pageDTO.meta.total,
     page: pageDTO.meta.page,
     pageSize: pageDTO.meta.page_size,
-  };
+  }
 }
 
 // Exportar (tarea transversal): TODO lo que matchea filtros, sin
@@ -557,11 +594,11 @@ export async function exportLowStock(
     path: '/products/low-stock/export',
     params: { empresaId: filters.empresaId, branchId: filters.branchId, search: filters.search },
     mock: () => {
-      const sorted = filterAndSortLowStock(filters, sort);
-      const truncated = sorted.length > MAX_EXPORT_ROWS;
-      const items = sorted.slice(0, MAX_EXPORT_ROWS).map(stockedProductFromDTO);
+      const sorted = filterAndSortLowStock(filters, sort)
+      const truncated = sorted.length > MAX_EXPORT_ROWS
+      const items = sorted.slice(0, MAX_EXPORT_ROWS).map(stockedProductFromDTO)
 
-      return { items, truncated };
+      return { items, truncated }
     },
-  });
+  })
 }

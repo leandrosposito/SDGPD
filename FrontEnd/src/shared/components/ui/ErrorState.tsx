@@ -1,6 +1,6 @@
-import type { FC } from 'react';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
-import './ErrorState.css';
+import type { FC } from 'react'
+import { AlertTriangle, RefreshCw } from 'lucide-react'
+import './ErrorState.css'
 
 // ============================================================
 // ErrorState — Estado de error para una operacion async que ya
@@ -12,8 +12,8 @@ import './ErrorState.css';
 // ============================================================
 
 interface ErrorStateProps {
-  message?: string;
-  onRetry?: () => void;
+  message?: string
+  onRetry?: () => void
 }
 
 export const ErrorState: FC<ErrorStateProps> = ({
@@ -30,4 +30,4 @@ export const ErrorState: FC<ErrorStateProps> = ({
       </button>
     )}
   </div>
-);
+)

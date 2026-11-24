@@ -1,23 +1,39 @@
-import type { Trip, Stop, TripStatus, TripPosition, CapacityOverrideEvent } from '@/shared/types/trip.types';
-import type { Delivery } from '@/shared/types/logistics.types';
-import type { TripId, StopId, VehicleId, DriverId, DeliveryId, BranchId } from '@/shared/types/ids.types';
-import { asTripId, asStopId } from '@/shared/types/ids.types';
-import { puedeTransicionarViaje, computeAllowedTripTransitions } from '@/shared/types/tripStatus.types';
-import { computeCapacidadUsada, excedeCapacidad } from '@/shared/utils/tripCapacity';
-import { getStopNoVisitadaBlockReason } from '@/shared/utils/stopVisitEligibility';
-import type { PageQuery, PageResult } from '@/shared/types/pagination.types';
-import { TRIPS_MOCK_DATA } from '@/data/mock/trips.data';
-import { httpClient } from '@/shared/api/httpClient';
-import { withIdempotency } from '@/shared/utils/idempotency';
-import { getVehicleById } from '@/shared/api/vehicles/vehicles.service';
+import type {
+  Trip,
+  Stop,
+  TripStatus,
+  TripPosition,
+  CapacityOverrideEvent,
+} from '@/shared/types/trip.types'
+import type { Delivery } from '@/shared/types/logistics.types'
+import type {
+  TripId,
+  StopId,
+  VehicleId,
+  DriverId,
+  DeliveryId,
+  BranchId,
+} from '@/shared/types/ids.types'
+import { asTripId, asStopId } from '@/shared/types/ids.types'
+import {
+  puedeTransicionarViaje,
+  computeAllowedTripTransitions,
+} from '@/shared/types/tripStatus.types'
+import { computeCapacidadUsada, excedeCapacidad } from '@/shared/utils/tripCapacity'
+import { getStopNoVisitadaBlockReason } from '@/shared/utils/stopVisitEligibility'
+import type { PageQuery, PageResult } from '@/shared/types/pagination.types'
+import { TRIPS_MOCK_DATA } from '@/data/mock/trips.data'
+import { httpClient } from '@/shared/api/httpClient'
+import { withIdempotency } from '@/shared/utils/idempotency'
+import { getVehicleById } from '@/shared/api/vehicles/vehicles.service'
 import {
   getDeliveryById,
   getDeliveryIdsMatchingFilter,
   transitionDelivery,
   reprogramDelivery,
   type DeliveryQueryFilters,
-} from './deliveries.service';
-import { registerPodEvidence, type PodInput } from './pod.service';
+} from './deliveries.service'
+import { registerPodEvidence, type PodInput } from './pod.service'
 
 // ============================================================
 // trips.service — Viajes, asignacion y POD (Tanda 10B, ADR-011).
@@ -34,17 +50,17 @@ import { registerPodEvidence, type PodInput } from './pod.service';
 // productos/pedidos modele peso/volumen.
 // ============================================================
 
-let tripsStore: Trip[] = structuredClone(TRIPS_MOCK_DATA);
+let tripsStore: Trip[] = structuredClone(TRIPS_MOCK_DATA)
 
-export const MAX_TRIP_ASSIGNMENT = 100;
-export const MAX_ROUTE_POINTS = 500;
+export const MAX_TRIP_ASSIGNMENT = 100
+export const MAX_ROUTE_POINTS = 500
 
 function nowISO(): string {
-  return new Date().toISOString();
+  return new Date().toISOString()
 }
 
 function findTripContainingDelivery(deliveryId: DeliveryId): Trip | undefined {
-  return tripsStore.find((t) => t.paradas.some((s) => s.deliveryIds.includes(deliveryId)));
+  return tripsStore.find(t => t.paradas.some(s => s.deliveryIds.includes(deliveryId)))
 }
 
 // ------------------------------------------------------------
@@ -60,25 +76,34 @@ function findTripContainingDelivery(deliveryId: DeliveryId): Trip | undefined {
 // todavia no se asignaron a ningun viaje.
 // ------------------------------------------------------------
 export function releaseDeliveryFromTrip(deliveryId: DeliveryId): void {
-  const trip = findTripContainingDelivery(deliveryId);
-  if (!trip) return;
+  const trip = findTripContainingDelivery(deliveryId)
+  if (!trip) return
 
-  const paradas = trip.paradas.map((s) =>
-    s.deliveryIds.includes(deliveryId) ? { ...s, deliveryIds: s.deliveryIds.filter((id) => id !== deliveryId) } : s
-  );
-  const capacidadUsada = computeCapacidadUsada(paradas);
-  const vehicle = getVehicleById(trip.vehicleId);
+  const paradas = trip.paradas.map(s =>
+    s.deliveryIds.includes(deliveryId)
+      ? { ...s, deliveryIds: s.deliveryIds.filter(id => id !== deliveryId) }
+      : s
+  )
+  const capacidadUsada = computeCapacidadUsada(paradas)
+  const vehicle = getVehicleById(trip.vehicleId)
   // Liberar una entrega solo puede BAJAR capacidadUsada — pero si el
   // viaje ya estaba sobrecargado por varias entregas, sacar una sola
   // no necesariamente lo deja dentro del limite: se recalcula de
   // verdad, nunca se asume `false` a secas.
-  const sobrecargado = vehicle !== undefined && excedeCapacidad(capacidadUsada, vehicle.capacidad);
-  const updated: Trip = { ...trip, paradas, capacidadUsada, sobrecargado, version: trip.version + 1, updatedAt: nowISO() };
-  tripsStore = tripsStore.map((t) => (t.id === trip.id ? updated : t));
+  const sobrecargado = vehicle !== undefined && excedeCapacidad(capacidadUsada, vehicle.capacidad)
+  const updated: Trip = {
+    ...trip,
+    paradas,
+    capacidadUsada,
+    sobrecargado,
+    version: trip.version + 1,
+    updatedAt: nowISO(),
+  }
+  tripsStore = tripsStore.map(t => (t.id === trip.id ? updated : t))
 }
 
 function withComputedFields(trip: Trip): Trip {
-  return { ...trip, allowedTransitions: computeAllowedTripTransitions(trip.estado) };
+  return { ...trip, allowedTransitions: computeAllowedTripTransitions(trip.estado) }
 }
 
 // ============================================================
@@ -86,15 +111,15 @@ function withComputedFields(trip: Trip): Trip {
 // ============================================================
 
 export interface TripQueryFilters {
-  empresaId: string;
-  branchId: BranchId | null;
-  estado?: TripStatus;
-  fecha?: string; // ISO date exact-match
-  vehicleId?: VehicleId;
-  driverId?: DriverId;
+  empresaId: string
+  branchId: BranchId | null
+  estado?: TripStatus
+  fecha?: string // ISO date exact-match
+  vehicleId?: VehicleId
+  driverId?: DriverId
 }
 
-export type TripSortField = 'fecha' | 'estado';
+export type TripSortField = 'fecha' | 'estado'
 
 function matchesTripFilters(t: Trip, filters: TripQueryFilters): boolean {
   return (
@@ -103,16 +128,16 @@ function matchesTripFilters(t: Trip, filters: TripQueryFilters): boolean {
     (!filters.fecha || t.fecha === filters.fecha) &&
     (!filters.vehicleId || t.vehicleId === filters.vehicleId) &&
     (!filters.driverId || t.driverId === filters.driverId)
-  );
+  )
 }
 
 function compareTrips(a: Trip, b: Trip, field: TripSortField): number {
   switch (field) {
     case 'estado':
-      return a.estado.localeCompare(b.estado);
+      return a.estado.localeCompare(b.estado)
     case 'fecha':
     default:
-      return a.fecha.localeCompare(b.fecha);
+      return a.fecha.localeCompare(b.fecha)
   }
 }
 
@@ -130,7 +155,7 @@ export async function getTripsPage(
   query: PageQuery<TripQueryFilters, TripSortField>,
   signal?: AbortSignal
 ): Promise<PageResult<Trip, undefined>> {
-  const filters = query.filters;
+  const filters = query.filters
   return httpClient.request<PageResult<Trip, undefined>>({
     method: 'GET',
     path: '/trips',
@@ -148,41 +173,45 @@ export async function getTripsPage(
     },
     signal,
     mock: () => {
-      const inScope = tripsStore.filter((t) => matchesTripFilters(t, filters));
-      const sortField = query.sort?.field ?? 'fecha';
-      const direction = query.sort?.direction ?? 'desc';
+      const inScope = tripsStore.filter(t => matchesTripFilters(t, filters))
+      const sortField = query.sort?.field ?? 'fecha'
+      const direction = query.sort?.direction ?? 'desc'
       const sorted = [...inScope].sort((a, b) => {
-        const cmp = compareTrips(a, b, sortField);
-        const primary = direction === 'asc' ? cmp : -cmp;
-        return primary !== 0 ? primary : a.id.localeCompare(b.id);
-      });
+        const cmp = compareTrips(a, b, sortField)
+        const primary = direction === 'asc' ? cmp : -cmp
+        return primary !== 0 ? primary : a.id.localeCompare(b.id)
+      })
 
-      const total = sorted.length;
-      const totalPages = Math.max(1, Math.ceil(total / query.pageSize));
-      const safePage = Math.min(Math.max(1, query.page), totalPages);
-      const start = (safePage - 1) * query.pageSize;
+      const total = sorted.length
+      const totalPages = Math.max(1, Math.ceil(total / query.pageSize))
+      const safePage = Math.min(Math.max(1, query.page), totalPages)
+      const start = (safePage - 1) * query.pageSize
 
       return {
         items: structuredClone(sorted.slice(start, start + query.pageSize).map(withComputedFields)),
         total,
         page: safePage,
         pageSize: query.pageSize,
-      };
+      }
     },
-  });
+  })
 }
 
-export async function getTripById(empresaId: string, tripId: TripId, signal?: AbortSignal): Promise<Trip | null> {
+export async function getTripById(
+  empresaId: string,
+  tripId: TripId,
+  signal?: AbortSignal
+): Promise<Trip | null> {
   return httpClient.request<Trip | null>({
     method: 'GET',
     path: `/trips/${tripId}`,
     params: { empresaId },
     signal,
     mock: () => {
-      const trip = tripsStore.find((t) => t.id === tripId);
-      return trip ? structuredClone(withComputedFields(trip)) : null;
+      const trip = tripsStore.find(t => t.id === tripId)
+      return trip ? structuredClone(withComputedFields(trip)) : null
     },
-  });
+  })
 }
 
 // ============================================================
@@ -197,24 +226,24 @@ export async function getTripById(empresaId: string, tripId: TripId, signal?: Ab
 // deliveryIds directo, existirian DOS caminos para asignar una
 // entrega a una parada, uno validado y otro no.
 export interface CreateTripStopInput {
-  clientName: string;
-  address: string;
+  clientName: string
+  address: string
 }
 
 export interface CreateTripInput {
-  branchId: BranchId;
-  vehicleId: VehicleId;
-  driverId: DriverId;
-  fecha: string;
-  paradas: CreateTripStopInput[];
+  branchId: BranchId
+  vehicleId: VehicleId
+  driverId: DriverId
+  fecha: string
+  paradas: CreateTripStopInput[]
 }
 
-export type CreateTripReason = 'vehicle-not-found';
+export type CreateTripReason = 'vehicle-not-found'
 
 export interface CreateTripResult {
-  success: boolean;
-  trip?: Trip;
-  reason?: CreateTripReason;
+  success: boolean
+  trip?: Trip
+  reason?: CreateTripReason
 }
 
 export async function createTrip(
@@ -230,13 +259,13 @@ export async function createTrip(
     idempotencyKey,
     mock: () =>
       withIdempotency(idempotencyKey, () => {
-        const vehicle = getVehicleById(input.vehicleId);
+        const vehicle = getVehicleById(input.vehicleId)
         if (!vehicle) {
-          return { success: false, reason: 'vehicle-not-found' as const };
+          return { success: false, reason: 'vehicle-not-found' as const }
         }
 
-        const now = nowISO();
-        const id = asTripId(`trip-${Date.now()}`);
+        const now = nowISO()
+        const id = asTripId(`trip-${Date.now()}`)
         const paradas: Stop[] = input.paradas.map((stop, index) => ({
           id: asStopId(`stop-${Date.now()}-${index}`),
           tripId: id,
@@ -246,7 +275,7 @@ export async function createTrip(
           deliveryIds: [],
           estado: 'Pendiente',
           preferenciasEntrega: null,
-        }));
+        }))
 
         const trip: Trip = {
           id,
@@ -263,13 +292,13 @@ export async function createTrip(
           overrides: [],
           createdAt: now,
           updatedAt: now,
-        };
+        }
 
-        tripsStore = [...tripsStore, trip];
-        void quien; // sin historial de viaje en esta tanda (ver comentario de transitionTrip) — quien queda reservado para cuando se agregue.
-        return { success: true, trip: structuredClone(withComputedFields(trip)) };
+        tripsStore = [...tripsStore, trip]
+        void quien // sin historial de viaje en esta tanda (ver comentario de transitionTrip) — quien queda reservado para cuando se agregue.
+        return { success: true, trip: structuredClone(withComputedFields(trip)) }
       }),
-  });
+  })
 }
 
 // ============================================================
@@ -278,36 +307,32 @@ export async function createTrip(
 
 export type AssignDeliveriesInput =
   | { modo: 'lista'; deliveryIds: DeliveryId[] }
-  | { modo: 'filtro'; filtros: Omit<DeliveryQueryFilters, 'empresaId'>; excluidos: DeliveryId[] };
+  | { modo: 'filtro'; filtros: Omit<DeliveryQueryFilters, 'empresaId'>; excluidos: DeliveryId[] }
 
 export interface AssignDeliveriesOptions {
-  expectedVersion: number;
+  expectedVersion: number
   // Sub-opcion A2 (ADR-011 seccion 2, correccion: motivo obligatorio en
   // el override): sin forzar, una asignacion que excede la capacidad
   // nominal del vehiculo se rechaza entera (ver reason 'exceeds-capacity').
-  forzar?: { motivo: string };
+  forzar?: { motivo: string }
 }
 
 export type AssignDeliveriesReason =
-  | 'not-found'
-  | 'stale-version'
-  | 'exceeds-limit'
-  | 'exceeds-capacity'
-  | 'motivo-requerido';
+  'not-found' | 'stale-version' | 'exceeds-limit' | 'exceeds-capacity' | 'motivo-requerido'
 
 export interface AssignDeliveriesConflict {
-  deliveryId: DeliveryId;
-  asignadoATripId: TripId;
+  deliveryId: DeliveryId
+  asignadoATripId: TripId
 }
 
 export interface AssignDeliveriesResult {
-  success: boolean;
-  trip?: Trip;
-  reason?: AssignDeliveriesReason;
-  matched?: number;
-  limit?: number;
-  conflictos?: AssignDeliveriesConflict[];
-  asignados?: DeliveryId[];
+  success: boolean
+  trip?: Trip
+  reason?: AssignDeliveriesReason
+  matched?: number
+  limit?: number
+  conflictos?: AssignDeliveriesConflict[]
+  asignados?: DeliveryId[]
 }
 
 export async function assignDeliveriesToStop(
@@ -326,12 +351,12 @@ export async function assignDeliveriesToStop(
     idempotencyKey,
     mock: () =>
       withIdempotency(idempotencyKey, () => {
-        const trip = tripsStore.find((t) => t.id === tripId);
-        if (!trip || !trip.paradas.some((s) => s.id === stopId)) {
-          return { success: false, reason: 'not-found' as const };
+        const trip = tripsStore.find(t => t.id === tripId)
+        if (!trip || !trip.paradas.some(s => s.id === stopId)) {
+          return { success: false, reason: 'not-found' as const }
         }
         if (trip.version !== options.expectedVersion) {
-          return { success: false, reason: 'stale-version' as const };
+          return { success: false, reason: 'stale-version' as const }
         }
 
         // Resuelve la lista de candidatos: 'lista' explicita, o
@@ -341,44 +366,59 @@ export async function assignDeliveriesToStop(
         const candidateIds =
           input.modo === 'lista'
             ? input.deliveryIds
-            : getDeliveryIdsMatchingFilter({ empresaId, ...input.filtros }).filter((id) => !input.excluidos.includes(id));
+            : getDeliveryIdsMatchingFilter({ empresaId, ...input.filtros }).filter(
+                id => !input.excluidos.includes(id)
+              )
 
         if (candidateIds.length > MAX_TRIP_ASSIGNMENT) {
-          return { success: false, reason: 'exceeds-limit' as const, matched: candidateIds.length, limit: MAX_TRIP_ASSIGNMENT };
+          return {
+            success: false,
+            reason: 'exceeds-limit' as const,
+            matched: candidateIds.length,
+            limit: MAX_TRIP_ASSIGNMENT,
+          }
         }
 
         // Concurrencia granular (ADR-011 seccion 3, correccion): cada
         // deliveryId ya tomado por OTRO viaje se reporta como conflicto
         // puntual; los que siguen libres se aplican igual.
-        const conflictos: AssignDeliveriesConflict[] = [];
-        const libres: DeliveryId[] = [];
+        const conflictos: AssignDeliveriesConflict[] = []
+        const libres: DeliveryId[] = []
         for (const deliveryId of candidateIds) {
-          const owner = findTripContainingDelivery(deliveryId);
+          const owner = findTripContainingDelivery(deliveryId)
           if (owner && owner.id !== tripId) {
-            conflictos.push({ deliveryId, asignadoATripId: owner.id });
+            conflictos.push({ deliveryId, asignadoATripId: owner.id })
           } else {
-            libres.push(deliveryId);
+            libres.push(deliveryId)
           }
         }
 
-        const paradasConAsignacion = trip.paradas.map((s) =>
+        const paradasConAsignacion = trip.paradas.map(s =>
           s.id === stopId ? { ...s, deliveryIds: [...new Set([...s.deliveryIds, ...libres])] } : s
-        );
-        const capacidadUsada = computeCapacidadUsada(paradasConAsignacion);
-        const vehicle = getVehicleById(trip.vehicleId);
-        const sobrecargado = vehicle !== undefined && excedeCapacidad(capacidadUsada, vehicle.capacidad);
+        )
+        const capacidadUsada = computeCapacidadUsada(paradasConAsignacion)
+        const vehicle = getVehicleById(trip.vehicleId)
+        const sobrecargado =
+          vehicle !== undefined && excedeCapacidad(capacidadUsada, vehicle.capacidad)
 
         if (sobrecargado && !options.forzar) {
-          return { success: false, reason: 'exceeds-capacity' as const };
+          return { success: false, reason: 'exceeds-capacity' as const }
         }
         if (sobrecargado && options.forzar && !options.forzar.motivo.trim()) {
-          return { success: false, reason: 'motivo-requerido' as const };
+          return { success: false, reason: 'motivo-requerido' as const }
         }
 
-        const now = nowISO();
+        const now = nowISO()
         const overrideEvent: CapacityOverrideEvent[] = sobrecargado
-          ? [{ quien, cuando: now, motivo: options.forzar!.motivo, deltaBultos: capacidadUsada.bultos - (vehicle?.capacidad.bultos ?? 0) }]
-          : [];
+          ? [
+              {
+                quien,
+                cuando: now,
+                motivo: options.forzar!.motivo,
+                deltaBultos: capacidadUsada.bultos - (vehicle?.capacidad.bultos ?? 0),
+              },
+            ]
+          : []
 
         const updated: Trip = {
           ...trip,
@@ -388,17 +428,17 @@ export async function assignDeliveriesToStop(
           sobrecargado,
           overrides: [...trip.overrides, ...overrideEvent],
           updatedAt: now,
-        };
-        tripsStore = tripsStore.map((t) => (t.id === tripId ? updated : t));
+        }
+        tripsStore = tripsStore.map(t => (t.id === tripId ? updated : t))
 
         return {
           success: true,
           trip: structuredClone(withComputedFields(updated)),
           conflictos: conflictos.length > 0 ? conflictos : undefined,
           asignados: libres,
-        };
+        }
       }),
-  });
+  })
 }
 
 // ============================================================
@@ -406,14 +446,14 @@ export async function assignDeliveriesToStop(
 // transitionDelivery en deliveries.service.ts)
 // ============================================================
 
-export type TransitionTripReason = 'not-found' | 'invalid-transition';
+export type TransitionTripReason = 'not-found' | 'invalid-transition'
 
 export interface TransitionTripResult {
-  success: boolean;
-  tripId: string;
-  previousStatus?: TripStatus;
-  newStatus?: TripStatus;
-  reason?: TransitionTripReason;
+  success: boolean
+  tripId: string
+  previousStatus?: TripStatus
+  newStatus?: TripStatus
+  reason?: TransitionTripReason
 }
 
 // Sin historial de eventos propio para Trip en esta tanda (a
@@ -434,22 +474,32 @@ export async function transitionTrip(
     idempotencyKey,
     mock: () =>
       withIdempotency(idempotencyKey, () => {
-        void quien;
-        const trip = tripsStore.find((t) => t.id === tripId);
+        void quien
+        const trip = tripsStore.find(t => t.id === tripId)
         if (!trip) {
-          return { success: false, tripId, reason: 'not-found' as const };
+          return { success: false, tripId, reason: 'not-found' as const }
         }
         if (!puedeTransicionarViaje(trip.estado, hasta)) {
-          return { success: false, tripId, previousStatus: trip.estado, reason: 'invalid-transition' as const };
+          return {
+            success: false,
+            tripId,
+            previousStatus: trip.estado,
+            reason: 'invalid-transition' as const,
+          }
         }
 
-        const previousStatus = trip.estado;
-        const updated: Trip = { ...trip, estado: hasta, version: trip.version + 1, updatedAt: nowISO() };
-        tripsStore = tripsStore.map((t) => (t.id === tripId ? updated : t));
+        const previousStatus = trip.estado
+        const updated: Trip = {
+          ...trip,
+          estado: hasta,
+          version: trip.version + 1,
+          updatedAt: nowISO(),
+        }
+        tripsStore = tripsStore.map(t => (t.id === tripId ? updated : t))
 
-        return { success: true, tripId, previousStatus, newStatus: hasta };
+        return { success: true, tripId, previousStatus, newStatus: hasta }
       }),
-  });
+  })
 }
 
 // ============================================================
@@ -458,38 +508,45 @@ export async function transitionTrip(
 // posicion del array recibido, nunca calcula una secuencia.
 // ============================================================
 
-export type UpdateStopOrderReason = 'not-found' | 'stops-mismatch';
+export type UpdateStopOrderReason = 'not-found' | 'stops-mismatch'
 
 export interface UpdateStopOrderResult {
-  success: boolean;
-  trip?: Trip;
-  reason?: UpdateStopOrderReason;
+  success: boolean
+  trip?: Trip
+  reason?: UpdateStopOrderReason
 }
 
-export async function updateStopOrder(empresaId: string, tripId: TripId, stops: StopId[]): Promise<UpdateStopOrderResult> {
+export async function updateStopOrder(
+  empresaId: string,
+  tripId: TripId,
+  stops: StopId[]
+): Promise<UpdateStopOrderResult> {
   return httpClient.request<UpdateStopOrderResult>({
     method: 'PUT',
     path: `/trips/${tripId}/stops/order`,
     body: { empresaId, stops },
     mock: () => {
-      const trip = tripsStore.find((t) => t.id === tripId);
+      const trip = tripsStore.find(t => t.id === tripId)
       if (!trip) {
-        return { success: false, reason: 'not-found' as const };
+        return { success: false, reason: 'not-found' as const }
       }
-      if (stops.length !== trip.paradas.length || !stops.every((id) => trip.paradas.some((s) => s.id === id))) {
-        return { success: false, reason: 'stops-mismatch' as const };
+      if (
+        stops.length !== trip.paradas.length ||
+        !stops.every(id => trip.paradas.some(s => s.id === id))
+      ) {
+        return { success: false, reason: 'stops-mismatch' as const }
       }
 
       const paradas = stops.map((stopId, index) => {
-        const stop = trip.paradas.find((s) => s.id === stopId)!;
-        return { ...stop, orden: index + 1 };
-      });
-      const updated: Trip = { ...trip, paradas, version: trip.version + 1, updatedAt: nowISO() };
-      tripsStore = tripsStore.map((t) => (t.id === tripId ? updated : t));
+        const stop = trip.paradas.find(s => s.id === stopId)!
+        return { ...stop, orden: index + 1 }
+      })
+      const updated: Trip = { ...trip, paradas, version: trip.version + 1, updatedAt: nowISO() }
+      tripsStore = tripsStore.map(t => (t.id === tripId ? updated : t))
 
-      return { success: true, trip: structuredClone(withComputedFields(updated)) };
+      return { success: true, trip: structuredClone(withComputedFields(updated)) }
     },
-  });
+  })
 }
 
 // ============================================================
@@ -500,12 +557,12 @@ export async function updateStopOrder(empresaId: string, tripId: TripId, stops: 
 // y la Parada 'Visitada'.
 // ============================================================
 
-export type RegisterPodReason = 'not-found' | 'delivery-not-found';
+export type RegisterPodReason = 'not-found' | 'delivery-not-found'
 
 export interface RegisterPodResult {
-  success: boolean;
-  trip?: Trip;
-  reason?: RegisterPodReason;
+  success: boolean
+  trip?: Trip
+  reason?: RegisterPodReason
   // Fase C (hallazgo propio): el intento de marcar la Delivery
   // FINALIZADO puede fallar (ej. todavia esta en CREADO, nunca salio a
   // EN_TRANSITO — transitionDelivery no permite ese salto directo,
@@ -514,7 +571,7 @@ export interface RegisterPodResult {
   // esto (mismo criterio que 'propagation-failed' en
   // deliveries.service.ts#registrarEntrega) — pero `success: true` sin
   // este campo mentiria sobre un efecto que en realidad no se aplico.
-  deliveryFinalized: boolean;
+  deliveryFinalized: boolean
 }
 
 export async function registerPod(
@@ -533,17 +590,17 @@ export async function registerPod(
     idempotencyKey,
     mock: () =>
       withIdempotency(idempotencyKey, async () => {
-        const trip = tripsStore.find((t) => t.id === tripId);
-        const stop = trip?.paradas.find((s) => s.id === stopId);
+        const trip = tripsStore.find(t => t.id === tripId)
+        const stop = trip?.paradas.find(s => s.id === stopId)
         if (!trip || !stop || !stop.deliveryIds.includes(deliveryId)) {
-          return { success: false, reason: 'not-found' as const, deliveryFinalized: false };
+          return { success: false, reason: 'not-found' as const, deliveryFinalized: false }
         }
-        const delivery = getDeliveryById(deliveryId);
+        const delivery = getDeliveryById(deliveryId)
         if (!delivery) {
-          return { success: false, reason: 'delivery-not-found' as const, deliveryFinalized: false };
+          return { success: false, reason: 'delivery-not-found' as const, deliveryFinalized: false }
         }
 
-        await registerPodEvidence(empresaId, deliveryId, stopId, input, quien);
+        await registerPodEvidence(empresaId, deliveryId, stopId, input, quien)
 
         // "si no lo estaba" (tarea): FINALIZADO ya alcanzado (ej. via
         // registrarEntrega) no se reintenta — transitionDelivery con la
@@ -561,15 +618,29 @@ export async function registerPod(
         // `deliveryFinalized` ahora dice la verdad sobre ese efecto.
         const deliveryFinalized =
           delivery.status === 'FINALIZADO' ||
-          (await transitionDelivery(empresaId, `${idempotencyKey}-finalizar`, deliveryId, 'FINALIZADO', quien)).success;
+          (
+            await transitionDelivery(
+              empresaId,
+              `${idempotencyKey}-finalizar`,
+              deliveryId,
+              'FINALIZADO',
+              quien
+            )
+          ).success
 
-        const paradas = trip.paradas.map((s) => (s.id === stopId ? { ...s, estado: 'Visitada' as const } : s));
-        const updated: Trip = { ...trip, paradas, updatedAt: nowISO() };
-        tripsStore = tripsStore.map((t) => (t.id === tripId ? updated : t));
+        const paradas = trip.paradas.map(s =>
+          s.id === stopId ? { ...s, estado: 'Visitada' as const } : s
+        )
+        const updated: Trip = { ...trip, paradas, updatedAt: nowISO() }
+        tripsStore = tripsStore.map(t => (t.id === tripId ? updated : t))
 
-        return { success: true, trip: structuredClone(withComputedFields(updated)), deliveryFinalized };
+        return {
+          success: true,
+          trip: structuredClone(withComputedFields(updated)),
+          deliveryFinalized,
+        }
       }),
-  });
+  })
 }
 
 // ============================================================
@@ -591,9 +662,9 @@ export async function registerPod(
 // ============================================================
 
 export interface MarkStopNoVisitadaInput {
-  motivoCodigo: string;
-  motivoOtroTexto?: string;
-  fechaNueva: string; // ISO date (yyyy-MM-dd) — proximo intento
+  motivoCodigo: string
+  motivoOtroTexto?: string
+  fechaNueva: string // ISO date (yyyy-MM-dd) — proximo intento
 }
 
 // Tanda 13 — HALLAZGO ALTO corregido (enmienda ADR-013): antes esta
@@ -614,18 +685,18 @@ export type MarkStopNoVisitadaReason =
   | 'stop-not-pendiente'
   | 'no-deliveries'
   | 'delivery-en-estado-terminal'
-  | 'reprogram-failed';
+  | 'reprogram-failed'
 
 export interface MarkStopNoVisitadaDeliveryResult {
-  deliveryId: DeliveryId;
-  success: boolean;
+  deliveryId: DeliveryId
+  success: boolean
 }
 
 export interface MarkStopNoVisitadaResult {
-  success: boolean;
-  trip?: Trip;
-  reason?: MarkStopNoVisitadaReason;
-  resultadosPorEntrega?: MarkStopNoVisitadaDeliveryResult[];
+  success: boolean
+  trip?: Trip
+  reason?: MarkStopNoVisitadaReason
+  resultadosPorEntrega?: MarkStopNoVisitadaDeliveryResult[]
 }
 
 export async function markStopNoVisitada(
@@ -664,18 +735,18 @@ export async function markStopNoVisitada(
         // vez — nunca un error"). Mismo patron corregido en
         // deliveries.service.ts#reprogramDelivery/registrarEntrega/
         // createDelivery (ver ese archivo).
-        const trip = tripsStore.find((t) => t.id === tripId);
-        const stop = trip?.paradas.find((s) => s.id === stopId);
+        const trip = tripsStore.find(t => t.id === tripId)
+        const stop = trip?.paradas.find(s => s.id === stopId)
         if (!trip || !stop) {
-          return { success: false, reason: 'not-found' as const };
+          return { success: false, reason: 'not-found' as const }
         }
 
         const deliveries: Delivery[] = stop.deliveryIds
-          .map((id) => getDeliveryById(id))
-          .filter((d): d is Delivery => d !== undefined);
-        const blockReason = getStopNoVisitadaBlockReason(trip, stop, deliveries);
+          .map(id => getDeliveryById(id))
+          .filter((d): d is Delivery => d !== undefined)
+        const blockReason = getStopNoVisitadaBlockReason(trip, stop, deliveries)
         if (blockReason) {
-          return { success: false, reason: blockReason };
+          return { success: false, reason: blockReason }
         }
 
         // Sub-clave por entrega, mismo criterio que registerPod
@@ -683,18 +754,23 @@ export async function markStopNoVisitada(
         // reprogramDelivery necesita su propia clave, la misma clave
         // repetida N veces cachearia solo el primer resultado para las
         // N entregas.
-        const resultadosPorEntrega: MarkStopNoVisitadaDeliveryResult[] = [];
+        const resultadosPorEntrega: MarkStopNoVisitadaDeliveryResult[] = []
         for (const deliveryId of stop.deliveryIds) {
-          const result = await reprogramDelivery(empresaId, `${idempotencyKey}-${deliveryId}`, deliveryId, {
-            fechaNueva: input.fechaNueva,
-            motivoCodigo: input.motivoCodigo,
-            motivoOtroTexto: input.motivoOtroTexto,
-            motivoTipo: 'no-entrega',
-            responsable: quien,
-            tripId,
-            stopId,
-          });
-          resultadosPorEntrega.push({ deliveryId, success: result.success });
+          const result = await reprogramDelivery(
+            empresaId,
+            `${idempotencyKey}-${deliveryId}`,
+            deliveryId,
+            {
+              fechaNueva: input.fechaNueva,
+              motivoCodigo: input.motivoCodigo,
+              motivoOtroTexto: input.motivoOtroTexto,
+              motivoTipo: 'no-entrega',
+              responsable: quien,
+              tripId,
+              stopId,
+            }
+          )
+          resultadosPorEntrega.push({ deliveryId, success: result.success })
         }
 
         // Tanda 13 (hallazgo ALTO): si CUALQUIER reprogramacion fallo,
@@ -709,22 +785,28 @@ export async function markStopNoVisitada(
         // queda en la respuesta para que quien llama sepa exactamente
         // que entregas reprogramo y cuales no, y pueda reintentar sobre
         // las que fallaron.
-        if (resultadosPorEntrega.some((r) => !r.success)) {
-          return { success: false, reason: 'reprogram-failed' as const, resultadosPorEntrega };
+        if (resultadosPorEntrega.some(r => !r.success)) {
+          return { success: false, reason: 'reprogram-failed' as const, resultadosPorEntrega }
         }
 
         // trip pudo cambiar (capacidadUsada/version) por cada
         // liberacion de entrega de arriba (releaseDeliveryFromTrip,
         // ADR-013 seccion 1) — se relee de tripsStore, no se reusa la
         // referencia `trip` de antes del loop.
-        const tripActualizado = tripsStore.find((t) => t.id === tripId)!;
-        const paradas = tripActualizado.paradas.map((s) => (s.id === stopId ? { ...s, estado: 'NoVisitada' as const } : s));
-        const updated: Trip = { ...tripActualizado, paradas, updatedAt: nowISO() };
-        tripsStore = tripsStore.map((t) => (t.id === tripId ? updated : t));
+        const tripActualizado = tripsStore.find(t => t.id === tripId)!
+        const paradas = tripActualizado.paradas.map(s =>
+          s.id === stopId ? { ...s, estado: 'NoVisitada' as const } : s
+        )
+        const updated: Trip = { ...tripActualizado, paradas, updatedAt: nowISO() }
+        tripsStore = tripsStore.map(t => (t.id === tripId ? updated : t))
 
-        return { success: true, trip: structuredClone(withComputedFields(updated)), resultadosPorEntrega };
+        return {
+          success: true,
+          trip: structuredClone(withComputedFields(updated)),
+          resultadosPorEntrega,
+        }
       }),
-  });
+  })
 }
 
 // ============================================================
@@ -742,26 +824,26 @@ export async function markStopNoVisitada(
 // ============================================================
 
 export interface TripPositionQueryFilters {
-  empresaId: string;
-  tripId: TripId;
+  empresaId: string
+  tripId: TripId
 }
 
 export async function getTripPosition(
   query: PageQuery<TripPositionQueryFilters>,
   signal?: AbortSignal
 ): Promise<PageResult<TripPosition, undefined>> {
-  const { tripId, empresaId } = query.filters;
+  const { tripId, empresaId } = query.filters
   return httpClient.request<PageResult<TripPosition, undefined>>({
     method: 'GET',
     path: `/trips/${tripId}/posicion`,
     params: { empresaId },
     signal,
     mock: () => {
-      const trip = tripsStore.find((t) => t.id === tripId);
-      const items = trip?.posicionActual ? [trip.posicionActual] : [];
-      return { items, total: items.length, page: 1, pageSize: 1 };
+      const trip = tripsStore.find(t => t.id === tripId)
+      const items = trip?.posicionActual ? [trip.posicionActual] : []
+      return { items, total: items.length, page: 1, pageSize: 1 }
     },
-  });
+  })
 }
 
 // ============================================================
@@ -774,25 +856,29 @@ export async function getTripPosition(
 // decimar de verdad todavia).
 // ============================================================
 
-export async function getTripRoute(empresaId: string, tripId: TripId, signal?: AbortSignal): Promise<TripPosition[]> {
+export async function getTripRoute(
+  empresaId: string,
+  tripId: TripId,
+  signal?: AbortSignal
+): Promise<TripPosition[]> {
   return httpClient.request<TripPosition[]>({
     method: 'GET',
     path: `/trips/${tripId}/recorrido`,
     params: { empresaId },
     signal,
     mock: () => {
-      const trip = tripsStore.find((t) => t.id === tripId);
-      if (!trip?.posicionActual) return [];
+      const trip = tripsStore.find(t => t.id === tripId)
+      if (!trip?.posicionActual) return []
 
-      const { lat, lng, timestampServidor } = trip.posicionActual;
-      const base = new Date(timestampServidor).getTime();
+      const { lat, lng, timestampServidor } = trip.posicionActual
+      const base = new Date(timestampServidor).getTime()
       const synthetic: TripPosition[] = Array.from({ length: 5 }, (_, i) => ({
         lat: lat - (4 - i) * 0.002,
         lng: lng - (4 - i) * 0.002,
         timestampDispositivo: new Date(base - (4 - i) * 5 * 60_000).toISOString(),
         timestampServidor: new Date(base - (4 - i) * 5 * 60_000).toISOString(),
-      }));
-      return synthetic.slice(0, MAX_ROUTE_POINTS);
+      }))
+      return synthetic.slice(0, MAX_ROUTE_POINTS)
     },
-  });
+  })
 }

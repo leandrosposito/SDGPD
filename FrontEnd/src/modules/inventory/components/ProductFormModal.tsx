@@ -1,17 +1,17 @@
-import { useEffect, useMemo, useState, type FC } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { toast } from 'sonner';
-import { Modal } from '@/shared/components/ui/Modal';
-import type { InventoryItem } from '@/shared/types/inventory.types';
-import type { Supplier } from '@/shared/types/supplier.types';
+import { useEffect, useMemo, useState, type FC } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { toast } from 'sonner'
+import { Modal } from '@/shared/components/ui/Modal'
+import type { InventoryItem } from '@/shared/types/inventory.types'
+import type { Supplier } from '@/shared/types/supplier.types'
 import {
   createProductFormSchema,
   productFormDefaultValues,
   type ProductFormInput,
   type ProductFormValues,
-} from './ProductFormModal.schema';
-import './InventoryModals.css';
+} from './ProductFormModal.schema'
+import './InventoryModals.css'
 
 // ============================================================
 // ProductFormModal — RF-PRD-001 (ABM Central de Productos)
@@ -21,15 +21,15 @@ import './InventoryModals.css';
 // ============================================================
 
 interface ProductFormModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  product?: InventoryItem | null;
-  existingProducts?: InventoryItem[];
+  isOpen: boolean
+  onClose: () => void
+  product?: InventoryItem | null
+  existingProducts?: InventoryItem[]
   // Lista de proveedores reales para el select (E3, R2): se resuelve por
   // id contra suppliers.service, nunca por coincidencia de nombre.
-  suppliers?: Supplier[];
-  onSave?: (values: ProductFormValues, productId?: string) => Promise<InventoryItem>;
-  onDelete?: (productId: string) => Promise<void>;
+  suppliers?: Supplier[]
+  onSave?: (values: ProductFormValues, productId?: string) => Promise<InventoryItem>
+  onDelete?: (productId: string) => Promise<void>
 }
 
 export const ProductFormModal: FC<ProductFormModalProps> = ({
@@ -41,14 +41,14 @@ export const ProductFormModal: FC<ProductFormModalProps> = ({
   onSave,
   onDelete,
 }) => {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
 
   const schema = useMemo(
     () => createProductFormSchema(existingProducts, product?.id),
     [existingProducts, product?.id]
-  );
+  )
 
   // useForm con 3 generics (input, context, output): cost/price usan
   // z.coerce.number(), cuyo input (pre-coercion) es distinto del output
@@ -62,7 +62,7 @@ export const ProductFormModal: FC<ProductFormModalProps> = ({
   } = useForm<ProductFormInput, unknown, ProductFormValues>({
     resolver: zodResolver(schema),
     defaultValues: productFormDefaultValues(product),
-  });
+  })
 
   // Not a pure derived value: confirmingDelete is local UI state toggled by the
   // user while the modal is open (see the "Eliminar"/"Cancelar" buttons below),
@@ -71,43 +71,45 @@ export const ProductFormModal: FC<ProductFormModalProps> = ({
   // change to reset it — a legitimate use of an effect, not something derivable.
   useEffect(() => {
     if (isOpen) {
-      reset(productFormDefaultValues(product));
+      reset(productFormDefaultValues(product))
       // eslint-disable-next-line react-hooks/set-state-in-effect -- see comment above
-      setConfirmingDelete(false);
+      setConfirmingDelete(false)
     }
-  }, [isOpen, product, reset]);
+  }, [isOpen, product, reset])
 
   const onSubmit = async (values: ProductFormValues) => {
     if (!onSave) {
-      onClose();
-      return;
+      onClose()
+      return
     }
-    setIsSubmitting(true);
+    setIsSubmitting(true)
     try {
-      await onSave(values, product?.id);
-      toast.success(product ? 'Producto actualizado correctamente.' : 'Producto creado correctamente.');
-      onClose();
+      await onSave(values, product?.id)
+      toast.success(
+        product ? 'Producto actualizado correctamente.' : 'Producto creado correctamente.'
+      )
+      onClose()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'No se pudo guardar el producto.');
+      toast.error(err instanceof Error ? err.message : 'No se pudo guardar el producto.')
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
 
   const handleConfirmDelete = async () => {
-    if (!product || !onDelete) return;
-    setIsDeleting(true);
+    if (!product || !onDelete) return
+    setIsDeleting(true)
     try {
-      await onDelete(product.id);
-      toast.success('Producto marcado como Inactivo.');
-      onClose();
+      await onDelete(product.id)
+      toast.success('Producto marcado como Inactivo.')
+      onClose()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'No se pudo desactivar el producto.');
+      toast.error(err instanceof Error ? err.message : 'No se pudo desactivar el producto.')
     } finally {
-      setIsDeleting(false);
-      setConfirmingDelete(false);
+      setIsDeleting(false)
+      setConfirmingDelete(false)
     }
-  };
+  }
 
   return (
     <Modal
@@ -118,8 +120,8 @@ export const ProductFormModal: FC<ProductFormModalProps> = ({
         confirmingDelete ? (
           <div className="product-delete-confirm">
             <span className="product-delete-confirm__text">
-              ¿Marcar este producto como Inactivo? No se borra del catálogo — vas a poder reactivarlo después
-              editándolo y cambiando su Estado a Activo.
+              ¿Marcar este producto como Inactivo? No se borra del catálogo — vas a poder
+              reactivarlo después editándolo y cambiando su Estado a Activo.
             </span>
             <div className="product-modal-footer__actions">
               <button
@@ -155,7 +157,12 @@ export const ProductFormModal: FC<ProductFormModalProps> = ({
               <div />
             )}
             <div className="product-modal-footer__actions">
-              <button type="button" className="btn-secondary" onClick={onClose} disabled={isSubmitting}>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={onClose}
+                disabled={isSubmitting}
+              >
                 Cancelar
               </button>
               <button
@@ -198,7 +205,9 @@ export const ProductFormModal: FC<ProductFormModalProps> = ({
               placeholder="Ej. 7791234567890"
               {...register('barcode')}
             />
-            {errors.barcode && <span className="text-danger text-xs">{errors.barcode.message}</span>}
+            {errors.barcode && (
+              <span className="text-danger text-xs">{errors.barcode.message}</span>
+            )}
           </div>
         </div>
 
@@ -242,7 +251,9 @@ export const ProductFormModal: FC<ProductFormModalProps> = ({
               <option value="Limpieza">Limpieza</option>
               <option value="Lacteos">Lacteos</option>
             </select>
-            {errors.category && <span className="text-danger text-xs">{errors.category.message}</span>}
+            {errors.category && (
+              <span className="text-danger text-xs">{errors.category.message}</span>
+            )}
           </div>
           <div className="form-group">
             <label htmlFor="unitOfMeasure" className="form-label">
@@ -266,7 +277,7 @@ export const ProductFormModal: FC<ProductFormModalProps> = ({
             </label>
             <select id="supplierId" className="form-input" {...register('supplierId')}>
               <option value="">(Ninguno)</option>
-              {suppliers.map((supplier) => (
+              {suppliers.map(supplier => (
                 <option key={supplier.id} value={supplier.id}>
                   {supplier.name}
                 </option>
@@ -312,5 +323,5 @@ export const ProductFormModal: FC<ProductFormModalProps> = ({
         </div>
       </form>
     </Modal>
-  );
-};
+  )
+}

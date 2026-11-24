@@ -1,23 +1,23 @@
-import { useEffect, useMemo, useRef, useState, type FC } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { toast } from 'sonner';
-import { Search, Trash2 } from 'lucide-react';
-import { Modal } from '@/shared/components/ui/Modal';
-import { useSessionStore } from '@/shared/state/useSessionStore';
-import type { Branch } from '@/shared/types/session.types';
-import type { Supplier } from '@/shared/types/supplier.types';
-import type { InventoryItem } from '@/shared/types/inventory.types';
-import type { PurchaseOrder } from '@/shared/types/purchaseOrder.types';
-import { asBranchId } from '@/shared/types/ids.types';
-import { createPurchaseOrder } from '@/services/mock/purchaseOrders.service';
+import { useEffect, useMemo, useRef, useState, type FC } from 'react'
+import { useForm, useFieldArray } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { toast } from 'sonner'
+import { Search, Trash2 } from 'lucide-react'
+import { Modal } from '@/shared/components/ui/Modal'
+import { useSessionStore } from '@/shared/state/useSessionStore'
+import type { Branch } from '@/shared/types/session.types'
+import type { Supplier } from '@/shared/types/supplier.types'
+import type { InventoryItem } from '@/shared/types/inventory.types'
+import type { PurchaseOrder } from '@/shared/types/purchaseOrder.types'
+import { asBranchId } from '@/shared/types/ids.types'
+import { createPurchaseOrder } from '@/services/mock/purchaseOrders.service'
 import {
   purchaseOrderFormSchema,
   purchaseOrderFormDefaultValues,
   type PurchaseOrderFormInput,
   type PurchaseOrderFormValues,
-} from './PurchaseOrderFormModal.schema';
-import './PurchaseOrderFormModal.css';
+} from './PurchaseOrderFormModal.schema'
+import './PurchaseOrderFormModal.css'
 
 // ============================================================
 // PurchaseOrderFormModal — Alta de OrdenDeCompra (O4): migracion del
@@ -43,18 +43,18 @@ import './PurchaseOrderFormModal.css';
 // ============================================================
 
 interface PurchaseOrderFormModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  suppliers: Supplier[];
-  branches: Branch[];
-  products: InventoryItem[];
-  defaultSupplierId?: string;
-  defaultBranchId?: string;
+  isOpen: boolean
+  onClose: () => void
+  suppliers: Supplier[]
+  branches: Branch[]
+  products: InventoryItem[]
+  defaultSupplierId?: string
+  defaultBranchId?: string
   // Linea precargada (ej. deep-link "Generar OC" desde stock critico de
   // Inventario, ver docs/DECISIONES_TECNICAS.md, O4) — editable por el
   // usuario como cualquier otra linea, no un valor fijo.
-  defaultLines?: PurchaseOrderFormInput['lines'];
-  onCreated: (order: PurchaseOrder) => void;
+  defaultLines?: PurchaseOrderFormInput['lines']
+  onCreated: (order: PurchaseOrder) => void
 }
 
 export const PurchaseOrderFormModal: FC<PurchaseOrderFormModalProps> = ({
@@ -68,9 +68,9 @@ export const PurchaseOrderFormModal: FC<PurchaseOrderFormModalProps> = ({
   defaultLines,
   onCreated,
 }) => {
-  const empresaId = useSessionStore((s) => s.session?.company.id);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [productQuery, setProductQuery] = useState('');
+  const empresaId = useSessionStore(s => s.session?.company.id)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [productQuery, setProductQuery] = useState('')
 
   const {
     register,
@@ -82,9 +82,9 @@ export const PurchaseOrderFormModal: FC<PurchaseOrderFormModalProps> = ({
   } = useForm<PurchaseOrderFormInput, unknown, PurchaseOrderFormValues>({
     resolver: zodResolver(purchaseOrderFormSchema),
     defaultValues: purchaseOrderFormDefaultValues(defaultSupplierId, defaultBranchId),
-  });
+  })
 
-  const { fields, append, remove, update } = useFieldArray({ control, name: 'lines' });
+  const { fields, append, remove, update } = useFieldArray({ control, name: 'lines' })
 
   // Reinicia el formulario cada vez que se abre (draft state editable por
   // el usuario, no un valor derivado — mismo criterio que
@@ -100,38 +100,42 @@ export const PurchaseOrderFormModal: FC<PurchaseOrderFormModalProps> = ({
   // una opcion que todavia no existe) y el proveedor preseleccionado se
   // pierde en silencio — bug real encontrado en la verificacion en
   // navegador de esta tarea, ver DECISIONES_TECNICAS.md.
-  const appliedDefaultsRef = useRef(false);
+  const appliedDefaultsRef = useRef(false)
   useEffect(() => {
     if (!isOpen) {
-      appliedDefaultsRef.current = false;
-      return;
+      appliedDefaultsRef.current = false
+      return
     }
-    if (appliedDefaultsRef.current) return;
-    if (defaultSupplierId && !suppliers.some((s) => s.id === defaultSupplierId)) return;
+    if (appliedDefaultsRef.current) return
+    if (defaultSupplierId && !suppliers.some(s => s.id === defaultSupplierId)) return
 
-    reset(purchaseOrderFormDefaultValues(defaultSupplierId, defaultBranchId, defaultLines));
-    setProductQuery('');
-    appliedDefaultsRef.current = true;
-  }, [isOpen, defaultSupplierId, defaultBranchId, defaultLines, suppliers, reset]);
+    reset(purchaseOrderFormDefaultValues(defaultSupplierId, defaultBranchId, defaultLines))
+    setProductQuery('')
+    appliedDefaultsRef.current = true
+  }, [isOpen, defaultSupplierId, defaultBranchId, defaultLines, suppliers, reset])
 
   const productMatches = useMemo(() => {
-    const q = productQuery.trim().toLowerCase();
-    if (!q) return [];
+    const q = productQuery.trim().toLowerCase()
+    if (!q) return []
     // Tanda 14 (hallazgo Tanda 12 a medias): un producto dado de baja
     // no debe poder agregarse a una OC nueva — `products` sigue
     // llegando completo (ComprasPage tambien lo usa para resolver
     // nombres de lineas de OCs ya existentes, que pueden referenciar
     // productos ya inactivos), el filtro va aca, en el buscador.
     return products
-      .filter((p) => p.status === 'active' && (p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q)))
-      .slice(0, 8);
-  }, [products, productQuery]);
+      .filter(
+        p =>
+          p.status === 'active' &&
+          (p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q))
+      )
+      .slice(0, 8)
+  }, [products, productQuery])
 
   const handleAddProduct = (product: InventoryItem) => {
-    const existingIndex = fields.findIndex((f) => f.productId === product.id);
+    const existingIndex = fields.findIndex(f => f.productId === product.id)
     if (existingIndex >= 0) {
-      const current = fields[existingIndex];
-      update(existingIndex, { ...current, quantity: (Number(current.quantity) || 0) + 1 });
+      const current = fields[existingIndex]
+      update(existingIndex, { ...current, quantity: (Number(current.quantity) || 0) + 1 })
     } else {
       append({
         productId: product.id,
@@ -139,31 +143,37 @@ export const PurchaseOrderFormModal: FC<PurchaseOrderFormModalProps> = ({
         productName: product.name,
         quantity: 1,
         unitPrice: product.cost,
-      });
+      })
     }
-    setProductQuery('');
-  };
+    setProductQuery('')
+  }
 
   const submitOrder = (status: 'draft' | 'sent') =>
-    handleSubmit(async (values) => {
-      if (!empresaId) return;
-      setIsSubmitting(true);
+    handleSubmit(async values => {
+      if (!empresaId) return
+      setIsSubmitting(true)
       try {
         const result = await createPurchaseOrder(empresaId, {
           supplierId: values.supplierId,
           branchId: asBranchId(values.branchId),
           currency: values.currency,
           status,
-          lines: values.lines.map(({ productId, quantity, unitPrice }) => ({ productId, quantity, unitPrice })),
-        });
+          lines: values.lines.map(({ productId, quantity, unitPrice }) => ({
+            productId,
+            quantity,
+            unitPrice,
+          })),
+        })
 
         if (result.success && result.order) {
           toast.success(
-            status === 'draft' ? 'Orden guardada como borrador.' : 'Orden de compra emitida correctamente.'
-          );
-          onCreated(result.order);
-          onClose();
-          return;
+            status === 'draft'
+              ? 'Orden guardada como borrador.'
+              : 'Orden de compra emitida correctamente.'
+          )
+          onCreated(result.order)
+          onClose()
+          return
         }
 
         const reasonMessage =
@@ -173,19 +183,22 @@ export const PurchaseOrderFormModal: FC<PurchaseOrderFormModalProps> = ({
               ? 'Revisa las cantidades y precios cargados.'
               : result.reason === 'inactive-product'
                 ? 'Uno de los productos cargados esta dado de baja. Quitalo de la orden.'
-                : 'No se pudo crear la orden de compra.';
-        toast.error(reasonMessage);
+                : 'No se pudo crear la orden de compra.'
+        toast.error(reasonMessage)
       } finally {
-        setIsSubmitting(false);
+        setIsSubmitting(false)
       }
-    });
+    })
 
-  const lines = watch('lines');
-  const currency = watch('currency');
-  const total = lines.reduce((sum, l) => sum + (Number(l.quantity) || 0) * (Number(l.unitPrice) || 0), 0);
+  const lines = watch('lines')
+  const currency = watch('currency')
+  const total = lines.reduce(
+    (sum, l) => sum + (Number(l.quantity) || 0) * (Number(l.unitPrice) || 0),
+    0
+  )
 
   function formatCurrency(value: number): string {
-    return new Intl.NumberFormat('es-AR', { style: 'currency', currency }).format(value);
+    return new Intl.NumberFormat('es-AR', { style: 'currency', currency }).format(value)
   }
 
   return (
@@ -196,13 +209,28 @@ export const PurchaseOrderFormModal: FC<PurchaseOrderFormModalProps> = ({
       size="xl"
       footer={
         <div className="modal-footer">
-          <button type="button" className="client-modal-btn client-modal-btn--outline" onClick={onClose} disabled={isSubmitting}>
+          <button
+            type="button"
+            className="client-modal-btn client-modal-btn--outline"
+            onClick={onClose}
+            disabled={isSubmitting}
+          >
             Cancelar
           </button>
-          <button type="button" className="client-modal-btn client-modal-btn--outline" onClick={submitOrder('draft')} disabled={isSubmitting}>
+          <button
+            type="button"
+            className="client-modal-btn client-modal-btn--outline"
+            onClick={submitOrder('draft')}
+            disabled={isSubmitting}
+          >
             {isSubmitting ? 'Guardando...' : 'Guardar Borrador'}
           </button>
-          <button type="button" className="client-modal-btn client-modal-btn--primary" onClick={submitOrder('sent')} disabled={isSubmitting}>
+          <button
+            type="button"
+            className="client-modal-btn client-modal-btn--primary"
+            onClick={submitOrder('sent')}
+            disabled={isSubmitting}
+          >
             {isSubmitting ? 'Emitiendo...' : 'Emitir Orden de Compra'}
           </button>
         </div>
@@ -211,27 +239,41 @@ export const PurchaseOrderFormModal: FC<PurchaseOrderFormModalProps> = ({
       <div className="purchase-order-layout">
         <div className="po-header-grid">
           <div className="client-form-group">
-            <label className="client-form-label" htmlFor="po-supplier">Proveedor</label>
+            <label className="client-form-label" htmlFor="po-supplier">
+              Proveedor
+            </label>
             <select id="po-supplier" className="client-form-select" {...register('supplierId')}>
               <option value="">Seleccionar proveedor...</option>
-              {suppliers.map((s) => (
-                <option key={s.id} value={s.id}>{s.name}</option>
+              {suppliers.map(s => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
               ))}
             </select>
-            {errors.supplierId && <span className="client-form-error">{errors.supplierId.message}</span>}
+            {errors.supplierId && (
+              <span className="client-form-error">{errors.supplierId.message}</span>
+            )}
           </div>
           <div className="client-form-group">
-            <label className="client-form-label" htmlFor="po-branch">Sucursal de Destino</label>
+            <label className="client-form-label" htmlFor="po-branch">
+              Sucursal de Destino
+            </label>
             <select id="po-branch" className="client-form-select" {...register('branchId')}>
               <option value="">Seleccionar sucursal...</option>
-              {branches.map((b) => (
-                <option key={b.id} value={b.id}>{b.name}</option>
+              {branches.map(b => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
               ))}
             </select>
-            {errors.branchId && <span className="client-form-error">{errors.branchId.message}</span>}
+            {errors.branchId && (
+              <span className="client-form-error">{errors.branchId.message}</span>
+            )}
           </div>
           <div className="client-form-group">
-            <label className="client-form-label" htmlFor="po-currency">Moneda</label>
+            <label className="client-form-label" htmlFor="po-currency">
+              Moneda
+            </label>
             <select id="po-currency" className="client-form-select" {...register('currency')}>
               <option value="ARS">Pesos (ARS)</option>
               <option value="USD">Dolares (USD)</option>
@@ -241,7 +283,9 @@ export const PurchaseOrderFormModal: FC<PurchaseOrderFormModalProps> = ({
 
         <div className="po-search-bar">
           <div className="client-form-group" style={{ flex: 1, position: 'relative' }}>
-            <label className="client-form-label" htmlFor="po-product-search">Buscar producto por nombre o SKU</label>
+            <label className="client-form-label" htmlFor="po-product-search">
+              Buscar producto por nombre o SKU
+            </label>
             <div className="po-product-search">
               <Search size={18} className="po-product-search__icon" aria-hidden="true" />
               <input
@@ -250,14 +294,22 @@ export const PurchaseOrderFormModal: FC<PurchaseOrderFormModalProps> = ({
                 className="po-product-search__input"
                 placeholder="Ej: Aceite Girasol..."
                 value={productQuery}
-                onChange={(e) => setProductQuery(e.target.value)}
+                onChange={e => setProductQuery(e.target.value)}
               />
             </div>
             {productMatches.length > 0 && (
-              <ul className="po-product-matches" role="listbox" aria-label="Resultados de busqueda de productos">
-                {productMatches.map((p) => (
+              <ul
+                className="po-product-matches"
+                role="listbox"
+                aria-label="Resultados de busqueda de productos"
+              >
+                {productMatches.map(p => (
                   <li key={p.id}>
-                    <button type="button" className="po-product-matches__item" onClick={() => handleAddProduct(p)}>
+                    <button
+                      type="button"
+                      className="po-product-matches__item"
+                      onClick={() => handleAddProduct(p)}
+                    >
                       <span className="font-medium">{p.name}</span>
                       <span className="text-tertiary text-xs font-mono">{p.sku}</span>
                     </button>
@@ -274,16 +326,26 @@ export const PurchaseOrderFormModal: FC<PurchaseOrderFormModalProps> = ({
           <thead>
             <tr>
               <th>Producto</th>
-              <th className="text-right" style={{ width: '6rem' }}>Cantidad</th>
-              <th className="text-right" style={{ width: '8rem' }}>Precio U.</th>
-              <th className="text-right" style={{ width: '8rem' }}>Subtotal</th>
+              <th className="text-right" style={{ width: '6rem' }}>
+                Cantidad
+              </th>
+              <th className="text-right" style={{ width: '8rem' }}>
+                Precio U.
+              </th>
+              <th className="text-right" style={{ width: '8rem' }}>
+                Subtotal
+              </th>
               <th style={{ width: '3rem' }}></th>
             </tr>
           </thead>
           <tbody>
             {fields.length === 0 ? (
               <tr>
-                <td colSpan={5} className="text-center text-tertiary" style={{ padding: 'var(--space-6)' }}>
+                <td
+                  colSpan={5}
+                  className="text-center text-tertiary"
+                  style={{ padding: 'var(--space-6)' }}
+                >
                   No hay productos cargados en esta orden. Busca uno arriba para agregarlo.
                 </td>
               </tr>
@@ -312,7 +374,9 @@ export const PurchaseOrderFormModal: FC<PurchaseOrderFormModalProps> = ({
                     />
                   </td>
                   <td className="text-right font-medium">
-                    {formatCurrency((Number(lines[index]?.quantity) || 0) * (Number(lines[index]?.unitPrice) || 0))}
+                    {formatCurrency(
+                      (Number(lines[index]?.quantity) || 0) * (Number(lines[index]?.unitPrice) || 0)
+                    )}
                   </td>
                   <td className="text-right">
                     <button
@@ -340,5 +404,5 @@ export const PurchaseOrderFormModal: FC<PurchaseOrderFormModalProps> = ({
         </div>
       </div>
     </Modal>
-  );
-};
+  )
+}

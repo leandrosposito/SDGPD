@@ -17,7 +17,7 @@ export type ApiErrorCode =
   | 'CANCELLED'
   | 'CLIENT_ERROR' // 4xx — nunca se reintenta
   | 'SERVER_ERROR' // 5xx — se reintenta
-  | 'UNKNOWN';
+  | 'UNKNOWN'
 
 // BE-0b (ADR-BE-004 › Errores): en modo http, si el servidor responde con
 // el cuerpo de error del contrato `{ code, message, details? }`, ese `code`
@@ -27,24 +27,24 @@ export type ApiErrorCode =
 // del cliente (TIMEOUT/CLIENT_ERROR/...), que es lo que decide los
 // reintentos — por eso el codigo del servidor va en un campo aparte.
 export interface ApiErrorServerBody {
-  serverCode: string;
-  details?: Record<string, unknown>;
+  serverCode: string
+  details?: Record<string, unknown>
 }
 
 export class ApiError extends Error {
-  readonly status: number;
-  readonly code: ApiErrorCode;
-  readonly serverCode?: string;
-  readonly details?: Record<string, unknown>;
+  readonly status: number
+  readonly code: ApiErrorCode
+  readonly serverCode?: string
+  readonly details?: Record<string, unknown>
 
   constructor(status: number, code: ApiErrorCode, message: string, server?: ApiErrorServerBody) {
-    super(message);
-    this.name = 'ApiError';
-    this.status = status;
-    this.code = code;
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
+    this.code = code
     if (server) {
-      this.serverCode = server.serverCode;
-      if (server.details) this.details = server.details;
+      this.serverCode = server.serverCode
+      if (server.details) this.details = server.details
     }
   }
 }
@@ -52,5 +52,5 @@ export class ApiError extends Error {
 // Un error es reintentable segun la politica del proyecto (httpClient.ts):
 // SOLO errores de red y 5xx. Nunca 4xx, nunca una cancelacion explicita.
 export function isRetryableApiError(error: ApiError): boolean {
-  return error.code === 'NETWORK_ERROR' || error.code === 'TIMEOUT' || error.code === 'SERVER_ERROR';
+  return error.code === 'NETWORK_ERROR' || error.code === 'TIMEOUT' || error.code === 'SERVER_ERROR'
 }

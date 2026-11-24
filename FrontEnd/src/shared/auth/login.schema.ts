@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from 'zod'
 
 // ============================================================
 // login.schema — validacion del formulario de login (convencion del
@@ -10,6 +10,6 @@ import { z } from 'zod';
 export const loginFormSchema = z.object({
   email: z.string().trim().min(1, 'Ingresa tu email').email('El email no es valido'),
   password: z.string().min(1, 'Ingresa tu contrasena'),
-});
+})
 
-export type LoginFormValues = z.infer<typeof loginFormSchema>;
+export type LoginFormValues = z.infer<typeof loginFormSchema>

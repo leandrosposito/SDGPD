@@ -7,17 +7,17 @@
 // orders.service.ts — esto es solo la aritmetica/formato, sin efectos.
 // ============================================================
 
-const ORDER_NUMBER_PATTERN = /^PED-(\d+)$/;
+const ORDER_NUMBER_PATTERN = /^PED-(\d+)$/
 
 export function extractOrderNumberSuffix(orderNumber: string): number | null {
-  const match = ORDER_NUMBER_PATTERN.exec(orderNumber);
-  return match ? Number(match[1]) : null;
+  const match = ORDER_NUMBER_PATTERN.exec(orderNumber)
+  return match ? Number(match[1]) : null
 }
 
 export function maxOrderNumberSuffix(orderNumbers: string[]): number {
-  return orderNumbers.reduce((max, on) => Math.max(max, extractOrderNumberSuffix(on) ?? 0), 0);
+  return orderNumbers.reduce((max, on) => Math.max(max, extractOrderNumberSuffix(on) ?? 0), 0)
 }
 
 export function formatOrderNumber(n: number, digits: number): string {
-  return `PED-${String(n).padStart(digits, '0')}`;
+  return `PED-${String(n).padStart(digits, '0')}`
 }

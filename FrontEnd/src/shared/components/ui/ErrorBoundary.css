@@ -48,7 +48,9 @@
   border: 0.0625rem solid transparent;
   cursor: pointer;
   text-decoration: none;
-  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast);
 }
 
 .error-boundary__button--primary {

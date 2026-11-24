@@ -1,5 +1,5 @@
-import type { FC } from 'react';
-import '@/modules/settings/SettingsPage.css';
+import type { FC } from 'react'
+import '@/modules/settings/SettingsPage.css'
 
 export const TabSystemPreferences: FC = () => {
   return (
@@ -9,17 +9,36 @@ export const TabSystemPreferences: FC = () => {
         <div className="settings-form-group">
           <label className="settings-label">Formato de Remitos y Facturas</label>
           <div style={{ display: 'flex', gap: 'var(--space-4)' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', cursor: 'pointer' }}>
+            <label
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 'var(--space-2)',
+                cursor: 'pointer',
+              }}
+            >
               <input type="radio" name="printFormat" value="a4" defaultChecked /> A4 (Oficina)
             </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', cursor: 'pointer' }}>
+            <label
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 'var(--space-2)',
+                cursor: 'pointer',
+              }}
+            >
               <input type="radio" name="printFormat" value="ticket" /> Ticket 80mm (Punto de Venta)
             </label>
           </div>
         </div>
         <div className="settings-form-group">
           <label className="settings-label">Copias por Defecto</label>
-          <input type="number" className="settings-input" defaultValue={2} style={{ width: '5rem' }} />
+          <input
+            type="number"
+            className="settings-input"
+            defaultValue={2}
+            style={{ width: '5rem' }}
+          />
         </div>
       </div>
 
@@ -53,18 +72,48 @@ export const TabSystemPreferences: FC = () => {
       <h3 className="settings-section-title">Cuentas Bancarias y Recaudación</h3>
       <div className="settings-form-group" style={{ maxWidth: '40rem' }}>
         <div style={{ display: 'flex', gap: 'var(--space-2)', marginBottom: 'var(--space-2)' }}>
-          <input type="text" className="settings-input" defaultValue="Banco Santander - Cta Cte 123/4" style={{ flex: 1 }} />
-          <input type="text" className="settings-input" defaultValue="CBU: 07200000000000000" style={{ flex: 1 }} />
+          <input
+            type="text"
+            className="settings-input"
+            defaultValue="Banco Santander - Cta Cte 123/4"
+            style={{ flex: 1 }}
+          />
+          <input
+            type="text"
+            className="settings-input"
+            defaultValue="CBU: 07200000000000000"
+            style={{ flex: 1 }}
+          />
           <button className="client-modal-btn client-modal-btn--outline">X</button>
         </div>
         <div style={{ display: 'flex', gap: 'var(--space-2)', marginBottom: 'var(--space-2)' }}>
-          <input type="text" className="settings-input" defaultValue="Mercado Pago - CVU Corporativo" style={{ flex: 1 }} />
-          <input type="text" className="settings-input" defaultValue="CVU: 00000031000000000" style={{ flex: 1 }} />
+          <input
+            type="text"
+            className="settings-input"
+            defaultValue="Mercado Pago - CVU Corporativo"
+            style={{ flex: 1 }}
+          />
+          <input
+            type="text"
+            className="settings-input"
+            defaultValue="CVU: 00000031000000000"
+            style={{ flex: 1 }}
+          />
           <button className="client-modal-btn client-modal-btn--outline">X</button>
         </div>
         <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-          <input type="text" className="settings-input" placeholder="Nombre Banco/Billetera" style={{ flex: 1 }} />
-          <input type="text" className="settings-input" placeholder="CBU/CVU o Alias" style={{ flex: 1 }} />
+          <input
+            type="text"
+            className="settings-input"
+            placeholder="Nombre Banco/Billetera"
+            style={{ flex: 1 }}
+          />
+          <input
+            type="text"
+            className="settings-input"
+            placeholder="CBU/CVU o Alias"
+            style={{ flex: 1 }}
+          />
           <button className="client-modal-btn client-modal-btn--primary">+ Añadir</button>
         </div>
       </div>
@@ -73,5 +122,5 @@ export const TabSystemPreferences: FC = () => {
         <button className="client-modal-btn client-modal-btn--primary">Guardar Preferencias</button>
       </div>
     </>
-  );
-};
+  )
+}

@@ -14,5 +14,5 @@
 // ============================================================
 
 export function normalizePatente(raw: string): string {
-  return raw.toUpperCase().replace(/\s+/g, '');
+  return raw.toUpperCase().replace(/\s+/g, '')
 }

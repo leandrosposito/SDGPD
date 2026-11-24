@@ -1,5 +1,5 @@
-import { useSearchParams } from 'react-router-dom';
-import type { PageSort, SortDirection } from '@/shared/types/pagination.types';
+import { useSearchParams } from 'react-router-dom'
+import type { PageSort, SortDirection } from '@/shared/types/pagination.types'
 
 // ============================================================
 // useUrlListState — Tanda 4 (corrida completa, A13 hallazgo ALTO #1):
@@ -34,138 +34,140 @@ import type { PageSort, SortDirection } from '@/shared/types/pagination.types';
 // ============================================================
 
 export function parsePageParam(raw: string | null | undefined): number {
-  if (!raw) return 1;
-  const parsed = Number(raw);
-  if (!Number.isInteger(parsed) || parsed < 1) return 1;
-  return parsed;
+  if (!raw) return 1
+  const parsed = Number(raw)
+  if (!Number.isInteger(parsed) || parsed < 1) return 1
+  return parsed
 }
 
 export function serializePageParam(page: number): string | undefined {
   // pagina 1 es el default: se omite de la URL para no ensuciarla con
   // el caso mas comun (?page=1 en cada listado apenas se abre).
-  return page > 1 ? String(page) : undefined;
+  return page > 1 ? String(page) : undefined
 }
 
 function isSortDirection(value: string): value is SortDirection {
-  return value === 'asc' || value === 'desc';
+  return value === 'asc' || value === 'desc'
 }
 
 export function parseSortParam<TSort extends string>(
   raw: string | null | undefined,
   allowedFields?: readonly TSort[]
 ): PageSort<TSort> | undefined {
-  if (!raw) return undefined;
+  if (!raw) return undefined
 
-  const separatorIndex = raw.lastIndexOf(':');
-  if (separatorIndex <= 0 || separatorIndex === raw.length - 1) return undefined;
+  const separatorIndex = raw.lastIndexOf(':')
+  if (separatorIndex <= 0 || separatorIndex === raw.length - 1) return undefined
 
-  const field = raw.slice(0, separatorIndex);
-  const direction = raw.slice(separatorIndex + 1);
+  const field = raw.slice(0, separatorIndex)
+  const direction = raw.slice(separatorIndex + 1)
 
-  if (!isSortDirection(direction)) return undefined;
-  if (allowedFields && !allowedFields.includes(field as TSort)) return undefined;
+  if (!isSortDirection(direction)) return undefined
+  if (allowedFields && !allowedFields.includes(field as TSort)) return undefined
 
-  return { field: field as TSort, direction };
+  return { field: field as TSort, direction }
 }
 
-export function serializeSortParam<TSort extends string>(sort: PageSort<TSort> | undefined): string | undefined {
-  return sort ? `${sort.field}:${sort.direction}` : undefined;
+export function serializeSortParam<TSort extends string>(
+  sort: PageSort<TSort> | undefined
+): string | undefined {
+  return sort ? `${sort.field}:${sort.direction}` : undefined
 }
 
 export interface UseUrlListStateOptions<TSort extends string, TFilterKey extends string> {
   // Namespace de los params de este listado (ver comentario de arriba).
-  prefix?: string;
+  prefix?: string
   // Whitelist de campos de orden validos — un valor de URL que no este
   // en esta lista se descarta (undefined) en vez de aceptarse a ciegas.
   // Omitir si el listado no tiene orden.
-  sortFields?: readonly TSort[];
+  sortFields?: readonly TSort[]
   // Nombres de los filtros de texto propios del listado (busqueda,
   // estado, rango de fecha ya serializado, etc.) — cada uno se lee/
   // escribe como un string plano en la URL.
-  filterKeys?: readonly TFilterKey[];
+  filterKeys?: readonly TFilterKey[]
 }
 
 export interface UseUrlListStateResult<TSort extends string, TFilterKey extends string> {
-  page: number;
-  setPage: (page: number) => void;
-  sort: PageSort<TSort> | undefined;
-  setSort: (sort: PageSort<TSort> | undefined) => void;
-  filters: Partial<Record<TFilterKey, string>>;
+  page: number
+  setPage: (page: number) => void
+  sort: PageSort<TSort> | undefined
+  setSort: (sort: PageSort<TSort> | undefined) => void
+  filters: Partial<Record<TFilterKey, string>>
   // Actualiza un filtro y vuelve la pagina a 1 (mismo criterio que
   // usePagedQuery aplicaba internamente al cambiar filtros/orden en
   // modo no controlado) — un cambio de filtro nunca deja al usuario
   // "en la pagina 3 de un resultado que ya no tiene 3 paginas".
-  setFilter: (key: TFilterKey, value: string | undefined) => void;
+  setFilter: (key: TFilterKey, value: string | undefined) => void
   // Actualiza VARIOS filtros a la vez en una sola escritura a la URL
   // (ej. un DateRangeValue completo: preset+dateFrom+dateTo) — evita 3
   // llamadas seguidas a setSearchParams, que podrian no componerse
   // entre si de forma segura dentro del mismo handler de evento.
-  setFilters: (patch: Partial<Record<TFilterKey, string | undefined>>) => void;
+  setFilters: (patch: Partial<Record<TFilterKey, string | undefined>>) => void
 }
 
 export function useUrlListState<TSort extends string = never, TFilterKey extends string = never>(
   options: UseUrlListStateOptions<TSort, TFilterKey> = {}
 ): UseUrlListStateResult<TSort, TFilterKey> {
-  const { prefix, sortFields, filterKeys = [] } = options;
-  const [searchParams, setSearchParams] = useSearchParams();
+  const { prefix, sortFields, filterKeys = [] } = options
+  const [searchParams, setSearchParams] = useSearchParams()
 
   function paramName(name: string): string {
-    return prefix ? `${prefix}_${name}` : name;
+    return prefix ? `${prefix}_${name}` : name
   }
 
-  const page = parsePageParam(searchParams.get(paramName('page')));
-  const sort = parseSortParam<TSort>(searchParams.get(paramName('sort')), sortFields);
+  const page = parsePageParam(searchParams.get(paramName('page')))
+  const sort = parseSortParam<TSort>(searchParams.get(paramName('sort')), sortFields)
 
-  const filters: Partial<Record<TFilterKey, string>> = {};
+  const filters: Partial<Record<TFilterKey, string>> = {}
   for (const key of filterKeys) {
-    const value = searchParams.get(paramName(key));
-    if (value) filters[key] = value;
+    const value = searchParams.get(paramName(key))
+    if (value) filters[key] = value
   }
 
   function applyParams(mutate: (params: URLSearchParams) => void, resetPage: boolean) {
     setSearchParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        mutate(next);
-        if (resetPage) next.delete(paramName('page'));
-        return next;
+      prev => {
+        const next = new URLSearchParams(prev)
+        mutate(next)
+        if (resetPage) next.delete(paramName('page'))
+        return next
       },
       { replace: true }
-    );
+    )
   }
 
   function setPage(next: number) {
-    applyParams((params) => {
-      const serialized = serializePageParam(next);
-      if (serialized === undefined) params.delete(paramName('page'));
-      else params.set(paramName('page'), serialized);
-    }, false);
+    applyParams(params => {
+      const serialized = serializePageParam(next)
+      if (serialized === undefined) params.delete(paramName('page'))
+      else params.set(paramName('page'), serialized)
+    }, false)
   }
 
   function setSort(next: PageSort<TSort> | undefined) {
-    applyParams((params) => {
-      const serialized = serializeSortParam(next);
-      if (serialized === undefined) params.delete(paramName('sort'));
-      else params.set(paramName('sort'), serialized);
-    }, true);
+    applyParams(params => {
+      const serialized = serializeSortParam(next)
+      if (serialized === undefined) params.delete(paramName('sort'))
+      else params.set(paramName('sort'), serialized)
+    }, true)
   }
 
   function setFilter(key: TFilterKey, value: string | undefined) {
-    applyParams((params) => {
-      if (!value) params.delete(paramName(key));
-      else params.set(paramName(key), value);
-    }, true);
+    applyParams(params => {
+      if (!value) params.delete(paramName(key))
+      else params.set(paramName(key), value)
+    }, true)
   }
 
   function setFilters(patch: Partial<Record<TFilterKey, string | undefined>>) {
-    applyParams((params) => {
+    applyParams(params => {
       for (const key of Object.keys(patch) as TFilterKey[]) {
-        const value = patch[key];
-        if (!value) params.delete(paramName(key));
-        else params.set(paramName(key), value);
+        const value = patch[key]
+        if (!value) params.delete(paramName(key))
+        else params.set(paramName(key), value)
       }
-    }, true);
+    }, true)
   }
 
-  return { page, setPage, sort, setSort, filters, setFilter, setFilters };
+  return { page, setPage, sort, setSort, filters, setFilter, setFilters }
 }

@@ -1,28 +1,37 @@
-import { useEffect, useMemo, useState, type FC } from 'react';
-import { toast } from 'sonner';
-import { PackageCheck } from 'lucide-react';
-import { useSessionStore } from '@/shared/state/useSessionStore';
-import type { Branch } from '@/shared/types/session.types';
-import type { Supplier } from '@/shared/types/supplier.types';
-import type { InventoryItem } from '@/shared/types/inventory.types';
+import { useEffect, useMemo, useState, type FC } from 'react'
+import { toast } from 'sonner'
+import { PackageCheck } from 'lucide-react'
+import { useSessionStore } from '@/shared/state/useSessionStore'
+import type { Branch } from '@/shared/types/session.types'
+import type { Supplier } from '@/shared/types/supplier.types'
+import type { InventoryItem } from '@/shared/types/inventory.types'
 import type {
   PurchaseOrder,
   PurchaseOrderStatus,
   PurchaseOrdersQueryFilters,
-} from '@/shared/types/purchaseOrder.types';
-import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary';
-import { SkeletonTable } from '@/shared/components/ui/SkeletonLoader';
-import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay';
-import { Pagination } from '@/shared/components/ui/Pagination';
-import { DateRangeFilter } from '@/shared/components/ui/DateRangeFilter';
-import { readDateRangeFromUrl, dateRangeToUrlParams, type DateRangeValue } from '@/shared/components/ui/dateRangePresets';
-import { ExportButton, type ExportColumn } from '@/shared/components/ui/ExportButton';
-import { usePagedQuery } from '@/shared/hooks/usePagedQuery';
-import { useUrlListState } from '@/shared/hooks/useUrlListState';
-import { getPurchaseOrdersPage, exportPurchaseOrders, updatePurchaseOrderStatus, computePurchaseOrderTotal } from '@/services/mock/purchaseOrders.service';
-import { PurchaseOrdersTable } from './PurchaseOrdersTable';
-import { PurchaseOrderDetailPanel } from './PurchaseOrderDetailPanel';
-import { PURCHASE_ORDER_STATUS_LABEL } from '../purchaseOrderLabels';
+} from '@/shared/types/purchaseOrder.types'
+import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary'
+import { SkeletonTable } from '@/shared/components/ui/SkeletonLoader'
+import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay'
+import { Pagination } from '@/shared/components/ui/Pagination'
+import { DateRangeFilter } from '@/shared/components/ui/DateRangeFilter'
+import {
+  readDateRangeFromUrl,
+  dateRangeToUrlParams,
+  type DateRangeValue,
+} from '@/shared/components/ui/dateRangePresets'
+import { ExportButton, type ExportColumn } from '@/shared/components/ui/ExportButton'
+import { usePagedQuery } from '@/shared/hooks/usePagedQuery'
+import { useUrlListState } from '@/shared/hooks/useUrlListState'
+import {
+  getPurchaseOrdersPage,
+  exportPurchaseOrders,
+  updatePurchaseOrderStatus,
+  computePurchaseOrderTotal,
+} from '@/services/mock/purchaseOrders.service'
+import { PurchaseOrdersTable } from './PurchaseOrdersTable'
+import { PurchaseOrderDetailPanel } from './PurchaseOrderDetailPanel'
+import { PURCHASE_ORDER_STATUS_LABEL } from '../purchaseOrderLabels'
 
 // ============================================================
 // TabPendingReceipt — OrdenesDeCompra en estado 'sent' EN LA SUCURSAL
@@ -46,11 +55,11 @@ import { PURCHASE_ORDER_STATUS_LABEL } from '../purchaseOrderLabels';
 // ============================================================
 
 interface TabPendingReceiptProps {
-  branchId: Branch['id'];
-  branchName: string;
-  suppliersById: Map<Supplier['id'], Supplier>;
-  branchesById: Map<Branch['id'], Branch>;
-  productsById: Map<InventoryItem['id'], InventoryItem>;
+  branchId: Branch['id']
+  branchName: string
+  suppliersById: Map<Supplier['id'], Supplier>
+  branchesById: Map<Branch['id'], Branch>
+  productsById: Map<InventoryItem['id'], InventoryItem>
 }
 
 export const TabPendingReceipt: FC<TabPendingReceiptProps> = ({
@@ -60,10 +69,10 @@ export const TabPendingReceipt: FC<TabPendingReceiptProps> = ({
   branchesById,
   productsById,
 }) => {
-  const empresaId = useSessionStore((s) => s.session?.company.id);
-  const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(null);
-  const [isDetailOpen, setIsDetailOpen] = useState(false);
-  const [isTransitioning, setIsTransitioning] = useState(false);
+  const empresaId = useSessionStore(s => s.session?.company.id)
+  const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(null)
+  const [isDetailOpen, setIsDetailOpen] = useState(false)
+  const [isTransitioning, setIsTransitioning] = useState(false)
   // Rango de fecha y pagina propios (tarea transversal + Tanda 4,
   // corrida completa), independientes del tab "Listado General" de la
   // misma pagina — prefijo `rec_` para no chocar con `oc_` (ComprasPage)
@@ -72,24 +81,30 @@ export const TabPendingReceipt: FC<TabPendingReceiptProps> = ({
   const urlState = useUrlListState<never, 'preset' | 'from' | 'to'>({
     prefix: 'rec',
     filterKeys: ['preset', 'from', 'to'],
-  });
+  })
 
   // Lectura y escritura del rango: helper compartido de
   // dateRangePresets.ts (Tanda 24, regla PROTOCOLO 3.8). Default 'all'.
-  const { preset: urlPreset, from: urlFrom, to: urlTo } = urlState.filters;
+  const { preset: urlPreset, from: urlFrom, to: urlTo } = urlState.filters
   const dateRange: DateRangeValue = useMemo(
     () => readDateRangeFromUrl({ preset: urlPreset, from: urlFrom, to: urlTo }, 'all'),
     [urlPreset, urlFrom, urlTo]
-  );
+  )
 
   function setDateRange(next: DateRangeValue) {
-    urlState.setFilters(dateRangeToUrlParams(next, 'all'));
+    urlState.setFilters(dateRangeToUrlParams(next, 'all'))
   }
 
   const filters: PurchaseOrdersQueryFilters = useMemo(
-    () => ({ empresaId: empresaId ?? '', status: 'sent', branchId, dateFrom: dateRange.dateFrom, dateTo: dateRange.dateTo }),
+    () => ({
+      empresaId: empresaId ?? '',
+      status: 'sent',
+      branchId,
+      dateFrom: dateRange.dateFrom,
+      dateTo: dateRange.dateTo,
+    }),
     [empresaId, branchId, dateRange]
-  );
+  )
 
   const {
     items: orders,
@@ -106,53 +121,59 @@ export const TabPendingReceipt: FC<TabPendingReceiptProps> = ({
   } = usePagedQuery(getPurchaseOrdersPage, filters, {
     page: urlState.page,
     onPageChange: urlState.setPage,
-  });
+  })
 
   useEffect(() => {
-    if (error) toast.error('No se pudo cargar el listado de pendientes de recepcion.');
-  }, [error]);
+    if (error) toast.error('No se pudo cargar el listado de pendientes de recepcion.')
+  }, [error])
 
   const handleViewDetail = (order: PurchaseOrder) => {
-    setSelectedOrder(order);
-    setIsDetailOpen(true);
-  };
+    setSelectedOrder(order)
+    setIsDetailOpen(true)
+  }
 
   const handleTransition = async (order: PurchaseOrder, nextStatus: PurchaseOrderStatus) => {
-    setIsTransitioning(true);
+    setIsTransitioning(true)
     try {
-      const result = await updatePurchaseOrderStatus(empresaId ?? '', order.id, nextStatus);
+      const result = await updatePurchaseOrderStatus(empresaId ?? '', order.id, nextStatus)
       if (result.success && result.order) {
-        toast.success(`Orden ${order.id} actualizada.`);
+        toast.success(`Orden ${order.id} actualizada.`)
         // La orden ya no matchea status:'sent' -> desaparece de esta
         // pagina al refetchear (P10: refetch de la pagina vigente, no
         // actualizacion optimista en el cliente).
-        setIsDetailOpen(false);
-        refetch();
-        return;
+        setIsDetailOpen(false)
+        refetch()
+        return
       }
       const message =
         result.reason === 'invalid-transition'
           ? 'Esa orden no puede pasar a ese estado desde su estado actual.'
-          : 'No se encontro la orden de compra.';
-      toast.error(message);
+          : 'No se encontro la orden de compra.'
+      toast.error(message)
     } finally {
-      setIsTransitioning(false);
+      setIsTransitioning(false)
     }
-  };
+  }
 
   // Exportar (tarea transversal): mismos filtros vigentes de este tab
   // (branchId fijo por sucursal activa, status:'sent', rango de fecha
   // propio) via exportPurchaseOrders, que reusa el mismo filtro+orden
   // que getPurchaseOrdersPage.
   const exportColumns: ExportColumn<PurchaseOrder>[] = [
-    { header: 'OC', accessor: (o) => o.id },
-    { header: 'Proveedor', accessor: (o) => suppliersById.get(o.supplierId)?.name ?? 'Proveedor no disponible' },
-    { header: 'Sucursal', accessor: (o) => branchesById.get(o.branchId)?.name ?? 'Sucursal no disponible' },
-    { header: 'Fecha de Creacion', accessor: (o) => o.createdAt.slice(0, 10) },
-    { header: 'Estado', accessor: (o) => PURCHASE_ORDER_STATUS_LABEL[o.status] },
-    { header: 'Moneda', accessor: (o) => o.currency },
-    { header: 'Total', accessor: (o) => computePurchaseOrderTotal(o.lines) },
-  ];
+    { header: 'OC', accessor: o => o.id },
+    {
+      header: 'Proveedor',
+      accessor: o => suppliersById.get(o.supplierId)?.name ?? 'Proveedor no disponible',
+    },
+    {
+      header: 'Sucursal',
+      accessor: o => branchesById.get(o.branchId)?.name ?? 'Sucursal no disponible',
+    },
+    { header: 'Fecha de Creacion', accessor: o => o.createdAt.slice(0, 10) },
+    { header: 'Estado', accessor: o => PURCHASE_ORDER_STATUS_LABEL[o.status] },
+    { header: 'Moneda', accessor: o => o.currency },
+    { header: 'Total', accessor: o => computePurchaseOrderTotal(o.lines) },
+  ]
 
   return (
     <div className="compras-page__tab-content">
@@ -223,5 +244,5 @@ export const TabPendingReceipt: FC<TabPendingReceiptProps> = ({
         isTransitioning={isTransitioning}
       />
     </div>
-  );
-};
+  )
+}

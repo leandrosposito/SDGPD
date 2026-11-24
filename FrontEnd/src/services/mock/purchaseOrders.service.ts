@@ -1,6 +1,6 @@
-import type { Supplier } from '@/shared/types/supplier.types';
-import type { PageQuery, PageResult, ExportResult } from '@/shared/types/pagination.types';
-import { MAX_EXPORT_ROWS } from '@/shared/types/pagination.types';
+import type { Supplier } from '@/shared/types/supplier.types'
+import type { PageQuery, PageResult, ExportResult } from '@/shared/types/pagination.types'
+import { MAX_EXPORT_ROWS } from '@/shared/types/pagination.types'
 import type {
   Currency,
   CreatePurchaseOrderInput,
@@ -15,20 +15,23 @@ import type {
   PurchaseOrdersAggregates,
   PurchaseOrdersQueryFilters,
   PurchaseOrdersSortField,
-} from '@/shared/types/purchaseOrder.types';
-import { PURCHASE_ORDERS_MOCK_DATA } from '@/data/mock/purchaseOrders.data';
-import { httpClient } from '@/shared/api/httpClient';
-import { fetchProducts } from '@/shared/api/products/products.service';
+} from '@/shared/types/purchaseOrder.types'
+import { PURCHASE_ORDERS_MOCK_DATA } from '@/data/mock/purchaseOrders.data'
+import { httpClient } from '@/shared/api/httpClient'
+import { fetchProducts } from '@/shared/api/products/products.service'
 
 // Tanda 14 (hallazgo Tanda 12 a medias): "servidor a servidor" hacia
 // products.service.ts, mismo patron que
 // purchase-suggestions.service.ts#getActiveProductIds — createPurchaseOrder
 // y generatePurchaseOrderFromSuggestion son los 2 puntos que persisten
 // una linea de OC, asi que los 2 necesitan la misma verificacion.
-async function hasInactiveProduct(empresaId: string, productIds: readonly string[]): Promise<boolean> {
-  const products = await fetchProducts(empresaId);
-  const inactiveIds = new Set(products.filter((p) => p.status === 'inactive').map((p) => p.id));
-  return productIds.some((id) => inactiveIds.has(id));
+async function hasInactiveProduct(
+  empresaId: string,
+  productIds: readonly string[]
+): Promise<boolean> {
+  const products = await fetchProducts(empresaId)
+  const inactiveIds = new Set(products.filter(p => p.status === 'inactive').map(p => p.id))
+  return productIds.some(id => inactiveIds.has(id))
 }
 
 // ============================================================
@@ -48,7 +51,7 @@ async function hasInactiveProduct(empresaId: string, productIds: readonly string
 // clients.service.ts/products.service.ts.
 // ============================================================
 
-let purchaseOrdersStore: PurchaseOrder[] = structuredClone(PURCHASE_ORDERS_MOCK_DATA);
+let purchaseOrdersStore: PurchaseOrder[] = structuredClone(PURCHASE_ORDERS_MOCK_DATA)
 
 // Total de una orden (O2): SIEMPRE derivado de sus lineas, nunca un
 // campo propio. Se llama tanto para construir agregados (server-side,
@@ -58,12 +61,12 @@ let purchaseOrdersStore: PurchaseOrder[] = structuredClone(PURCHASE_ORDERS_MOCK_
 // completa, igual que OrderItemsTable ya calculaba quantity*unitPrice
 // por fila antes de esta tarea).
 export function computePurchaseOrderTotal(lines: PurchaseOrderLine[]): number {
-  return lines.reduce((sum, l) => sum + l.quantity * l.unitPrice, 0);
+  return lines.reduce((sum, l) => sum + l.quantity * l.unitPrice, 0)
 }
 
 function matchesSearch(orderId: string, search: string | undefined): boolean {
-  if (!search || !search.trim()) return true;
-  return orderId.toLowerCase().includes(search.trim().toLowerCase());
+  if (!search || !search.trim()) return true
+  return orderId.toLowerCase().includes(search.trim().toLowerCase())
 }
 
 // dateFrom/dateTo (DateRangeFilter, tarea transversal): comparan solo
@@ -71,11 +74,15 @@ function matchesSearch(orderId: string, search: string | undefined): boolean {
 // los dos limites (ISO date puro) — asi una orden creada HOY a
 // cualquier hora cae dentro de un rango cuyo `dateTo` es hoy, en vez de
 // quedar afuera por la parte de hora del datetime.
-function isWithinDateRange(dateISO: string, dateFrom: string | undefined, dateTo: string | undefined): boolean {
-  const day = dateISO.slice(0, 10);
-  if (dateFrom && day < dateFrom) return false;
-  if (dateTo && day > dateTo) return false;
-  return true;
+function isWithinDateRange(
+  dateISO: string,
+  dateFrom: string | undefined,
+  dateTo: string | undefined
+): boolean {
+  const day = dateISO.slice(0, 10)
+  if (dateFrom && day < dateFrom) return false
+  if (dateTo && day > dateTo) return false
+  return true
 }
 
 // Filtro compartido entre getPurchaseOrdersPage y exportPurchaseOrders
@@ -85,40 +92,40 @@ function isWithinDateRange(dateISO: string, dateFrom: string | undefined, dateTo
 // scope SIN ese filtro).
 function filterOrdersInScope(filters: PurchaseOrdersQueryFilters): PurchaseOrder[] {
   return purchaseOrdersStore.filter(
-    (o) =>
+    o =>
       matchesSearch(o.id, filters.search) &&
       (!filters.supplierId || o.supplierId === filters.supplierId) &&
       (!filters.branchId || o.branchId === filters.branchId) &&
       isWithinDateRange(o.createdAt, filters.dateFrom, filters.dateTo)
-  );
+  )
 }
 
 function sortOrders(
   orders: PurchaseOrder[],
   sort: { field: PurchaseOrdersSortField; direction: 'asc' | 'desc' } | undefined
 ): PurchaseOrder[] {
-  const sortField = sort?.field ?? 'createdAt';
-  const direction = sort?.direction ?? 'desc';
+  const sortField = sort?.field ?? 'createdAt'
+  const direction = sort?.direction ?? 'desc'
   return [...orders].sort((a, b) => {
-    const cmp = compareOrders(a, b, sortField);
-    const primary = direction === 'asc' ? cmp : -cmp;
+    const cmp = compareOrders(a, b, sortField)
+    const primary = direction === 'asc' ? cmp : -cmp
     // Desempate estable por id (3.3): un orden ambiguo hace que la
     // misma OC aparezca en dos paginas o en ninguna al paginar.
-    return primary !== 0 ? primary : a.id.localeCompare(b.id);
-  });
+    return primary !== 0 ? primary : a.id.localeCompare(b.id)
+  })
 }
 
 function compareOrders(a: PurchaseOrder, b: PurchaseOrder, field: PurchaseOrdersSortField): number {
   switch (field) {
     case 'total':
-      return computePurchaseOrderTotal(a.lines) - computePurchaseOrderTotal(b.lines);
+      return computePurchaseOrderTotal(a.lines) - computePurchaseOrderTotal(b.lines)
     case 'createdAt':
     default:
-      return a.createdAt.localeCompare(b.createdAt);
+      return a.createdAt.localeCompare(b.createdAt)
   }
 }
 
-const ALL_STATUSES: readonly PurchaseOrderStatus[] = ['draft', 'sent', 'received', 'cancelled'];
+const ALL_STATUSES: readonly PurchaseOrderStatus[] = ['draft', 'sent', 'received', 'cancelled']
 
 // Agregados por estado (O8): clave compuesta estado:moneda, mismo
 // criterio que AgingBucketAggregate en clients.service.ts. Se calculan
@@ -127,26 +134,31 @@ const ALL_STATUSES: readonly PurchaseOrderStatus[] = ['draft', 'sent', 'received
 // estado es la faceta que el usuario togglea, no debe cambiar los
 // totales de las otras facetas al elegir una).
 function computeAggregates(orders: PurchaseOrder[]): PurchaseOrdersAggregates {
-  const totals = new Map<string, PurchaseOrderStatusAggregate>();
+  const totals = new Map<string, PurchaseOrderStatusAggregate>()
 
   for (const order of orders) {
-    const key = `${order.status}:${order.currency}`;
-    const current = totals.get(key) ?? { status: order.status, currency: order.currency, count: 0, total: 0 };
-    current.count += 1;
-    current.total += computePurchaseOrderTotal(order.lines);
-    totals.set(key, current);
+    const key = `${order.status}:${order.currency}`
+    const current = totals.get(key) ?? {
+      status: order.status,
+      currency: order.currency,
+      count: 0,
+      total: 0,
+    }
+    current.count += 1
+    current.total += computePurchaseOrderTotal(order.lines)
+    totals.set(key, current)
   }
 
   const currencies = new Set<Currency>(
-    orders.length > 0 ? orders.map((o) => o.currency) : (['ARS'] as Currency[])
-  );
-  const byStatus: PurchaseOrderStatusAggregate[] = [];
+    orders.length > 0 ? orders.map(o => o.currency) : (['ARS'] as Currency[])
+  )
+  const byStatus: PurchaseOrderStatusAggregate[] = []
   for (const currency of currencies) {
     for (const status of ALL_STATUSES) {
-      byStatus.push(totals.get(`${status}:${currency}`) ?? { status, currency, count: 0, total: 0 });
+      byStatus.push(totals.get(`${status}:${currency}`) ?? { status, currency, count: 0, total: 0 })
     }
   }
-  return { byStatus };
+  return { byStatus }
 }
 
 export async function getPurchaseOrdersPage(
@@ -171,25 +183,25 @@ export async function getPurchaseOrdersPage(
     },
     signal,
     mock: () => {
-      const { filters, sort, page, pageSize } = query;
+      const { filters, sort, page, pageSize } = query
 
-      const inScope = filterOrdersInScope(filters);
+      const inScope = filterOrdersInScope(filters)
 
-      const aggregates = computeAggregates(inScope);
+      const aggregates = computeAggregates(inScope)
 
-      const filtered = filters.status ? inScope.filter((o) => o.status === filters.status) : inScope;
+      const filtered = filters.status ? inScope.filter(o => o.status === filters.status) : inScope
 
-      const sorted = sortOrders(filtered, sort);
+      const sorted = sortOrders(filtered, sort)
 
-      const total = sorted.length;
-      const totalPages = Math.max(1, Math.ceil(total / pageSize));
-      const safePage = Math.min(Math.max(1, page), totalPages);
-      const start = (safePage - 1) * pageSize;
-      const items = sorted.slice(start, start + pageSize);
+      const total = sorted.length
+      const totalPages = Math.max(1, Math.ceil(total / pageSize))
+      const safePage = Math.min(Math.max(1, page), totalPages)
+      const start = (safePage - 1) * pageSize
+      const items = sorted.slice(start, start + pageSize)
 
-      return { items: structuredClone(items), total, page: safePage, pageSize, aggregates };
+      return { items: structuredClone(items), total, page: safePage, pageSize, aggregates }
     },
-  });
+  })
 }
 
 // Exportar (tarea transversal, DECISIONES_TECNICAS.md): TODO lo que
@@ -214,16 +226,16 @@ export async function exportPurchaseOrders(
       dateTo: filters.dateTo,
     },
     mock: () => {
-      const inScope = filterOrdersInScope(filters);
-      const filtered = filters.status ? inScope.filter((o) => o.status === filters.status) : inScope;
-      const sorted = sortOrders(filtered, sort);
+      const inScope = filterOrdersInScope(filters)
+      const filtered = filters.status ? inScope.filter(o => o.status === filters.status) : inScope
+      const sorted = sortOrders(filtered, sort)
 
-      const truncated = sorted.length > MAX_EXPORT_ROWS;
-      const items = sorted.slice(0, MAX_EXPORT_ROWS);
+      const truncated = sorted.length > MAX_EXPORT_ROWS
+      const items = sorted.slice(0, MAX_EXPORT_ROWS)
 
-      return { items: structuredClone(items), truncated };
+      return { items: structuredClone(items), truncated }
     },
-  });
+  })
 }
 
 // O3: consulta publica por supplierId — reemplaza a la lectura directa
@@ -242,19 +254,19 @@ export async function getPurchaseOrdersBySupplierId(
     signal,
     mock: () => {
       const orders = purchaseOrdersStore
-        .filter((o) => o.supplierId === supplierId)
-        .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-      return structuredClone(orders);
+        .filter(o => o.supplierId === supplierId)
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      return structuredClone(orders)
     },
-  });
+  })
 }
 
 function nextOrderId(): string {
-  return `po-${Date.now()}`;
+  return `po-${Date.now()}`
 }
 
 function nextLineId(seed: number): string {
-  return `pol-${Date.now()}-${seed}`;
+  return `pol-${Date.now()}-${seed}`
 }
 
 // Alta manual (O4, desde el formulario migrado). status por defecto
@@ -271,16 +283,21 @@ export async function createPurchaseOrder(
     body: { empresaId, ...input },
     mock: async () => {
       if (!input.supplierId) {
-        return { success: false, reason: 'invalid-supplier' };
+        return { success: false, reason: 'invalid-supplier' }
       }
       if (input.lines.length === 0) {
-        return { success: false, reason: 'no-lines' };
+        return { success: false, reason: 'no-lines' }
       }
-      if (input.lines.some((l) => l.quantity <= 0 || l.unitPrice < 0)) {
-        return { success: false, reason: 'invalid-line' };
+      if (input.lines.some(l => l.quantity <= 0 || l.unitPrice < 0)) {
+        return { success: false, reason: 'invalid-line' }
       }
-      if (await hasInactiveProduct(empresaId, input.lines.map((l) => l.productId))) {
-        return { success: false, reason: 'inactive-product' };
+      if (
+        await hasInactiveProduct(
+          empresaId,
+          input.lines.map(l => l.productId)
+        )
+      ) {
+        return { success: false, reason: 'inactive-product' }
       }
 
       const newOrder: PurchaseOrder = {
@@ -291,11 +308,11 @@ export async function createPurchaseOrder(
         status: input.status ?? 'draft',
         createdAt: new Date().toISOString(),
         lines: input.lines.map((l, i) => ({ ...l, id: nextLineId(i) })),
-      };
-      purchaseOrdersStore = [...purchaseOrdersStore, newOrder];
-      return { success: true, order: structuredClone(newOrder) };
+      }
+      purchaseOrdersStore = [...purchaseOrdersStore, newOrder]
+      return { success: true, order: structuredClone(newOrder) }
     },
-  });
+  })
 }
 
 // O7: transiciones validas. Unica fuente de verdad — ni la vista ni
@@ -305,7 +322,7 @@ const VALID_TRANSITIONS: Record<PurchaseOrderStatus, readonly PurchaseOrderStatu
   sent: ['received', 'cancelled'],
   received: [],
   cancelled: [],
-};
+}
 
 export async function updatePurchaseOrderStatus(
   empresaId: string,
@@ -317,19 +334,19 @@ export async function updatePurchaseOrderStatus(
     path: `/purchase-orders/${orderId}/status`,
     body: { empresaId, status: nextStatus },
     mock: () => {
-      const existing = purchaseOrdersStore.find((o) => o.id === orderId);
+      const existing = purchaseOrdersStore.find(o => o.id === orderId)
       if (!existing) {
-        return { success: false, reason: 'order-not-found' };
+        return { success: false, reason: 'order-not-found' }
       }
       if (!VALID_TRANSITIONS[existing.status].includes(nextStatus)) {
-        return { success: false, reason: 'invalid-transition' };
+        return { success: false, reason: 'invalid-transition' }
       }
 
-      const updated: PurchaseOrder = { ...existing, status: nextStatus };
-      purchaseOrdersStore = purchaseOrdersStore.map((o) => (o.id === orderId ? updated : o));
-      return { success: true, order: structuredClone(updated) };
+      const updated: PurchaseOrder = { ...existing, status: nextStatus }
+      purchaseOrdersStore = purchaseOrdersStore.map(o => (o.id === orderId ? updated : o))
+      return { success: true, order: structuredClone(updated) }
     },
-  });
+  })
 }
 
 // O9/O10: generar OC desde una sugerencia de stock critico. El input
@@ -355,29 +372,40 @@ export async function generatePurchaseOrderFromSuggestion(
     body: { empresaId, ...input },
     mock: async () => {
       if (!input.supplierId) {
-        return { success: false, merged: false, reason: 'invalid-supplier' };
+        return { success: false, merged: false, reason: 'invalid-supplier' }
       }
       if (await hasInactiveProduct(empresaId, [input.productId])) {
-        return { success: false, merged: false, reason: 'inactive-product' };
+        return { success: false, merged: false, reason: 'inactive-product' }
       }
 
       const existingDraft = purchaseOrdersStore.find(
-        (o) => o.supplierId === input.supplierId && o.branchId === input.branchId && o.status === 'draft'
-      );
+        o =>
+          o.supplierId === input.supplierId && o.branchId === input.branchId && o.status === 'draft'
+      )
 
       if (existingDraft) {
-        const existingLine = existingDraft.lines.find((l) => l.productId === input.productId);
+        const existingLine = existingDraft.lines.find(l => l.productId === input.productId)
         const nextLines: PurchaseOrderLine[] = existingLine
-          ? existingDraft.lines.map((l) =>
+          ? existingDraft.lines.map(l =>
               l.productId === input.productId
                 ? { ...l, quantity: l.quantity + input.quantity, unitPrice: input.unitPrice }
                 : l
             )
-          : [...existingDraft.lines, { id: nextLineId(existingDraft.lines.length), productId: input.productId, quantity: input.quantity, unitPrice: input.unitPrice }];
+          : [
+              ...existingDraft.lines,
+              {
+                id: nextLineId(existingDraft.lines.length),
+                productId: input.productId,
+                quantity: input.quantity,
+                unitPrice: input.unitPrice,
+              },
+            ]
 
-        const updated: PurchaseOrder = { ...existingDraft, lines: nextLines };
-        purchaseOrdersStore = purchaseOrdersStore.map((o) => (o.id === existingDraft.id ? updated : o));
-        return { success: true, merged: true, order: structuredClone(updated) };
+        const updated: PurchaseOrder = { ...existingDraft, lines: nextLines }
+        purchaseOrdersStore = purchaseOrdersStore.map(o =>
+          o.id === existingDraft.id ? updated : o
+        )
+        return { success: true, merged: true, order: structuredClone(updated) }
       }
 
       const newOrder: PurchaseOrder = {
@@ -387,10 +415,17 @@ export async function generatePurchaseOrderFromSuggestion(
         currency: input.currency,
         status: 'draft',
         createdAt: new Date().toISOString(),
-        lines: [{ id: nextLineId(0), productId: input.productId, quantity: input.quantity, unitPrice: input.unitPrice }],
-      };
-      purchaseOrdersStore = [...purchaseOrdersStore, newOrder];
-      return { success: true, merged: false, order: structuredClone(newOrder) };
+        lines: [
+          {
+            id: nextLineId(0),
+            productId: input.productId,
+            quantity: input.quantity,
+            unitPrice: input.unitPrice,
+          },
+        ],
+      }
+      purchaseOrdersStore = [...purchaseOrdersStore, newOrder]
+      return { success: true, merged: false, order: structuredClone(newOrder) }
     },
-  });
+  })
 }

@@ -1,6 +1,6 @@
-import type { FC } from 'react';
-import { Loader2 } from 'lucide-react';
-import './LoadingState.css';
+import type { FC } from 'react'
+import { Loader2 } from 'lucide-react'
+import './LoadingState.css'
 
 // ============================================================
 // LoadingState — Indicador de carga generico para una seccion
@@ -12,7 +12,7 @@ import './LoadingState.css';
 // ============================================================
 
 interface LoadingStateProps {
-  message?: string;
+  message?: string
 }
 
 export const LoadingState: FC<LoadingStateProps> = ({ message = 'Cargando...' }) => (
@@ -20,4 +20,4 @@ export const LoadingState: FC<LoadingStateProps> = ({ message = 'Cargando...' })
     <Loader2 className="loading-state__spinner" size={24} aria-hidden="true" />
     <span className="loading-state__message">{message}</span>
   </div>
-);
+)

@@ -1,38 +1,51 @@
-import { useEffect, useMemo, useState, type FC } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { toast } from 'sonner';
-import { ShoppingCart } from 'lucide-react';
-import { useQueryClient } from '@tanstack/react-query';
-import { Pagination } from '@/shared/components/ui/Pagination';
-import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary';
-import { SkeletonTable } from '@/shared/components/ui/SkeletonLoader';
-import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay';
-import { usePagedQuery } from '@/shared/hooks/usePagedQuery';
-import { useUrlListState } from '@/shared/hooks/useUrlListState';
-import { useCachedQuery, CACHE_STALE_TIME } from '@/shared/hooks/useCachedQuery';
-import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
-import { useSessionStore } from '@/shared/state/useSessionStore';
-import type { Branch } from '@/shared/types/session.types';
-import type { Supplier } from '@/shared/types/supplier.types';
-import type { InventoryItem } from '@/shared/types/inventory.types';
-import type { PurchaseOrder, PurchaseOrderStatus, PurchaseOrdersQueryFilters } from '@/shared/types/purchaseOrder.types';
-import { isBranchId, type BranchId } from '@/shared/types/ids.types';
-import { fetchSuppliers } from '@/modules/suppliers/api/suppliers.service';
-import { fetchProducts, getStockForBranch } from '@/shared/api/products/products.service';
-import { getPurchaseOrdersPage, exportPurchaseOrders, updatePurchaseOrderStatus, computePurchaseOrderTotal } from '@/services/mock/purchaseOrders.service';
-import type { PurchaseOrderFormInput } from './components/PurchaseOrderFormModal.schema';
-import { PurchaseOrderFilters } from './components/PurchaseOrderFilters';
-import { PurchaseOrderStatusSummary } from './components/PurchaseOrderStatusSummary';
-import { PurchaseOrdersTable } from './components/PurchaseOrdersTable';
-import { PurchaseOrderDetailPanel } from './components/PurchaseOrderDetailPanel';
-import { PurchaseOrderFormModal } from './components/PurchaseOrderFormModal';
-import { TabPendingReceipt } from './components/TabPendingReceipt';
-import { PURCHASE_ORDER_STATUS_LABEL } from './purchaseOrderLabels';
-import { Tabs, type TabItem } from '@/shared/components/ui/Tabs';
-import { DateRangeFilter } from '@/shared/components/ui/DateRangeFilter';
-import { readDateRangeFromUrl, dateRangeToUrlParams, type DateRangeValue } from '@/shared/components/ui/dateRangePresets';
-import { ExportButton, type ExportColumn } from '@/shared/components/ui/ExportButton';
-import './ComprasPage.css';
+import { useEffect, useMemo, useState, type FC } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { toast } from 'sonner'
+import { ShoppingCart } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
+import { Pagination } from '@/shared/components/ui/Pagination'
+import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary'
+import { SkeletonTable } from '@/shared/components/ui/SkeletonLoader'
+import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay'
+import { usePagedQuery } from '@/shared/hooks/usePagedQuery'
+import { useUrlListState } from '@/shared/hooks/useUrlListState'
+import { useCachedQuery, CACHE_STALE_TIME } from '@/shared/hooks/useCachedQuery'
+import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue'
+import { useSessionStore } from '@/shared/state/useSessionStore'
+import type { Branch } from '@/shared/types/session.types'
+import type { Supplier } from '@/shared/types/supplier.types'
+import type { InventoryItem } from '@/shared/types/inventory.types'
+import type {
+  PurchaseOrder,
+  PurchaseOrderStatus,
+  PurchaseOrdersQueryFilters,
+} from '@/shared/types/purchaseOrder.types'
+import { isBranchId, type BranchId } from '@/shared/types/ids.types'
+import { fetchSuppliers } from '@/modules/suppliers/api/suppliers.service'
+import { fetchProducts, getStockForBranch } from '@/shared/api/products/products.service'
+import {
+  getPurchaseOrdersPage,
+  exportPurchaseOrders,
+  updatePurchaseOrderStatus,
+  computePurchaseOrderTotal,
+} from '@/services/mock/purchaseOrders.service'
+import type { PurchaseOrderFormInput } from './components/PurchaseOrderFormModal.schema'
+import { PurchaseOrderFilters } from './components/PurchaseOrderFilters'
+import { PurchaseOrderStatusSummary } from './components/PurchaseOrderStatusSummary'
+import { PurchaseOrdersTable } from './components/PurchaseOrdersTable'
+import { PurchaseOrderDetailPanel } from './components/PurchaseOrderDetailPanel'
+import { PurchaseOrderFormModal } from './components/PurchaseOrderFormModal'
+import { TabPendingReceipt } from './components/TabPendingReceipt'
+import { PURCHASE_ORDER_STATUS_LABEL } from './purchaseOrderLabels'
+import { Tabs, type TabItem } from '@/shared/components/ui/Tabs'
+import { DateRangeFilter } from '@/shared/components/ui/DateRangeFilter'
+import {
+  readDateRangeFromUrl,
+  dateRangeToUrlParams,
+  type DateRangeValue,
+} from '@/shared/components/ui/dateRangePresets'
+import { ExportButton, type ExportColumn } from '@/shared/components/ui/ExportButton'
+import './ComprasPage.css'
 
 // ============================================================
 // ComprasPage — Modulo Compras (O1-O10, DECISIONES_TECNICAS.md).
@@ -63,11 +76,11 @@ import './ComprasPage.css';
 // selectores en DECISIONES_TECNICAS.md): un `?? []` inline en cada
 // render alimentaria el useMemo de branchesById con una dependencia
 // distinta cada vez y lo invalidaria siempre.
-const EMPTY_BRANCHES: Branch[] = [];
+const EMPTY_BRANCHES: Branch[] = []
 // Mismo motivo que EMPTY_BRANCHES: referencias estables para el
 // fallback de useCachedQuery mientras no resolvio.
-const EMPTY_SUPPLIERS: Supplier[] = [];
-const EMPTY_PRODUCTS: InventoryItem[] = [];
+const EMPTY_SUPPLIERS: Supplier[] = []
+const EMPTY_PRODUCTS: InventoryItem[] = []
 
 // Parseo explicito (ADR-006/Tanda 5) del unico id que este archivo lee
 // desde la URL (el param `sucursal` del deep-link de traspaso, y el
@@ -75,18 +88,18 @@ const EMPTY_PRODUCTS: InventoryItem[] = [];
 // romper el render, se trata como "sin sucursal" con un aviso en
 // consola en vez de silenciarse sin rastro.
 function safeBranchId(raw: string | null | undefined): BranchId | undefined {
-  if (!raw) return undefined;
+  if (!raw) return undefined
   if (!isBranchId(raw)) {
-    console.warn(`ComprasPage: valor de sucursal invalido en la URL, se ignora: "${raw}"`);
-    return undefined;
+    console.warn(`ComprasPage: valor de sucursal invalido en la URL, se ignora: "${raw}"`)
+    return undefined
   }
-  return raw;
+  return raw
 }
 
 export const ComprasPage: FC = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const activeBranchId = useSessionStore((s) => s.activeBranchId);
-  const session = useSessionStore((s) => s.session);
+  const [searchParams, setSearchParams] = useSearchParams()
+  const activeBranchId = useSessionStore(s => s.activeBranchId)
+  const session = useSessionStore(s => s.session)
 
   // Tanda 4 (corrida completa, A13): pagina/filtros del Listado General
   // y la tab activa viven en la URL, prefijados `oc_` — este archivo YA
@@ -94,21 +107,24 @@ export const ComprasPage: FC = () => {
   // DISTINTO (`proveedor`/`producto`/`sucursal`, de traspaso de accion,
   // no de estado de vista); el prefijo evita cualquier colision de
   // nombres con esos tres params reservados.
-  const ocUrlState = useUrlListState<never, 'q' | 'supplier' | 'status' | 'branch' | 'preset' | 'from' | 'to' | 'tab'>({
+  const ocUrlState = useUrlListState<
+    never,
+    'q' | 'supplier' | 'status' | 'branch' | 'preset' | 'from' | 'to' | 'tab'
+  >({
     prefix: 'oc',
     filterKeys: ['q', 'supplier', 'status', 'branch', 'preset', 'from', 'to', 'tab'],
-  });
+  })
 
-  const [searchQuery, setSearchQuery] = useState(ocUrlState.filters.q ?? '');
-  const debouncedSearchQuery = useDebouncedValue(searchQuery, 300);
+  const [searchQuery, setSearchQuery] = useState(ocUrlState.filters.q ?? '')
+  const debouncedSearchQuery = useDebouncedValue(searchQuery, 300)
 
   useEffect(() => {
-    const current = ocUrlState.filters.q ?? '';
+    const current = ocUrlState.filters.q ?? ''
     if (debouncedSearchQuery !== current) {
-      ocUrlState.setFilter('q', debouncedSearchQuery || undefined);
+      ocUrlState.setFilter('q', debouncedSearchQuery || undefined)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- solo debe reaccionar al valor debounceado
-  }, [debouncedSearchQuery]);
+  }, [debouncedSearchQuery])
 
   // V3 de VERIFICACION_CORRIDA_COMPLETA.md: si la URL cambia externamente
   // (back/forward del navegador) mientras el componente sigue montado,
@@ -118,35 +134,37 @@ export const ComprasPage: FC = () => {
     // Microtask (mismo patron ya usado en ReprogramarModal/AlertsBell/
     // RegistrarEntregaModal) para no disparar setState sincronico en
     // el cuerpo del efecto.
-    Promise.resolve().then(() => setSearchQuery(ocUrlState.filters.q ?? ''));
-  }, [ocUrlState.filters.q]);
+    Promise.resolve().then(() => setSearchQuery(ocUrlState.filters.q ?? ''))
+  }, [ocUrlState.filters.q])
 
-  const supplierFilter = ocUrlState.filters.supplier ?? '';
-  const setSupplierFilter = (value: string) => ocUrlState.setFilter('supplier', value || undefined);
-  const statusFilter = (ocUrlState.filters.status ?? '') as PurchaseOrderStatus | '';
-  const setStatusFilter = (value: PurchaseOrderStatus | '') => ocUrlState.setFilter('status', value || undefined);
-  const branchFilter = ocUrlState.filters.branch ?? '';
-  const setBranchFilter = (value: string) => ocUrlState.setFilter('branch', value || undefined);
-  const activeTab = ocUrlState.filters.tab === 'pending-receipt' ? 'pending-receipt' : 'listado';
-  const setActiveTab = (tab: string) => ocUrlState.setFilter('tab', tab === 'listado' ? undefined : tab);
+  const supplierFilter = ocUrlState.filters.supplier ?? ''
+  const setSupplierFilter = (value: string) => ocUrlState.setFilter('supplier', value || undefined)
+  const statusFilter = (ocUrlState.filters.status ?? '') as PurchaseOrderStatus | ''
+  const setStatusFilter = (value: PurchaseOrderStatus | '') =>
+    ocUrlState.setFilter('status', value || undefined)
+  const branchFilter = ocUrlState.filters.branch ?? ''
+  const setBranchFilter = (value: string) => ocUrlState.setFilter('branch', value || undefined)
+  const activeTab = ocUrlState.filters.tab === 'pending-receipt' ? 'pending-receipt' : 'listado'
+  const setActiveTab = (tab: string) =>
+    ocUrlState.setFilter('tab', tab === 'listado' ? undefined : tab)
 
-  const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(null);
-  const [isDetailOpen, setIsDetailOpen] = useState(false);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(null)
+  const [isDetailOpen, setIsDetailOpen] = useState(false)
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const [isTransitioning, setIsTransitioning] = useState(false)
   // Proveedor pedido por query param (O4), copiado a estado propio ANTES
   // de limpiar la URL: si se leyera `searchParams.get('proveedor')`
   // directo en cada render, el mismo efecto que borra el query param
   // haria que ese valor ya fuera null en el render donde el modal se
   // abre (isCreateModalOpen y el query param cambian en el mismo ciclo
   // de efectos) — el proveedor preseleccionado se perderia.
-  const [supplierIdFromUrl, setSupplierIdFromUrl] = useState<string | undefined>(undefined);
+  const [supplierIdFromUrl, setSupplierIdFromUrl] = useState<string | undefined>(undefined)
   // Linea precargada por deep-link `?producto=` (Task A). Mismo criterio
   // que supplierIdFromUrl: se copia a estado propio antes de limpiar la
   // URL, y es lo que se le pasa como prop al modal.
-  const [defaultLinesFromUrl, setDefaultLinesFromUrl] = useState<PurchaseOrderFormInput['lines'] | undefined>(
-    undefined
-  );
+  const [defaultLinesFromUrl, setDefaultLinesFromUrl] = useState<
+    PurchaseOrderFormInput['lines'] | undefined
+  >(undefined)
   // Rango de fecha (tarea transversal): default 'all' (sin filtro) —
   // este listado hoy no filtraba por fecha, "Hoy" como default
   // ocultaria de entrada todo el historico existente sin que el
@@ -154,14 +172,14 @@ export const ComprasPage: FC = () => {
   // en la URL (`oc_preset`/`oc_from`/`oc_to`) junto al resto de filtros.
   // Lectura y escritura: helper compartido de dateRangePresets.ts
   // (Tanda 24, regla PROTOCOLO 3.8).
-  const { preset: ocUrlPreset, from: ocUrlFrom, to: ocUrlTo } = ocUrlState.filters;
+  const { preset: ocUrlPreset, from: ocUrlFrom, to: ocUrlTo } = ocUrlState.filters
   const dateRange: DateRangeValue = useMemo(
     () => readDateRangeFromUrl({ preset: ocUrlPreset, from: ocUrlFrom, to: ocUrlTo }, 'all'),
     [ocUrlPreset, ocUrlFrom, ocUrlTo]
-  );
+  )
 
   function setDateRange(next: DateRangeValue) {
-    ocUrlState.setFilters(dateRangeToUrlParams(next, 'all'));
+    ocUrlState.setFilters(dateRangeToUrlParams(next, 'all'))
   }
 
   // Catalogo de productos y lista de proveedores (Tanda 2.5,
@@ -169,52 +187,52 @@ export const ComprasPage: FC = () => {
   // mismo queryName ('products'/'suppliers-list') que InventoryPage y
   // CreateOrderModal — los 3 comparten una sola entrada de cache
   // (dedupe real entre modulos), no 3 fetches independientes.
-  const empresaId = session?.company.id;
-  const queryClient = useQueryClient();
+  const empresaId = session?.company.id
+  const queryClient = useQueryClient()
 
   const { data: suppliersData, error: suppliersError } = useCachedQuery(
     'suppliers-list',
     undefined,
-    (signal) => fetchSuppliers(empresaId ?? '', signal),
+    signal => fetchSuppliers(empresaId ?? '', signal),
     { staleTime: CACHE_STALE_TIME.CATALOG, enabled: Boolean(empresaId) }
-  );
-  const suppliers = suppliersData ?? EMPTY_SUPPLIERS;
+  )
+  const suppliers = suppliersData ?? EMPTY_SUPPLIERS
 
   useEffect(() => {
-    if (suppliersError) toast.error('No se pudo cargar el listado de proveedores.');
-  }, [suppliersError]);
+    if (suppliersError) toast.error('No se pudo cargar el listado de proveedores.')
+  }, [suppliersError])
 
   const { data: productsData, error: productsError } = useCachedQuery(
     'products',
     undefined,
-    (signal) => fetchProducts(empresaId ?? '', signal),
+    signal => fetchProducts(empresaId ?? '', signal),
     { staleTime: CACHE_STALE_TIME.CATALOG }
-  );
-  const products = productsData ?? EMPTY_PRODUCTS;
+  )
+  const products = productsData ?? EMPTY_PRODUCTS
 
   useEffect(() => {
-    if (productsError) toast.error('No se pudo cargar el catalogo de productos.');
-  }, [productsError]);
+    if (productsError) toast.error('No se pudo cargar el catalogo de productos.')
+  }, [productsError])
 
   // Deep link desde Proveedores (O4): ?proveedor=<id> abre el modal de
   // alta con ese proveedor preseleccionado. Se limpia el query param al
   // abrir para que un refresh de la pagina no reabra el modal solo.
   useEffect(() => {
-    const supplierId = searchParams.get('proveedor');
+    const supplierId = searchParams.get('proveedor')
     if (supplierId) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- reaccion a un query param de entrada, no un derivado sincronico del render
-      setSupplierIdFromUrl(supplierId);
-      setDefaultLinesFromUrl(undefined);
-      setIsCreateModalOpen(true);
+      setSupplierIdFromUrl(supplierId)
+      setDefaultLinesFromUrl(undefined)
+      setIsCreateModalOpen(true)
       setSearchParams(
-        (prev) => {
-          const next = new URLSearchParams(prev);
-          next.delete('proveedor');
-          return next;
+        prev => {
+          const next = new URLSearchParams(prev)
+          next.delete('proveedor')
+          return next
         },
         { replace: true }
-      );
-      return;
+      )
+      return
     }
 
     // Segundo caso del mismo patron de deep-link (Task A): TabLowStock
@@ -224,35 +242,37 @@ export const ComprasPage: FC = () => {
     // por eso espera a que `products` este cargado (mismo criterio de
     // "reintentar hasta que exista" que ya usa el modal con `suppliers`,
     // ver PurchaseOrderFormModal.tsx).
-    const productoId = searchParams.get('producto');
-    if (!productoId) return;
-    if (products.length === 0) return;
+    const productoId = searchParams.get('producto')
+    if (!productoId) return
+    if (products.length === 0) return
 
-    const product = products.find((p) => p.id === productoId);
+    const product = products.find(p => p.id === productoId)
     if (!product) {
-      toast.error('No se encontro el producto indicado para generar la orden de compra.');
+      toast.error('No se encontro el producto indicado para generar la orden de compra.')
       setSearchParams(
-        (prev) => {
-          const next = new URLSearchParams(prev);
-          next.delete('producto');
-          next.delete('sucursal');
-          return next;
+        prev => {
+          const next = new URLSearchParams(prev)
+          next.delete('producto')
+          next.delete('sucursal')
+          return next
         },
         { replace: true }
-      );
-      return;
+      )
+      return
     }
 
-    const branchIdParam = safeBranchId(searchParams.get('sucursal')) ?? activeBranchId ?? undefined;
-    let cancelled = false;
+    const branchIdParam = safeBranchId(searchParams.get('sucursal')) ?? activeBranchId ?? undefined
+    let cancelled = false
 
-    (async () => {
+    ;(async () => {
       // Cantidad recalculada aca (autoridad del servicio), no confiada
       // a un query param: el stock pudo cambiar entre que se listo el
       // bajo stock en Inventario y el click en "Generar OC".
-      const stock = branchIdParam ? await getStockForBranch(empresaId ?? '', product.id, branchIdParam) : undefined;
-      const suggestedQuantity = stock ? Math.max(stock.minStock - stock.stock, 0) : 0;
-      if (cancelled) return;
+      const stock = branchIdParam
+        ? await getStockForBranch(empresaId ?? '', product.id, branchIdParam)
+        : undefined
+      const suggestedQuantity = stock ? Math.max(stock.minStock - stock.stock, 0) : 0
+      if (cancelled) return
 
       setDefaultLinesFromUrl([
         {
@@ -266,31 +286,31 @@ export const ComprasPage: FC = () => {
           quantity: suggestedQuantity > 0 ? suggestedQuantity : 1,
           unitPrice: product.cost,
         },
-      ]);
-      setSupplierIdFromUrl(product.supplierId);
-      setIsCreateModalOpen(true);
-    })();
+      ])
+      setSupplierIdFromUrl(product.supplierId)
+      setIsCreateModalOpen(true)
+    })()
 
     setSearchParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        next.delete('producto');
-        next.delete('sucursal');
-        return next;
+      prev => {
+        const next = new URLSearchParams(prev)
+        next.delete('producto')
+        next.delete('sucursal')
+        return next
       },
       { replace: true }
-    );
+    )
 
     return () => {
-      cancelled = true;
-    };
+      cancelled = true
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- setSearchParams no es estable entre renders (react-router), no debe disparar el efecto de nuevo
-  }, [searchParams, products, activeBranchId]);
+  }, [searchParams, products, activeBranchId])
 
-  const suppliersById = useMemo(() => new Map(suppliers.map((s) => [s.id, s])), [suppliers]);
-  const productsById = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
-  const branches = session?.branches ?? EMPTY_BRANCHES;
-  const branchesById = useMemo(() => new Map(branches.map((b) => [b.id, b])), [branches]);
+  const suppliersById = useMemo(() => new Map(suppliers.map(s => [s.id, s])), [suppliers])
+  const productsById = useMemo(() => new Map(products.map(p => [p.id, p])), [products])
+  const branches = session?.branches ?? EMPTY_BRANCHES
+  const branchesById = useMemo(() => new Map(branches.map(b => [b.id, b])), [branches])
 
   const filters: PurchaseOrdersQueryFilters = useMemo(
     () => ({
@@ -303,7 +323,7 @@ export const ComprasPage: FC = () => {
       dateTo: dateRange.dateTo,
     }),
     [empresaId, debouncedSearchQuery, supplierFilter, statusFilter, branchFilter, dateRange]
-  );
+  )
 
   const {
     items: orders,
@@ -321,25 +341,25 @@ export const ComprasPage: FC = () => {
   } = usePagedQuery(getPurchaseOrdersPage, filters, {
     page: ocUrlState.page,
     onPageChange: ocUrlState.setPage,
-  });
+  })
 
   useEffect(() => {
-    if (error) toast.error('No se pudo cargar el listado de ordenes de compra.');
-  }, [error]);
+    if (error) toast.error('No se pudo cargar el listado de ordenes de compra.')
+  }, [error])
 
   const handleViewDetail = (order: PurchaseOrder) => {
-    setSelectedOrder(order);
-    setIsDetailOpen(true);
-  };
+    setSelectedOrder(order)
+    setIsDetailOpen(true)
+  }
 
   const handleTransition = async (order: PurchaseOrder, nextStatus: PurchaseOrderStatus) => {
-    setIsTransitioning(true);
+    setIsTransitioning(true)
     try {
-      const result = await updatePurchaseOrderStatus(empresaId ?? '', order.id, nextStatus);
+      const result = await updatePurchaseOrderStatus(empresaId ?? '', order.id, nextStatus)
       if (result.success && result.order) {
-        toast.success(`Orden ${order.id} actualizada.`);
-        setSelectedOrder(result.order);
-        refetch();
+        toast.success(`Orden ${order.id} actualizada.`)
+        setSelectedOrder(result.order)
+        refetch()
         // Invalidacion por mutacion (Tanda 2.5, tabla completa en
         // DECISIONES_TECNICAS.md): cambiar el estado de una OC invalida
         // ademas su presencia en el historial de OC del proveedor
@@ -349,38 +369,44 @@ export const ComprasPage: FC = () => {
         if (empresaId) {
           void queryClient.invalidateQueries({
             queryKey: ['cached', 'purchase-orders-by-supplier', empresaId, result.order.supplierId],
-          });
+          })
         }
-        return;
+        return
       }
       const message =
         result.reason === 'invalid-transition'
           ? 'Esa orden no puede pasar a ese estado desde su estado actual.'
-          : 'No se encontro la orden de compra.';
-      toast.error(message);
+          : 'No se encontro la orden de compra.'
+      toast.error(message)
     } finally {
-      setIsTransitioning(false);
+      setIsTransitioning(false)
     }
-  };
+  }
 
   const handleOrderCreated = (order: PurchaseOrder) => {
-    refetch();
-    setSelectedOrder(order);
-    setIsDetailOpen(true);
-  };
+    refetch()
+    setSelectedOrder(order)
+    setIsDetailOpen(true)
+  }
 
   // Exportar (tarea transversal): mismos filtros vigentes del Listado
   // General (incluido el rango de fecha) via exportPurchaseOrders, que
   // reusa el mismo filtro+orden que getPurchaseOrdersPage.
   const exportColumns: ExportColumn<PurchaseOrder>[] = [
-    { header: 'OC', accessor: (o) => o.id },
-    { header: 'Proveedor', accessor: (o) => suppliersById.get(o.supplierId)?.name ?? 'Proveedor no disponible' },
-    { header: 'Sucursal', accessor: (o) => branchesById.get(o.branchId)?.name ?? 'Sucursal no disponible' },
-    { header: 'Fecha de Creacion', accessor: (o) => o.createdAt.slice(0, 10) },
-    { header: 'Estado', accessor: (o) => PURCHASE_ORDER_STATUS_LABEL[o.status] },
-    { header: 'Moneda', accessor: (o) => o.currency },
-    { header: 'Total', accessor: (o) => computePurchaseOrderTotal(o.lines) },
-  ];
+    { header: 'OC', accessor: o => o.id },
+    {
+      header: 'Proveedor',
+      accessor: o => suppliersById.get(o.supplierId)?.name ?? 'Proveedor no disponible',
+    },
+    {
+      header: 'Sucursal',
+      accessor: o => branchesById.get(o.branchId)?.name ?? 'Sucursal no disponible',
+    },
+    { header: 'Fecha de Creacion', accessor: o => o.createdAt.slice(0, 10) },
+    { header: 'Estado', accessor: o => PURCHASE_ORDER_STATUS_LABEL[o.status] },
+    { header: 'Moneda', accessor: o => o.currency },
+    { header: 'Total', accessor: o => computePurchaseOrderTotal(o.lines) },
+  ]
 
   return (
     <div className="compras-page page-enter">
@@ -396,9 +422,9 @@ export const ComprasPage: FC = () => {
           type="button"
           className="client-modal-btn client-modal-btn--primary"
           onClick={() => {
-            setSupplierIdFromUrl(undefined);
-            setDefaultLinesFromUrl(undefined);
-            setIsCreateModalOpen(true);
+            setSupplierIdFromUrl(undefined)
+            setDefaultLinesFromUrl(undefined)
+            setIsCreateModalOpen(true)
           }}
         >
           Nueva Orden de Compra
@@ -434,7 +460,11 @@ export const ComprasPage: FC = () => {
                   />
 
                   <div className="compras-page__tab-toolbar">
-                    <DateRangeFilter idPrefix="compras-listado" value={dateRange} onChange={setDateRange} />
+                    <DateRangeFilter
+                      idPrefix="compras-listado"
+                      value={dateRange}
+                      onChange={setDateRange}
+                    />
                     <ExportButton
                       fileNamePrefix="ordenes-compra"
                       columns={exportColumns}
@@ -480,7 +510,7 @@ export const ComprasPage: FC = () => {
               ) : (
                 <TabPendingReceipt
                   branchId={activeBranchId}
-                  branchName={branches.find((b) => b.id === activeBranchId)?.name ?? ''}
+                  branchName={branches.find(b => b.id === activeBranchId)?.name ?? ''}
                   suppliersById={suppliersById}
                   branchesById={branchesById}
                   productsById={productsById}
@@ -516,5 +546,5 @@ export const ComprasPage: FC = () => {
         onCreated={handleOrderCreated}
       />
     </div>
-  );
-};
+  )
+}

@@ -37,7 +37,9 @@
   border-radius: var(--radius-md);
   background: var(--color-bg-subtle);
   color: var(--color-text-primary);
-  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast);
   max-width: 14rem;
 }
 

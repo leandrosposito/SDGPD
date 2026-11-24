@@ -1,9 +1,9 @@
-import { loginResponseSchema, sessionSchema, type Session } from '@sdgpd/contracts';
-import { httpClient } from '@/shared/api/httpClient';
-import { ApiError } from '@/shared/api/ApiError';
-import { setAccessToken } from '@/shared/auth/tokenStore';
-import { asBranchId } from '@/shared/types/ids.types';
-import type { SessionUser } from '@/shared/types/session.types';
+import { loginResponseSchema, sessionSchema, type Session } from '@sdgpd/contracts'
+import { httpClient } from '@/shared/api/httpClient'
+import { ApiError } from '@/shared/api/ApiError'
+import { setAccessToken } from '@/shared/auth/tokenStore'
+import { asBranchId } from '@/shared/types/ids.types'
+import type { SessionUser } from '@/shared/types/session.types'
 
 // ============================================================
 // auth.service — login, logout y sesion contra el backend (BE-1b,
@@ -18,12 +18,16 @@ import type { SessionUser } from '@/shared/types/session.types';
 // ============================================================
 
 const AUTH_ONLY = (): never => {
-  throw new ApiError(0, 'UNKNOWN', 'auth.service solo existe con auth por http (VITE_HTTP_SERVICES).');
-};
+  throw new ApiError(
+    0,
+    'UNKNOWN',
+    'auth.service solo existe con auth por http (VITE_HTTP_SERVICES).'
+  )
+}
 
 /** Sesion del contrato → SessionUser del frontend. Las sucursales son solo las habilitadas. */
 export function sessionUserFromContract(session: Session): SessionUser {
-  const branches = session.branches.map((b) => ({ ...b, id: asBranchId(b.id) }));
+  const branches = session.branches.map(b => ({ ...b, id: asBranchId(b.id) }))
   return {
     id: session.user.id,
     fullName: session.user.fullName,
@@ -32,8 +36,8 @@ export function sessionUserFromContract(session: Session): SessionUser {
     role: session.role,
     permissions: session.permissions,
     branches,
-    defaultBranchId: branches.find((b) => b.status === 'active')?.id ?? null,
-  };
+    defaultBranchId: branches.find(b => b.status === 'active')?.id ?? null,
+  }
 }
 
 /** POST /api/auth/login (rama web: el refresh vuelve en la cookie). */
@@ -47,10 +51,10 @@ export async function login(email: string, password: string): Promise<SessionUse
     body: { email, password, clientType: 'web' },
     retries: 0,
     mock: AUTH_ONLY,
-  });
-  const response = loginResponseSchema.parse(body);
-  setAccessToken(response.accessToken);
-  return sessionUserFromContract(response.session);
+  })
+  const response = loginResponseSchema.parse(body)
+  setAccessToken(response.accessToken)
+  return sessionUserFromContract(response.session)
 }
 
 /** GET /api/auth/session, con el access token vigente. */
@@ -61,8 +65,8 @@ export async function fetchCurrentSession(signal?: AbortSignal): Promise<Session
     service: 'session',
     signal,
     mock: AUTH_ONLY,
-  });
-  return sessionUserFromContract(sessionSchema.parse(body));
+  })
+  return sessionUserFromContract(sessionSchema.parse(body))
 }
 
 /** POST /api/auth/logout: revoca la familia del refresh (por el access token) y borra la cookie. */
@@ -75,8 +79,8 @@ export async function logout(): Promise<void> {
       withCredentials: true,
       retries: 0,
       mock: AUTH_ONLY,
-    });
+    })
   } finally {
-    setAccessToken(null);
+    setAccessToken(null)
   }
 }

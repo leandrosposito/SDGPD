@@ -1,19 +1,19 @@
-import { httpClient } from '@/shared/api/httpClient';
-import { getOrdersSnapshotForAggregation } from '@/modules/orders/api/orders.service';
-import { getOverdueClientsPage } from '@/modules/clients/api/clients.service';
-import { getOrderBranchLinksForAggregation } from '@/modules/logistics/services/deliveries.service';
-import { moneyFromNumber, type Money } from '@/shared/utils/money';
-import type { Currency } from '@/shared/types/client.types';
-import type { BranchId } from '@/shared/types/ids.types';
+import { httpClient } from '@/shared/api/httpClient'
+import { getOrdersSnapshotForAggregation } from '@/modules/orders/api/orders.service'
+import { getOverdueClientsPage } from '@/modules/clients/api/clients.service'
+import { getOrderBranchLinksForAggregation } from '@/modules/logistics/services/deliveries.service'
+import { moneyFromNumber, type Money } from '@/shared/utils/money'
+import type { Currency } from '@/shared/types/client.types'
+import type { BranchId } from '@/shared/types/ids.types'
 import {
   groupSalesByZone,
   groupOrdersByStatusInRange,
   filterOrdersForBranch,
   type SalesByZoneRow,
   type OrdersByStatusRow,
-} from './dashboardAggregates';
+} from './dashboardAggregates'
 
-export type { SalesByZoneRow, OrdersByStatusRow };
+export type { SalesByZoneRow, OrdersByStatusRow }
 
 // ============================================================
 // dashboardAggregates.service — Tanda 7 de la corrida completa;
@@ -30,17 +30,17 @@ export type { SalesByZoneRow, OrdersByStatusRow };
 // ============================================================
 
 export interface DashboardAggregatesResult {
-  salesByZone: SalesByZoneRow[];
-  ordersByStatus: OrdersByStatusRow[];
+  salesByZone: SalesByZoneRow[]
+  ordersByStatus: OrdersByStatusRow[]
 }
 
 export interface DashboardAggregatesQuery {
-  dateFrom?: string;
-  dateTo?: string;
+  dateFrom?: string
+  dateTo?: string
   // ADR-009: ausente = toda la empresa. Presente = solo pedidos con al
   // menos una Delivery de esa sucursal (Order no tiene branchId
   // propio, ver dashboardAggregates.ts#filterOrdersForBranch).
-  branchId?: BranchId;
+  branchId?: BranchId
 }
 
 export async function getDashboardAggregates(
@@ -54,16 +54,16 @@ export async function getDashboardAggregates(
     params: { empresaId, dateFrom: query.dateFrom, dateTo: query.dateTo, branchId: query.branchId },
     signal,
     mock: () => {
-      const snapshot = getOrdersSnapshotForAggregation();
+      const snapshot = getOrdersSnapshotForAggregation()
       const scoped = query.branchId
         ? filterOrdersForBranch(snapshot, getOrderBranchLinksForAggregation(), query.branchId)
-        : snapshot;
+        : snapshot
       return {
         salesByZone: groupSalesByZone(scoped),
         ordersByStatus: groupOrdersByStatusInRange(scoped, query.dateFrom, query.dateTo),
-      };
+      }
     },
-  });
+  })
 }
 
 // Cuentas por cobrar vencidas, envueltas en Money (ADR-008) — reusa
@@ -94,14 +94,19 @@ export async function getOverdueTotalsInMoney(
   branchId?: BranchId,
   signal?: AbortSignal
 ): Promise<Money[]> {
-  void branchId; // ver comentario arriba: aceptado por contrato, no usado.
-  const page = await getOverdueClientsPage({ page: 1, pageSize: 1, filters: { empresaId } }, signal);
-  const byBucket = page.aggregates?.byBucket ?? [];
+  void branchId // ver comentario arriba: aceptado por contrato, no usado.
+  const page = await getOverdueClientsPage({ page: 1, pageSize: 1, filters: { empresaId } }, signal)
+  const byBucket = page.aggregates?.byBucket ?? []
 
-  const totalsByCurrency = new Map<Currency, number>();
+  const totalsByCurrency = new Map<Currency, number>()
   for (const bucket of byBucket) {
-    totalsByCurrency.set(bucket.currency, (totalsByCurrency.get(bucket.currency) ?? 0) + bucket.totalOverdue);
+    totalsByCurrency.set(
+      bucket.currency,
+      (totalsByCurrency.get(bucket.currency) ?? 0) + bucket.totalOverdue
+    )
   }
 
-  return [...totalsByCurrency.entries()].map(([currency, total]) => moneyFromNumber(total, currency));
+  return [...totalsByCurrency.entries()].map(([currency, total]) =>
+    moneyFromNumber(total, currency)
+  )
 }

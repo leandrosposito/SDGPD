@@ -13,21 +13,21 @@
 // ============================================================
 
 export interface ProductHistoryEventDTO {
-  id: string;
-  fecha: string;
-  sku: string;
-  nombre_producto: string;
-  tipo_evento: string;
-  descripcion: string;
-  usuario: string;
-  sucursal_id: string;
+  id: string
+  fecha: string
+  sku: string
+  nombre_producto: string
+  tipo_evento: string
+  descripcion: string
+  usuario: string
+  sucursal_id: string
 }
 
 export interface ProductHistoryPageDTO {
-  data: ProductHistoryEventDTO[];
+  data: ProductHistoryEventDTO[]
   meta: {
-    total: number;
-    page: number;
-    page_size: number;
-  };
+    total: number
+    page: number
+    page_size: number
+  }
 }

@@ -1,5 +1,5 @@
-import type { TripId, StopId, VehicleId, DriverId, DeliveryId, BranchId } from './ids.types';
-import type { VehicleCapacity } from './vehicle.types';
+import type { TripId, StopId, VehicleId, DriverId, DeliveryId, BranchId } from './ids.types'
+import type { VehicleCapacity } from './vehicle.types'
 
 // ============================================================
 // trip.types — Viajes y paradas (Tanda 10B, ADR-011). Modelo
@@ -23,12 +23,20 @@ import type { VehicleCapacity } from './vehicle.types';
 // vehicle.types.ts).
 // ============================================================
 
-export type TripStatus = 'Planificado' | 'Despachado' | 'EnTransito' | 'Rendido' | 'Cancelado';
+export type TripStatus = 'Planificado' | 'Despachado' | 'EnTransito' | 'Rendido' | 'Cancelado'
 
-export type StopStatus = 'Pendiente' | 'Visitada' | 'NoVisitada' | 'Reprogramada';
+export type StopStatus = 'Pendiente' | 'Visitada' | 'NoVisitada' | 'Reprogramada'
 
-export const DIAS_SEMANA = ['Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado', 'Domingo'] as const;
-export type DiaSemana = (typeof DIAS_SEMANA)[number];
+export const DIAS_SEMANA = [
+  'Lunes',
+  'Martes',
+  'Miercoles',
+  'Jueves',
+  'Viernes',
+  'Sabado',
+  'Domingo',
+] as const
+export type DiaSemana = (typeof DIAS_SEMANA)[number]
 
 // ADR-011 seccion 6 (Opcion C): restriccion blanda de horario de
 // visita — vive en la Parada, no en el cliente (ADR-011 lo definia
@@ -36,39 +44,39 @@ export type DiaSemana = (typeof DIAS_SEMANA)[number];
 // carga al armar la Parada, ver CreateTripModal). El motor de
 // asignacion la lee para advertir, nunca para bloquear.
 export interface PreferenciasEntrega {
-  ventanaDesde: string; // "HH:mm"
-  ventanaHasta: string; // "HH:mm"
-  diasVisita: DiaSemana[];
+  ventanaDesde: string // "HH:mm"
+  ventanaHasta: string // "HH:mm"
+  diasVisita: DiaSemana[]
 }
 
 export interface Stop {
-  id: StopId;
-  tripId: TripId;
-  orden: number;
-  clientName: string;
-  address: string;
-  deliveryIds: DeliveryId[];
-  estado: StopStatus;
-  preferenciasEntrega?: PreferenciasEntrega | null;
+  id: StopId
+  tripId: TripId
+  orden: number
+  clientName: string
+  address: string
+  deliveryIds: DeliveryId[]
+  estado: StopStatus
+  preferenciasEntrega?: PreferenciasEntrega | null
 }
 
 // ADR-011 seccion 4: un solo punto, sin historial (eso es
 // getTripRoute) — payload minimo para polling cada 10-15s.
 export interface TripPosition {
-  lat: number;
-  lng: number;
-  timestampDispositivo: string;
-  timestampServidor: string;
-  precision?: number;
+  lat: number
+  lng: number
+  timestampDispositivo: string
+  timestampServidor: string
+  precision?: number
 }
 
 // Mismo patron que AllowedTransition (logistics.types.ts, ADR-010
 // seccion 3): un objeto por CADA estado del dominio distinto del
 // actual, nunca solo un array de los permitidos.
 export interface AllowedTripTransition {
-  transicion: TripStatus;
-  permitida: boolean;
-  motivo?: string;
+  transicion: TripStatus
+  permitida: boolean
+  motivo?: string
 }
 
 // ADR-011 seccion 2 (sub-opcion A2, correccion 2026-09-09: motivo
@@ -78,37 +86,37 @@ export interface AllowedTripTransition {
 // (deltaBultos, que el servidor calcula solo). Append-only, igual
 // criterio que Delivery.historial.
 export interface CapacityOverrideEvent {
-  quien: string;
-  cuando: string;
-  motivo: string;
-  deltaBultos: number;
+  quien: string
+  cuando: string
+  motivo: string
+  deltaBultos: number
 }
 
 export interface Trip {
-  id: TripId;
-  vehicleId: VehicleId;
-  driverId: DriverId;
-  branchId: BranchId;
-  empresaId: string;
-  fecha: string; // ISO date (yyyy-MM-dd)
-  estado: TripStatus;
-  paradas: Stop[];
+  id: TripId
+  vehicleId: VehicleId
+  driverId: DriverId
+  branchId: BranchId
+  empresaId: string
+  fecha: string // ISO date (yyyy-MM-dd)
+  estado: TripStatus
+  paradas: Stop[]
   // ADR-011 seccion 3: control optimista, incrementada en cada
   // escritura — assignDeliveriesToStop la valida y devuelve 409
   // granular si no matchea.
-  version: number;
+  version: number
   // ADR-011 seccion 2 (sub-opcion A2, warning override-able):
   // recalculada SIEMPRE server-side en cada alta/baja de parada/
   // entrega — nunca sumada en el cliente. capacidadTotal no se
   // duplica aca: es Vehicle.capacidad, resuelta via vehicleId.
-  capacidadUsada: VehicleCapacity;
-  sobrecargado: boolean;
-  overrides: CapacityOverrideEvent[];
-  posicionActual?: TripPosition;
-  createdAt: string;
-  updatedAt: string;
+  capacidadUsada: VehicleCapacity
+  sobrecargado: boolean
+  overrides: CapacityOverrideEvent[]
+  posicionActual?: TripPosition
+  createdAt: string
+  updatedAt: string
   // Mismo patron que Delivery.allowedTransitions (ADR-010 seccion 3):
   // NUNCA persistido en tripsStore, calculado y adjunto solo en las
   // respuestas de lectura.
-  allowedTransitions?: AllowedTripTransition[];
+  allowedTransitions?: AllowedTripTransition[]
 }

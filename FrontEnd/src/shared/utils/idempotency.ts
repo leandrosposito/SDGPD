@@ -21,18 +21,18 @@
 // ejecutarse. `compute` puede ser async.
 // ============================================================
 
-const idempotencyStore = new Map<string, unknown>();
+const idempotencyStore = new Map<string, unknown>()
 
 export async function withIdempotency<T extends { success: boolean }>(
   idempotencyKey: string,
   compute: () => T | Promise<T>
 ): Promise<T> {
   if (idempotencyStore.has(idempotencyKey)) {
-    return idempotencyStore.get(idempotencyKey) as T;
+    return idempotencyStore.get(idempotencyKey) as T
   }
-  const result = await compute();
+  const result = await compute()
   if (result.success) {
-    idempotencyStore.set(idempotencyKey, result);
+    idempotencyStore.set(idempotencyKey, result)
   }
-  return result;
+  return result
 }

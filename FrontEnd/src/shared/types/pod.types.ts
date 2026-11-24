@@ -1,4 +1,4 @@
-import type { PodId, DeliveryId, StopId } from './ids.types';
+import type { PodId, DeliveryId, StopId } from './ids.types'
 
 // ============================================================
 // pod.types — Proof of Delivery (Tanda 10B, ADR-010 seccion 7,
@@ -12,31 +12,31 @@ import type { PodId, DeliveryId, StopId } from './ids.types';
 // explicitamente "no tenia contacto asociado" el dia que Clientes
 // gane contactos multiples, sin ambiguedad ni migracion de datos.
 export interface PodReceptor {
-  nombre: string;
-  documento?: string;
-  contactId?: string | null;
+  nombre: string
+  documento?: string
+  contactId?: string | null
 }
 
 export interface PodUbicacion {
-  lat: number;
-  lng: number;
-  precision: number;
+  lat: number
+  lng: number
+  precision: number
 }
 
 export interface Pod {
-  id: PodId;
-  deliveryId: DeliveryId;
-  stopId: StopId;
-  receptor: PodReceptor;
-  firmaEvidenciaId?: string;
-  imagenesIds: string[];
-  ubicacion?: PodUbicacion;
-  observaciones?: string;
+  id: PodId
+  deliveryId: DeliveryId
+  stopId: StopId
+  receptor: PodReceptor
+  firmaEvidenciaId?: string
+  imagenesIds: string[]
+  ubicacion?: PodUbicacion
+  observaciones?: string
   // Los dos timestamps, nunca uno solo (ADR-010 seccion 7): dispositivo
   // = reloj del celular al momento del evento (capturado al ABRIR el
   // modal, no al confirmar — ver PodModal.tsx); servidor = cuando el
   // sistema lo recibio, fuente de verdad para ordenar/auditar.
-  timestampDispositivo: string;
-  timestampServidor: string;
-  creadoPor: string;
+  timestampDispositivo: string
+  timestampServidor: string
+  creadoPor: string
 }

@@ -1,7 +1,7 @@
-import { useEffect, useState, useMemo, type FC } from 'react';
-import { toast } from 'sonner';
-import { useQueryClient } from '@tanstack/react-query';
-import type { ClientAccount } from '@/shared/types/client.types';
+import { useEffect, useState, useMemo, type FC } from 'react'
+import { toast } from 'sonner'
+import { useQueryClient } from '@tanstack/react-query'
+import type { ClientAccount } from '@/shared/types/client.types'
 import {
   getClientsPage,
   createClient,
@@ -9,25 +9,25 @@ import {
   exportClients,
   type ClientFormInput,
   type ClientsQueryFilters,
-} from './api/clients.service';
-import type { ExportColumn } from '@/shared/components/ui/ExportButton';
-import { usePagedQuery } from '@/shared/hooks/usePagedQuery';
-import { cachedQueryKey } from '@/shared/api/queryKeys';
-import { useUrlListState } from '@/shared/hooks/useUrlListState';
-import { useSessionStore } from '@/shared/state/useSessionStore';
-import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
-import { Pagination } from '@/shared/components/ui/Pagination';
-import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary';
-import { ErrorState } from '@/shared/components/ui/ErrorState';
-import { LoadingState } from '@/shared/components/ui/LoadingState';
-import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay';
-import { ClientActionBar } from './components/ClientActionBar';
-import { ClientFilters } from './components/ClientFilters';
-import { ClientDirectoryTable } from './components/ClientDirectoryTable';
-import { ClientAccountsTable } from './components/ClientAccountsTable';
-import { ClientOverdueTable } from './components/ClientOverdueTable';
-import { CreateClientModal } from './components/create-client/CreateClientModal';
-import './ClientsPage.css';
+} from './api/clients.service'
+import type { ExportColumn } from '@/shared/components/ui/ExportButton'
+import { usePagedQuery } from '@/shared/hooks/usePagedQuery'
+import { cachedQueryKey } from '@/shared/api/queryKeys'
+import { useUrlListState } from '@/shared/hooks/useUrlListState'
+import { useSessionStore } from '@/shared/state/useSessionStore'
+import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue'
+import { Pagination } from '@/shared/components/ui/Pagination'
+import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary'
+import { ErrorState } from '@/shared/components/ui/ErrorState'
+import { LoadingState } from '@/shared/components/ui/LoadingState'
+import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay'
+import { ClientActionBar } from './components/ClientActionBar'
+import { ClientFilters } from './components/ClientFilters'
+import { ClientDirectoryTable } from './components/ClientDirectoryTable'
+import { ClientAccountsTable } from './components/ClientAccountsTable'
+import { ClientOverdueTable } from './components/ClientOverdueTable'
+import { CreateClientModal } from './components/create-client/CreateClientModal'
+import './ClientsPage.css'
 
 // ============================================================
 // ClientsPage — Main Clients Module Container (Tanda 3d de
@@ -43,41 +43,41 @@ import './ClientsPage.css';
 // Morosos no los soportan en su contrato paginado.
 // ============================================================
 
-type ActiveTab = 'directory' | 'accounts' | 'overdue';
+type ActiveTab = 'directory' | 'accounts' | 'overdue'
 
 // M6: debounce generico (useDebouncedValue) para no disparar un fetch
 // por tecla contra un dataset de decenas de miles de cuentas. Vive en
 // ClientsPage (no dentro de cada tab) porque las dos tabs paginadas
 // comparten el mismo input de busqueda de arriba — un solo debounce,
 // no uno por tab.
-const SEARCH_DEBOUNCE_MS = 300;
+const SEARCH_DEBOUNCE_MS = 300
 
-const TAB_VALUES: readonly ActiveTab[] = ['directory', 'accounts', 'overdue'];
+const TAB_VALUES: readonly ActiveTab[] = ['directory', 'accounts', 'overdue']
 
 function isActiveTab(value: string | undefined): value is ActiveTab {
-  return TAB_VALUES.includes(value as ActiveTab);
+  return TAB_VALUES.includes(value as ActiveTab)
 }
 
 const directoryExportColumns: ExportColumn<ClientAccount>[] = [
-  { header: 'Razon Social', accessor: (c) => c.clientName },
-  { header: 'CUIT', accessor: (c) => c.cuit },
-  { header: 'Direccion', accessor: (c) => c.address },
-  { header: 'Telefono', accessor: (c) => c.phone },
-  { header: 'Zona', accessor: (c) => c.zone },
-  { header: 'Vendedor', accessor: (c) => c.sellerName },
-  { header: 'Limite de Credito', accessor: (c) => c.creditLimit },
-  { header: 'Saldo Actual', accessor: (c) => c.currentBalance },
-  { header: 'Estado', accessor: (c) => c.status },
+  { header: 'Razon Social', accessor: c => c.clientName },
+  { header: 'CUIT', accessor: c => c.cuit },
+  { header: 'Direccion', accessor: c => c.address },
+  { header: 'Telefono', accessor: c => c.phone },
+  { header: 'Zona', accessor: c => c.zone },
+  { header: 'Vendedor', accessor: c => c.sellerName },
+  { header: 'Limite de Credito', accessor: c => c.creditLimit },
+  { header: 'Saldo Actual', accessor: c => c.currentBalance },
+  { header: 'Estado', accessor: c => c.status },
   // Tanda 18: mismo dato que la columna "Activo" del Directorio
   // (ClientDirectoryTable) — el archivo exportado coincide con lo que
   // se ve en pantalla (ADR-004).
-  { header: 'Activo', accessor: (c) => (c.isActive ? 'Activo' : 'Inactivo') },
-];
+  { header: 'Activo', accessor: c => (c.isActive ? 'Activo' : 'Inactivo') },
+]
 
 export const ClientsPage: FC = () => {
-  const empresaId = useSessionStore((s) => s.session?.company.id);
-  const queryClient = useQueryClient();
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const empresaId = useSessionStore(s => s.session?.company.id)
+  const queryClient = useQueryClient()
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
 
   // Tanda 4 (corrida completa, A13): tab activa, busqueda/zona/vendedor/
   // estado (compartidos por las 3 tabs, ver comentario de cabecera) y la
@@ -87,21 +87,24 @@ export const ClientsPage: FC = () => {
   // pero comparten esta misma busqueda via prop `search`, igual que antes.
   const urlState = useUrlListState<never, 'q' | 'zone' | 'seller' | 'status' | 'tab'>({
     filterKeys: ['q', 'zone', 'seller', 'status', 'tab'],
-  });
+  })
 
-  const activeTab: ActiveTab = isActiveTab(urlState.filters.tab) ? urlState.filters.tab : 'directory';
-  const setActiveTab = (tab: ActiveTab) => urlState.setFilter('tab', tab === 'directory' ? undefined : tab);
+  const activeTab: ActiveTab = isActiveTab(urlState.filters.tab)
+    ? urlState.filters.tab
+    : 'directory'
+  const setActiveTab = (tab: ActiveTab) =>
+    urlState.setFilter('tab', tab === 'directory' ? undefined : tab)
 
-  const [searchQuery, setSearchQuery] = useState(urlState.filters.q ?? '');
-  const debouncedSearchQuery = useDebouncedValue(searchQuery, SEARCH_DEBOUNCE_MS);
+  const [searchQuery, setSearchQuery] = useState(urlState.filters.q ?? '')
+  const debouncedSearchQuery = useDebouncedValue(searchQuery, SEARCH_DEBOUNCE_MS)
 
   useEffect(() => {
-    const current = urlState.filters.q ?? '';
+    const current = urlState.filters.q ?? ''
     if (debouncedSearchQuery !== current) {
-      urlState.setFilter('q', debouncedSearchQuery || undefined);
+      urlState.setFilter('q', debouncedSearchQuery || undefined)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- solo debe reaccionar al valor debounceado
-  }, [debouncedSearchQuery]);
+  }, [debouncedSearchQuery])
 
   // V3 de VERIFICACION_CORRIDA_COMPLETA.md: si la URL cambia externamente
   // (back/forward del navegador) mientras el componente sigue montado,
@@ -111,15 +114,15 @@ export const ClientsPage: FC = () => {
     // Microtask (mismo patron ya usado en ReprogramarModal/AlertsBell/
     // RegistrarEntregaModal) para no disparar setState sincronico en
     // el cuerpo del efecto.
-    Promise.resolve().then(() => setSearchQuery(urlState.filters.q ?? ''));
-  }, [urlState.filters.q]);
+    Promise.resolve().then(() => setSearchQuery(urlState.filters.q ?? ''))
+  }, [urlState.filters.q])
 
-  const zone = urlState.filters.zone ?? '';
-  const setZone = (value: string) => urlState.setFilter('zone', value || undefined);
-  const seller = urlState.filters.seller ?? '';
-  const setSeller = (value: string) => urlState.setFilter('seller', value || undefined);
-  const status = urlState.filters.status ?? '';
-  const setStatus = (value: string) => urlState.setFilter('status', value || undefined);
+  const zone = urlState.filters.zone ?? ''
+  const setZone = (value: string) => urlState.setFilter('zone', value || undefined)
+  const seller = urlState.filters.seller ?? ''
+  const setSeller = (value: string) => urlState.setFilter('seller', value || undefined)
+  const status = urlState.filters.status ?? ''
+  const setStatus = (value: string) => urlState.setFilter('status', value || undefined)
 
   // Directorio de Clientes (Tanda 3d): usePagedQuery server-side,
   // reemplaza al useCachedQuery + filtrado en memoria de Tanda 2.5.
@@ -135,8 +138,14 @@ export const ClientsPage: FC = () => {
       seller: urlState.filters.seller || undefined,
       status: (urlState.filters.status || undefined) as ClientAccount['status'] | undefined,
     }),
-    [empresaId, urlState.filters.q, urlState.filters.zone, urlState.filters.seller, urlState.filters.status]
-  );
+    [
+      empresaId,
+      urlState.filters.q,
+      urlState.filters.zone,
+      urlState.filters.seller,
+      urlState.filters.status,
+    ]
+  )
 
   const {
     items: clients,
@@ -154,11 +163,11 @@ export const ClientsPage: FC = () => {
     enabled: Boolean(empresaId),
     page: urlState.page,
     onPageChange: urlState.setPage,
-  });
+  })
 
   useEffect(() => {
-    if (error) toast.error('No se pudo cargar el listado de clientes.');
-  }, [error]);
+    if (error) toast.error('No se pudo cargar el listado de clientes.')
+  }, [error])
 
   // RF-CLI-001: Alta / Modificacion de cliente contra el service nuevo
   // (persiste en memoria durante la sesion, ver modules/clients/api/clients.service.ts).
@@ -172,21 +181,25 @@ export const ClientsPage: FC = () => {
   // CATALOG = 5 min) — sin esto, dar de baja un cliente y abrir "Nuevo
   // Pedido" enseguida seguia ofreciendolo con el isActive viejo.
   const handleSaveClient = async (input: ClientFormInput, clientId?: string) => {
-    if (!empresaId) throw new Error('Todavia no hay una sesion activa.');
+    if (!empresaId) throw new Error('Todavia no hay una sesion activa.')
     const saved = clientId
       ? await updateClient(empresaId, clientId, input)
-      : await createClient(empresaId, input);
-    refetch();
-    void queryClient.invalidateQueries({ queryKey: cachedQueryKey({ queryName: 'clients-catalog', empresaId }) });
-    return saved;
-  };
+      : await createClient(empresaId, input)
+    refetch()
+    void queryClient.invalidateQueries({
+      queryKey: cachedQueryKey({ queryName: 'clients-catalog', empresaId }),
+    })
+    return saved
+  }
 
   return (
     <div className="clients-page page-enter">
       <header className="page-header" style={{ alignItems: 'flex-start' }}>
         <div>
           <h2 className="page-header__title">Clientes</h2>
-          <p className="page-header__subtitle">Directorio comercial y gestion de cuentas corrientes</p>
+          <p className="page-header__subtitle">
+            Directorio comercial y gestion de cuentas corrientes
+          </p>
         </div>
         <ClientActionBar
           onNewClient={() => setIsCreateModalOpen(true)}
@@ -207,7 +220,7 @@ export const ClientsPage: FC = () => {
       />
 
       <div className="client-tabs">
-        <button 
+        <button
           className={`client-tab ${activeTab === 'directory' ? 'active' : ''}`}
           onClick={() => setActiveTab('directory')}
         >
@@ -228,8 +241,8 @@ export const ClientsPage: FC = () => {
       </div>
 
       <div className="clients-page__content mt-4">
-        {activeTab === 'directory' && (
-          !empresaId || isLoading ? (
+        {activeTab === 'directory' &&
+          (!empresaId || isLoading ? (
             <LoadingState message="Cargando directorio de clientes..." />
           ) : error ? (
             <ErrorState message="No se pudo cargar el directorio de clientes." onRetry={refetch} />
@@ -250,14 +263,9 @@ export const ClientsPage: FC = () => {
                 onPageSizeChange={setPageSize}
               />
             </ErrorBoundary>
-          )
-        )}
-        {activeTab === 'accounts' && (
-          <ClientAccountsTable search={debouncedSearchQuery} />
-        )}
-        {activeTab === 'overdue' && (
-          <ClientOverdueTable search={debouncedSearchQuery} />
-        )}
+          ))}
+        {activeTab === 'accounts' && <ClientAccountsTable search={debouncedSearchQuery} />}
+        {activeTab === 'overdue' && <ClientOverdueTable search={debouncedSearchQuery} />}
       </div>
 
       <CreateClientModal
@@ -267,5 +275,5 @@ export const ClientsPage: FC = () => {
         onSave={handleSaveClient}
       />
     </div>
-  );
-};
+  )
+}

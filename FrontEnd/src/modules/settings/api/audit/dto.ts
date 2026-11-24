@@ -7,9 +7,9 @@
 // ============================================================
 
 export interface AuditLogItemDTO {
-  id: string;
-  fecha: string; // string relativo ("Hace 5 min", "Ayer") — no ISO, ver mapper.ts
-  usuario: string;
-  accion: string;
-  detalle: string;
+  id: string
+  fecha: string // string relativo ("Hace 5 min", "Ayer") — no ISO, ver mapper.ts
+  usuario: string
+  accion: string
+  detalle: string
 }

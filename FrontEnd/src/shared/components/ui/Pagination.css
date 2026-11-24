@@ -38,7 +38,9 @@
   border: 0.0625rem solid var(--color-border);
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: background var(--transition-fast) ease, border-color var(--transition-fast) ease;
+  transition:
+    background var(--transition-fast) ease,
+    border-color var(--transition-fast) ease;
 }
 
 .pagination__btn:hover:not(:disabled) {
@@ -107,7 +109,9 @@
   border-radius: var(--radius-md);
   font-size: var(--font-size-sm);
   cursor: pointer;
-  transition: background var(--transition-fast) ease, border-color var(--transition-fast) ease;
+  transition:
+    background var(--transition-fast) ease,
+    border-color var(--transition-fast) ease;
 }
 
 .pagination__jump-btn:hover {

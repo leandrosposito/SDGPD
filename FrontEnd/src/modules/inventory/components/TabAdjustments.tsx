@@ -1,32 +1,33 @@
-import { useState, type FC } from 'react';
-import './TabAdjustments.css';
+import { useState, type FC } from 'react'
+import './TabAdjustments.css'
 
 // ============================================================
 // TabAdjustments — Panel para registrar correcciones manuales
 // ============================================================
 
 export const TabAdjustments: FC = () => {
-  const [productSearch, setProductSearch] = useState('');
-  const [quantity, setQuantity] = useState('');
-  const [motive, setMotive] = useState('');
+  const [productSearch, setProductSearch] = useState('')
+  const [quantity, setQuantity] = useState('')
+  const [motive, setMotive] = useState('')
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
-      e.preventDefault();
+      e.preventDefault()
       // Aca iria la logica para buscar el producto por codigo de barras
-      console.log('Buscando producto:', productSearch);
+      console.log('Buscando producto:', productSearch)
     }
-  };
+  }
 
   return (
     <div className="tab-adjustments">
       <div className="tab-adjustments__panel">
         <h3 className="tab-adjustments__title">Registrar Ajuste Manual</h3>
         <p className="tab-adjustments__subtitle">
-          Utiliza este panel para corregir discrepancias de inventario sin generar una orden de compra o venta.
+          Utiliza este panel para corregir discrepancias de inventario sin generar una orden de
+          compra o venta.
         </p>
 
-        <form className="tab-adjustments__form" onSubmit={(e) => e.preventDefault()}>
+        <form className="tab-adjustments__form" onSubmit={e => e.preventDefault()}>
           <div className="tab-adjustments__form-group">
             <label htmlFor="adj-product">Producto (Escanear Codigo o Buscar)</label>
             <input
@@ -34,7 +35,7 @@ export const TabAdjustments: FC = () => {
               type="text"
               placeholder="Ej: 7791234567890 o 'Cerveza'"
               value={productSearch}
-              onChange={(e) => setProductSearch(e.target.value)}
+              onChange={e => setProductSearch(e.target.value)}
               onKeyDown={handleKeyDown}
               className="tab-adjustments__input"
               autoComplete="off"
@@ -49,7 +50,7 @@ export const TabAdjustments: FC = () => {
                 type="number"
                 placeholder="Ej: -5 o 10"
                 value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
+                onChange={e => setQuantity(e.target.value)}
                 className="tab-adjustments__input"
               />
             </div>
@@ -59,7 +60,7 @@ export const TabAdjustments: FC = () => {
               <select
                 id="adj-motive"
                 value={motive}
-                onChange={(e) => setMotive(e.target.value)}
+                onChange={e => setMotive(e.target.value)}
                 className="tab-adjustments__input"
               >
                 <option value="">Seleccione un motivo...</option>
@@ -86,11 +87,7 @@ export const TabAdjustments: FC = () => {
 
             <div className="tab-adjustments__form-group">
               <label htmlFor="adj-vencimiento">Fecha de Vencimiento</label>
-              <input
-                id="adj-vencimiento"
-                type="date"
-                className="tab-adjustments__input"
-              />
+              <input id="adj-vencimiento" type="date" className="tab-adjustments__input" />
             </div>
           </div>
 
@@ -112,5 +109,5 @@ export const TabAdjustments: FC = () => {
         </form>
       </div>
     </div>
-  );
-};
+  )
+}

@@ -1,4 +1,4 @@
-import { type FC } from 'react';
+import { type FC } from 'react'
 import {
   ResponsiveContainer,
   LineChart,
@@ -7,41 +7,47 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-} from 'recharts';
-import type { SalesDataPoint } from '@/shared/types/analytics.types';
-import './ChartCard.css';
+} from 'recharts'
+import type { SalesDataPoint } from '@/shared/types/analytics.types'
+import './ChartCard.css'
 
 // ============================================================
 // SalesLineChart — Revenue trend line chart
 // ============================================================
 
 interface SalesLineChartProps {
-  data: SalesDataPoint[];
+  data: SalesDataPoint[]
 }
 
 const CHART_COLORS = {
-  line:     '#a78bfa',
-  grid:     'rgba(167, 139, 250, 0.1)',
-  tooltip:  '#1e1b2e',
-};
+  line: '#a78bfa',
+  grid: 'rgba(167, 139, 250, 0.1)',
+  tooltip: '#1e1b2e',
+}
 
 function formatCurrencyShort(value: number): string {
-  if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
-  if (value >= 1_000)     return `$${(value / 1_000).toFixed(0)}K`;
-  return `$${value}`;
+  if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`
+  if (value >= 1_000) return `$${(value / 1_000).toFixed(0)}K`
+  return `$${value}`
 }
 
 function renderTooltip(props: unknown) {
-  const { active, payload, label } = props as { active: boolean; payload: Array<{ value: number }>; label: string };
-  if (!active || !payload?.length) return null;
+  const { active, payload, label } = props as {
+    active: boolean
+    payload: Array<{ value: number }>
+    label: string
+  }
+  if (!active || !payload?.length) return null
   return (
     <div className="chart-tooltip">
       <span className="chart-tooltip__label">{label}</span>
       <span className="chart-tooltip__value">
-        {new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(payload[0].value ?? 0)}
+        {new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(
+          payload[0].value ?? 0
+        )}
       </span>
     </div>
-  );
+  )
 }
 
 export const SalesLineChart: FC<SalesLineChartProps> = ({ data }) => {
@@ -67,7 +73,10 @@ export const SalesLineChart: FC<SalesLineChartProps> = ({ data }) => {
               tickLine={false}
               width={52}
             />
-            <Tooltip content={renderTooltip} cursor={{ stroke: CHART_COLORS.line, strokeWidth: 1, strokeDasharray: '4 4' }} />
+            <Tooltip
+              content={renderTooltip}
+              cursor={{ stroke: CHART_COLORS.line, strokeWidth: 1, strokeDasharray: '4 4' }}
+            />
             <Line
               type="monotone"
               dataKey="revenue"
@@ -80,5 +89,5 @@ export const SalesLineChart: FC<SalesLineChartProps> = ({ data }) => {
         </ResponsiveContainer>
       </div>
     </div>
-  );
-};
+  )
+}

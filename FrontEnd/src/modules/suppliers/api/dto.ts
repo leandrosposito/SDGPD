@@ -11,13 +11,13 @@
 // ============================================================
 
 export interface SupplierContactDTO {
-  nombre: string;
-  email: string;
+  nombre: string
+  email: string
 }
 
 export interface SupplierAddressDTO {
-  calle: string;
-  ciudad: string;
+  calle: string
+  ciudad: string
 }
 
 // "Cuenta" agrupa lo financiero/comercial del proveedor — separado de
@@ -25,32 +25,32 @@ export interface SupplierAddressDTO {
 // salga de un sistema distinto (cuentas corrientes) que el ABM de
 // proveedores en si.
 export interface SupplierAccountDTO {
-  ordenes_pendientes: number;
-  dias_hasta_vencimiento: number | null;
-  saldo_actual: number;
-  tiene_deuda_vencida: boolean;
+  ordenes_pendientes: number
+  dias_hasta_vencimiento: number | null
+  saldo_actual: number
+  tiene_deuda_vencida: boolean
 }
 
 export interface SupplierProductDTO {
-  id: string;
-  sku: string;
-  nombre: string;
-  rubro: string;
-  costo: number;
-  actualizado_en: string;
+  id: string
+  sku: string
+  nombre: string
+  rubro: string
+  costo: number
+  actualizado_en: string
 }
 
 export interface SupplierDTO {
-  id: string;
-  razon_social: string;
-  cuit: string;
-  telefono: string;
-  rubro: string;
-  condiciones_pago: string;
-  contacto: SupplierContactDTO;
-  direccion: SupplierAddressDTO;
-  cuenta: SupplierAccountDTO;
-  productos: SupplierProductDTO[];
+  id: string
+  razon_social: string
+  cuit: string
+  telefono: string
+  rubro: string
+  condiciones_pago: string
+  contacto: SupplierContactDTO
+  direccion: SupplierAddressDTO
+  cuenta: SupplierAccountDTO
+  productos: SupplierProductDTO[]
 }
 
 // Envoltorio de lista paginada tal como lo devolveria el backend real
@@ -59,12 +59,12 @@ export interface SupplierDTO {
 // es la forma de la respuesta HTTP cruda que el mapper traduce a
 // PageResult<Supplier, undefined> dentro de suppliers.service.ts.
 export interface SuppliersPageDTO {
-  data: SupplierDTO[];
+  data: SupplierDTO[]
   meta: {
-    total: number;
-    page: number;
-    page_size: number;
-  };
+    total: number
+    page: number
+    page_size: number
+  }
 }
 
 // Payload de alta — solo los campos que el formulario de verdad pide
@@ -72,12 +72,12 @@ export interface SuppliersPageDTO {
 // completaria solo (id, cuenta en cero, sin productos todavia) no
 // viajan.
 export interface CreateSupplierDTO {
-  empresa_id: string;
-  razon_social: string;
-  cuit: string;
-  rubro: string;
-  telefono: string;
-  contacto: Pick<SupplierContactDTO, 'email'>;
+  empresa_id: string
+  razon_social: string
+  cuit: string
+  rubro: string
+  telefono: string
+  contacto: Pick<SupplierContactDTO, 'email'>
 }
 
-export type UpdateSupplierDTO = CreateSupplierDTO;
+export type UpdateSupplierDTO = CreateSupplierDTO

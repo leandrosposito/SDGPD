@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from 'zod'
 
 // ============================================================
 // PurchaseOrderFormModal.schema — formulario real de Alta de Orden de
@@ -19,17 +19,17 @@ const purchaseOrderLineFormSchema = z.object({
   productName: z.string(),
   quantity: z.coerce.number().int().min(1, 'La cantidad debe ser al menos 1.'),
   unitPrice: z.coerce.number().min(0, 'El precio no puede ser negativo.'),
-});
+})
 
 export const purchaseOrderFormSchema = z.object({
   supplierId: z.string().trim().min(1, 'Elegi un proveedor.'),
   branchId: z.string().trim().min(1, 'Elegi una sucursal de destino.'),
   currency: z.enum(['ARS', 'USD']),
   lines: z.array(purchaseOrderLineFormSchema).min(1, 'Agrega al menos un producto a la orden.'),
-});
+})
 
-export type PurchaseOrderFormInput = z.input<typeof purchaseOrderFormSchema>;
-export type PurchaseOrderFormValues = z.output<typeof purchaseOrderFormSchema>;
+export type PurchaseOrderFormInput = z.input<typeof purchaseOrderFormSchema>
+export type PurchaseOrderFormValues = z.output<typeof purchaseOrderFormSchema>
 
 export function purchaseOrderFormDefaultValues(
   defaultSupplierId?: string,
@@ -41,5 +41,5 @@ export function purchaseOrderFormDefaultValues(
     branchId: defaultBranchId ?? '',
     currency: 'ARS',
     lines: defaultLines ?? [],
-  };
+  }
 }

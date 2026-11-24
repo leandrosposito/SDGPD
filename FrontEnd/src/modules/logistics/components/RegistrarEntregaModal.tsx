@@ -1,17 +1,17 @@
-import { useEffect, useMemo, useState, type FC } from 'react';
-import { toast } from 'sonner';
-import { Modal } from '@/shared/components/ui/Modal';
-import { EvidenceUploader } from '@/shared/components/ui/EvidenceUploader';
-import { useEvidenceUpload } from '@/shared/hooks/useEvidenceUpload';
-import { useCachedQuery, CACHE_STALE_TIME } from '@/shared/hooks/useCachedQuery';
-import { useSessionStore } from '@/shared/state/useSessionStore';
-import type { Delivery } from '@/shared/types/logistics.types';
-import { derivePendingQuantity } from '@/shared/utils/orderFulfillment';
-import { getOrderById } from '@/modules/orders/api/orders.service';
-import { getMotivoCatalog } from '@/shared/api/motivos/motivos.service';
-import { MOTIVO_OTRO_CODIGO } from '@/shared/types/motivo.types';
-import { registrarEntrega, type RegistrarEntregaLineInput } from '../services/deliveries.service';
-import './RegistrarEntregaModal.css';
+import { useEffect, useMemo, useState, type FC } from 'react'
+import { toast } from 'sonner'
+import { Modal } from '@/shared/components/ui/Modal'
+import { EvidenceUploader } from '@/shared/components/ui/EvidenceUploader'
+import { useEvidenceUpload } from '@/shared/hooks/useEvidenceUpload'
+import { useCachedQuery, CACHE_STALE_TIME } from '@/shared/hooks/useCachedQuery'
+import { useSessionStore } from '@/shared/state/useSessionStore'
+import type { Delivery } from '@/shared/types/logistics.types'
+import { derivePendingQuantity } from '@/shared/utils/orderFulfillment'
+import { getOrderById } from '@/modules/orders/api/orders.service'
+import { getMotivoCatalog } from '@/shared/api/motivos/motivos.service'
+import { MOTIVO_OTRO_CODIGO } from '@/shared/types/motivo.types'
+import { registrarEntrega, type RegistrarEntregaLineInput } from '../services/deliveries.service'
+import './RegistrarEntregaModal.css'
 
 // ============================================================
 // RegistrarEntregaModal — ADR-001/ADR-002/ADR-005 (Tanda 8, corrida
@@ -38,25 +38,30 @@ import './RegistrarEntregaModal.css';
 // ============================================================
 
 interface LineDraft {
-  entregar: number;
-  rechazar: number;
-  motivoCodigo: string;
-  motivoOtroTexto: string;
+  entregar: number
+  rechazar: number
+  motivoCodigo: string
+  motivoOtroTexto: string
 }
 
 interface RegistrarEntregaModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  delivery: Delivery | null;
-  onRegistered: () => void;
+  isOpen: boolean
+  onClose: () => void
+  delivery: Delivery | null
+  onRegistered: () => void
 }
 
-export const RegistrarEntregaModal: FC<RegistrarEntregaModalProps> = ({ isOpen, onClose, delivery, onRegistered }) => {
-  const fullName = useSessionStore((s) => s.session?.fullName) ?? 'Usuario';
-  const empresaId = useSessionStore((s) => s.session?.company.id);
-  const [drafts, setDrafts] = useState<Record<string, LineDraft>>({});
-  const [isSaving, setIsSaving] = useState(false);
-  const evidence = useEvidenceUpload();
+export const RegistrarEntregaModal: FC<RegistrarEntregaModalProps> = ({
+  isOpen,
+  onClose,
+  delivery,
+  onRegistered,
+}) => {
+  const fullName = useSessionStore(s => s.session?.fullName) ?? 'Usuario'
+  const empresaId = useSessionStore(s => s.session?.company.id)
+  const [drafts, setDrafts] = useState<Record<string, LineDraft>>({})
+  const [isSaving, setIsSaving] = useState(false)
+  const evidence = useEvidenceUpload()
 
   // Idempotencia (ADR-010 seccion 4): la clave se forma UNA vez por
   // intento de registrar esta entrega — al abrir el modal, no al
@@ -68,12 +73,12 @@ export const RegistrarEntregaModal: FC<RegistrarEntregaModalProps> = ({ isOpen, 
   // lint — "la regla se calla, el problema queda". `openTrigger` nulo
   // mientras el modal esta cerrado evita generar una clave que nadie
   // va a usar.
-  const openTrigger = isOpen ? (delivery?.id ?? '') : null;
-  const [idempotencyKey, setIdempotencyKey] = useState('');
-  const [lastKeyTrigger, setLastKeyTrigger] = useState<string | null>(null);
+  const openTrigger = isOpen ? (delivery?.id ?? '') : null
+  const [idempotencyKey, setIdempotencyKey] = useState('')
+  const [lastKeyTrigger, setLastKeyTrigger] = useState<string | null>(null)
   if (openTrigger !== null && openTrigger !== lastKeyTrigger) {
-    setLastKeyTrigger(openTrigger);
-    setIdempotencyKey(crypto.randomUUID());
+    setLastKeyTrigger(openTrigger)
+    setIdempotencyKey(crypto.randomUUID())
   }
 
   const {
@@ -83,33 +88,35 @@ export const RegistrarEntregaModal: FC<RegistrarEntregaModalProps> = ({ isOpen, 
   } = useCachedQuery(
     'order-detail',
     delivery?.orderId ?? null,
-    (signal) => {
+    signal => {
       // Guardado por `enabled` (Boolean(delivery) && Boolean(empresaId))
       // — nunca deberia dispararse con cualquiera de los dos en null,
       // pero preferimos un error explicito a un `!` de asercion.
-      if (!delivery || !empresaId) throw new Error('RegistrarEntregaModal: fetch de pedido sin delivery/empresaId.');
-      return getOrderById(empresaId, delivery.orderId, signal);
+      if (!delivery || !empresaId)
+        throw new Error('RegistrarEntregaModal: fetch de pedido sin delivery/empresaId.')
+      return getOrderById(empresaId, delivery.orderId, signal)
     },
-    { enabled: isOpen && Boolean(delivery) && Boolean(empresaId), staleTime: CACHE_STALE_TIME.OPERATIONAL }
-  );
+    {
+      enabled: isOpen && Boolean(delivery) && Boolean(empresaId),
+      staleTime: CACHE_STALE_TIME.OPERATIONAL,
+    }
+  )
 
-  const {
-    data: motivoCatalog = [],
-    error: motivoCatalogError,
-  } = useCachedQuery(
+  const { data: motivoCatalog = [], error: motivoCatalogError } = useCachedQuery(
     'motivo-catalog',
     'rechazo',
-    (signal) => {
-      if (!empresaId) throw new Error('RegistrarEntregaModal: fetch de catalogo de motivos sin empresaId.');
-      return getMotivoCatalog(empresaId, 'rechazo', signal);
+    signal => {
+      if (!empresaId)
+        throw new Error('RegistrarEntregaModal: fetch de catalogo de motivos sin empresaId.')
+      return getMotivoCatalog(empresaId, 'rechazo', signal)
     },
     { enabled: isOpen && Boolean(empresaId), staleTime: CACHE_STALE_TIME.CATALOG }
-  );
+  )
 
   useEffect(() => {
-    if (orderError) toast.error('No se pudo cargar el pedido de esta entrega.');
-    if (motivoCatalogError) toast.error('No se pudo cargar el catálogo de motivos de rechazo.');
-  }, [orderError, motivoCatalogError]);
+    if (orderError) toast.error('No se pudo cargar el pedido de esta entrega.')
+    if (motivoCatalogError) toast.error('No se pudo cargar el catálogo de motivos de rechazo.')
+  }, [orderError, motivoCatalogError])
 
   // Seedea los drafts editables a partir del pedido YA TRAIDO por
   // useCachedQuery (no dispara ningun fetch — reacciona a datos que
@@ -121,21 +128,21 @@ export const RegistrarEntregaModal: FC<RegistrarEntregaModalProps> = ({ isOpen, 
     // 7/8) para no disparar setState sincronico en el cuerpo del efecto.
     Promise.resolve().then(() => {
       if (!isOpen || !order) {
-        setDrafts({});
-        evidence.reset();
-        return;
+        setDrafts({})
+        evidence.reset()
+        return
       }
-      const initial: Record<string, LineDraft> = {};
+      const initial: Record<string, LineDraft> = {}
       for (const item of order.items) {
-        const pending = derivePendingQuantity(item);
-        initial[item.id] = { entregar: pending, rechazar: 0, motivoCodigo: '', motivoOtroTexto: '' };
+        const pending = derivePendingQuantity(item)
+        initial[item.id] = { entregar: pending, rechazar: 0, motivoCodigo: '', motivoOtroTexto: '' }
       }
-      setDrafts(initial);
-    });
+      setDrafts(initial)
+    })
     // eslint-disable-next-line react-hooks/exhaustive-deps -- solo debe re-seedear cuando cambia el pedido/se abre, no en cada cambio de `evidence`
-  }, [isOpen, order]);
+  }, [isOpen, order])
 
-  const hasAnyRejection = useMemo(() => Object.values(drafts).some((d) => d.rechazar > 0), [drafts]);
+  const hasAnyRejection = useMemo(() => Object.values(drafts).some(d => d.rechazar > 0), [drafts])
 
   // Tanda 10B (hallazgo de Fase A: conecta requiereEvidencia, declarado
   // en el catalogo desde Tanda 9 sin consumidor de comportamiento).
@@ -146,67 +153,85 @@ export const RegistrarEntregaModal: FC<RegistrarEntregaModalProps> = ({ isOpen, 
   // evento (no por linea: mismo criterio que evidenciaIds hoy, un solo
   // array a nivel de remito, no por linea de detalle).
   const needsEvidence = useMemo(
-    () => Object.values(drafts).some((d) => d.rechazar > 0 && motivoCatalog.find((m) => m.codigo === d.motivoCodigo)?.requiereEvidencia),
+    () =>
+      Object.values(drafts).some(
+        d =>
+          d.rechazar > 0 && motivoCatalog.find(m => m.codigo === d.motivoCodigo)?.requiereEvidencia
+      ),
     [drafts, motivoCatalog]
-  );
-  const evidenceMissing = needsEvidence && evidence.uploadedFileIds.length === 0;
+  )
+  const evidenceMissing = needsEvidence && evidence.uploadedFileIds.length === 0
 
-  if (!delivery) return null;
+  if (!delivery) return null
 
   function updateDraft(lineId: string, patch: Partial<LineDraft>) {
-    setDrafts((prev) => ({ ...prev, [lineId]: { ...prev[lineId], ...patch } }));
+    setDrafts(prev => ({ ...prev, [lineId]: { ...prev[lineId], ...patch } }))
   }
 
   async function handleConfirm() {
-    if (!order || !delivery || !empresaId) return;
+    if (!order || !delivery || !empresaId) return
 
     const lines: RegistrarEntregaLineInput[] = order.items
-      .map((item) => {
-        const draft = drafts[item.id];
+      .map(item => {
+        const draft = drafts[item.id]
         return {
           orderLineId: item.id,
           cantidadEntregada: draft?.entregar ?? 0,
           cantidadRechazada: draft?.rechazar ?? 0,
           motivoCodigo: draft?.rechazar > 0 ? draft.motivoCodigo || undefined : undefined,
-          motivoOtroTexto: draft?.motivoCodigo === MOTIVO_OTRO_CODIGO ? draft.motivoOtroTexto || undefined : undefined,
-        };
+          motivoOtroTexto:
+            draft?.motivoCodigo === MOTIVO_OTRO_CODIGO
+              ? draft.motivoOtroTexto || undefined
+              : undefined,
+        }
       })
-      .filter((l) => l.cantidadEntregada > 0 || l.cantidadRechazada > 0);
+      .filter(l => l.cantidadEntregada > 0 || l.cantidadRechazada > 0)
 
     if (lines.length === 0) {
-      toast.error('Cargá al menos una cantidad entregada o rechazada.');
-      return;
+      toast.error('Cargá al menos una cantidad entregada o rechazada.')
+      return
     }
-    if (lines.some((l) => l.cantidadRechazada > 0 && !l.motivoCodigo)) {
-      toast.error('Toda cantidad rechazada necesita un motivo.');
-      return;
+    if (lines.some(l => l.cantidadRechazada > 0 && !l.motivoCodigo)) {
+      toast.error('Toda cantidad rechazada necesita un motivo.')
+      return
     }
-    if (lines.some((l) => l.motivoCodigo === MOTIVO_OTRO_CODIGO && !l.motivoOtroTexto?.trim())) {
-      toast.error('El motivo "Otro" necesita una aclaración.');
-      return;
+    if (lines.some(l => l.motivoCodigo === MOTIVO_OTRO_CODIGO && !l.motivoOtroTexto?.trim())) {
+      toast.error('El motivo "Otro" necesita una aclaración.')
+      return
     }
     if (evidence.isUploading) {
-      toast.error('Esperá a que terminen de subirse los archivos de evidencia.');
-      return;
+      toast.error('Esperá a que terminen de subirse los archivos de evidencia.')
+      return
     }
     if (hasAnyRejection && evidence.hasErrors) {
-      toast.error('Hay archivos de evidencia con error — reintentalos o quitalos antes de confirmar.');
-      return;
+      toast.error(
+        'Hay archivos de evidencia con error — reintentalos o quitalos antes de confirmar.'
+      )
+      return
     }
     if (evidenceMissing) {
-      toast.error('Al menos un motivo de rechazo exige evidencia adjunta — subí un archivo antes de confirmar.');
-      return;
+      toast.error(
+        'Al menos un motivo de rechazo exige evidencia adjunta — subí un archivo antes de confirmar.'
+      )
+      return
     }
-    if (!idempotencyKey) return;
+    if (!idempotencyKey) return
 
-    setIsSaving(true);
+    setIsSaving(true)
     try {
-      const result = await registrarEntrega(empresaId, idempotencyKey, delivery.id, lines, evidence.uploadedFileIds, fullName);
+      const result = await registrarEntrega(
+        empresaId,
+        idempotencyKey,
+        delivery.id,
+        lines,
+        evidence.uploadedFileIds,
+        fullName
+      )
       if (result.success) {
-        toast.success('Entrega registrada correctamente.');
-        onRegistered();
-        onClose();
-        return;
+        toast.success('Entrega registrada correctamente.')
+        onRegistered()
+        onClose()
+        return
       }
       if (result.reason === 'propagation-failed') {
         // El remito quedo escrito y la entrega ya paso a Finalizada
@@ -215,12 +240,15 @@ export const RegistrarEntregaModal: FC<RegistrarEntregaModalProps> = ({ isOpen, 
         // la misma entrega ya no es una transicion valida) pero con una
         // advertencia distinta, no el error generico: hay que corregir
         // el pedido a mano.
-        toast.error(`Se registró el remito de ${delivery.id}, pero no se pudo actualizar el pedido — avisá para corregirlo a mano.`, {
-          duration: 10000,
-        });
-        onRegistered();
-        onClose();
-        return;
+        toast.error(
+          `Se registró el remito de ${delivery.id}, pero no se pudo actualizar el pedido — avisá para corregirlo a mano.`,
+          {
+            duration: 10000,
+          }
+        )
+        onRegistered()
+        onClose()
+        return
       }
       const message =
         result.reason === 'invalid-transition'
@@ -229,12 +257,12 @@ export const RegistrarEntregaModal: FC<RegistrarEntregaModalProps> = ({ isOpen, 
             ? 'No se cargó ninguna línea.'
             : result.reason === 'motivo-invalido'
               ? 'Revisá los motivos de rechazo cargados.'
-              : 'No se encontró la entrega.';
-      toast.error(message);
+              : 'No se encontró la entrega.'
+      toast.error(message)
     } catch {
-      toast.error('No se pudo registrar la entrega.');
+      toast.error('No se pudo registrar la entrega.')
     } finally {
-      setIsSaving(false);
+      setIsSaving(false)
     }
   }
 
@@ -246,7 +274,12 @@ export const RegistrarEntregaModal: FC<RegistrarEntregaModalProps> = ({ isOpen, 
       size="lg"
       footer={
         <>
-          <button type="button" className="registrar-entrega__cancel" onClick={onClose} disabled={isSaving}>
+          <button
+            type="button"
+            className="registrar-entrega__cancel"
+            onClick={onClose}
+            disabled={isSaving}
+          >
             Cancelar
           </button>
           <button
@@ -254,7 +287,11 @@ export const RegistrarEntregaModal: FC<RegistrarEntregaModalProps> = ({ isOpen, 
             className="registrar-entrega__confirm"
             onClick={handleConfirm}
             disabled={isSaving || isLoadingOrder || !order || evidenceMissing}
-            title={evidenceMissing ? 'Este rechazo exige evidencia adjunta antes de confirmar.' : undefined}
+            title={
+              evidenceMissing
+                ? 'Este rechazo exige evidencia adjunta antes de confirmar.'
+                : undefined
+            }
           >
             {isSaving ? 'Guardando...' : 'Confirmar entrega'}
           </button>
@@ -278,9 +315,14 @@ export const RegistrarEntregaModal: FC<RegistrarEntregaModalProps> = ({ isOpen, 
               </tr>
             </thead>
             <tbody>
-              {order.items.map((item) => {
-                const pending = derivePendingQuantity(item);
-                const draft = drafts[item.id] ?? { entregar: pending, rechazar: 0, motivoCodigo: '', motivoOtroTexto: '' };
+              {order.items.map(item => {
+                const pending = derivePendingQuantity(item)
+                const draft = drafts[item.id] ?? {
+                  entregar: pending,
+                  rechazar: 0,
+                  motivoCodigo: '',
+                  motivoOtroTexto: '',
+                }
                 return (
                   <tr key={item.id}>
                     <td>{item.name}</td>
@@ -293,7 +335,7 @@ export const RegistrarEntregaModal: FC<RegistrarEntregaModalProps> = ({ isOpen, 
                         min={0}
                         max={pending}
                         value={draft.entregar}
-                        onChange={(e) => updateDraft(item.id, { entregar: Number(e.target.value) })}
+                        onChange={e => updateDraft(item.id, { entregar: Number(e.target.value) })}
                       />
                     </td>
                     <td>
@@ -302,7 +344,7 @@ export const RegistrarEntregaModal: FC<RegistrarEntregaModalProps> = ({ isOpen, 
                         min={0}
                         max={pending}
                         value={draft.rechazar}
-                        onChange={(e) => updateDraft(item.id, { rechazar: Number(e.target.value) })}
+                        onChange={e => updateDraft(item.id, { rechazar: Number(e.target.value) })}
                       />
                     </td>
                     <td>
@@ -310,10 +352,15 @@ export const RegistrarEntregaModal: FC<RegistrarEntregaModalProps> = ({ isOpen, 
                         <div className="registrar-entrega__motivo">
                           <select
                             value={draft.motivoCodigo}
-                            onChange={(e) => updateDraft(item.id, { motivoCodigo: e.target.value, motivoOtroTexto: '' })}
+                            onChange={e =>
+                              updateDraft(item.id, {
+                                motivoCodigo: e.target.value,
+                                motivoOtroTexto: '',
+                              })
+                            }
                           >
                             <option value="">Seleccioná un motivo…</option>
-                            {motivoCatalog.map((m) => (
+                            {motivoCatalog.map(m => (
                               <option key={m.codigo} value={m.codigo}>
                                 {m.descripcion}
                               </option>
@@ -324,14 +371,16 @@ export const RegistrarEntregaModal: FC<RegistrarEntregaModalProps> = ({ isOpen, 
                               type="text"
                               placeholder="Especificar…"
                               value={draft.motivoOtroTexto}
-                              onChange={(e) => updateDraft(item.id, { motivoOtroTexto: e.target.value })}
+                              onChange={e =>
+                                updateDraft(item.id, { motivoOtroTexto: e.target.value })
+                              }
                             />
                           )}
                         </div>
                       )}
                     </td>
                   </tr>
-                );
+                )
               })}
             </tbody>
           </table>
@@ -348,5 +397,5 @@ export const RegistrarEntregaModal: FC<RegistrarEntregaModalProps> = ({ isOpen, 
         </div>
       )}
     </Modal>
-  );
-};
+  )
+}

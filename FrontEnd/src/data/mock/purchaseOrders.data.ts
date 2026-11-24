@@ -1,5 +1,5 @@
-import { asBranchId } from '@/shared/types/ids.types';
-import type { PurchaseOrder } from '@/shared/types/purchaseOrder.types';
+import { asBranchId } from '@/shared/types/ids.types'
+import type { PurchaseOrder } from '@/shared/types/purchaseOrder.types'
 
 // ============================================================
 // MOCK DATA — Purchase Orders (Compras)
@@ -30,23 +30,41 @@ const PRODUCTS_BY_SUPPLIER: Record<string, string[]> = {
   'sup-001': ['inv-001', 'inv-003', 'inv-006', 'inv-013', 'inv-016', 'inv-008', 'inv-009'],
   'sup-002': ['inv-002', 'inv-007', 'inv-012', 'inv-014', 'inv-017'],
   'sup-003': ['inv-004', 'inv-005', 'inv-010', 'inv-011', 'inv-015', 'inv-018'],
-};
+}
 
 const UNIT_PRICE_BY_PRODUCT: Record<string, number> = {
-  'inv-001': 1500, 'inv-003': 380, 'inv-006': 4200, 'inv-013': 950, 'inv-016': 280, 'inv-008': 310, 'inv-009': 650,
-  'inv-002': 2800, 'inv-007': 1100, 'inv-012': 320, 'inv-014': 1100, 'inv-017': 980,
-  'inv-004': 420, 'inv-005': 280, 'inv-010': 480, 'inv-011': 890, 'inv-015': 890, 'inv-018': 2200,
-};
+  'inv-001': 1500,
+  'inv-003': 380,
+  'inv-006': 4200,
+  'inv-013': 950,
+  'inv-016': 280,
+  'inv-008': 310,
+  'inv-009': 650,
+  'inv-002': 2800,
+  'inv-007': 1100,
+  'inv-012': 320,
+  'inv-014': 1100,
+  'inv-017': 980,
+  'inv-004': 420,
+  'inv-005': 280,
+  'inv-010': 480,
+  'inv-011': 890,
+  'inv-015': 890,
+  'inv-018': 2200,
+}
 
-let lineSeq = 0;
-function line(productId: string, quantity: number): { id: string; productId: string; quantity: number; unitPrice: number } {
-  lineSeq += 1;
+let lineSeq = 0
+function line(
+  productId: string,
+  quantity: number
+): { id: string; productId: string; quantity: number; unitPrice: number } {
+  lineSeq += 1
   return {
     id: `pol-${String(lineSeq).padStart(4, '0')}`,
     productId,
     quantity,
     unitPrice: UNIT_PRICE_BY_PRODUCT[productId] ?? 1000,
-  };
+  }
 }
 
 export const PURCHASE_ORDERS_MOCK_DATA: PurchaseOrder[] = [
@@ -125,28 +143,32 @@ export const PURCHASE_ORDERS_MOCK_DATA: PurchaseOrder[] = [
     createdAt: '2026-08-25T16:20:00Z',
     lines: [line('inv-018', 150), line('inv-018', 50)],
   },
-];
+]
 
 // Relleno para probar paginacion real (3.2: al menos 30 en total).
 // Determinístico (sin Math.random()): cicla proveedor/sucursal/estado/
 // moneda para cubrir la matriz completa varias veces con datos
 // reproducibles entre corridas.
-const SUPPLIER_IDS = ['sup-001', 'sup-002', 'sup-003'];
-const BRANCH_IDS = ['0192f000-0000-7000-8000-000000000001', '0192f000-0000-7000-8000-000000000002', '0192f000-0000-7000-8000-000000000003'].map(asBranchId);
-const STATUSES: PurchaseOrder['status'][] = ['draft', 'sent', 'received', 'cancelled'];
-const CURRENCIES: PurchaseOrder['currency'][] = ['ARS', 'USD'];
+const SUPPLIER_IDS = ['sup-001', 'sup-002', 'sup-003']
+const BRANCH_IDS = [
+  '0192f000-0000-7000-8000-000000000001',
+  '0192f000-0000-7000-8000-000000000002',
+  '0192f000-0000-7000-8000-000000000003',
+].map(asBranchId)
+const STATUSES: PurchaseOrder['status'][] = ['draft', 'sent', 'received', 'cancelled']
+const CURRENCIES: PurchaseOrder['currency'][] = ['ARS', 'USD']
 
-const bulkOrders: PurchaseOrder[] = [];
+const bulkOrders: PurchaseOrder[] = []
 for (let i = 0; i < 26; i++) {
-  const supplierId = SUPPLIER_IDS[i % SUPPLIER_IDS.length];
-  const branchId = BRANCH_IDS[(i + 1) % BRANCH_IDS.length];
-  const status = STATUSES[i % STATUSES.length];
-  const currency = CURRENCIES[i % CURRENCIES.length];
-  const products = PRODUCTS_BY_SUPPLIER[supplierId];
-  const lineCount = (i % 3) + 1; // 1, 2 o 3 lineas
+  const supplierId = SUPPLIER_IDS[i % SUPPLIER_IDS.length]
+  const branchId = BRANCH_IDS[(i + 1) % BRANCH_IDS.length]
+  const status = STATUSES[i % STATUSES.length]
+  const currency = CURRENCIES[i % CURRENCIES.length]
+  const products = PRODUCTS_BY_SUPPLIER[supplierId]
+  const lineCount = (i % 3) + 1 // 1, 2 o 3 lineas
   const lines = Array.from({ length: lineCount }, (_, j) =>
-    line(products[(i + j) % products.length], 20 + ((i + j) * 7) % 180)
-  );
+    line(products[(i + j) % products.length], 20 + (((i + j) * 7) % 180))
+  )
 
   bulkOrders.push({
     id: `po-${String(i + 8).padStart(3, '0')}`,
@@ -159,7 +181,7 @@ for (let i = 0; i < 26; i++) {
     // logistica): nada en Compras calcula antiguedad ni tramos.
     createdAt: new Date(Date.UTC(2026, 7, 5 - i, 10, 0, 0)).toISOString(),
     lines,
-  });
+  })
 }
 
-PURCHASE_ORDERS_MOCK_DATA.push(...bulkOrders);
+PURCHASE_ORDERS_MOCK_DATA.push(...bulkOrders)

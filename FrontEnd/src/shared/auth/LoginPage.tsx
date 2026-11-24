@@ -1,11 +1,11 @@
-import { useState, type FC } from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { LogIn } from 'lucide-react';
-import { AUTH_IS_HTTP, useSessionStore, type LoginReason } from '@/shared/state/useSessionStore';
-import { loginFormSchema, type LoginFormValues } from './login.schema';
-import './LoginPage.css';
+import { useState, type FC } from 'react'
+import { Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { LogIn } from 'lucide-react'
+import { AUTH_IS_HTTP, useSessionStore, type LoginReason } from '@/shared/state/useSessionStore'
+import { loginFormSchema, type LoginFormValues } from './login.schema'
+import './LoginPage.css'
 
 // ============================================================
 // LoginPage — pantalla de login (BE-1b). Solo existe con 'auth' por http
@@ -22,42 +22,54 @@ const LOGIN_ERROR_MESSAGES: Record<LoginReason, string> = {
   'invalid-credentials': 'Email o contrasena incorrectos.',
   network: 'No se pudo conectar con el servidor. Revisa que el backend este levantado.',
   unknown: 'No se pudo iniciar sesion. Intenta de nuevo.',
-};
+}
 
 function fromPath(state: unknown): string {
-  if (typeof state === 'object' && state !== null && 'from' in state && typeof state.from === 'string') return state.from;
-  return '/';
+  if (
+    typeof state === 'object' &&
+    state !== null &&
+    'from' in state &&
+    typeof state.from === 'string'
+  )
+    return state.from
+  return '/'
 }
 
 export const LoginPage: FC = () => {
-  const login = useSessionStore((s) => s.login);
-  const status = useSessionStore((s) => s.status);
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [serverError, setServerError] = useState<string | null>(null);
+  const login = useSessionStore(s => s.login)
+  const status = useSessionStore(s => s.status)
+  const navigate = useNavigate()
+  const location = useLocation()
+  const [serverError, setServerError] = useState<string | null>(null)
 
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<LoginFormValues>({ resolver: zodResolver(loginFormSchema), defaultValues: { email: '', password: '' } });
+  } = useForm<LoginFormValues>({
+    resolver: zodResolver(loginFormSchema),
+    defaultValues: { email: '', password: '' },
+  })
 
-  if (!AUTH_IS_HTTP || status === 'authenticated') return <Navigate to={fromPath(location.state)} replace />;
+  if (!AUTH_IS_HTTP || status === 'authenticated')
+    return <Navigate to={fromPath(location.state)} replace />
 
-  const onSubmit = handleSubmit(async (values) => {
-    setServerError(null);
-    const result = await login(values.email, values.password);
+  const onSubmit = handleSubmit(async values => {
+    setServerError(null)
+    const result = await login(values.email, values.password)
     if (result.success) {
-      navigate(fromPath(location.state), { replace: true });
-      return;
+      navigate(fromPath(location.state), { replace: true })
+      return
     }
-    setServerError(LOGIN_ERROR_MESSAGES[result.reason ?? 'unknown']);
-  });
+    setServerError(LOGIN_ERROR_MESSAGES[result.reason ?? 'unknown'])
+  })
 
   return (
     <main className="login-page">
       <form className="login-card" onSubmit={onSubmit} noValidate aria-labelledby="login-title">
-        <h1 id="login-title" className="login-card__title">SDGPD</h1>
+        <h1 id="login-title" className="login-card__title">
+          SDGPD
+        </h1>
         <p className="login-card__subtitle">Ingresa con tu cuenta</p>
 
         <label className="login-card__field">
@@ -96,5 +108,5 @@ export const LoginPage: FC = () => {
         </button>
       </form>
     </main>
-  );
-};
+  )
+}

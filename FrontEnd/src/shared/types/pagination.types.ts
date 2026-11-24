@@ -6,20 +6,20 @@
 // cuenta y corta el, y devuelve solo la pagina pedida.
 // ============================================================
 
-export type SortDirection = 'asc' | 'desc';
+export type SortDirection = 'asc' | 'desc'
 
 export interface PageSort<TSort extends string> {
-  field: TSort;
-  direction: SortDirection;
+  field: TSort
+  direction: SortDirection
 }
 
 // TFilters es tipado por cada consumidor (nunca Record<string, unknown>):
 // ver DeliveryQueryFilters (logistics) y LowStockQueryFilters (inventory).
 export interface PageQuery<TFilters, TSort extends string = string> {
-  page: number; // 1-based
-  pageSize: number;
-  filters: TFilters;
-  sort?: PageSort<TSort>;
+  page: number // 1-based
+  pageSize: number
+  filters: TFilters
+  sort?: PageSort<TSort>
 }
 
 // TAggregates es opcional y tipado por consumidor (P3) — nunca any. Un
@@ -31,15 +31,15 @@ export interface PageQuery<TFilters, TSort extends string = string> {
 // promedio sobre `items` — si necesita un numero agregado, tiene que
 // salir de `aggregates`, no de recorrer la pagina a mano.
 export interface PageResult<TItem, TAggregates = undefined> {
-  items: TItem[];
-  total: number; // total que matchea los filtros, NO el tamaño del dataset entero
+  items: TItem[]
+  total: number // total que matchea los filtros, NO el tamaño del dataset entero
   // Pagina realmente devuelta: puede diferir de la pedida si la pedida
   // quedo fuera de rango (por ejemplo, una mutacion redujo el total y
   // la pagina que se estaba viendo ya no existe) — quien consume el
   // contrato debe confiar en este valor, no en el que pidio.
-  page: number;
-  pageSize: number;
-  aggregates?: TAggregates;
+  page: number
+  pageSize: number
+  aggregates?: TAggregates
 }
 
 // ============================================================
@@ -57,8 +57,8 @@ export interface PageResult<TItem, TAggregates = undefined> {
 // ============================================================
 
 export interface DateRangeQueryFilters {
-  dateFrom?: string;
-  dateTo?: string;
+  dateFrom?: string
+  dateTo?: string
 }
 
 // ============================================================
@@ -71,12 +71,12 @@ export interface DateRangeQueryFilters {
 // export lo volveria mas ambiguo para el resto. Cada servicio expone
 // en cambio una funcion de export propia, que reutiliza (no duplica)
 // el mismo filtro+orden que su getXPage.
-export const MAX_EXPORT_ROWS = 10_000;
+export const MAX_EXPORT_ROWS = 10_000
 
 export interface ExportResult<TItem> {
-  items: TItem[];
+  items: TItem[]
   // true si el total filtrado excedia MAX_EXPORT_ROWS y se corto —
   // quien consume esto debe avisar al usuario (toast), nunca fallar
   // en silencio ni intentar traer el resto.
-  truncated: boolean;
+  truncated: boolean
 }

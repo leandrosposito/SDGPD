@@ -1,5 +1,5 @@
-import type { FC } from 'react';
-import '@/modules/settings/SettingsPage.css';
+import type { FC } from 'react'
+import '@/modules/settings/SettingsPage.css'
 
 export const TabCompanyProfile: FC = () => {
   return (
@@ -53,18 +53,32 @@ export const TabCompanyProfile: FC = () => {
 
       <h3 className="settings-section-title">Logo Oficial</h3>
       <div className="settings-dropzone">
-        <svg className="settings-dropzone-icon" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <svg
+          className="settings-dropzone-icon"
+          width="48"
+          height="48"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
           <polyline points="17 8 12 3 7 8"></polyline>
           <line x1="12" y1="3" x2="12" y2="15"></line>
         </svg>
-        <span className="settings-label" style={{ color: 'var(--color-text-primary)' }}>Arrastra tu logo aquí o haz clic para buscar</span>
-        <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)' }}>Recomendado: PNG fondo transparente. Se aplicará en remitos y facturas.</span>
+        <span className="settings-label" style={{ color: 'var(--color-text-primary)' }}>
+          Arrastra tu logo aquí o haz clic para buscar
+        </span>
+        <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)' }}>
+          Recomendado: PNG fondo transparente. Se aplicará en remitos y facturas.
+        </span>
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 'var(--space-4)' }}>
         <button className="client-modal-btn client-modal-btn--primary">Guardar Cambios</button>
       </div>
     </>
-  );
-};
+  )
+}

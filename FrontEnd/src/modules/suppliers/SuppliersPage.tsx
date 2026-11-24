@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState, type FC } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
-import type { Supplier } from '@/shared/types/supplier.types';
+import { useEffect, useMemo, useState, type FC } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
+import type { Supplier } from '@/shared/types/supplier.types'
 import {
   fetchSuppliersPage,
   exportSuppliers,
@@ -10,22 +10,22 @@ import {
   type SuppliersQueryFilters,
   type SuppliersSortField,
   type SupplierFormInput,
-} from './api/suppliers.service';
-import { usePagedQuery } from '@/shared/hooks/usePagedQuery';
-import { useUrlListState } from '@/shared/hooks/useUrlListState';
-import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
-import { useSessionStore } from '@/shared/state/useSessionStore';
-import { Pagination } from '@/shared/components/ui/Pagination';
-import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary';
-import { ErrorState } from '@/shared/components/ui/ErrorState';
-import { LoadingState } from '@/shared/components/ui/LoadingState';
-import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay';
-import { ExportButton, type ExportColumn } from '@/shared/components/ui/ExportButton';
-import { SupplierDetailPanel } from './components/SupplierDetailPanel';
-import { SupplierFormModal } from './components/SupplierFormModal';
-import { SuppliersFilters } from './components/SuppliersFilters';
-import { SuppliersTable } from './components/SuppliersTable';
-import './SuppliersPage.css';
+} from './api/suppliers.service'
+import { usePagedQuery } from '@/shared/hooks/usePagedQuery'
+import { useUrlListState } from '@/shared/hooks/useUrlListState'
+import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue'
+import { useSessionStore } from '@/shared/state/useSessionStore'
+import { Pagination } from '@/shared/components/ui/Pagination'
+import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary'
+import { ErrorState } from '@/shared/components/ui/ErrorState'
+import { LoadingState } from '@/shared/components/ui/LoadingState'
+import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay'
+import { ExportButton, type ExportColumn } from '@/shared/components/ui/ExportButton'
+import { SupplierDetailPanel } from './components/SupplierDetailPanel'
+import { SupplierFormModal } from './components/SupplierFormModal'
+import { SuppliersFilters } from './components/SuppliersFilters'
+import { SuppliersTable } from './components/SuppliersTable'
+import './SuppliersPage.css'
 
 // ============================================================
 // SuppliersPage — Gestion de Proveedores. Modulo piloto de la capa
@@ -46,32 +46,32 @@ import './SuppliersPage.css';
 // ============================================================
 
 export const SuppliersPage: FC = () => {
-  const navigate = useNavigate();
-  const session = useSessionStore((s) => s.session);
-  const empresaId = session?.company.id;
-  const queryClient = useQueryClient();
+  const navigate = useNavigate()
+  const session = useSessionStore(s => s.session)
+  const empresaId = session?.company.id
+  const queryClient = useQueryClient()
 
-  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
-  const [isPanelOpen, setIsPanelOpen] = useState(false);
-  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null)
+  const [isPanelOpen, setIsPanelOpen] = useState(false)
+  const [isFormModalOpen, setIsFormModalOpen] = useState(false)
 
   // Tanda 4 (corrida completa, A13): pagina, orden, busqueda y categoria
   // viven en la URL — unica fuente de verdad del listado.
   const urlState = useUrlListState<SuppliersSortField, 'q' | 'category'>({
     sortFields: ['name', 'cuit', 'currentBalance', 'category'],
     filterKeys: ['q', 'category'],
-  });
+  })
 
-  const [searchTerm, setSearchTerm] = useState(urlState.filters.q ?? '');
-  const debouncedSearchTerm = useDebouncedValue(searchTerm, 300);
+  const [searchTerm, setSearchTerm] = useState(urlState.filters.q ?? '')
+  const debouncedSearchTerm = useDebouncedValue(searchTerm, 300)
 
   useEffect(() => {
-    const current = urlState.filters.q ?? '';
+    const current = urlState.filters.q ?? ''
     if (debouncedSearchTerm !== current) {
-      urlState.setFilter('q', debouncedSearchTerm || undefined);
+      urlState.setFilter('q', debouncedSearchTerm || undefined)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- solo debe reaccionar al valor debounceado, no a cada render de urlState
-  }, [debouncedSearchTerm]);
+  }, [debouncedSearchTerm])
 
   // V3 de VERIFICACION_CORRIDA_COMPLETA.md: si la URL cambia externamente
   // (back/forward del navegador) mientras el componente sigue montado,
@@ -81,11 +81,12 @@ export const SuppliersPage: FC = () => {
     // Microtask (mismo patron ya usado en ReprogramarModal/AlertsBell/
     // RegistrarEntregaModal) para no disparar setState sincronico en
     // el cuerpo del efecto.
-    Promise.resolve().then(() => setSearchTerm(urlState.filters.q ?? ''));
-  }, [urlState.filters.q]);
+    Promise.resolve().then(() => setSearchTerm(urlState.filters.q ?? ''))
+  }, [urlState.filters.q])
 
-  const selectedCategory = urlState.filters.category ?? '';
-  const setSelectedCategory = (category: string) => urlState.setFilter('category', category || undefined);
+  const selectedCategory = urlState.filters.category ?? ''
+  const setSelectedCategory = (category: string) =>
+    urlState.setFilter('category', category || undefined)
 
   const filters: SuppliersQueryFilters = useMemo(
     () => ({
@@ -94,7 +95,7 @@ export const SuppliersPage: FC = () => {
       category: urlState.filters.category || undefined,
     }),
     [empresaId, urlState.filters.q, urlState.filters.category]
-  );
+  )
 
   const {
     items: suppliers,
@@ -116,7 +117,7 @@ export const SuppliersPage: FC = () => {
     onPageChange: urlState.setPage,
     sort: urlState.sort,
     onSortChange: urlState.setSort,
-  });
+  })
 
   // RF-PRO-001: Alta / Modificacion de proveedor contra suppliers.service
   // (persiste en memoria durante la sesion). Tras guardar, se vuelve a
@@ -125,55 +126,55 @@ export const SuppliersPage: FC = () => {
   // resto de listados migrados: evita duplicar en el cliente cualquier
   // logica de filtro/orden que ya vive en el servicio.
   const handleSaveSupplier = async (input: SupplierFormInput, supplierId?: string) => {
-    if (!empresaId) throw new Error('Todavia no hay una sesion activa.');
+    if (!empresaId) throw new Error('Todavia no hay una sesion activa.')
     const saved = supplierId
       ? await updateSupplier(empresaId, supplierId, input)
-      : await createSupplier(empresaId, input);
-    refetch();
+      : await createSupplier(empresaId, input)
+    refetch()
     // Invalidacion por mutacion (Tanda 2.5, tabla completa en
     // DECISIONES_TECNICAS.md): crear/editar proveedor invalida ademas
     // la lista completa de proveedores (useCachedQuery, queryName
     // 'suppliers-list', consumida por InventoryPage/ComprasPage) — el
     // listado paginado de esta misma pantalla ya se resuelve con
     // refetch() (Tanda 2), no con esto.
-    void queryClient.invalidateQueries({ queryKey: ['cached', 'suppliers-list', empresaId] });
-    setSelectedSupplier((prev) => (prev?.id === saved.id ? saved : prev));
-    return saved;
-  };
+    void queryClient.invalidateQueries({ queryKey: ['cached', 'suppliers-list', empresaId] })
+    setSelectedSupplier(prev => (prev?.id === saved.id ? saved : prev))
+    return saved
+  }
 
   const exportColumns: ExportColumn<Supplier>[] = [
-    { header: 'Razon Social', accessor: (s) => s.name },
-    { header: 'CUIT', accessor: (s) => s.cuit },
-    { header: 'Rubro', accessor: (s) => s.category },
-    { header: 'Telefono', accessor: (s) => s.phone },
-    { header: 'Email', accessor: (s) => s.contactEmail },
-    { header: 'Saldo Actual', accessor: (s) => s.currentBalance },
-  ];
+    { header: 'Razon Social', accessor: s => s.name },
+    { header: 'CUIT', accessor: s => s.cuit },
+    { header: 'Rubro', accessor: s => s.category },
+    { header: 'Telefono', accessor: s => s.phone },
+    { header: 'Email', accessor: s => s.contactEmail },
+    { header: 'Saldo Actual', accessor: s => s.currentBalance },
+  ]
 
   const handleRowClick = (supplier: Supplier) => {
-    setSelectedSupplier(supplier);
-    setIsPanelOpen(true);
-  };
+    setSelectedSupplier(supplier)
+    setIsPanelOpen(true)
+  }
 
   const handleNewSupplier = () => {
-    setSelectedSupplier(null);
-    setIsFormModalOpen(true);
-  };
+    setSelectedSupplier(null)
+    setIsFormModalOpen(true)
+  }
 
   // O4: navega a Compras en vez de abrir un modal local. Sin proveedor
   // en contexto (boton de la cabecera de la pagina), sin query param —
   // el usuario elige el proveedor alla mismo.
   const handleNewOrder = () => {
-    navigate('/compras');
-  };
+    navigate('/compras')
+  }
 
   // O4: con un proveedor ya seleccionado (boton "Nueva OC" del panel de
   // detalle), viaja como query param para que Compras abra el
   // formulario con ese proveedor preseleccionado.
   const handleNewOrderForSelectedSupplier = () => {
-    if (!selectedSupplier) return;
-    navigate(`/compras?proveedor=${encodeURIComponent(selectedSupplier.id)}`);
-  };
+    if (!selectedSupplier) return
+    navigate(`/compras?proveedor=${encodeURIComponent(selectedSupplier.id)}`)
+  }
 
   // PENDIENTES.md item 1 (hallazgo ya documentado, cerrado en esta
   // tanda): la logica de edicion ya estaba completa en
@@ -184,9 +185,9 @@ export const SuppliersPage: FC = () => {
   // que PodModal sobre TripDetailPanel, modulo logistica): al guardar,
   // handleSaveSupplier ya actualiza `selectedSupplier` con el resultado.
   const handleEditSelectedSupplier = () => {
-    if (!selectedSupplier) return;
-    setIsFormModalOpen(true);
-  };
+    if (!selectedSupplier) return
+    setIsFormModalOpen(true)
+  }
 
   return (
     <div className="suppliers-page page-enter">
@@ -195,7 +196,10 @@ export const SuppliersPage: FC = () => {
           <h2 className="page-header__title">Proveedores</h2>
           <p className="page-header__subtitle">Administracion de fabricantes y mayoristas</p>
         </div>
-        <div className="suppliers-page__header-actions" style={{ display: 'flex', gap: 'var(--space-3)' }}>
+        <div
+          className="suppliers-page__header-actions"
+          style={{ display: 'flex', gap: 'var(--space-3)' }}
+        >
           <ExportButton
             fileNamePrefix="proveedores"
             columns={exportColumns}
@@ -204,7 +208,10 @@ export const SuppliersPage: FC = () => {
           <button className="client-modal-btn client-modal-btn--outline" onClick={handleNewOrder}>
             Nueva Orden de Compra
           </button>
-          <button className="client-modal-btn client-modal-btn--primary" onClick={handleNewSupplier}>
+          <button
+            className="client-modal-btn client-modal-btn--primary"
+            onClick={handleNewSupplier}
+          >
             Nuevo Proveedor
           </button>
         </div>
@@ -262,5 +269,5 @@ export const SuppliersPage: FC = () => {
         onSave={handleSaveSupplier}
       />
     </div>
-  );
-};
+  )
+}

@@ -1,4 +1,4 @@
-import type { CashRegister } from '@/shared/types/cash.types';
+import type { CashRegister } from '@/shared/types/cash.types'
 
 export const CASH_MOCK_DATA: CashRegister = {
   date: '2026-06-14',
@@ -74,15 +74,16 @@ export const CASH_MOCK_DATA: CashRegister = {
       amount: 25000,
     },
   ],
-};
+}
 
 // Mock data para el selector de facturas pendientes en el modal dinámico
-export const PENDING_VOUCHERS_MOCK: Record<string, { id: string; label: string; amount: number }[]> = {
+export const PENDING_VOUCHERS_MOCK: Record<
+  string,
+  { id: string; label: string; amount: number }[]
+> = {
   'Kiosco El Paso': [
     { id: 'FAC-0089', label: 'Factura A 0089', amount: 45000 },
     { id: 'PED-00385', label: 'Pedido Pendiente 00385', amount: 60000 },
   ],
-  'Distribuidora Coca-Cola': [
-    { id: 'FAC-0012-A', label: 'Factura A 0012', amount: 25000 },
-  ]
-};
+  'Distribuidora Coca-Cola': [{ id: 'FAC-0012-A', label: 'Factura A 0012', amount: 25000 }],
+}

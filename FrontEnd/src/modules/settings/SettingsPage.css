@@ -99,7 +99,8 @@
   color: var(--color-text-secondary);
 }
 
-.settings-input, .settings-select {
+.settings-input,
+.settings-select {
   width: 100%;
   padding: var(--space-2) var(--space-3);
   background: var(--color-bg-base);
@@ -110,7 +111,8 @@
   transition: border-color var(--transition-fast);
 }
 
-.settings-input:focus, .settings-select:focus {
+.settings-input:focus,
+.settings-select:focus {
   outline: none;
   border-color: var(--color-accent);
 }
@@ -145,7 +147,8 @@
   border-collapse: collapse;
 }
 
-.settings-matrix-table th, .settings-matrix-table td {
+.settings-matrix-table th,
+.settings-matrix-table td {
   padding: var(--space-3);
   border-bottom: 0.0625rem solid var(--color-border);
   text-align: center;
@@ -159,7 +162,8 @@
   font-weight: var(--font-weight-semibold);
 }
 
-.settings-matrix-table td:first-child, .settings-matrix-table th:first-child {
+.settings-matrix-table td:first-child,
+.settings-matrix-table th:first-child {
   text-align: left;
   font-weight: var(--font-weight-medium);
   color: var(--color-text-primary);

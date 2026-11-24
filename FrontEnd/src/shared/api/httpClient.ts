@@ -1,6 +1,6 @@
-import { createHttpClient, type RefreshLock } from './httpClientCore';
-import { parseHttpServices, type ServiceName } from './serviceModes';
-import { getAccessToken, notifySessionExpired, setAccessToken } from '@/shared/auth/tokenStore';
+import { createHttpClient, type RefreshLock } from './httpClientCore'
+import { parseHttpServices, type ServiceName } from './serviceModes'
+import { getAccessToken, notifySessionExpired, setAccessToken } from '@/shared/auth/tokenStore'
 
 // ============================================================
 // httpClient — Punto unico por el que pasa toda peticion del
@@ -53,32 +53,34 @@ import { getAccessToken, notifySessionExpired, setAccessToken } from '@/shared/a
 // VITE_API_BASE_URL: por defecto '/api', el prefijo global del backend, en el
 // mismo origen (en desarrollo, el proxy de Vite lo manda al backend sin
 // reescribir la ruta; ver vite.config.ts).
-export type { HttpMethod, HttpRequestConfig } from './httpClientCore';
+export type { HttpMethod, HttpRequestConfig } from './httpClientCore'
 
-const API_MODE = (import.meta.env.VITE_API_MODE as string | undefined) ?? 'mock';
+const API_MODE = (import.meta.env.VITE_API_MODE as string | undefined) ?? 'mock'
 
 export const httpServices: ReadonlySet<ServiceName> = parseHttpServices(
   import.meta.env.VITE_HTTP_SERVICES as string | undefined
-);
+)
 
 export function isHttpService(service: ServiceName): boolean {
-  return API_MODE === 'http' || httpServices.has(service);
+  return API_MODE === 'http' || httpServices.has(service)
 }
 
-const API_DEBUG = (import.meta.env.VITE_API_DEBUG as string | undefined) === 'true';
+const API_DEBUG = (import.meta.env.VITE_API_DEBUG as string | undefined) === 'true'
 
 // BE-1c: el refresh se serializa entre pestanas con la Web Locks API. Si el
 // navegador no la tiene, se sigue sin lock (como en BE-1b) y se avisa UNA vez
 // por consola en modo debug. Sin polyfill.
 function browserRefreshLock(): RefreshLock | undefined {
   if (typeof navigator !== 'undefined' && 'locks' in navigator && navigator.locks) {
-    const locks = navigator.locks;
-    return (name, fn) => locks.request(name, () => fn());
+    const locks = navigator.locks
+    return (name, fn) => locks.request(name, () => fn())
   }
   if (API_DEBUG) {
-    console.warn('[httpClient] navigator.locks no existe: el refresh no se coordina entre pestanas (dos a la vez pueden cerrar la sesion).');
+    console.warn(
+      '[httpClient] navigator.locks no existe: el refresh no se coordina entre pestanas (dos a la vez pueden cerrar la sesion).'
+    )
   }
-  return undefined;
+  return undefined
 }
 
 export const httpClient = createHttpClient({
@@ -98,4 +100,4 @@ export const httpClient = createHttpClient({
         lock: browserRefreshLock(),
       }
     : undefined,
-});
+})

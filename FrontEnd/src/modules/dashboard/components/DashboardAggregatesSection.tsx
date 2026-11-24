@@ -1,12 +1,12 @@
-import type { FC } from 'react';
-import { Link } from 'react-router-dom';
-import { ArrowRight, MapPin, ListChecks, AlertCircle, Building2 } from 'lucide-react';
-import type { OrderStatus } from '@/shared/types/order.types';
-import { isBranchId } from '@/shared/types/ids.types';
-import { useSessionStore } from '@/shared/state/useSessionStore';
-import { formatMoney } from '@/shared/utils/money';
-import { useDashboardAggregates } from '../hooks/useDashboardAggregates';
-import './DashboardAggregatesSection.css';
+import type { FC } from 'react'
+import { Link } from 'react-router-dom'
+import { ArrowRight, MapPin, ListChecks, AlertCircle, Building2 } from 'lucide-react'
+import type { OrderStatus } from '@/shared/types/order.types'
+import { isBranchId } from '@/shared/types/ids.types'
+import { useSessionStore } from '@/shared/state/useSessionStore'
+import { formatMoney } from '@/shared/utils/money'
+import { useDashboardAggregates } from '../hooks/useDashboardAggregates'
+import './DashboardAggregatesSection.css'
 
 // ============================================================
 // DashboardAggregatesSection — Tanda 7 de la corrida completa; ADR-009
@@ -31,9 +31,9 @@ const STATUS_LABEL: Record<OrderStatus, string> = {
   delivered: 'Entregado',
   invoiced: 'Facturado',
   cancelled: 'Cancelado',
-};
+}
 
-const EMPRESA_LABEL = 'Toda la empresa';
+const EMPRESA_LABEL = 'Toda la empresa'
 
 // ADR-009, seccion "Reconciliacion": un pedido con entregas en 2+
 // sucursales se cuenta completo en cada una (no se prorratea) — real y
@@ -50,25 +50,26 @@ const EMPRESA_LABEL = 'Toda la empresa';
 // con el filtro) y solo cuando el alcance activo es una sucursal
 // puntual — en "Toda la empresa" no hay nada que reconciliar.
 const RECONCILIATION_NOTE =
-  'Los números de esta sucursal pueden no coincidir con la suma exacta de todas las sucursales: un pedido despachado desde más de un depósito cuenta en cada uno, y los pedidos que todavía no tienen ninguna entrega asignada solo aparecen en "Toda la empresa".';
+  'Los números de esta sucursal pueden no coincidir con la suma exacta de todas las sucursales: un pedido despachado desde más de un depósito cuenta en cada uno, y los pedidos que todavía no tienen ninguna entrega asignada solo aparecen en "Toda la empresa".'
 
 export const DashboardAggregatesSection: FC = () => {
-  const session = useSessionStore((s) => s.session);
-  const { data, isLoading, error, resolvedBranchId, isExplicitAll, setBranchFilter } = useDashboardAggregates();
+  const session = useSessionStore(s => s.session)
+  const { data, isLoading, error, resolvedBranchId, isExplicitAll, setBranchFilter } =
+    useDashboardAggregates()
 
   const scopeLabel = resolvedBranchId
-    ? (session?.branches.find((b) => b.id === resolvedBranchId)?.name ?? 'Sucursal')
-    : EMPRESA_LABEL;
+    ? (session?.branches.find(b => b.id === resolvedBranchId)?.name ?? 'Sucursal')
+    : EMPRESA_LABEL
 
   function handleScopeChange(value: string) {
     if (value === 'all') {
-      setBranchFilter('all');
+      setBranchFilter('all')
     } else if (value === '') {
       // "Seguir sucursal activa": borra el filtro propio del tablero,
       // vuelve a resolver desde el selector global (ver ADR-009).
-      setBranchFilter(undefined);
+      setBranchFilter(undefined)
     } else if (isBranchId(value)) {
-      setBranchFilter(value);
+      setBranchFilter(value)
     }
     // Cualquier otro valor (no deberia ocurrir: las opciones del
     // <select> solo se arman desde session.branches, ids reales) se
@@ -80,7 +81,7 @@ export const DashboardAggregatesSection: FC = () => {
   // de sucursal activa) — evita el bug de mostrar "Seguir sucursal
   // activa" seleccionado cuando en realidad el filtro aplicado es
   // "toda la empresa" a proposito.
-  const selectValue = isExplicitAll ? 'all' : (resolvedBranchId ?? '');
+  const selectValue = isExplicitAll ? 'all' : (resolvedBranchId ?? '')
 
   const scopeSelector = (
     <label className="dashboard-aggregates__scope">
@@ -89,18 +90,18 @@ export const DashboardAggregatesSection: FC = () => {
         className="dashboard-aggregates__scope-select"
         aria-label="Alcance de los agregados del tablero"
         value={selectValue}
-        onChange={(e) => handleScopeChange(e.target.value)}
+        onChange={e => handleScopeChange(e.target.value)}
       >
         <option value="">Seguir sucursal activa</option>
         <option value="all">Toda la empresa</option>
-        {session?.branches.map((branch) => (
+        {session?.branches.map(branch => (
           <option key={branch.id} value={branch.id}>
             {branch.name}
           </option>
         ))}
       </select>
     </label>
-  );
+  )
 
   if (isLoading) {
     return (
@@ -111,7 +112,7 @@ export const DashboardAggregatesSection: FC = () => {
         </div>
         <div className="dashboard-aggregates__loading">Cargando agregados...</div>
       </section>
-    );
+    )
   }
 
   if (error || !data) {
@@ -121,12 +122,14 @@ export const DashboardAggregatesSection: FC = () => {
           <h3 className="dashboard-aggregates__heading">Agregados — Mostrando: {scopeLabel}</h3>
           {scopeSelector}
         </div>
-        <div className="dashboard-aggregates__loading">No se pudieron cargar los agregados del periodo.</div>
+        <div className="dashboard-aggregates__loading">
+          No se pudieron cargar los agregados del periodo.
+        </div>
       </section>
-    );
+    )
   }
 
-  const pendingCount = data.ordersByStatus.find((row) => row.status === 'pending')?.cantidad ?? 0;
+  const pendingCount = data.ordersByStatus.find(row => row.status === 'pending')?.cantidad ?? 0
 
   return (
     <section className="dashboard-aggregates" aria-label="Agregados del periodo">
@@ -149,11 +152,13 @@ export const DashboardAggregatesSection: FC = () => {
             <p className="dashboard-aggregates__empty">Sin ventas registradas.</p>
           ) : (
             <ul className="dashboard-aggregates__list">
-              {data.salesByZone.map((row) => (
+              {data.salesByZone.map(row => (
                 <li key={row.zone} className="dashboard-aggregates__row">
                   <span>{row.zone}</span>
                   <span className="dashboard-aggregates__row-value">
-                    {new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(row.totalVentas)}
+                    {new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(
+                      row.totalVentas
+                    )}
                     <small> ({row.cantidadPedidos})</small>
                   </span>
                 </li>
@@ -171,7 +176,7 @@ export const DashboardAggregatesSection: FC = () => {
             <p className="dashboard-aggregates__empty">Sin pedidos en el periodo.</p>
           ) : (
             <ul className="dashboard-aggregates__list">
-              {data.ordersByStatus.map((row) => (
+              {data.ordersByStatus.map(row => (
                 <li key={row.status} className="dashboard-aggregates__row">
                   <span>{STATUS_LABEL[row.status]}</span>
                   <span className="dashboard-aggregates__row-value">{row.cantidad}</span>
@@ -187,12 +192,14 @@ export const DashboardAggregatesSection: FC = () => {
           </div>
           {/* ADR-009: EMPRESA-ONLY siempre, rotulo fijo — nunca sigue al
               selector de arriba, no tiene relacion con sucursal en el modelo. */}
-          <p className="dashboard-aggregates__card-scope">{EMPRESA_LABEL} (no se puede filtrar por sucursal)</p>
+          <p className="dashboard-aggregates__card-scope">
+            {EMPRESA_LABEL} (no se puede filtrar por sucursal)
+          </p>
           {data.overdueTotals.length === 0 ? (
             <p className="dashboard-aggregates__empty">Sin cuentas vencidas.</p>
           ) : (
             <ul className="dashboard-aggregates__list">
-              {data.overdueTotals.map((total) => (
+              {data.overdueTotals.map(total => (
                 <li key={total.moneda} className="dashboard-aggregates__row">
                   <span>{total.moneda}</span>
                   <span className="dashboard-aggregates__row-value">{formatMoney(total)}</span>
@@ -202,7 +209,10 @@ export const DashboardAggregatesSection: FC = () => {
           )}
         </div>
 
-        <Link to="/pedidos?status=pending" className="dashboard-aggregates__card dashboard-aggregates__card--link">
+        <Link
+          to="/pedidos?status=pending"
+          className="dashboard-aggregates__card dashboard-aggregates__card--link"
+        >
           <div className="dashboard-aggregates__card-title">Pedidos pendientes de preparacion</div>
           <div className="dashboard-aggregates__big-number">
             {pendingCount}
@@ -212,5 +222,5 @@ export const DashboardAggregatesSection: FC = () => {
         </Link>
       </div>
     </section>
-  );
-};
+  )
+}

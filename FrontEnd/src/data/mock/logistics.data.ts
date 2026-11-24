@@ -1,5 +1,10 @@
-import { asOrderId, asBranchId, asDeliveryId, asDeliveryHistoryEventId } from '@/shared/types/ids.types';
-import type { Delivery, DeliveryHistoryEvent, DeliveryStatus } from '@/shared/types/logistics.types';
+import {
+  asOrderId,
+  asBranchId,
+  asDeliveryId,
+  asDeliveryHistoryEventId,
+} from '@/shared/types/ids.types'
+import type { Delivery, DeliveryHistoryEvent, DeliveryStatus } from '@/shared/types/logistics.types'
 
 // ============================================================
 // MOCK DATA — Logistics (Entregas)
@@ -24,35 +29,35 @@ import type { Delivery, DeliveryHistoryEvent, DeliveryStatus } from '@/shared/ty
 // ============================================================
 
 function toISODate(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 function shiftDays(date: Date, days: number): Date {
-  const shifted = new Date(date);
-  shifted.setDate(shifted.getDate() + days);
-  return shifted;
+  const shifted = new Date(date)
+  shifted.setDate(shifted.getDate() + days)
+  return shifted
 }
 
-const TODAY = new Date();
-const TODAY_ISO = toISODate(TODAY);
-const YESTERDAY_ISO = toISODate(shiftDays(TODAY, -1));
-const TOMORROW_ISO = toISODate(shiftDays(TODAY, 1));
+const TODAY = new Date()
+const TODAY_ISO = toISODate(TODAY)
+const YESTERDAY_ISO = toISODate(shiftDays(TODAY, -1))
+const TOMORROW_ISO = toISODate(shiftDays(TODAY, 1))
 
 interface DeliverySeed {
-  id: string;
-  orderId: string;
-  branchId: string;
-  clientName: string;
-  address: string;
-  date: string;
-  estimatedTime: string;
-  status: DeliveryStatus;
-  zone: 'Norte' | 'Centro' | 'Sur';
-  priority: 'high' | 'medium' | 'low';
-  collectionAmount: number;
+  id: string
+  orderId: string
+  branchId: string
+  clientName: string
+  address: string
+  date: string
+  estimatedTime: string
+  status: DeliveryStatus
+  zone: 'Norte' | 'Centro' | 'Sur'
+  priority: 'high' | 'medium' | 'low'
+  collectionAmount: number
 }
 
 function buildDelivery(seed: DeliverySeed): Delivery {
@@ -65,7 +70,7 @@ function buildDelivery(seed: DeliverySeed): Delivery {
     hasta: seed.status,
     quien: 'Sistema (dato de ejemplo)',
     cuando: `${seed.date}T00:00:00Z`,
-  };
+  }
 
   return {
     id: asDeliveryId(seed.id),
@@ -81,7 +86,7 @@ function buildDelivery(seed: DeliverySeed): Delivery {
     collectionAmount: seed.collectionAmount,
     historial: [createdEvent],
     reprogramaciones: [],
-  };
+  }
 }
 
 const SEEDS: DeliverySeed[] = [
@@ -328,6 +333,6 @@ const SEEDS: DeliverySeed[] = [
     priority: 'low',
     collectionAmount: 8700,
   },
-];
+]
 
-export const LOGISTICS_MOCK_DATA: Delivery[] = SEEDS.map(buildDelivery);
+export const LOGISTICS_MOCK_DATA: Delivery[] = SEEDS.map(buildDelivery)

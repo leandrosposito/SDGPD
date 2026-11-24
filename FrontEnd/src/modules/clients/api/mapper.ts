@@ -1,6 +1,6 @@
-import type { ClientAccount } from '@/shared/types/client.types';
-import { asClientId } from '@/shared/types/ids.types';
-import type { ClientAccountDTO, ClientFormPayloadDTO } from './dto';
+import type { ClientAccount } from '@/shared/types/client.types'
+import { asClientId } from '@/shared/types/ids.types'
+import type { ClientAccountDTO, ClientFormPayloadDTO } from './dto'
 
 // ============================================================
 // mapper.ts (clients) — Único lugar que traduce DTO↔dominio para el
@@ -35,7 +35,7 @@ export type ClientFormInput = Pick<
   | 'businessCategory'
   | 'notes'
   | 'isActive'
->;
+>
 
 export function clientFromDTO(dto: ClientAccountDTO): ClientAccount {
   return {
@@ -65,7 +65,7 @@ export function clientFromDTO(dto: ClientAccountDTO): ClientAccount {
     daysOverdue: dto.cuenta.dias_vencido,
     status: dto.cuenta.estado,
     transactions: dto.transacciones,
-  };
+  }
 }
 
 // Usada SOLO para sembrar la conversión de ida y vuelta en el borde
@@ -106,7 +106,7 @@ export function clientToDTO(client: ClientAccount): ClientAccountDTO {
       estado: client.status,
     },
     transacciones: client.transactions,
-  };
+  }
 }
 
 export function clientFormInputToDTO(input: ClientFormInput): ClientFormPayloadDTO {
@@ -130,5 +130,5 @@ export function clientFormInputToDTO(input: ClientFormInput): ClientFormPayloadD
     categoria: input.businessCategory,
     notas: input.notes,
     activo: input.isActive,
-  };
+  }
 }

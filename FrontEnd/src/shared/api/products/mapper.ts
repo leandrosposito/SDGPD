@@ -1,12 +1,17 @@
-import type { InventoryItem, ProductLot, ProductStock, StockedInventoryItem } from '@/shared/types/inventory.types';
-import { asBranchId } from '@/shared/types/ids.types';
+import type {
+  InventoryItem,
+  ProductLot,
+  ProductStock,
+  StockedInventoryItem,
+} from '@/shared/types/inventory.types'
+import { asBranchId } from '@/shared/types/ids.types'
 import type {
   ProductLotDTO,
   ProductDTO,
   ProductStockDTO,
   StockedProductDTO,
   ProductPayloadDTO,
-} from './dto';
+} from './dto'
 
 // ============================================================
 // mapper.ts (products) — Único lugar que traduce DTO↔dominio. Nada
@@ -23,7 +28,7 @@ import type {
 // esta tanda (`Omit<InventoryItem, 'id'>`) — `ProductFormValues`
 // (ProductFormModal.schema.ts) ya es estructuralmente compatible, sin
 // cambios en el formulario.
-export type ProductFormInput = Omit<InventoryItem, 'id'>;
+export type ProductFormInput = Omit<InventoryItem, 'id'>
 
 function productLotFromDTO(dto: ProductLotDTO): ProductLot {
   return {
@@ -31,7 +36,7 @@ function productLotFromDTO(dto: ProductLotDTO): ProductLot {
     lotNumber: dto.numero_lote,
     quantity: dto.cantidad,
     expirationDate: dto.fecha_vencimiento,
-  };
+  }
 }
 
 // Exportada (sesion avance-2026-09-30) para `updateProduct`: si el
@@ -42,7 +47,7 @@ export function productLotToDTO(lot: ProductLot): ProductLotDTO {
     numero_lote: lot.lotNumber,
     cantidad: lot.quantity,
     fecha_vencimiento: lot.expirationDate,
-  };
+  }
 }
 
 export function productFromDTO(dto: ProductDTO): InventoryItem {
@@ -62,7 +67,7 @@ export function productFromDTO(dto: ProductDTO): InventoryItem {
     wholesaleMargin: dto.margen_mayorista,
     distributorMargin: dto.margen_distribuidor,
     retailMargin: dto.margen_minorista,
-  };
+  }
 }
 
 // Usada solo para sembrar el store desde data/mock/inventory.data.ts
@@ -84,7 +89,7 @@ export function productToDTO(item: InventoryItem): ProductDTO {
     margen_mayorista: item.wholesaleMargin,
     margen_distribuidor: item.distributorMargin,
     margen_minorista: item.retailMargin,
-  };
+  }
 }
 
 export function productStockFromDTO(dto: ProductStockDTO): ProductStock {
@@ -93,7 +98,7 @@ export function productStockFromDTO(dto: ProductStockDTO): ProductStock {
     branchId: asBranchId(dto.sucursal_id),
     stock: dto.stock,
     minStock: dto.stock_minimo,
-  };
+  }
 }
 
 // Usada solo para sembrar el store desde data/mock/productStock.data.ts.
@@ -103,7 +108,7 @@ export function productStockToDTO(stock: ProductStock): ProductStockDTO {
     sucursal_id: stock.branchId,
     stock: stock.stock,
     stock_minimo: stock.minStock,
-  };
+  }
 }
 
 export function stockedProductFromDTO(dto: StockedProductDTO): StockedInventoryItem {
@@ -113,7 +118,7 @@ export function stockedProductFromDTO(dto: StockedProductDTO): StockedInventoryI
     branchId: asBranchId(dto.sucursal_id),
     stock: dto.stock,
     minStock: dto.stock_minimo,
-  };
+  }
 }
 
 export function productFormInputToDTO(input: ProductFormInput): ProductPayloadDTO {
@@ -131,5 +136,5 @@ export function productFormInputToDTO(input: ProductFormInput): ProductPayloadDT
     margen_mayorista: input.wholesaleMargin,
     margen_distribuidor: input.distributorMargin,
     margen_minorista: input.retailMargin,
-  };
+  }
 }

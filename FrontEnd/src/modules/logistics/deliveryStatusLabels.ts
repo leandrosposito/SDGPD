@@ -1,5 +1,5 @@
-import type { DeliveryStatus } from '@/shared/types/logistics.types';
-import type { BadgeVariant } from '@/shared/components/ui/Badge';
+import type { DeliveryStatus } from '@/shared/types/logistics.types'
+import type { BadgeVariant } from '@/shared/components/ui/Badge'
 
 // ============================================================
 // Etiquetas y variantes de presentacion para DeliveryStatus.
@@ -18,7 +18,7 @@ export const DELIVERY_STATUS_LABEL: Record<DeliveryStatus, string> = {
   FINALIZADO: 'Finalizada',
   REPROGRAMADO: 'Reprogramada',
   CANCELADO: 'Cancelada',
-};
+}
 
 export const DELIVERY_STATUS_VARIANT: Record<DeliveryStatus, BadgeVariant> = {
   CREADO: 'neutral',
@@ -26,4 +26,4 @@ export const DELIVERY_STATUS_VARIANT: Record<DeliveryStatus, BadgeVariant> = {
   FINALIZADO: 'success',
   REPROGRAMADO: 'warning',
   CANCELADO: 'danger',
-};
+}

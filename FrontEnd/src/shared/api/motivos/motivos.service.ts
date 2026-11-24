@@ -1,6 +1,6 @@
-import type { MotivoCatalogItem, MotivoTipo } from '@/shared/types/motivo.types';
-import { MOTIVOS_MOCK_DATA } from '@/data/mock/motivos.data';
-import { httpClient } from '@/shared/api/httpClient';
+import type { MotivoCatalogItem, MotivoTipo } from '@/shared/types/motivo.types'
+import { MOTIVOS_MOCK_DATA } from '@/data/mock/motivos.data'
+import { httpClient } from '@/shared/api/httpClient'
 
 // ============================================================
 // motivos.service — Catalogo de motivos (Tanda 9, ADR-010 seccion 5).
@@ -18,7 +18,7 @@ import { httpClient } from '@/shared/api/httpClient';
 // alta/edicion/baja desde la UI, ver comentario de arriba) — a
 // diferencia de deliveriesStore/ordersDTOStore, no hay ninguna mutacion
 // que reasignarla.
-const motivosStore: MotivoCatalogItem[] = structuredClone(MOTIVOS_MOCK_DATA);
+const motivosStore: MotivoCatalogItem[] = structuredClone(MOTIVOS_MOCK_DATA)
 
 export async function getMotivoCatalog(
   empresaId: string,
@@ -30,8 +30,8 @@ export async function getMotivoCatalog(
     path: '/motivos',
     params: { empresaId, tipo },
     signal,
-    mock: () => motivosStore.filter((m) => m.tipo === tipo && m.activo),
-  });
+    mock: () => motivosStore.filter(m => m.tipo === tipo && m.activo),
+  })
 }
 
 // Nota de alcance (ADR-010 seccion 5): "los textos de Otro deben

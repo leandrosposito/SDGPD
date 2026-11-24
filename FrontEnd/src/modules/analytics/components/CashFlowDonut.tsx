@@ -1,46 +1,43 @@
-import { type FC } from 'react';
-import {
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-} from 'recharts';
-import type { CashFlowData } from '@/shared/types/analytics.types';
-import './ChartCard.css';
+import { type FC } from 'react'
+import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts'
+import type { CashFlowData } from '@/shared/types/analytics.types'
+import './ChartCard.css'
 
 // ============================================================
 // CashFlowDonut — Income vs Expenses doughnut chart
 // ============================================================
 
 interface CashFlowDonutProps {
-  data: CashFlowData;
+  data: CashFlowData
 }
 
-const COLORS = { income: '#8b5cf6', expenses: '#4b5563' };
+const COLORS = { income: '#8b5cf6', expenses: '#4b5563' }
 
 function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(value);
+  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(value)
 }
 
 function renderTooltip(props: unknown) {
-  const { active, payload } = props as { active: boolean; payload: Array<{ name: string; value: number }> };
-  if (!active || !payload?.length) return null;
+  const { active, payload } = props as {
+    active: boolean
+    payload: Array<{ name: string; value: number }>
+  }
+  if (!active || !payload?.length) return null
   return (
     <div className="chart-tooltip">
       <span className="chart-tooltip__label">{payload[0].name}</span>
       <span className="chart-tooltip__value">{formatCurrency(payload[0].value ?? 0)}</span>
     </div>
-  );
+  )
 }
 
 export const CashFlowDonut: FC<CashFlowDonutProps> = ({ data }) => {
   const chartData = [
-    { name: 'Ingresos',  value: data.income },
-    { name: 'Egresos',   value: data.expenses },
-  ];
+    { name: 'Ingresos', value: data.income },
+    { name: 'Egresos', value: data.expenses },
+  ]
 
-  const total = data.income + data.expenses;
+  const total = data.income + data.expenses
 
   return (
     <div className="chart-card">
@@ -94,10 +91,12 @@ export const CashFlowDonut: FC<CashFlowDonutProps> = ({ data }) => {
           <div className="chart-legend__item cashflow-donut__net">
             <span className="chart-legend__dot" style={{ backgroundColor: 'transparent' }} />
             <span className="chart-legend__label">Resultado Neto</span>
-            <span className="chart-legend__value">{formatCurrency(data.income - data.expenses)}</span>
+            <span className="chart-legend__value">
+              {formatCurrency(data.income - data.expenses)}
+            </span>
           </div>
         </div>
       </div>
     </div>
-  );
-};
+  )
+}

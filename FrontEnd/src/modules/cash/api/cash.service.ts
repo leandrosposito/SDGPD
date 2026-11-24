@@ -1,13 +1,18 @@
-import type { CashTransaction, ExpenseAnalysis } from '@/shared/types/cash.types';
-import type { PageQuery, PageResult, ExportResult } from '@/shared/types/pagination.types';
-import { MAX_EXPORT_ROWS } from '@/shared/types/pagination.types';
-import { CASH_MOCK_DATA } from '@/data/mock/cash.data';
-import { httpClient } from '@/shared/api/httpClient';
-import { ApiError } from '@/shared/api/ApiError';
-import type { CashTransactionDTO, CashPageDTO, CashAggregatesDTO } from './dto';
-import { cashTransactionFromDTO, cashTransactionToDTO, cashTransactionFormInputToDTO, type CashTransactionFormInput } from './mapper';
+import type { CashTransaction, ExpenseAnalysis } from '@/shared/types/cash.types'
+import type { PageQuery, PageResult, ExportResult } from '@/shared/types/pagination.types'
+import { MAX_EXPORT_ROWS } from '@/shared/types/pagination.types'
+import { CASH_MOCK_DATA } from '@/data/mock/cash.data'
+import { httpClient } from '@/shared/api/httpClient'
+import { ApiError } from '@/shared/api/ApiError'
+import type { CashTransactionDTO, CashPageDTO, CashAggregatesDTO } from './dto'
+import {
+  cashTransactionFromDTO,
+  cashTransactionToDTO,
+  cashTransactionFormInputToDTO,
+  type CashTransactionFormInput,
+} from './mapper'
 
-export type { CashTransactionFormInput };
+export type { CashTransactionFormInput }
 
 // ============================================================
 // cash.service — Único punto del proyecto que habla con httpClient
@@ -35,14 +40,14 @@ export interface CashMovementsQueryFilters {
   // contrato ya lo exige para el día que exista backend real. Sin
   // ningún otro filtro: CashPage.tsx no tenía búsqueda ni filtro de
   // tipo/categoría/fecha antes de esta tanda — no se inventan acá.
-  empresaId: string;
+  empresaId: string
 }
 
 // Un solo campo de orden posible hoy: CashTransactionsTable.tsx
 // siempre ordenaba por hora descendente, sin control de usuario — se
 // mantiene ese único orden por defecto, no se agrega un selector de
 // columna que la UI original no tenía.
-export type CashSortField = 'time';
+export type CashSortField = 'time'
 
 // Agregados (P3, DECISIONES_TECNICAS.md): reemplazan el cálculo que
 // hacía CashPage.tsx a mano, sumando incrementalmente en cada alta
@@ -51,11 +56,11 @@ export type CashSortField = 'time';
 // TODO el store en cada consulta. `expenseAnalysis` reusa el tipo de
 // dominio ya existente (`shared/types/cash.types.ts`), no se redefine.
 export interface CashAggregates {
-  initialBalance: number;
-  totalIncome: number;
-  totalExpense: number;
-  currentBalance: number;
-  expenseAnalysis: ExpenseAnalysis;
+  initialBalance: number
+  totalIncome: number
+  totalExpense: number
+  currentBalance: number
+  expenseAnalysis: ExpenseAnalysis
 }
 
 // ------------------------------------------------------------
@@ -63,7 +68,8 @@ export interface CashAggregates {
 // data/mock/cash.data.ts (dominio) vía cashTransactionToDTO.
 // Reasignado (nunca mutado in-place) en cada escritura.
 // ------------------------------------------------------------
-let cashTransactionsDTOStore: CashTransactionDTO[] = CASH_MOCK_DATA.transactions.map(cashTransactionToDTO);
+let cashTransactionsDTOStore: CashTransactionDTO[] =
+  CASH_MOCK_DATA.transactions.map(cashTransactionToDTO)
 
 // Saldo inicial del día: valor fijo tomado del mock, no derivado de
 // las transacciones (representa el saldo que quedó del cierre
@@ -71,7 +77,7 @@ let cashTransactionsDTOStore: CashTransactionDTO[] = CASH_MOCK_DATA.transactions
 // hoy (el botón "Cierre de Caja" de CashPage.tsx es decorativo, sin
 // handler, desde antes de esta tanda) — no se agrega uno acá, está
 // fuera de alcance de una migración de paginación/cache.
-const INITIAL_BALANCE = CASH_MOCK_DATA.initialBalance;
+const INITIAL_BALANCE = CASH_MOCK_DATA.initialBalance
 
 // Comparación "vs mes anterior": valor fijo, mismo criterio que
 // FAKE_TODAY en orders.service.ts (Tanda 3a) — no hay datos de un
@@ -80,23 +86,25 @@ const EXPENSE_TREND = {
   label: CASH_MOCK_DATA.expenseAnalysis.trendLabel,
   percentage: CASH_MOCK_DATA.expenseAnalysis.trendPercentage,
   isNegative: CASH_MOCK_DATA.expenseAnalysis.isNegativeTrend,
-};
+}
 
 function compareByTime(a: CashTransactionDTO, b: CashTransactionDTO): number {
-  return b.hora.localeCompare(a.hora); // descendente, mas reciente primero
+  return b.hora.localeCompare(a.hora) // descendente, mas reciente primero
 }
 
 // Top categorías de gasto: agrupa EGRESOS reales por categoría (antes
 // era un array fijo de 3 categorías del mock, nunca recalculado) — se
 // muestran todas las categorías con gasto, ordenadas de mayor a
 // menor, sin un tope artificial.
-function computeTopExpenseCategories(store: CashTransactionDTO[]): CashAggregatesDTO['analisis_gastos']['top_categorias'] {
-  const totalsByCategory = new Map<string, number>();
-  let totalExpense = 0;
+function computeTopExpenseCategories(
+  store: CashTransactionDTO[]
+): CashAggregatesDTO['analisis_gastos']['top_categorias'] {
+  const totalsByCategory = new Map<string, number>()
+  let totalExpense = 0
   for (const dto of store) {
-    if (dto.tipo !== 'expense') continue;
-    totalsByCategory.set(dto.categoria, (totalsByCategory.get(dto.categoria) ?? 0) + dto.monto);
-    totalExpense += dto.monto;
+    if (dto.tipo !== 'expense') continue
+    totalsByCategory.set(dto.categoria, (totalsByCategory.get(dto.categoria) ?? 0) + dto.monto)
+    totalExpense += dto.monto
   }
   return [...totalsByCategory.entries()]
     .map(([categoria, monto]) => ({
@@ -104,12 +112,16 @@ function computeTopExpenseCategories(store: CashTransactionDTO[]): CashAggregate
       monto,
       porcentaje: totalExpense > 0 ? Math.round((monto / totalExpense) * 100) : 0,
     }))
-    .sort((a, b) => b.monto - a.monto);
+    .sort((a, b) => b.monto - a.monto)
 }
 
 function computeAggregates(store: CashTransactionDTO[]): CashAggregatesDTO {
-  const totalIncome = store.filter((dto) => dto.tipo === 'income').reduce((sum, dto) => sum + dto.monto, 0);
-  const totalExpense = store.filter((dto) => dto.tipo === 'expense').reduce((sum, dto) => sum + dto.monto, 0);
+  const totalIncome = store
+    .filter(dto => dto.tipo === 'income')
+    .reduce((sum, dto) => sum + dto.monto, 0)
+  const totalExpense = store
+    .filter(dto => dto.tipo === 'expense')
+    .reduce((sum, dto) => sum + dto.monto, 0)
 
   return {
     saldo_inicial: INITIAL_BALANCE,
@@ -122,22 +134,24 @@ function computeAggregates(store: CashTransactionDTO[]): CashAggregatesDTO {
       tendencia_es_negativa: EXPENSE_TREND.isNegative,
       top_categorias: computeTopExpenseCategories(store),
     },
-  };
+  }
 }
 
-function resolveMockCashPage(query: PageQuery<CashMovementsQueryFilters, CashSortField>): CashPageDTO {
-  const aggregates = computeAggregates(cashTransactionsDTOStore);
-  const sorted = [...cashTransactionsDTOStore].sort(compareByTime);
+function resolveMockCashPage(
+  query: PageQuery<CashMovementsQueryFilters, CashSortField>
+): CashPageDTO {
+  const aggregates = computeAggregates(cashTransactionsDTOStore)
+  const sorted = [...cashTransactionsDTOStore].sort(compareByTime)
 
-  const total = sorted.length;
-  const totalPages = Math.max(1, Math.ceil(total / query.pageSize));
-  const safePage = Math.min(Math.max(1, query.page), totalPages);
-  const start = (safePage - 1) * query.pageSize;
+  const total = sorted.length
+  const totalPages = Math.max(1, Math.ceil(total / query.pageSize))
+  const safePage = Math.min(Math.max(1, query.page), totalPages)
+  const start = (safePage - 1) * query.pageSize
 
   return {
     data: sorted.slice(start, start + query.pageSize),
     meta: { total, page: safePage, page_size: query.pageSize, aggregates },
-  };
+  }
 }
 
 // fetchPage de usePagedQuery — firma exacta (query, signal?), nombre
@@ -157,7 +171,7 @@ export async function getCashTransactionsPage(
     },
     signal,
     mock: () => resolveMockCashPage(query),
-  });
+  })
 
   return {
     items: pageDTO.data.map(cashTransactionFromDTO),
@@ -173,14 +187,14 @@ export async function getCashTransactionsPage(
         trendLabel: pageDTO.meta.aggregates.analisis_gastos.tendencia_etiqueta,
         trendPercentage: pageDTO.meta.aggregates.analisis_gastos.tendencia_porcentaje,
         isNegativeTrend: pageDTO.meta.aggregates.analisis_gastos.tendencia_es_negativa,
-        topCategories: pageDTO.meta.aggregates.analisis_gastos.top_categorias.map((c) => ({
+        topCategories: pageDTO.meta.aggregates.analisis_gastos.top_categorias.map(c => ({
           category: c.categoria,
           amount: c.monto,
           percentage: c.porcentaje,
         })),
       },
     },
-  };
+  }
 }
 
 // Exportar (mismo patron que exportClientAccounts/exportSuppliers/etc.):
@@ -196,16 +210,16 @@ export async function exportCashTransactions(
     path: '/cash/transactions/export',
     params: { empresaId: filters.empresaId },
     mock: () => {
-      const sorted = [...cashTransactionsDTOStore].sort(compareByTime).map(cashTransactionFromDTO);
-      const truncated = sorted.length > MAX_EXPORT_ROWS;
-      const items = sorted.slice(0, MAX_EXPORT_ROWS);
-      return { items: structuredClone(items), truncated };
+      const sorted = [...cashTransactionsDTOStore].sort(compareByTime).map(cashTransactionFromDTO)
+      const truncated = sorted.length > MAX_EXPORT_ROWS
+      const items = sorted.slice(0, MAX_EXPORT_ROWS)
+      return { items: structuredClone(items), truncated }
     },
-  });
+  })
 }
 
 function nextTransactionId(): string {
-  return `ctx-${Date.now()}`;
+  return `ctx-${Date.now()}`
 }
 
 // Nuevo Movimiento de Caja. `id` lo genera el service — antes lo
@@ -220,7 +234,7 @@ export async function createCashTransaction(
     body: { empresaId, ...cashTransactionFormInputToDTO(input) },
     mock: () => {
       if (!(input.amount > 0)) {
-        throw new ApiError(400, 'CLIENT_ERROR', 'El monto tiene que ser mayor a cero.');
+        throw new ApiError(400, 'CLIENT_ERROR', 'El monto tiene que ser mayor a cero.')
       }
       const newDTO: CashTransactionDTO = {
         id: nextTransactionId(),
@@ -231,10 +245,10 @@ export async function createCashTransaction(
         comprobante: input.linkedVoucher,
         descripcion: input.description,
         monto: input.amount,
-      };
-      cashTransactionsDTOStore = [newDTO, ...cashTransactionsDTOStore];
-      return newDTO;
+      }
+      cashTransactionsDTOStore = [newDTO, ...cashTransactionsDTOStore]
+      return newDTO
     },
-  });
-  return cashTransactionFromDTO(dto);
+  })
+  return cashTransactionFromDTO(dto)
 }

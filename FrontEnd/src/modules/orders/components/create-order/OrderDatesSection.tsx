@@ -1,16 +1,16 @@
-import { type FC } from 'react';
+import { type FC } from 'react'
 
 // ============================================================
 // OrderDatesSection — Order date, delivery date and status
 // ============================================================
 
 interface OrderDatesSectionProps {
-  orderDate: string;
-  onOrderDateChange: (d: string) => void;
-  deliveryDate: string;
-  onDeliveryDateChange: (d: string) => void;
-  initialStatus: string;
-  onInitialStatusChange: (s: string) => void;
+  orderDate: string
+  onOrderDateChange: (d: string) => void
+  deliveryDate: string
+  onDeliveryDateChange: (d: string) => void
+  initialStatus: string
+  onInitialStatusChange: (s: string) => void
 }
 
 export const OrderDatesSection: FC<OrderDatesSectionProps> = ({
@@ -31,7 +31,7 @@ export const OrderDatesSection: FC<OrderDatesSectionProps> = ({
             type="date"
             className="co-input"
             value={orderDate}
-            onChange={(e) => onOrderDateChange(e.target.value)}
+            onChange={e => onOrderDateChange(e.target.value)}
           />
         </div>
         <div className="co-form-group">
@@ -40,12 +40,16 @@ export const OrderDatesSection: FC<OrderDatesSectionProps> = ({
             type="date"
             className="co-input"
             value={deliveryDate}
-            onChange={(e) => onDeliveryDateChange(e.target.value)}
+            onChange={e => onDeliveryDateChange(e.target.value)}
           />
         </div>
         <div className="co-form-group">
           <label className="co-label">Estado Inicial</label>
-          <select className="co-input" value={initialStatus} onChange={(e) => onInitialStatusChange(e.target.value)}>
+          <select
+            className="co-input"
+            value={initialStatus}
+            onChange={e => onInitialStatusChange(e.target.value)}
+          >
             <option value="pending">Pendiente</option>
             <option value="preparing">Preparando</option>
             <option value="dispatched">Despachado</option>
@@ -54,5 +58,5 @@ export const OrderDatesSection: FC<OrderDatesSectionProps> = ({
         </div>
       </div>
     </section>
-  );
-};
+  )
+}

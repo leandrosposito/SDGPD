@@ -1,4 +1,4 @@
-import type { OrderId, OrderLineId, DeliveryId, DeliveryNoteId } from './ids.types';
+import type { OrderId, OrderLineId, DeliveryId, DeliveryNoteId } from './ids.types'
 
 // ============================================================
 // deliveryNote.types — Remitos (ADR-001, Tanda 8 de la corrida
@@ -17,18 +17,18 @@ import type { OrderId, OrderLineId, DeliveryId, DeliveryNoteId } from './ids.typ
 // ============================================================
 
 export interface DeliveryNoteLine {
-  orderLineId: OrderLineId;
-  cantidadOfrecida: number;
-  cantidadEntregada: number;
-  cantidadRechazada: number;
+  orderLineId: OrderLineId
+  cantidadOfrecida: number
+  cantidadEntregada: number
+  cantidadRechazada: number
   // Tanda 9 (ADR-010 seccion 5): motivoCodigo referencia
   // MotivoCatalogItem.codigo (motivo.types.ts) — 'OTRO' incluido, es un
   // codigo mas del catalogo. motivoRechazo pasa a ser el TEXTO
   // resuelto (la descripcion del catalogo en el momento de elegirlo, o
   // el texto libre cuando el codigo es 'OTRO') — se seguia llamando
   // igual para no romper el render ya existente de DeliveryHistoryModal.
-  motivoCodigo?: string;
-  motivoRechazo?: string;
+  motivoCodigo?: string
+  motivoRechazo?: string
   // Tanda 10B (ADR-010 seccion 6, corregido en la revision 2026-09-09
   // del ADR): cantidad propia, no solo un metadato de la linea — lo
   // rechazado que todavia esta fisicamente en el camion, entre el
@@ -40,23 +40,25 @@ export interface DeliveryNoteLine {
   // stock... fuera de alcance de implementar en esta ADR") — el campo
   // existe para que esa tanda futura tenga algo que leer/resolver, no
   // se descarta la cantidad mientras tanto.
-  cantidadEnTransitoDeRetorno?: number;
+  cantidadEnTransitoDeRetorno?: number
 }
 
 export interface DeliveryNote {
-  id: DeliveryNoteId; // Tanda 9, AUDIT_15#13: antes string plano.
-  orderId: OrderId;
-  deliveryId: DeliveryId;
-  fecha: string; // ISO datetime de creacion del remito
-  lines: DeliveryNoteLine[];
+  id: DeliveryNoteId // Tanda 9, AUDIT_15#13: antes string plano.
+  orderId: OrderId
+  deliveryId: DeliveryId
+  fecha: string // ISO datetime de creacion del remito
+  lines: DeliveryNoteLine[]
   // IDs de evidencia (ADR-005) — vacio si ninguna linea tuvo rechazo,
   // nunca el archivo en si (ver uploads.service.ts).
-  evidenciaIds: string[];
-  creadoEn: string; // ISO datetime
-  creadoPor: string; // SessionUser.fullName de quien registro la entrega
+  evidenciaIds: string[]
+  creadoEn: string // ISO datetime
+  creadoPor: string // SessionUser.fullName de quien registro la entrega
 }
 
 export function isRechazoTotal(lines: DeliveryNoteLine[]): boolean {
-  if (lines.length === 0) return false;
-  return lines.every((line) => line.cantidadOfrecida > 0 && line.cantidadRechazada === line.cantidadOfrecida);
+  if (lines.length === 0) return false
+  return lines.every(
+    line => line.cantidadOfrecida > 0 && line.cantidadRechazada === line.cantidadOfrecida
+  )
 }

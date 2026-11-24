@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState, type FC, type KeyboardEvent } from 'react';
-import { Building2, Check, ChevronDown } from 'lucide-react';
-import { toast } from 'sonner';
-import { useSessionStore } from '@/shared/state/useSessionStore';
-import type { Branch } from '@/shared/types/session.types';
-import { SkeletonLoader } from '@/shared/components/ui/SkeletonLoader';
-import './BranchSelector.css';
+import { useEffect, useRef, useState, type FC, type KeyboardEvent } from 'react'
+import { Building2, Check, ChevronDown } from 'lucide-react'
+import { toast } from 'sonner'
+import { useSessionStore } from '@/shared/state/useSessionStore'
+import type { Branch } from '@/shared/types/session.types'
+import { SkeletonLoader } from '@/shared/components/ui/SkeletonLoader'
+import './BranchSelector.css'
 
 // ============================================================
 // BranchSelector — Empresa activa (solo lectura) + sucursal activa
@@ -19,38 +19,38 @@ import './BranchSelector.css';
 // ============================================================
 
 export const BranchSelector: FC = () => {
-  const session = useSessionStore((s) => s.session);
-  const activeBranchId = useSessionStore((s) => s.activeBranchId);
-  const isLoading = useSessionStore((s) => s.isLoading);
-  const setActiveBranch = useSessionStore((s) => s.setActiveBranch);
+  const session = useSessionStore(s => s.session)
+  const activeBranchId = useSessionStore(s => s.activeBranchId)
+  const isLoading = useSessionStore(s => s.isLoading)
+  const setActiveBranch = useSessionStore(s => s.setActiveBranch)
 
-  const [isOpen, setIsOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
+  const [isOpen, setIsOpen] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) return
 
     function handlePointerDown(event: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
+        setIsOpen(false)
       }
     }
 
     function handleKeyDown(event: globalThis.KeyboardEvent) {
       if (event.key === 'Escape') {
-        setIsOpen(false);
-        triggerRef.current?.focus();
+        setIsOpen(false)
+        triggerRef.current?.focus()
       }
     }
 
-    document.addEventListener('mousedown', handlePointerDown);
-    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('mousedown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
     return () => {
-      document.removeEventListener('mousedown', handlePointerDown);
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isOpen]);
+      document.removeEventListener('mousedown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isOpen])
 
   // Sesion todavia no cargada: placeholder del mismo tamano para que
   // el header no salte de layout cuando la sesion llegue.
@@ -59,7 +59,7 @@ export const BranchSelector: FC = () => {
       <div className="branch-selector branch-selector--loading">
         <SkeletonLoader width="11rem" height="2.25rem" borderRadius="var(--radius-md)" />
       </div>
-    );
+    )
   }
 
   // Sin sucursales: no hay nada que elegir, y activeBranchId tampoco
@@ -74,7 +74,7 @@ export const BranchSelector: FC = () => {
           <span className="branch-selector__branch">Sin sucursales disponibles</span>
         </span>
       </div>
-    );
+    )
   }
 
   if (!activeBranchId) {
@@ -82,10 +82,10 @@ export const BranchSelector: FC = () => {
       <div className="branch-selector branch-selector--loading">
         <SkeletonLoader width="11rem" height="2.25rem" borderRadius="var(--radius-md)" />
       </div>
-    );
+    )
   }
 
-  const activeBranch = session.branches.find((b) => b.id === activeBranchId);
+  const activeBranch = session.branches.find(b => b.id === activeBranchId)
 
   // Una sola sucursal: no hay nada entre lo que elegir, mostrar estatico
   // en vez de un dropdown clickeable sin utilidad real.
@@ -95,37 +95,39 @@ export const BranchSelector: FC = () => {
         <Building2 size={16} aria-hidden="true" className="branch-selector__icon" />
         <span className="branch-selector__text">
           <span className="branch-selector__company">{session.company.name}</span>
-          <span className="branch-selector__branch">{activeBranch?.name ?? session.branches[0].name}</span>
+          <span className="branch-selector__branch">
+            {activeBranch?.name ?? session.branches[0].name}
+          </span>
         </span>
       </div>
-    );
+    )
   }
 
   function handleTriggerKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
     if (event.key === 'ArrowDown' && !isOpen) {
-      event.preventDefault();
-      setIsOpen(true);
+      event.preventDefault()
+      setIsOpen(true)
     }
   }
 
   function handleSelect(branchId: Branch['id'], branchName: string) {
-    setIsOpen(false);
-    triggerRef.current?.focus();
+    setIsOpen(false)
+    triggerRef.current?.focus()
 
-    if (branchId === activeBranchId) return;
+    if (branchId === activeBranchId) return
 
-    const result = setActiveBranch(branchId);
+    const result = setActiveBranch(branchId)
 
     if (result.success) {
-      toast.success(`Sucursal activa: ${branchName}.`);
-      return;
+      toast.success(`Sucursal activa: ${branchName}.`)
+      return
     }
 
     const message =
       result.reason === 'inactive'
         ? 'Esa sucursal esta inactiva y no se puede seleccionar.'
-        : 'No se encontro la sucursal.';
-    toast.error(message);
+        : 'No se encontro la sucursal.'
+    toast.error(message)
   }
 
   return (
@@ -137,13 +139,15 @@ export const BranchSelector: FC = () => {
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         aria-label={`Sucursal / Deposito activo: ${activeBranch?.name ?? 'sin definir'}. Abrir selector de sucursal.`}
-        onClick={() => setIsOpen((prev) => !prev)}
+        onClick={() => setIsOpen(prev => !prev)}
         onKeyDown={handleTriggerKeyDown}
       >
         <Building2 size={16} aria-hidden="true" className="branch-selector__icon" />
         <span className="branch-selector__text">
           <span className="branch-selector__company">{session.company.name}</span>
-          <span className="branch-selector__branch">{activeBranch?.name ?? 'Sucursal / Deposito'}</span>
+          <span className="branch-selector__branch">
+            {activeBranch?.name ?? 'Sucursal / Deposito'}
+          </span>
         </span>
         <ChevronDown
           size={16}
@@ -153,10 +157,14 @@ export const BranchSelector: FC = () => {
       </button>
 
       {isOpen && (
-        <ul className="branch-selector__menu" role="listbox" aria-label="Elegir sucursal / deposito activo">
-          {session.branches.map((branch) => {
-            const isActive = branch.id === activeBranchId;
-            const isDisabled = branch.status !== 'active';
+        <ul
+          className="branch-selector__menu"
+          role="listbox"
+          aria-label="Elegir sucursal / deposito activo"
+        >
+          {session.branches.map(branch => {
+            const isActive = branch.id === activeBranchId
+            const isDisabled = branch.status !== 'active'
 
             return (
               <li key={branch.id} role="presentation">
@@ -182,10 +190,10 @@ export const BranchSelector: FC = () => {
                   )}
                 </button>
               </li>
-            );
+            )
           })}
         </ul>
       )}
     </div>
-  );
-};
+  )
+}

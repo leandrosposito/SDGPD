@@ -1,4 +1,4 @@
-import { useState, type FC } from 'react';
+import { useState, type FC } from 'react'
 import {
   AreaChart,
   Area,
@@ -10,21 +10,21 @@ import {
   Tooltip,
   ResponsiveContainer,
   Legend,
-} from 'recharts';
-import type { SalesDataPoint } from '@/shared/types/dashboard.types';
-import { SkeletonLoader } from '@/shared/components/ui/SkeletonLoader';
-import './SalesChart.css';
+} from 'recharts'
+import type { SalesDataPoint } from '@/shared/types/dashboard.types'
+import { SkeletonLoader } from '@/shared/components/ui/SkeletonLoader'
+import './SalesChart.css'
 
 // ============================================================
 // SalesChart — Monthly revenue evolution with view toggle
 // ============================================================
 
 interface SalesChartProps {
-  data: SalesDataPoint[];
-  isLoading: boolean;
+  data: SalesDataPoint[]
+  isLoading: boolean
 }
 
-type ChartView = 'area' | 'bar';
+type ChartView = 'area' | 'bar'
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat('es-AR', {
@@ -32,25 +32,25 @@ function formatCurrency(value: number): string {
     currency: 'ARS',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
-  }).format(value);
+  }).format(value)
 }
 
 function formatRevenue(value: number): string {
-  if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
-  if (value >= 1000) return `$${(value / 1000).toFixed(0)}K`;
-  return `$${value}`;
+  if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`
+  if (value >= 1000) return `$${(value / 1000).toFixed(0)}K`
+  return `$${value}`
 }
 
 const CustomTooltip: FC<{
-  active?: boolean;
-  payload?: Array<{ name: string; value: number; color: string }>;
-  label?: string;
+  active?: boolean
+  payload?: Array<{ name: string; value: number; color: string }>
+  label?: string
 }> = ({ active, payload, label }) => {
-  if (!active || !payload?.length) return null;
+  if (!active || !payload?.length) return null
   return (
     <div className="chart-tooltip" role="tooltip">
       <p className="chart-tooltip__label">{label}</p>
-      {payload.map((entry) => (
+      {payload.map(entry => (
         <div key={entry.name} className="chart-tooltip__row">
           <span
             className="chart-tooltip__dot"
@@ -64,16 +64,16 @@ const CustomTooltip: FC<{
         </div>
       ))}
     </div>
-  );
-};
+  )
+}
 
 export const SalesChart: FC<SalesChartProps> = ({ data, isLoading }) => {
-  const [view, setView] = useState<ChartView>('area');
+  const [view, setView] = useState<ChartView>('area')
 
   const chartStyle = {
     '--color-chart-1': 'var(--color-chart-1)',
     '--color-chart-2': 'var(--color-chart-2)',
-  } as React.CSSProperties;
+  } as React.CSSProperties
 
   return (
     <section className="sales-chart" aria-labelledby="sales-chart-title">
@@ -104,7 +104,11 @@ export const SalesChart: FC<SalesChartProps> = ({ data, isLoading }) => {
         </div>
       </div>
 
-      <div className="sales-chart__body" style={chartStyle} aria-label="Grafico de ventas mensuales">
+      <div
+        className="sales-chart__body"
+        style={chartStyle}
+        aria-label="Grafico de ventas mensuales"
+      >
         {isLoading ? (
           <SkeletonLoader height="100%" />
         ) : (
@@ -137,7 +141,7 @@ export const SalesChart: FC<SalesChartProps> = ({ data, isLoading }) => {
                 />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend
-                  formatter={(value) => (
+                  formatter={value => (
                     <span style={{ color: '#9B8EC4', fontSize: '0.8rem' }}>{value}</span>
                   )}
                 />
@@ -170,7 +174,7 @@ export const SalesChart: FC<SalesChartProps> = ({ data, isLoading }) => {
                 />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend
-                  formatter={(value) => (
+                  formatter={value => (
                     <span style={{ color: '#9B8EC4', fontSize: '0.8rem' }}>{value}</span>
                   )}
                 />
@@ -194,5 +198,5 @@ export const SalesChart: FC<SalesChartProps> = ({ data, isLoading }) => {
         )}
       </div>
     </section>
-  );
-};
+  )
+}

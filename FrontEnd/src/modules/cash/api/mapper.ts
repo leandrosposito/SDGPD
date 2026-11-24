@@ -1,5 +1,5 @@
-import type { CashTransaction } from '@/shared/types/cash.types';
-import type { CashTransactionDTO, CreateCashTransactionDTO } from './dto';
+import type { CashTransaction } from '@/shared/types/cash.types'
+import type { CashTransactionDTO, CreateCashTransactionDTO } from './dto'
 
 // ============================================================
 // mapper.ts (cash) — Único lugar que traduce DTO↔dominio. Nada fuera
@@ -14,7 +14,7 @@ import type { CashTransactionDTO, CreateCashTransactionDTO } from './dto';
 // `mapper.ts`, eso arma un ciclo.
 // ============================================================
 
-export type CashTransactionFormInput = Omit<CashTransaction, 'id'>;
+export type CashTransactionFormInput = Omit<CashTransaction, 'id'>
 
 export function cashTransactionFromDTO(dto: CashTransactionDTO): CashTransaction {
   return {
@@ -26,7 +26,7 @@ export function cashTransactionFromDTO(dto: CashTransactionDTO): CashTransaction
     linkedVoucher: dto.comprobante,
     description: dto.descripcion,
     amount: dto.monto,
-  };
+  }
 }
 
 // Usada SOLO para sembrar el mock desde data/mock/cash.data.ts
@@ -41,10 +41,12 @@ export function cashTransactionToDTO(tx: CashTransaction): CashTransactionDTO {
     comprobante: tx.linkedVoucher,
     descripcion: tx.description,
     monto: tx.amount,
-  };
+  }
 }
 
-export function cashTransactionFormInputToDTO(input: CashTransactionFormInput): CreateCashTransactionDTO {
+export function cashTransactionFormInputToDTO(
+  input: CashTransactionFormInput
+): CreateCashTransactionDTO {
   return {
     hora: input.time,
     tipo: input.type,
@@ -53,5 +55,5 @@ export function cashTransactionFormInputToDTO(input: CashTransactionFormInput): 
     comprobante: input.linkedVoucher,
     descripcion: input.description,
     monto: input.amount,
-  };
+  }
 }

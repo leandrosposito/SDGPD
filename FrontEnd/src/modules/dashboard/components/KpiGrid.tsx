@@ -1,18 +1,18 @@
-import type { FC } from 'react';
-import type { KpiMetric } from '@/shared/types/dashboard.types';
-import { StatCard, StatCardSkeleton } from '@/shared/components/ui/StatCard';
-import './KpiGrid.css';
+import type { FC } from 'react'
+import type { KpiMetric } from '@/shared/types/dashboard.types'
+import { StatCard, StatCardSkeleton } from '@/shared/components/ui/StatCard'
+import './KpiGrid.css'
 
 // ============================================================
 // KpiGrid — Responsive grid of KPI metric cards
 // ============================================================
 
 interface KpiGridProps {
-  metrics: KpiMetric[];
-  isLoading: boolean;
+  metrics: KpiMetric[]
+  isLoading: boolean
 }
 
-const SKELETON_COUNT = 4;
+const SKELETON_COUNT = 4
 
 export const KpiGrid: FC<KpiGridProps> = ({ metrics, isLoading }) => {
   if (isLoading) {
@@ -22,16 +22,16 @@ export const KpiGrid: FC<KpiGridProps> = ({ metrics, isLoading }) => {
           <StatCardSkeleton key={i} />
         ))}
       </div>
-    );
+    )
   }
 
   return (
     <div className="kpi-grid" role="list" aria-label="Metricas principales">
-      {metrics.map((metric) => (
+      {metrics.map(metric => (
         <div key={metric.id} role="listitem">
           <StatCard metric={metric} />
         </div>
       ))}
     </div>
-  );
-};
+  )
+}

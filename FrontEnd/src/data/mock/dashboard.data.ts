@@ -1,4 +1,4 @@
-import type { DashboardData } from '@/shared/types/dashboard.types';
+import type { DashboardData } from '@/shared/types/dashboard.types'
 
 // ============================================================
 // MOCK DATA — Dashboard
@@ -185,4 +185,4 @@ export const DASHBOARD_MOCK_DATA: DashboardData = {
       createdAt: '2026-06-12T12:30:00Z',
     },
   ],
-};
+}

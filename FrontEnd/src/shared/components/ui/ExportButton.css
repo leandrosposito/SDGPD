@@ -16,7 +16,9 @@
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   cursor: pointer;
-  transition: background var(--transition-fast) ease, border-color var(--transition-fast) ease;
+  transition:
+    background var(--transition-fast) ease,
+    border-color var(--transition-fast) ease;
 }
 
 .export-button__trigger:hover:not(:disabled) {

@@ -1,5 +1,5 @@
-import type { OrderStatus } from '@/shared/types/order.types';
-import type { OrderId, BranchId } from '@/shared/types/ids.types';
+import type { OrderStatus } from '@/shared/types/order.types'
+import type { OrderId, BranchId } from '@/shared/types/ids.types'
 
 // ============================================================
 // dashboardAggregates — funciones PURAS de agrupacion para el tablero
@@ -20,11 +20,11 @@ import type { OrderId, BranchId } from '@/shared/types/ids.types';
 // ============================================================
 
 export interface OrderProjectionForAggregation {
-  id: OrderId;
-  status: OrderStatus;
-  date: string; // ISO, se compara por el prefijo yyyy-MM-dd (dia calendario)
-  zone: string;
-  totalAmount: number;
+  id: OrderId
+  status: OrderStatus
+  date: string // ISO, se compara por el prefijo yyyy-MM-dd (dia calendario)
+  zone: string
+  totalAmount: number
 }
 
 // ADR-009: un pedido "pertenece" a una sucursal si existe al menos una
@@ -38,14 +38,14 @@ export function filterOrdersForBranch<T extends { id: OrderId }>(
   links: readonly { orderId: OrderId; branchId: BranchId }[],
   branchId: BranchId
 ): T[] {
-  const orderIdsInBranch = new Set(links.filter((l) => l.branchId === branchId).map((l) => l.orderId));
-  return orders.filter((o) => orderIdsInBranch.has(o.id));
+  const orderIdsInBranch = new Set(links.filter(l => l.branchId === branchId).map(l => l.orderId))
+  return orders.filter(o => orderIdsInBranch.has(o.id))
 }
 
 export interface SalesByZoneRow {
-  zone: string;
-  totalVentas: number;
-  cantidadPedidos: number;
+  zone: string
+  totalVentas: number
+  cantidadPedidos: number
 }
 
 // Ventas por ZONA (no "por sucursal" — Order no tiene branchId hoy,
@@ -56,24 +56,30 @@ export interface SalesByZoneRow {
 // Excluye pedidos cancelados (mismo criterio que
 // orders.service.ts#computeAggregates para "facturacion_hoy": un
 // pedido cancelado no es una venta real).
-export function groupSalesByZone(orders: readonly OrderProjectionForAggregation[]): SalesByZoneRow[] {
-  const byZone = new Map<string, SalesByZoneRow>();
+export function groupSalesByZone(
+  orders: readonly OrderProjectionForAggregation[]
+): SalesByZoneRow[] {
+  const byZone = new Map<string, SalesByZoneRow>()
   for (const order of orders) {
-    if (order.status === 'cancelled') continue;
-    const existing = byZone.get(order.zone);
+    if (order.status === 'cancelled') continue
+    const existing = byZone.get(order.zone)
     if (existing) {
-      existing.totalVentas += order.totalAmount;
-      existing.cantidadPedidos += 1;
+      existing.totalVentas += order.totalAmount
+      existing.cantidadPedidos += 1
     } else {
-      byZone.set(order.zone, { zone: order.zone, totalVentas: order.totalAmount, cantidadPedidos: 1 });
+      byZone.set(order.zone, {
+        zone: order.zone,
+        totalVentas: order.totalAmount,
+        cantidadPedidos: 1,
+      })
     }
   }
-  return [...byZone.values()].sort((a, b) => b.totalVentas - a.totalVentas);
+  return [...byZone.values()].sort((a, b) => b.totalVentas - a.totalVentas)
 }
 
 export interface OrdersByStatusRow {
-  status: OrderStatus;
-  cantidad: number;
+  status: OrderStatus
+  cantidad: number
 }
 
 // Pedidos del periodo [dateFrom, dateTo] (inclusive, ambos opcionales)
@@ -85,12 +91,12 @@ export function groupOrdersByStatusInRange(
   dateFrom?: string,
   dateTo?: string
 ): OrdersByStatusRow[] {
-  const counts = new Map<OrderStatus, number>();
+  const counts = new Map<OrderStatus, number>()
   for (const order of orders) {
-    const day = order.date.slice(0, 10);
-    if (dateFrom && day < dateFrom) continue;
-    if (dateTo && day > dateTo) continue;
-    counts.set(order.status, (counts.get(order.status) ?? 0) + 1);
+    const day = order.date.slice(0, 10)
+    if (dateFrom && day < dateFrom) continue
+    if (dateTo && day > dateTo) continue
+    counts.set(order.status, (counts.get(order.status) ?? 0) + 1)
   }
-  return [...counts.entries()].map(([status, cantidad]) => ({ status, cantidad }));
+  return [...counts.entries()].map(([status, cantidad]) => ({ status, cantidad }))
 }

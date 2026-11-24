@@ -17,19 +17,19 @@
 // de la funcion misma, no del orden en que se la llama.
 // ============================================================
 
-const EXPIRING_SOON_WINDOW_DAYS = 30;
-const MS_PER_DAY = 1000 * 60 * 60 * 24;
+const EXPIRING_SOON_WINDOW_DAYS = 30
+const MS_PER_DAY = 1000 * 60 * 60 * 24
 
 function daysUntil(expirationDate: string, now: Date): number {
-  const exp = new Date(expirationDate);
-  return Math.ceil((exp.getTime() - now.getTime()) / MS_PER_DAY);
+  const exp = new Date(expirationDate)
+  return Math.ceil((exp.getTime() - now.getTime()) / MS_PER_DAY)
 }
 
 export function isExpired(expirationDate: string, now: Date = new Date()): boolean {
-  return new Date(expirationDate).getTime() < now.getTime();
+  return new Date(expirationDate).getTime() < now.getTime()
 }
 
 export function isExpiringSoon(expirationDate: string, now: Date = new Date()): boolean {
-  const diffDays = daysUntil(expirationDate, now);
-  return diffDays >= 0 && diffDays <= EXPIRING_SOON_WINDOW_DAYS;
+  const diffDays = daysUntil(expirationDate, now)
+  return diffDays >= 0 && diffDays <= EXPIRING_SOON_WINDOW_DAYS
 }

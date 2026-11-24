@@ -1,6 +1,6 @@
-import type { InventoryMovement } from '@/shared/types/inventory.types';
-import { asBranchId } from '@/shared/types/ids.types';
-import type { InventoryMovementDTO } from './dto';
+import type { InventoryMovement } from '@/shared/types/inventory.types'
+import { asBranchId } from '@/shared/types/ids.types'
+import type { InventoryMovementDTO } from './dto'
 
 // ============================================================
 // mapper.ts (movements) — Único lugar que traduce DTO↔dominio. Nada
@@ -18,7 +18,7 @@ export function inventoryMovementFromDTO(dto: InventoryMovementDTO): InventoryMo
     user: dto.usuario,
     notes: dto.notas,
     branchId: asBranchId(dto.sucursal_id),
-  };
+  }
 }
 
 // Usada solo para sembrar el store desde data/mock/inventory.data.ts
@@ -34,5 +34,5 @@ export function inventoryMovementToDTO(item: InventoryMovement): InventoryMoveme
     usuario: item.user,
     notas: item.notes,
     sucursal_id: item.branchId,
-  };
+  }
 }

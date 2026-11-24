@@ -1,5 +1,5 @@
-import { usePagedQuery, type UsePagedQueryOptions, type UsePagedQueryResult } from './usePagedQuery';
-import type { PageQuery, PageResult } from '@/shared/types/pagination.types';
+import { usePagedQuery, type UsePagedQueryOptions, type UsePagedQueryResult } from './usePagedQuery'
+import type { PageQuery, PageResult } from '@/shared/types/pagination.types'
 
 // ============================================================
 // useLiveQuery — ADR-003 (Tanda 8, corrida completa): "tiempo real"
@@ -21,10 +21,18 @@ import type { PageQuery, PageResult } from '@/shared/types/pagination.types';
 // en vez de un setInterval paralelo.
 // ============================================================
 
-export function useLiveQuery<TItem, TFilters, TSort extends string = string, TAggregates = undefined>(
-  fetchPage: (query: PageQuery<TFilters, TSort>, signal: AbortSignal) => Promise<PageResult<TItem, TAggregates>>,
+export function useLiveQuery<
+  TItem,
+  TFilters,
+  TSort extends string = string,
+  TAggregates = undefined,
+>(
+  fetchPage: (
+    query: PageQuery<TFilters, TSort>,
+    signal: AbortSignal
+  ) => Promise<PageResult<TItem, TAggregates>>,
   filters: TFilters,
   options: Omit<UsePagedQueryOptions<TSort>, 'live'> = {}
 ): UsePagedQueryResult<TItem, TSort, TAggregates> {
-  return usePagedQuery(fetchPage, filters, { ...options, live: true });
+  return usePagedQuery(fetchPage, filters, { ...options, live: true })
 }

@@ -24,15 +24,15 @@
 // Fase 2 de la sesion para el porque de este recorte de alcance.
 // ============================================================
 
-export type MotivoTipo = 'rechazo' | 'reprogramacion' | 'no-entrega';
+export type MotivoTipo = 'rechazo' | 'reprogramacion' | 'no-entrega'
 
 export interface MotivoCatalogItem {
-  codigo: string;
-  tipo: MotivoTipo;
-  descripcion: string;
-  activo: boolean;
-  requiereEvidencia: boolean;
-  disparaLogisticaInversa: boolean;
+  codigo: string
+  tipo: MotivoTipo
+  descripcion: string
+  activo: boolean
+  requiereEvidencia: boolean
+  disparaLogisticaInversa: boolean
 }
 
-export const MOTIVO_OTRO_CODIGO = 'OTRO';
+export const MOTIVO_OTRO_CODIGO = 'OTRO'

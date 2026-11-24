@@ -13,23 +13,23 @@
 // ============================================================
 
 export interface PurchaseSuggestionDTO {
-  id: string;
-  producto_id: string;
-  sku: string;
-  nombre_producto: string;
-  nombre_proveedor: string;
-  sucursal_id: string;
-  stock_actual: number;
-  stock_minimo: number;
-  cantidad_sugerida: number;
-  costo_estimado: number;
+  id: string
+  producto_id: string
+  sku: string
+  nombre_producto: string
+  nombre_proveedor: string
+  sucursal_id: string
+  stock_actual: number
+  stock_minimo: number
+  cantidad_sugerida: number
+  costo_estimado: number
 }
 
 export interface PurchaseSuggestionsPageDTO {
-  data: PurchaseSuggestionDTO[];
+  data: PurchaseSuggestionDTO[]
   meta: {
-    total: number;
-    page: number;
-    page_size: number;
-  };
+    total: number
+    page: number
+    page_size: number
+  }
 }

@@ -1,5 +1,12 @@
-import { asTripId, asStopId, asVehicleId, asDriverId, asBranchId, asDeliveryId } from '@/shared/types/ids.types';
-import type { Trip } from '@/shared/types/trip.types';
+import {
+  asTripId,
+  asStopId,
+  asVehicleId,
+  asDriverId,
+  asBranchId,
+  asDeliveryId,
+} from '@/shared/types/ids.types'
+import type { Trip } from '@/shared/types/trip.types'
 
 // ============================================================
 // MOCK DATA — Viajes (Tanda 10B, ADR-011). 2 viajes sembrados, cada
@@ -17,14 +24,14 @@ import type { Trip } from '@/shared/types/trip.types';
 // ============================================================
 
 function toISODate(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
-const TODAY_ISO = toISODate(new Date());
-const NOW_ISO = new Date().toISOString();
+const TODAY_ISO = toISODate(new Date())
+const NOW_ISO = new Date().toISOString()
 
 export const TRIPS_MOCK_DATA: Trip[] = [
   {
@@ -54,11 +61,21 @@ export const TRIPS_MOCK_DATA: Trip[] = [
         address: 'Sarmiento 111',
         deliveryIds: [asDeliveryId('del-004')],
         estado: 'Pendiente',
-        preferenciasEntrega: { ventanaDesde: '09:00', ventanaHasta: '13:00', diasVisita: ['Lunes', 'Miercoles', 'Viernes'] },
+        preferenciasEntrega: {
+          ventanaDesde: '09:00',
+          ventanaHasta: '13:00',
+          diasVisita: ['Lunes', 'Miercoles', 'Viernes'],
+        },
       },
     ],
     version: 1,
-    capacidadUsada: { bultos: 22, pesoKg: 340, volumenM3: 1.8, refrigerado: false, zonasHabilitadas: [] },
+    capacidadUsada: {
+      bultos: 22,
+      pesoKg: 340,
+      volumenM3: 1.8,
+      refrigerado: false,
+      zonasHabilitadas: [],
+    },
     sobrecargado: false,
     overrides: [],
     createdAt: NOW_ISO,
@@ -95,7 +112,13 @@ export const TRIPS_MOCK_DATA: Trip[] = [
       },
     ],
     version: 1,
-    capacidadUsada: { bultos: 18, pesoKg: 260, volumenM3: 2.1, refrigerado: false, zonasHabilitadas: [] },
+    capacidadUsada: {
+      bultos: 18,
+      pesoKg: 260,
+      volumenM3: 2.1,
+      refrigerado: false,
+      zonasHabilitadas: [],
+    },
     sobrecargado: false,
     overrides: [],
     posicionActual: {
@@ -108,4 +131,4 @@ export const TRIPS_MOCK_DATA: Trip[] = [
     createdAt: NOW_ISO,
     updatedAt: NOW_ISO,
   },
-];
+]

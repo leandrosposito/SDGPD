@@ -1,15 +1,15 @@
-import { useEffect, useMemo, useState, type FC } from 'react';
-import { toast } from 'sonner';
-import { usePagedQuery } from '@/shared/hooks/usePagedQuery';
-import { useUrlListState } from '@/shared/hooks/useUrlListState';
-import { useSessionStore } from '@/shared/state/useSessionStore';
-import { Pagination } from '@/shared/components/ui/Pagination';
-import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary';
-import { LoadingState } from '@/shared/components/ui/LoadingState';
-import { ErrorState } from '@/shared/components/ui/ErrorState';
-import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay';
-import type { Vehicle } from '@/shared/types/vehicle.types';
-import type { VehicleId } from '@/shared/types/ids.types';
+import { useEffect, useMemo, useState, type FC } from 'react'
+import { toast } from 'sonner'
+import { usePagedQuery } from '@/shared/hooks/usePagedQuery'
+import { useUrlListState } from '@/shared/hooks/useUrlListState'
+import { useSessionStore } from '@/shared/state/useSessionStore'
+import { Pagination } from '@/shared/components/ui/Pagination'
+import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary'
+import { LoadingState } from '@/shared/components/ui/LoadingState'
+import { ErrorState } from '@/shared/components/ui/ErrorState'
+import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay'
+import type { Vehicle } from '@/shared/types/vehicle.types'
+import type { VehicleId } from '@/shared/types/ids.types'
 import {
   getVehiclesPage,
   createVehicle,
@@ -18,10 +18,10 @@ import {
   type VehicleFormInput,
   type VehiclesQueryFilters,
   type VehiclesSortField,
-} from '@/shared/api/vehicles/vehicles.service';
-import { VehiclesTable } from './components/VehiclesTable';
-import { VehicleFormModal } from './components/VehicleFormModal';
-import './LogisticsAdminPage.css';
+} from '@/shared/api/vehicles/vehicles.service'
+import { VehiclesTable } from './components/VehiclesTable'
+import { VehicleFormModal } from './components/VehicleFormModal'
+import './LogisticsAdminPage.css'
 
 // ============================================================
 // VehiclesPage — ABM de flota (Tanda 10B, ADR-011). Alcance EMPRESA
@@ -30,17 +30,20 @@ import './LogisticsAdminPage.css';
 // ============================================================
 
 export const VehiclesPage: FC = () => {
-  const empresaId = useSessionStore((s) => s.session?.company.id);
+  const empresaId = useSessionStore(s => s.session?.company.id)
 
-  const urlState = useUrlListState<never, 'q'>({ filterKeys: ['q'] });
-  const [searchTerm, setSearchTerm] = useState(urlState.filters.q ?? '');
+  const urlState = useUrlListState<never, 'q'>({ filterKeys: ['q'] })
+  const [searchTerm, setSearchTerm] = useState(urlState.filters.q ?? '')
 
   useEffect(() => {
-    if (searchTerm !== (urlState.filters.q ?? '')) urlState.setFilter('q', searchTerm || undefined);
+    if (searchTerm !== (urlState.filters.q ?? '')) urlState.setFilter('q', searchTerm || undefined)
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reacciona solo al input local, mismo patron que SuppliersPage
-  }, [searchTerm]);
+  }, [searchTerm])
 
-  const filters = useMemo(() => ({ empresaId: empresaId ?? '', search: urlState.filters.q || undefined }), [empresaId, urlState.filters.q]);
+  const filters = useMemo(
+    () => ({ empresaId: empresaId ?? '', search: urlState.filters.q || undefined }),
+    [empresaId, urlState.filters.q]
+  )
 
   const {
     items: vehicles,
@@ -54,38 +57,48 @@ export const VehiclesPage: FC = () => {
     setPage,
     setPageSize,
     refetch,
-  } = usePagedQuery<Vehicle, VehiclesQueryFilters, VehiclesSortField, undefined>(getVehiclesPage, filters, {
-    enabled: Boolean(empresaId),
-    page: urlState.page,
-    onPageChange: urlState.setPage,
-  });
+  } = usePagedQuery<Vehicle, VehiclesQueryFilters, VehiclesSortField, undefined>(
+    getVehiclesPage,
+    filters,
+    {
+      enabled: Boolean(empresaId),
+      page: urlState.page,
+      onPageChange: urlState.setPage,
+    }
+  )
 
-  const [formTarget, setFormTarget] = useState<Vehicle | null>(null);
-  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [formTarget, setFormTarget] = useState<Vehicle | null>(null)
+  const [isFormOpen, setIsFormOpen] = useState(false)
 
   const handleSave = async (input: VehicleFormInput, vehicleId?: VehicleId) => {
-    if (!empresaId) throw new Error('Todavía no hay una sesión activa.');
-    const idempotencyKey = crypto.randomUUID();
+    if (!empresaId) throw new Error('Todavía no hay una sesión activa.')
+    const idempotencyKey = crypto.randomUUID()
     const result = vehicleId
       ? await updateVehicle(empresaId, idempotencyKey, vehicleId, input)
-      : await createVehicle(empresaId, idempotencyKey, input);
+      : await createVehicle(empresaId, idempotencyKey, input)
     if (!result.success) {
-      throw new Error(result.reason === 'patente-duplicada' ? 'Ya existe un vehículo con esa patente.' : 'No se pudo guardar el vehículo.');
+      throw new Error(
+        result.reason === 'patente-duplicada'
+          ? 'Ya existe un vehículo con esa patente.'
+          : 'No se pudo guardar el vehículo.'
+      )
     }
-    refetch();
-  };
+    refetch()
+  }
 
   const handleToggleActivo = async (vehicle: Vehicle) => {
-    if (!empresaId) return;
-    const idempotencyKey = crypto.randomUUID();
-    const result = await toggleVehicleActivo(empresaId, idempotencyKey, vehicle.id);
+    if (!empresaId) return
+    const idempotencyKey = crypto.randomUUID()
+    const result = await toggleVehicleActivo(empresaId, idempotencyKey, vehicle.id)
     if (result.success) {
-      toast.success(`Vehículo ${vehicle.patente} ${result.vehicle?.activo ? 'activado' : 'desactivado'}.`);
-      refetch();
-      return;
+      toast.success(
+        `Vehículo ${vehicle.patente} ${result.vehicle?.activo ? 'activado' : 'desactivado'}.`
+      )
+      refetch()
+      return
     }
-    toast.error('No se pudo cambiar el estado del vehículo.');
-  };
+    toast.error('No se pudo cambiar el estado del vehículo.')
+  }
 
   return (
     <div className="logistics-admin-page page-enter">
@@ -98,8 +111,8 @@ export const VehiclesPage: FC = () => {
           <button
             className="logistics-admin-page__btn-primary"
             onClick={() => {
-              setFormTarget(null);
-              setIsFormOpen(true);
+              setFormTarget(null)
+              setIsFormOpen(true)
             }}
           >
             Nuevo vehículo
@@ -113,7 +126,7 @@ export const VehiclesPage: FC = () => {
           className="logistics-admin-page__search"
           placeholder="Buscar por patente o tipo…"
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={e => setSearchTerm(e.target.value)}
         />
       </div>
 
@@ -123,13 +136,16 @@ export const VehiclesPage: FC = () => {
         ) : error ? (
           <ErrorState message="No se pudo cargar el listado de vehículos." onRetry={refetch} />
         ) : (
-          <ErrorBoundary fallbackTitle="No se pudo mostrar el listado de vehículos." fallbackMessage="Intenta de nuevo.">
+          <ErrorBoundary
+            fallbackTitle="No se pudo mostrar el listado de vehículos."
+            fallbackMessage="Intenta de nuevo."
+          >
             <FetchingOverlay isFetching={isFetching}>
               <VehiclesTable
                 vehicles={vehicles}
-                onEdit={(v) => {
-                  setFormTarget(v);
-                  setIsFormOpen(true);
+                onEdit={v => {
+                  setFormTarget(v)
+                  setIsFormOpen(true)
                 }}
                 onToggleActivo={handleToggleActivo}
               />
@@ -146,7 +162,12 @@ export const VehiclesPage: FC = () => {
         )}
       </div>
 
-      <VehicleFormModal isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} vehicle={formTarget} onSave={handleSave} />
+      <VehicleFormModal
+        isOpen={isFormOpen}
+        onClose={() => setIsFormOpen(false)}
+        vehicle={formTarget}
+        onSave={handleSave}
+      />
     </div>
-  );
-};
+  )
+}

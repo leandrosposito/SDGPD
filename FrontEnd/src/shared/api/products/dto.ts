@@ -13,39 +13,39 @@
 // ============================================================
 
 export interface ProductLotDTO {
-  id: string;
-  numero_lote: string;
-  cantidad: number;
-  fecha_vencimiento: string;
+  id: string
+  numero_lote: string
+  cantidad: number
+  fecha_vencimiento: string
 }
 
 export interface ProductDTO {
-  id: string;
-  sku: string;
-  codigo_barras: string;
-  nombre: string;
-  descripcion?: string;
-  categoria: string;
-  unidad_medida: string;
-  estado: 'active' | 'inactive';
+  id: string
+  sku: string
+  codigo_barras: string
+  nombre: string
+  descripcion?: string
+  categoria: string
+  unidad_medida: string
+  estado: 'active' | 'inactive'
   // Referencia tipada al proveedor real (E3, DECISIONES_TECNICAS.md) —
   // nunca el nombre del proveedor.
-  proveedor_id: string;
-  lotes: ProductLotDTO[];
-  costo: number;
-  precio: number;
-  margen_mayorista?: number;
-  margen_distribuidor?: number;
-  margen_minorista?: number;
+  proveedor_id: string
+  lotes: ProductLotDTO[]
+  costo: number
+  precio: number
+  margen_mayorista?: number
+  margen_distribuidor?: number
+  margen_minorista?: number
 }
 
 // Stock/mínimo de un producto en una sucursal (E1, DECISIONES_TECNICAS.md):
 // entidad separada del catálogo, con su propio ciclo de vida.
 export interface ProductStockDTO {
-  producto_id: string;
-  sucursal_id: string;
-  stock: number;
-  stock_minimo: number;
+  producto_id: string
+  sucursal_id: string
+  stock: number
+  stock_minimo: number
 }
 
 // Vista compuesta (join catálogo × stock) — misma forma "aplanada" que
@@ -53,10 +53,10 @@ export interface ProductStockDTO {
 // no un objeto anidado: hoy el join es 1:1 y anidar solo agregaría
 // indirección sin ningún beneficio real.
 export interface StockedProductDTO extends ProductDTO {
-  producto_id: string;
-  sucursal_id: string;
-  stock: number;
-  stock_minimo: number;
+  producto_id: string
+  sucursal_id: string
+  stock: number
+  stock_minimo: number
 }
 
 // Agregados (P3, DECISIONES_TECNICAS.md): reemplazan el cálculo que
@@ -70,49 +70,49 @@ export interface StockedProductDTO extends ProductDTO {
 // (E6: `stock <= stock_minimo`, no `<` estricto) — ver
 // `isBelowMinStock` en `products.service.ts`, reusada por ambos.
 export interface StockAggregatesDTO {
-  total_productos: number;
-  stock_bajo: number;
-  sin_stock: number;
-  valor_inventario: number;
+  total_productos: number
+  stock_bajo: number
+  sin_stock: number
+  valor_inventario: number
 }
 
 export interface StockedProductsPageDTO {
-  data: StockedProductDTO[];
+  data: StockedProductDTO[]
   meta: {
-    total: number;
-    page: number;
-    page_size: number;
-    aggregates: StockAggregatesDTO;
-  };
+    total: number
+    page: number
+    page_size: number
+    aggregates: StockAggregatesDTO
+  }
 }
 
 // Envoltorio de lista para Bajo Stock Mínimo — { data, meta } genérico,
 // sin `aggregates` (TabLowStock ya usa `totalItems` de la respuesta
 // paginada, no un agregado propio — ver E1/E2 de RELEVAMIENTO_INVENTORY.md).
 export interface LowStockPageDTO {
-  data: StockedProductDTO[];
+  data: StockedProductDTO[]
   meta: {
-    total: number;
-    page: number;
-    page_size: number;
-  };
+    total: number
+    page: number
+    page_size: number
+  }
 }
 
 // Payload de alta/edición (RF-PRD-001) — mismos campos que `ProductDTO`
 // menos `id`/`lotes` (los lotes no se cargan desde este formulario;
 // ver ProductFormModal.tsx, no toca `lots`).
 export interface ProductPayloadDTO {
-  sku: string;
-  codigo_barras: string;
-  nombre: string;
-  descripcion?: string;
-  categoria: string;
-  unidad_medida: string;
-  estado: 'active' | 'inactive';
-  proveedor_id: string;
-  costo: number;
-  precio: number;
-  margen_mayorista?: number;
-  margen_distribuidor?: number;
-  margen_minorista?: number;
+  sku: string
+  codigo_barras: string
+  nombre: string
+  descripcion?: string
+  categoria: string
+  unidad_medida: string
+  estado: 'active' | 'inactive'
+  proveedor_id: string
+  costo: number
+  precio: number
+  margen_mayorista?: number
+  margen_distribuidor?: number
+  margen_minorista?: number
 }

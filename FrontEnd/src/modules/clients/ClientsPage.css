@@ -353,7 +353,9 @@
   border-radius: var(--radius-lg);
   cursor: pointer;
   text-align: left;
-  transition: border-color var(--transition-fast) ease, background var(--transition-fast) ease;
+  transition:
+    border-color var(--transition-fast) ease,
+    background var(--transition-fast) ease;
 }
 
 .client-aging-summary__card:hover {

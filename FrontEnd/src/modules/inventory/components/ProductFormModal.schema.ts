@@ -1,5 +1,5 @@
-import { z } from 'zod';
-import type { InventoryItem } from '@/shared/types/inventory.types';
+import { z } from 'zod'
+import type { InventoryItem } from '@/shared/types/inventory.types'
 
 // ============================================================
 // ProductFormModal.schema — RF-PRD-001 (ABM Central de Productos)
@@ -13,29 +13,26 @@ import type { InventoryItem } from '@/shared/types/inventory.types';
 // Criterio de aceptacion RF-PRD-001: "Evitar codigos de barra malformados
 // (validacion EAN-13 si aplica)".
 function isValidEan13(barcode: string): boolean {
-  if (!/^\d{13}$/.test(barcode)) return false;
-  const digits = barcode.split('').map(Number);
-  const checkDigit = digits[12];
+  if (!/^\d{13}$/.test(barcode)) return false
+  const digits = barcode.split('').map(Number)
+  const checkDigit = digits[12]
   const sum = digits.slice(0, 12).reduce((acc, digit, index) => {
-    return acc + digit * (index % 2 === 0 ? 1 : 3);
-  }, 0);
-  const calculatedCheckDigit = (10 - (sum % 10)) % 10;
-  return calculatedCheckDigit === checkDigit;
+    return acc + digit * (index % 2 === 0 ? 1 : 3)
+  }, 0)
+  const calculatedCheckDigit = (10 - (sum % 10)) % 10
+  return calculatedCheckDigit === checkDigit
 }
 
 const baseProductFormSchema = z.object({
-  sku: z
-    .string()
-    .trim()
-    .min(1, 'El SKU es obligatorio.'),
+  sku: z.string().trim().min(1, 'El SKU es obligatorio.'),
   barcode: z
     .string()
     .trim()
     .min(1, 'El codigo de barras es obligatorio.')
-    .refine((value) => /^\d{13}$/.test(value), {
+    .refine(value => /^\d{13}$/.test(value), {
       message: 'Debe ser EAN-13 (13 digitos numericos).',
     })
-    .refine((value) => !/^\d{13}$/.test(value) || isValidEan13(value), {
+    .refine(value => !/^\d{13}$/.test(value) || isValidEan13(value), {
       message: 'El codigo de barras EAN-13 es invalido (digito verificador incorrecto).',
     }),
   name: z.string().trim().min(1, 'El nombre es obligatorio.'),
@@ -59,7 +56,7 @@ const baseProductFormSchema = z.object({
   // del catalogo. Un producto nuevo arranca sin stock en ninguna
   // sucursal (E5, "sin registro = 0") hasta que se cargue por otra via
   // (movimientos/ajustes de stock — fuera de alcance de esta tarea).
-});
+})
 
 // zod v4 + @hookform/resolvers: z.coerce.number() tiene un tipo de entrada
 // (unknown, antes de coercion) distinto del tipo de salida (number, ya
@@ -69,37 +66,40 @@ const baseProductFormSchema = z.object({
 // Fix: tipar useForm con los 3 generics (input, context, output) que
 // react-hook-form 7.55+ / @hookform/resolvers 3+ soportan para este caso
 // exacto — ver ProductFormModal.tsx.
-export type ProductFormInput = z.input<typeof baseProductFormSchema>;
-export type ProductFormValues = z.output<typeof baseProductFormSchema>;
+export type ProductFormInput = z.input<typeof baseProductFormSchema>
+export type ProductFormValues = z.output<typeof baseProductFormSchema>
 
 // Regla de negocio RF-PRD-001: "SKU y Codigo de Barras deben ser unicos".
 // La unicidad depende de la lista de productos existentes y del producto
 // que se esta editando (para no comparar un producto contra si mismo), por
 // eso se arma con una factory en vez de un schema estatico.
-export function createProductFormSchema(existingProducts: InventoryItem[], currentProductId?: string) {
+export function createProductFormSchema(
+  existingProducts: InventoryItem[],
+  currentProductId?: string
+) {
   return baseProductFormSchema.superRefine((values, ctx) => {
     const skuTaken = existingProducts.some(
-      (p) => p.sku.toLowerCase() === values.sku.toLowerCase() && p.id !== currentProductId
-    );
+      p => p.sku.toLowerCase() === values.sku.toLowerCase() && p.id !== currentProductId
+    )
     if (skuTaken) {
       ctx.addIssue({
         code: 'custom',
         path: ['sku'],
         message: 'Este SKU ya existe.',
-      });
+      })
     }
 
     const barcodeTaken = existingProducts.some(
-      (p) => p.barcode === values.barcode && p.id !== currentProductId
-    );
+      p => p.barcode === values.barcode && p.id !== currentProductId
+    )
     if (barcodeTaken) {
       ctx.addIssue({
         code: 'custom',
         path: ['barcode'],
         message: 'Este codigo de barras ya existe.',
-      });
+      })
     }
-  });
+  })
 }
 
 export function productFormDefaultValues(product?: InventoryItem | null): ProductFormInput {
@@ -115,7 +115,7 @@ export function productFormDefaultValues(product?: InventoryItem | null): Produc
       status: 'active',
       cost: 0,
       price: 0,
-    };
+    }
   }
   return {
     sku: product.sku,
@@ -128,5 +128,5 @@ export function productFormDefaultValues(product?: InventoryItem | null): Produc
     status: product.status || 'active',
     cost: product.cost,
     price: product.price,
-  };
+  }
 }

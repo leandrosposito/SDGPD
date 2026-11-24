@@ -1,4 +1,4 @@
-import type { ClientAccount, ClientTransaction } from '@/shared/types/client.types';
+import type { ClientAccount, ClientTransaction } from '@/shared/types/client.types'
 
 // ============================================================
 // dto.ts (clients) — Forma que tendría la respuesta de un backend
@@ -22,73 +22,73 @@ import type { ClientAccount, ClientTransaction } from '@/shared/types/client.typ
 // ============================================================
 
 export interface ClientAccountDTO {
-  id: string;
+  id: string
   cliente: {
-    razon_social: string;
-    cuit: string;
-    direccion: string;
-    telefono: string;
-    zona: string;
-    vendedor: string;
+    razon_social: string
+    cuit: string
+    direccion: string
+    telefono: string
+    zona: string
+    vendedor: string
     // Tanda 16 (PENDIENTES.md item 15) — ver el comentario completo en
     // shared/types/client.types.ts.
-    nombre_fantasia: string;
-    condicion_iva: string;
-    email: string;
-    google_maps_link: string;
-    direccion_entrega_igual_fiscal: boolean;
-    direccion_entrega: string;
-    referencias_entrega: string;
-  };
+    nombre_fantasia: string
+    condicion_iva: string
+    email: string
+    google_maps_link: string
+    direccion_entrega_igual_fiscal: boolean
+    direccion_entrega: string
+    referencias_entrega: string
+  }
   cuenta: {
-    limite_credito: number;
+    limite_credito: number
     // Tanda 12: lista_precios/condicion_venta agregados — ver el
     // comentario completo en shared/types/client.types.ts.
-    lista_precios: string;
-    condicion_venta: string;
+    lista_precios: string
+    condicion_venta: string
     // Tanda 16 (PENDIENTES.md item 15).
-    categoria: string;
-    notas: string;
-    activo: boolean;
-    total_debito: number;
-    total_credito: number;
-    saldo_actual: number;
-    dias_vencido: number;
-    estado: ClientAccount['status'];
-  };
-  transacciones: ClientTransaction[];
+    categoria: string
+    notas: string
+    activo: boolean
+    total_debito: number
+    total_credito: number
+    saldo_actual: number
+    dias_vencido: number
+    estado: ClientAccount['status']
+  }
+  transacciones: ClientTransaction[]
 }
 
 export interface ClientsPageDTO {
-  data: ClientAccountDTO[];
+  data: ClientAccountDTO[]
   meta: {
-    total: number;
-    page: number;
-    page_size: number;
-  };
+    total: number
+    page: number
+    page_size: number
+  }
 }
 
 // Payload de alta/edición — solo los campos que el formulario pide
 // (mismo criterio que `CreateSupplierDTO`/`CreateOrderDTO`).
 export interface ClientFormPayloadDTO {
-  razon_social: string;
-  cuit: string;
-  direccion: string;
-  telefono: string;
-  zona: string;
-  vendedor: string;
-  limite_credito: number;
-  lista_precios: string;
-  condicion_venta: string;
+  razon_social: string
+  cuit: string
+  direccion: string
+  telefono: string
+  zona: string
+  vendedor: string
+  limite_credito: number
+  lista_precios: string
+  condicion_venta: string
   // Tanda 16 (PENDIENTES.md item 15).
-  nombre_fantasia: string;
-  condicion_iva: string;
-  email: string;
-  google_maps_link: string;
-  direccion_entrega_igual_fiscal: boolean;
-  direccion_entrega: string;
-  referencias_entrega: string;
-  categoria: string;
-  notas: string;
-  activo: boolean;
+  nombre_fantasia: string
+  condicion_iva: string
+  email: string
+  google_maps_link: string
+  direccion_entrega_igual_fiscal: boolean
+  direccion_entrega: string
+  referencias_entrega: string
+  categoria: string
+  notas: string
+  activo: boolean
 }

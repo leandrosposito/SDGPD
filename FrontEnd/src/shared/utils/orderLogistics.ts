@@ -1,5 +1,5 @@
-import type { Order } from '@/shared/types/order.types';
-import type { Delivery, DeliveryStatus } from '@/shared/types/logistics.types';
+import type { Order } from '@/shared/types/order.types'
+import type { Delivery, DeliveryStatus } from '@/shared/types/logistics.types'
 
 // ============================================================
 // orderLogistics — Tanda 9 (modelo logistico base, ADR-010 secciones
@@ -26,7 +26,7 @@ import type { Delivery, DeliveryStatus } from '@/shared/types/logistics.types';
 // funcion de abajo) se reemplazan por la derivacion real desde
 // Parada.status — ver ADR-010 seccion 2, "Como se deriva el estado
 // hacia arriba".
-export type OrderLogisticoResumen = 'Pendiente' | DeliveryStatus;
+export type OrderLogisticoResumen = 'Pendiente' | DeliveryStatus
 
 // Un pedido puede tener 0, 1 o mas Delivery asociadas (AUDIT_15
 // hallazgo #4 — sin Parada, siguen sin relacion explicita entre si en
@@ -36,18 +36,18 @@ export type OrderLogisticoResumen = 'Pendiente' | DeliveryStatus;
 // menos tiempo) como representativa — es la entrega en la que "esta
 // pasando algo" ahora mismo para ese pedido.
 export function deriveOrderLogisticStatus(deliveries: readonly Delivery[]): OrderLogisticoResumen {
-  if (deliveries.length === 0) return 'Pendiente';
+  if (deliveries.length === 0) return 'Pendiente'
 
-  let masReciente = deliveries[0];
-  let masRecienteCuando = masReciente.historial.at(-1)?.cuando ?? '';
+  let masReciente = deliveries[0]
+  let masRecienteCuando = masReciente.historial.at(-1)?.cuando ?? ''
   for (const delivery of deliveries.slice(1)) {
-    const cuando = delivery.historial.at(-1)?.cuando ?? '';
+    const cuando = delivery.historial.at(-1)?.cuando ?? ''
     if (cuando > masRecienteCuando) {
-      masReciente = delivery;
-      masRecienteCuando = cuando;
+      masReciente = delivery
+      masRecienteCuando = cuando
     }
   }
-  return masReciente.status;
+  return masReciente.status
 }
 
 // Eje financiero (ADR-010 seccion 1): proyeccion de solo lectura,
@@ -58,8 +58,8 @@ export function deriveOrderLogisticStatus(deliveries: readonly Delivery[]): Orde
 // valores mezclados) en vez de inventar un valor fijo sin sentido. El
 // dia que exista un dominio real de comprobantes, esta funcion es la
 // UNICA que hay que reescribir — nada que la consuma cambia.
-export type OrderEstadoFinanciero = 'Sin facturar' | 'Facturado' | 'Cobrado' | 'Con nota de crédito';
+export type OrderEstadoFinanciero = 'Sin facturar' | 'Facturado' | 'Cobrado' | 'Con nota de crédito'
 
 export function deriveOrderFinancialStatus(order: Pick<Order, 'status'>): OrderEstadoFinanciero {
-  return order.status === 'invoiced' ? 'Facturado' : 'Sin facturar';
+  return order.status === 'invoiced' ? 'Facturado' : 'Sin facturar'
 }

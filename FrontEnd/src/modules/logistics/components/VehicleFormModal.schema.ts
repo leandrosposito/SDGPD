@@ -1,6 +1,6 @@
-import { z } from 'zod';
-import type { Vehicle } from '@/shared/types/vehicle.types';
-import type { VehicleFormInput } from '@/shared/api/vehicles/vehicles.service';
+import { z } from 'zod'
+import type { Vehicle } from '@/shared/types/vehicle.types'
+import type { VehicleFormInput } from '@/shared/api/vehicles/vehicles.service'
 
 // ============================================================
 // VehicleFormModal.schema — Tanda 10B. Validacion zod + react-hook-form
@@ -8,7 +8,7 @@ import type { VehicleFormInput } from '@/shared/api/vehicles/vehicles.service';
 // mismo patron que ProductFormModal.schema.ts.
 // ============================================================
 
-export const ZONAS_DISPONIBLES = ['Norte', 'Centro', 'Sur'] as const;
+export const ZONAS_DISPONIBLES = ['Norte', 'Centro', 'Sur'] as const
 
 export const vehicleFormSchema = z.object({
   patente: z.string().trim().min(1, 'La patente es obligatoria.'),
@@ -18,14 +18,22 @@ export const vehicleFormSchema = z.object({
   volumenM3: z.coerce.number().min(0, 'No puede ser negativo.'),
   refrigerado: z.boolean(),
   zonasHabilitadas: z.array(z.string()).min(1, 'Elegí al menos una zona habilitada.'),
-});
+})
 
-export type VehicleFormInputValues = z.input<typeof vehicleFormSchema>;
-export type VehicleFormValues = z.output<typeof vehicleFormSchema>;
+export type VehicleFormInputValues = z.input<typeof vehicleFormSchema>
+export type VehicleFormValues = z.output<typeof vehicleFormSchema>
 
 export function vehicleFormDefaultValues(vehicle?: Vehicle | null): VehicleFormInputValues {
   if (!vehicle) {
-    return { patente: '', tipo: '', bultos: 0, pesoKg: 0, volumenM3: 0, refrigerado: false, zonasHabilitadas: [] };
+    return {
+      patente: '',
+      tipo: '',
+      bultos: 0,
+      pesoKg: 0,
+      volumenM3: 0,
+      refrigerado: false,
+      zonasHabilitadas: [],
+    }
   }
   return {
     patente: vehicle.patente,
@@ -35,7 +43,7 @@ export function vehicleFormDefaultValues(vehicle?: Vehicle | null): VehicleFormI
     volumenM3: vehicle.capacidad.volumenM3,
     refrigerado: vehicle.capacidad.refrigerado,
     zonasHabilitadas: vehicle.capacidad.zonasHabilitadas,
-  };
+  }
 }
 
 export function vehicleFormValuesToServiceInput(values: VehicleFormValues): VehicleFormInput {
@@ -49,5 +57,5 @@ export function vehicleFormValuesToServiceInput(values: VehicleFormValues): Vehi
       refrigerado: values.refrigerado,
       zonasHabilitadas: values.zonasHabilitadas,
     },
-  };
+  }
 }

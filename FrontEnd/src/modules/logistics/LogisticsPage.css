@@ -87,7 +87,7 @@
 
 .logistics-kpi-icon--blue {
   background: rgba(59, 130, 246, 0.1);
-  color: #3B82F6;
+  color: #3b82f6;
 }
 
 .logistics-kpi-icon--accent {
@@ -106,7 +106,7 @@
 
 .logistics-kpi-progress-bar {
   height: 100%;
-  background: #3B82F6;
+  background: #3b82f6;
   border-radius: var(--radius-full);
 }
 

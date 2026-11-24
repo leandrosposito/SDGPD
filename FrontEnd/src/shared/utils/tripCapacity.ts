@@ -1,5 +1,5 @@
-import type { Stop } from '@/shared/types/trip.types';
-import type { VehicleCapacity } from '@/shared/types/vehicle.types';
+import type { Stop } from '@/shared/types/trip.types'
+import type { VehicleCapacity } from '@/shared/types/vehicle.types'
 
 // ============================================================
 // tripCapacity — Calculo de capacidad usada de un Viaje (Tanda 10B,
@@ -15,10 +15,10 @@ import type { VehicleCapacity } from '@/shared/types/vehicle.types';
 // ============================================================
 
 export function computeCapacidadUsada(paradas: Stop[]): VehicleCapacity {
-  const bultos = paradas.reduce((sum, stop) => sum + stop.deliveryIds.length, 0);
-  return { bultos, pesoKg: 0, volumenM3: 0, refrigerado: false, zonasHabilitadas: [] };
+  const bultos = paradas.reduce((sum, stop) => sum + stop.deliveryIds.length, 0)
+  return { bultos, pesoKg: 0, volumenM3: 0, refrigerado: false, zonasHabilitadas: [] }
 }
 
 export function excedeCapacidad(usada: VehicleCapacity, total: VehicleCapacity): boolean {
-  return usada.bultos > total.bultos;
+  return usada.bultos > total.bultos
 }

@@ -7,13 +7,13 @@
 // ============================================================
 
 export interface ExportColumn<T> {
-  header: string;
-  accessor: (row: T) => string | number;
+  header: string
+  accessor: (row: T) => string | number
 }
 
 export interface ExportFetchResult<T> {
-  items: T[];
-  truncated: boolean;
+  items: T[]
+  truncated: boolean
 }
 
-export type ExportFormat = 'xlsx' | 'csv';
+export type ExportFormat = 'xlsx' | 'csv'

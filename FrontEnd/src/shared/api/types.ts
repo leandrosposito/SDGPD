@@ -20,19 +20,19 @@
 // que agregar el filtrado real de tenant el dia que exista backend sea
 // un cambio de "que valor se pasa", no de firma de cada funcion.
 export interface TenantContext {
-  empresaId: string;
+  empresaId: string
 }
 
 // Opciones que cualquier llamada a httpClient.request puede recibir,
 // mas alla de las propias del endpoint (metodo/path/body/params).
 export interface RequestOptions {
-  timeoutMs?: number;
-  retries?: number;
-  signal?: AbortSignal;
+  timeoutMs?: number
+  retries?: number
+  signal?: AbortSignal
   // BE-0b (ADR-BE-005 › Idempotencia): clave de la intencion, generada por
   // cada modulo al formarla. En modo http viaja como header
   // `Idempotency-Key`. Ademas habilita los reintentos de una mutacion:
   // POST/PUT/PATCH/DELETE SOLO se reintentan si la llevan (cierra A2 del
   // lado del cliente); GET se reintenta siempre, como antes.
-  idempotencyKey?: string;
+  idempotencyKey?: string
 }

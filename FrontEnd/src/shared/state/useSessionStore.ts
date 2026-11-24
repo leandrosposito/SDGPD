@@ -1,12 +1,12 @@
-import { create } from 'zustand';
-import type { Branch, SessionUser } from '@/shared/types/session.types';
-import { fetchSession } from '@/services/mock/session.service';
-import { httpClient, isHttpService } from '@/shared/api/httpClient';
-import { ApiError } from '@/shared/api/ApiError';
-import { queryClient } from '@/shared/api/queryClient';
-import * as authService from '@/shared/api/auth/auth.service';
-import { onSessionExpired } from '@/shared/auth/tokenStore';
-import { resetAllStores } from './resettableStores';
+import { create } from 'zustand'
+import type { Branch, SessionUser } from '@/shared/types/session.types'
+import { fetchSession } from '@/services/mock/session.service'
+import { httpClient, isHttpService } from '@/shared/api/httpClient'
+import { ApiError } from '@/shared/api/ApiError'
+import { queryClient } from '@/shared/api/queryClient'
+import * as authService from '@/shared/api/auth/auth.service'
+import { onSessionExpired } from '@/shared/auth/tokenStore'
+import { resetAllStores } from './resettableStores'
 
 // ============================================================
 // useSessionStore — Sesion activa (empresa, usuario, sucursales)
@@ -34,45 +34,45 @@ import { resetAllStores } from './resettableStores';
 // ============================================================
 
 /** ¿La sesion es real (backend) o mock? Un solo lugar: VITE_HTTP_SERVICES. */
-export const AUTH_IS_HTTP = isHttpService('auth');
+export const AUTH_IS_HTTP = isHttpService('auth')
 
-export type SessionStatus = 'idle' | 'loading' | 'authenticated' | 'unauthenticated' | 'error';
-export type LoginReason = 'invalid-credentials' | 'network' | 'unknown';
+export type SessionStatus = 'idle' | 'loading' | 'authenticated' | 'unauthenticated' | 'error'
+export type LoginReason = 'invalid-credentials' | 'network' | 'unknown'
 
 export interface LoginResult {
-  success: boolean;
-  reason?: LoginReason;
+  success: boolean
+  reason?: LoginReason
 }
 
-const ACTIVE_BRANCH_STORAGE_KEY = 'sdgpd.activeBranchId';
+const ACTIVE_BRANCH_STORAGE_KEY = 'sdgpd.activeBranchId'
 
-export type SessionLoadReason = 'fetch-error';
-export type SetActiveBranchReason = 'not-found' | 'inactive';
+export type SessionLoadReason = 'fetch-error'
+export type SetActiveBranchReason = 'not-found' | 'inactive'
 
 export interface SessionLoadResult {
-  success: boolean;
-  reason?: SessionLoadReason;
+  success: boolean
+  reason?: SessionLoadReason
 }
 
 export interface SetActiveBranchResult {
-  success: boolean;
-  branchId: Branch['id'];
-  reason?: SetActiveBranchReason;
+  success: boolean
+  branchId: Branch['id']
+  reason?: SetActiveBranchReason
 }
 
 interface SessionState {
-  session: SessionUser | null;
-  activeBranchId: Branch['id'] | null;
-  status: SessionStatus;
-  isLoading: boolean;
-  error: string | null;
-  loadSession: () => Promise<SessionLoadResult>;
-  login: (email: string, password: string) => Promise<LoginResult>;
-  logout: () => Promise<void>;
+  session: SessionUser | null
+  activeBranchId: Branch['id'] | null
+  status: SessionStatus
+  isLoading: boolean
+  error: string | null
+  loadSession: () => Promise<SessionLoadResult>
+  login: (email: string, password: string) => Promise<LoginResult>
+  logout: () => Promise<void>
   // Vuelve a pedir la sesion (con auth por http): despues de cambiar el rol
   // propio o la matriz del rol propio, para que la UI oculte lo que corresponde.
-  refreshSession: () => Promise<void>;
-  setActiveBranch: (branchId: Branch['id']) => SetActiveBranchResult;
+  refreshSession: () => Promise<void>
+  setActiveBranch: (branchId: Branch['id']) => SetActiveBranchResult
 }
 
 // La sucursal guardada es solo una conveniencia de UX (recordar la
@@ -80,24 +80,24 @@ interface SessionState {
 // real debera validar igual que la sucursal pedida pertenezca a la
 // empresa de la sesion autenticada antes de servir cualquier dato.
 function resolveInitialBranchId(session: SessionUser): Branch['id'] | null {
-  const storedBranchId = localStorage.getItem(ACTIVE_BRANCH_STORAGE_KEY);
+  const storedBranchId = localStorage.getItem(ACTIVE_BRANCH_STORAGE_KEY)
   const storedBranch = session.branches.find(
-    (branch) => branch.id === storedBranchId && branch.status === 'active'
-  );
+    branch => branch.id === storedBranchId && branch.status === 'active'
+  )
 
   // storedBranch, si existe, YA es un Branch['id'] real de la sesion
   // (Tanda 5, ADR-006) — se toma su .id tipado en vez de re-envolver
   // el string crudo de localStorage con asBranchId (que ademas
   // lanzaria si alguna vez el storage tuviera un valor con otro
   // formato, cosa que este chequeo ya descarto).
-  return storedBranch ? storedBranch.id : session.defaultBranchId;
+  return storedBranch ? storedBranch.id : session.defaultBranchId
 }
 
 // Al cerrar la sesion (logout o refresh fallido) no puede quedar nada del
 // usuario anterior: ni datos en cache ni stores de modulo.
 function clearUserData(): void {
-  queryClient.clear();
-  resetAllStores();
+  queryClient.clear()
+  resetAllStores()
 }
 
 export const useSessionStore = create<SessionState>()((set, get) => ({
@@ -113,46 +113,61 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
     // por http, tampoco reintenta despues de un 'unauthenticated': eso lo
     // resuelve el login.
     if (get().session || get().isLoading || get().status === 'unauthenticated') {
-      return { success: get().session !== null };
+      return { success: get().session !== null }
     }
 
-    set({ isLoading: true, status: 'loading', error: null });
+    set({ isLoading: true, status: 'loading', error: null })
 
     try {
       if (AUTH_IS_HTTP && !(await httpClient.refreshAccessToken())) {
-        set({ isLoading: false, status: 'unauthenticated' });
-        return { success: false };
+        set({ isLoading: false, status: 'unauthenticated' })
+        return { success: false }
       }
-      const session = AUTH_IS_HTTP ? await authService.fetchCurrentSession() : await fetchSession();
-      set({ session, activeBranchId: resolveInitialBranchId(session), isLoading: false, status: 'authenticated' });
-      return { success: true };
+      const session = AUTH_IS_HTTP ? await authService.fetchCurrentSession() : await fetchSession()
+      set({
+        session,
+        activeBranchId: resolveInitialBranchId(session),
+        isLoading: false,
+        status: 'authenticated',
+      })
+      return { success: true }
     } catch {
-      set({ isLoading: false, status: 'error', error: 'No se pudo cargar la sesion.' });
-      return { success: false, reason: 'fetch-error' };
+      set({ isLoading: false, status: 'error', error: 'No se pudo cargar la sesion.' })
+      return { success: false, reason: 'fetch-error' }
     }
   },
 
   login: async (email, password) => {
     try {
-      const session = await authService.login(email, password);
-      clearUserData();
-      set({ session, activeBranchId: resolveInitialBranchId(session), status: 'authenticated', isLoading: false, error: null });
-      return { success: true };
+      const session = await authService.login(email, password)
+      clearUserData()
+      set({
+        session,
+        activeBranchId: resolveInitialBranchId(session),
+        status: 'authenticated',
+        isLoading: false,
+        error: null,
+      })
+      return { success: true }
     } catch (err) {
-      if (err instanceof ApiError && err.serverCode === 'invalid-credentials') return { success: false, reason: 'invalid-credentials' };
-      if (err instanceof ApiError && (err.code === 'NETWORK_ERROR' || err.code === 'TIMEOUT')) return { success: false, reason: 'network' };
-      return { success: false, reason: 'unknown' };
+      if (err instanceof ApiError && err.serverCode === 'invalid-credentials')
+        return { success: false, reason: 'invalid-credentials' }
+      if (err instanceof ApiError && (err.code === 'NETWORK_ERROR' || err.code === 'TIMEOUT'))
+        return { success: false, reason: 'network' }
+      return { success: false, reason: 'unknown' }
     }
   },
 
   refreshSession: async () => {
-    if (!AUTH_IS_HTTP || get().status !== 'authenticated') return;
+    if (!AUTH_IS_HTTP || get().status !== 'authenticated') return
     try {
-      const session = await authService.fetchCurrentSession();
-      const activeBranchId = session.branches.some((b) => b.id === get().activeBranchId && b.status === 'active')
+      const session = await authService.fetchCurrentSession()
+      const activeBranchId = session.branches.some(
+        b => b.id === get().activeBranchId && b.status === 'active'
+      )
         ? get().activeBranchId
-        : resolveInitialBranchId(session);
-      set({ session, activeBranchId });
+        : resolveInitialBranchId(session)
+      set({ session, activeBranchId })
     } catch {
       // Si fallo por la sesion, onSessionExpired ya la cerro; si no, la sesion anterior sigue.
     }
@@ -160,38 +175,42 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
 
   logout: async () => {
     try {
-      if (AUTH_IS_HTTP) await authService.logout();
+      if (AUTH_IS_HTTP) await authService.logout()
     } finally {
-      clearUserData();
-      set({ session: null, activeBranchId: null, status: AUTH_IS_HTTP ? 'unauthenticated' : 'idle' });
+      clearUserData()
+      set({
+        session: null,
+        activeBranchId: null,
+        status: AUTH_IS_HTTP ? 'unauthenticated' : 'idle',
+      })
     }
   },
 
-  setActiveBranch: (branchId) => {
-    const branch = get().session?.branches.find((b) => b.id === branchId);
+  setActiveBranch: branchId => {
+    const branch = get().session?.branches.find(b => b.id === branchId)
 
     if (!branch) {
-      return { success: false, branchId, reason: 'not-found' };
+      return { success: false, branchId, reason: 'not-found' }
     }
 
     if (branch.status !== 'active') {
-      return { success: false, branchId, reason: 'inactive' };
+      return { success: false, branchId, reason: 'inactive' }
     }
 
-    set({ activeBranchId: branchId });
-    localStorage.setItem(ACTIVE_BRANCH_STORAGE_KEY, branchId);
+    set({ activeBranchId: branchId })
+    localStorage.setItem(ACTIVE_BRANCH_STORAGE_KEY, branchId)
     // Evita mostrar datos de negocio de la sucursal anterior bajo el
     // rotulo de la nueva (ver DECISIONES_TECNICAS.md, D5).
-    resetAllStores();
+    resetAllStores()
 
-    return { success: true, branchId };
+    return { success: true, branchId }
   },
-}));
+}))
 
 // Un refresh fallido en medio de la sesion (httpClient, ante un 401): la
 // sesion termino. RequireSession ve 'unauthenticated' y manda al login.
 onSessionExpired(() => {
-  if (useSessionStore.getState().status !== 'authenticated') return;
-  clearUserData();
-  useSessionStore.setState({ session: null, activeBranchId: null, status: 'unauthenticated' });
-});
+  if (useSessionStore.getState().status !== 'authenticated') return
+  clearUserData()
+  useSessionStore.setState({ session: null, activeBranchId: null, status: 'unauthenticated' })
+})

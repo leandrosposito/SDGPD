@@ -1,5 +1,10 @@
-import type { OrderStatus, OrderComercialStatus, OrderSource, PaymentMethod } from '@/shared/types/order.types';
-import type { CreateOrderReason } from '@/shared/utils/orderEligibility';
+import type {
+  OrderStatus,
+  OrderComercialStatus,
+  OrderSource,
+  PaymentMethod,
+} from '@/shared/types/order.types'
+import type { CreateOrderReason } from '@/shared/utils/orderEligibility'
 
 // ============================================================
 // dto.ts (orders) — Forma que tendría la respuesta de un backend
@@ -14,50 +19,50 @@ import type { CreateOrderReason } from '@/shared/utils/orderEligibility';
 // ============================================================
 
 export interface OrderItemDTO {
-  id: string;
-  sku: string;
-  nombre: string;
-  cantidad: number;
-  precio_unitario: number;
-  subtotal: number;
+  id: string
+  sku: string
+  nombre: string
+  cantidad: number
+  precio_unitario: number
+  subtotal: number
   // Acumulado de todos los remitos ya aplicados (ADR-001, Tanda 8) —
   // 0 para un pedido recien creado.
-  cantidad_entregada: number;
+  cantidad_entregada: number
 }
 
 export interface OrderHistoryEventDTO {
-  id: string;
-  fecha: string;
-  estado: OrderStatus;
-  descripcion: string;
+  id: string
+  fecha: string
+  estado: OrderStatus
+  descripcion: string
 }
 
 export interface OrderDTO {
-  id: string;
-  numero_pedido: string;
-  fecha: string;
+  id: string
+  numero_pedido: string
+  fecha: string
   cliente: {
-    id: string;
-    nombre: string;
-    direccion: string;
-    zona: string;
-  };
-  vendedor: string;
-  estado: OrderStatus;
+    id: string
+    nombre: string
+    direccion: string
+    zona: string
+  }
+  vendedor: string
+  estado: OrderStatus
   // Tanda 9 (ADR-010 seccion 1): eje comercial real, independiente de
   // `estado` (deprecado, ver order.types.ts).
-  estado_comercial: OrderComercialStatus;
-  origen: OrderSource;
-  forma_pago: PaymentMethod;
+  estado_comercial: OrderComercialStatus
+  origen: OrderSource
+  forma_pago: PaymentMethod
   importes: {
-    subtotal: number;
-    descuento: number;
-    impuesto: number;
-    total: number;
-  };
-  notas: string;
-  items: OrderItemDTO[];
-  historial: OrderHistoryEventDTO[];
+    subtotal: number
+    descuento: number
+    impuesto: number
+    total: number
+  }
+  notas: string
+  items: OrderItemDTO[]
+  historial: OrderHistoryEventDTO[]
 }
 
 // Agregados (P3, DECISIONES_TECNICAS.md): el servidor los calcula
@@ -66,11 +71,11 @@ export interface OrderDTO {
 // DeliveryAggregates), nunca sobre `items` de la página. OrderKpis
 // (la UI) los consume directo, ya no recorre el array de pedidos.
 export interface OrdersAggregatesDTO {
-  pedidos_hoy: number;
-  pendientes: number;
-  preparando: number;
-  despachados: number;
-  facturacion_hoy: number;
+  pedidos_hoy: number
+  pendientes: number
+  preparando: number
+  despachados: number
+  facturacion_hoy: number
 }
 
 // Envoltorio de lista: { data, meta } es el genérico de todos los DTO
@@ -79,13 +84,13 @@ export interface OrdersAggregatesDTO {
 // porque este listado (a diferencia de suppliers) tiene KPIs
 // calculados server-side.
 export interface OrdersPageDTO {
-  data: OrderDTO[];
+  data: OrderDTO[]
   meta: {
-    total: number;
-    page: number;
-    page_size: number;
-    aggregates: OrdersAggregatesDTO;
-  };
+    total: number
+    page: number
+    page_size: number
+    aggregates: OrdersAggregatesDTO
+  }
 }
 
 // Payload de alta (RF-PED-001, alta manual desde CreateOrderModal).
@@ -95,21 +100,21 @@ export interface OrdersPageDTO {
 // propio servidor), nunca el cliente.
 export interface CreateOrderDTO {
   cliente: {
-    id: string;
-    nombre: string;
-    direccion: string;
-    zona: string;
-  };
-  vendedor: string;
-  forma_pago: PaymentMethod;
+    id: string
+    nombre: string
+    direccion: string
+    zona: string
+  }
+  vendedor: string
+  forma_pago: PaymentMethod
   importes: {
-    subtotal: number;
-    descuento: number;
-    impuesto: number;
-    total: number;
-  };
-  notas: string;
-  items: OrderItemDTO[];
+    subtotal: number
+    descuento: number
+    impuesto: number
+    total: number
+  }
+  notas: string
+  items: OrderItemDTO[]
 }
 
 // Respuesta de alta (Tanda 17, ADR-015 punto 2): un rechazo de negocio
@@ -117,4 +122,4 @@ export interface CreateOrderDTO {
 // criterio que CreatePurchaseOrderResult/OrderStatusTransitionResult.
 export type CreateOrderResponseDTO =
   | { success: true; pedido: OrderDTO }
-  | { success: false; reason: CreateOrderReason; detail?: string };
+  | { success: false; reason: CreateOrderReason; detail?: string }

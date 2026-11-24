@@ -1,7 +1,7 @@
-import { useState, type FC, type FormEvent } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { PAGE_SIZE_OPTIONS } from './paginationDefaults';
-import './Pagination.css';
+import { useState, type FC, type FormEvent } from 'react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { PAGE_SIZE_OPTIONS } from './paginationDefaults'
+import './Pagination.css'
 
 // ============================================================
 // Pagination — Control de paginacion generico para listados server-side
@@ -11,13 +11,13 @@ import './Pagination.css';
 // ============================================================
 
 interface PaginationProps {
-  currentPage: number;
-  totalPages: number;
-  onPageChange: (page: number) => void;
-  pageSize: number;
-  totalItems: number;
-  onPageSizeChange?: (size: number) => void;
-  pageSizeOptions?: readonly number[];
+  currentPage: number
+  totalPages: number
+  onPageChange: (page: number) => void
+  pageSize: number
+  totalItems: number
+  onPageSizeChange?: (size: number) => void
+  pageSizeOptions?: readonly number[]
 }
 
 export const Pagination: FC<PaginationProps> = ({
@@ -29,29 +29,29 @@ export const Pagination: FC<PaginationProps> = ({
   onPageSizeChange,
   pageSizeOptions = PAGE_SIZE_OPTIONS,
 }) => {
-  const rangeStart = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
-  const rangeEnd = Math.min(currentPage * pageSize, totalItems);
+  const rangeStart = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1
+  const rangeEnd = Math.min(currentPage * pageSize, totalItems)
 
   // Input de salto de pagina: se resincroniza con `currentPage` cuando
   // cambia desde afuera (filtro, sucursal, etc.) comparando durante el
   // render — mismo patron ya usado en el proyecto para evitar un efecto
   // solo para reflejar una prop en un input controlado.
-  const [pageInput, setPageInput] = useState(String(currentPage));
-  const [trackedPage, setTrackedPage] = useState(currentPage);
+  const [pageInput, setPageInput] = useState(String(currentPage))
+  const [trackedPage, setTrackedPage] = useState(currentPage)
   if (currentPage !== trackedPage) {
-    setTrackedPage(currentPage);
-    setPageInput(String(currentPage));
+    setTrackedPage(currentPage)
+    setPageInput(String(currentPage))
   }
 
   function handleJumpSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const parsed = Number(pageInput);
+    e.preventDefault()
+    const parsed = Number(pageInput)
     if (!Number.isFinite(parsed)) {
-      setPageInput(String(currentPage));
-      return;
+      setPageInput(String(currentPage))
+      return
     }
     // onPageChange (setPage del hook) ya clampa a [1, totalPages].
-    onPageChange(Math.trunc(parsed));
+    onPageChange(Math.trunc(parsed))
   }
 
   return (
@@ -68,9 +68,9 @@ export const Pagination: FC<PaginationProps> = ({
               className="pagination__size-select"
               aria-label="Filas por pagina"
               value={pageSize}
-              onChange={(e) => onPageSizeChange(Number(e.target.value))}
+              onChange={e => onPageSizeChange(Number(e.target.value))}
             >
-              {pageSizeOptions.map((size) => (
+              {pageSizeOptions.map(size => (
                 <option key={size} value={size}>
                   {size}
                 </option>
@@ -114,14 +114,18 @@ export const Pagination: FC<PaginationProps> = ({
             min={1}
             max={totalPages}
             value={pageInput}
-            onChange={(e) => setPageInput(e.target.value)}
+            onChange={e => setPageInput(e.target.value)}
             aria-label="Numero de pagina"
           />
-          <button type="submit" className="pagination__jump-btn" aria-label="Ir a la pagina ingresada">
+          <button
+            type="submit"
+            className="pagination__jump-btn"
+            aria-label="Ir a la pagina ingresada"
+          >
             Ir
           </button>
         </form>
       </div>
     </div>
-  );
-};
+  )
+}

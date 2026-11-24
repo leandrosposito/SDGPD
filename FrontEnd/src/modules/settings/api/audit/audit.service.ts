@@ -1,8 +1,8 @@
-import type { AuditLogItem } from '@/shared/types/settings.types';
-import { SETTINGS_MOCK_AUDIT } from '@/data/mock/settings.data';
-import { httpClient } from '@/shared/api/httpClient';
-import type { AuditLogItemDTO } from './dto';
-import { auditLogItemFromDTO, auditLogItemToDTO } from './mapper';
+import type { AuditLogItem } from '@/shared/types/settings.types'
+import { SETTINGS_MOCK_AUDIT } from '@/data/mock/settings.data'
+import { httpClient } from '@/shared/api/httpClient'
+import type { AuditLogItemDTO } from './dto'
+import { auditLogItemFromDTO, auditLogItemToDTO } from './mapper'
 
 // ============================================================
 // audit.service — Único punto que habla con httpClient para el
@@ -17,7 +17,7 @@ import { auditLogItemFromDTO, auditLogItemToDTO } from './mapper';
 // ============================================================
 
 // const, no let: sin mutaciones (ver comentario del encabezado).
-const auditLogDTOStore: AuditLogItemDTO[] = SETTINGS_MOCK_AUDIT.map(auditLogItemToDTO);
+const auditLogDTOStore: AuditLogItemDTO[] = SETTINGS_MOCK_AUDIT.map(auditLogItemToDTO)
 
 // El orden del store ya es cronológico por construcción (más
 // reciente primero) — `timestamp` es un string relativo ("Hace 5
@@ -25,13 +25,16 @@ const auditLogDTOStore: AuditLogItemDTO[] = SETTINGS_MOCK_AUDIT.map(auditLogItem
 // que ordenar de verdad. Se devuelve el store tal cual, mismo
 // comportamiento que el `.map()` directo de AuditLogWidget.tsx antes
 // de esta tanda.
-export async function getRecentAuditLog(empresaId: string, signal?: AbortSignal): Promise<AuditLogItem[]> {
+export async function getRecentAuditLog(
+  empresaId: string,
+  signal?: AbortSignal
+): Promise<AuditLogItem[]> {
   const dtos = await httpClient.request<AuditLogItemDTO[]>({
     method: 'GET',
     path: '/settings/audit-log',
     params: { empresaId },
     signal,
     mock: () => auditLogDTOStore,
-  });
-  return dtos.map(auditLogItemFromDTO);
+  })
+  return dtos.map(auditLogItemFromDTO)
 }

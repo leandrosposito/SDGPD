@@ -22,14 +22,14 @@
 // DECISIONES_TECNICAS.md, P10.
 // ============================================================
 
-type ResetFn = () => void;
+type ResetFn = () => void
 
-const resettableStores: ResetFn[] = [];
+const resettableStores: ResetFn[] = []
 
 export function registerResettableStore(reset: ResetFn): void {
-  resettableStores.push(reset);
+  resettableStores.push(reset)
 }
 
 export function resetAllStores(): void {
-  resettableStores.forEach((reset) => reset());
+  resettableStores.forEach(reset => reset())
 }

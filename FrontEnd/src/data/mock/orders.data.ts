@@ -1,5 +1,5 @@
-import { asOrderId, asOrderLineId, asClientId } from '@/shared/types/ids.types';
-import type { Order } from '@/shared/types/order.types';
+import { asOrderId, asOrderLineId, asClientId } from '@/shared/types/ids.types'
+import type { Order } from '@/shared/types/order.types'
 
 // ============================================================
 // MOCK DATA — Orders
@@ -25,13 +25,42 @@ export const ORDERS_MOCK_DATA: Order[] = [
     totalAmount: 57172.5,
     notes: 'Entregar antes del mediodia.',
     items: [
-      { id: asOrderLineId('oi-101'), sku: 'ACE-GIR-15', name: 'Aceite Girasol 1.5L', quantity: 12, unitPrice: 2100, subtotal: 25200, cantidadEntregada: 0 },
-      { id: asOrderLineId('oi-102'), sku: 'YER-MAT-1K', name: 'Yerba Mate 1kg Paquete', quantity: 6,  unitPrice: 3600, subtotal: 21600, cantidadEntregada: 0 },
-      { id: asOrderLineId('oi-103'), sku: 'GAL-AGU-200', name: 'Galletitas de Agua 200g', quantity: 1, unitPrice: 450, subtotal: 450, cantidadEntregada: 0 },
+      {
+        id: asOrderLineId('oi-101'),
+        sku: 'ACE-GIR-15',
+        name: 'Aceite Girasol 1.5L',
+        quantity: 12,
+        unitPrice: 2100,
+        subtotal: 25200,
+        cantidadEntregada: 0,
+      },
+      {
+        id: asOrderLineId('oi-102'),
+        sku: 'YER-MAT-1K',
+        name: 'Yerba Mate 1kg Paquete',
+        quantity: 6,
+        unitPrice: 3600,
+        subtotal: 21600,
+        cantidadEntregada: 0,
+      },
+      {
+        id: asOrderLineId('oi-103'),
+        sku: 'GAL-AGU-200',
+        name: 'Galletitas de Agua 200g',
+        quantity: 1,
+        unitPrice: 450,
+        subtotal: 450,
+        cantidadEntregada: 0,
+      },
     ],
     history: [
-      { id: 'h1', date: '2026-06-13T08:15:00Z', status: 'pending', description: 'Pedido ingresado via Mobile App' }
-    ]
+      {
+        id: 'h1',
+        date: '2026-06-13T08:15:00Z',
+        status: 'pending',
+        description: 'Pedido ingresado via Mobile App',
+      },
+    ],
   },
   {
     id: asOrderId('ord-002'),
@@ -52,14 +81,48 @@ export const ORDERS_MOCK_DATA: Order[] = [
     totalAmount: 227964,
     notes: '',
     items: [
-      { id: asOrderLineId('oi-201'), sku: 'ACE-GIR-15', name: 'Aceite Girasol 1.5L', quantity: 48, unitPrice: 2100, subtotal: 100800, cantidadEntregada: 0 },
-      { id: asOrderLineId('oi-202'), sku: 'ACE-OLI-05', name: 'Aceite Oliva 500ml', quantity: 12, unitPrice: 5600, subtotal: 67200, cantidadEntregada: 0 },
-      { id: asOrderLineId('oi-203'), sku: 'YER-UNI-05', name: 'Yerba Union 500g', quantity: 20, unitPrice: 1520, subtotal: 30400, cantidadEntregada: 0 },
+      {
+        id: asOrderLineId('oi-201'),
+        sku: 'ACE-GIR-15',
+        name: 'Aceite Girasol 1.5L',
+        quantity: 48,
+        unitPrice: 2100,
+        subtotal: 100800,
+        cantidadEntregada: 0,
+      },
+      {
+        id: asOrderLineId('oi-202'),
+        sku: 'ACE-OLI-05',
+        name: 'Aceite Oliva 500ml',
+        quantity: 12,
+        unitPrice: 5600,
+        subtotal: 67200,
+        cantidadEntregada: 0,
+      },
+      {
+        id: asOrderLineId('oi-203'),
+        sku: 'YER-UNI-05',
+        name: 'Yerba Union 500g',
+        quantity: 20,
+        unitPrice: 1520,
+        subtotal: 30400,
+        cantidadEntregada: 0,
+      },
     ],
     history: [
-      { id: 'h2', date: '2026-06-13T07:45:00Z', status: 'pending', description: 'Pedido ingresado via Mobile App' },
-      { id: 'h3', date: '2026-06-13T08:30:00Z', status: 'preparing', description: 'Preparacion iniciada en deposito' }
-    ]
+      {
+        id: 'h2',
+        date: '2026-06-13T07:45:00Z',
+        status: 'pending',
+        description: 'Pedido ingresado via Mobile App',
+      },
+      {
+        id: 'h3',
+        date: '2026-06-13T08:30:00Z',
+        status: 'preparing',
+        description: 'Preparacion iniciada en deposito',
+      },
+    ],
   },
   {
     id: asOrderId('ord-003'),
@@ -80,14 +143,45 @@ export const ORDERS_MOCK_DATA: Order[] = [
     totalAmount: 18585.6,
     notes: '',
     items: [
-      { id: asOrderLineId('oi-301'), sku: 'GAL-AGU-200', name: 'Galletitas de Agua 200g', quantity: 24, unitPrice: 450, subtotal: 10800, cantidadEntregada: 0 },
-      { id: asOrderLineId('oi-302'), sku: 'YER-UNI-05', name: 'Yerba Union 500g', quantity: 3, unitPrice: 1520, subtotal: 4560, cantidadEntregada: 0 },
+      {
+        id: asOrderLineId('oi-301'),
+        sku: 'GAL-AGU-200',
+        name: 'Galletitas de Agua 200g',
+        quantity: 24,
+        unitPrice: 450,
+        subtotal: 10800,
+        cantidadEntregada: 0,
+      },
+      {
+        id: asOrderLineId('oi-302'),
+        sku: 'YER-UNI-05',
+        name: 'Yerba Union 500g',
+        quantity: 3,
+        unitPrice: 1520,
+        subtotal: 4560,
+        cantidadEntregada: 0,
+      },
     ],
     history: [
-      { id: 'h4', date: '2026-06-12T16:30:00Z', status: 'pending', description: 'Pedido ingresado manualmente' },
-      { id: 'h5', date: '2026-06-12T17:00:00Z', status: 'preparing', description: 'Preparacion iniciada' },
-      { id: 'h6', date: '2026-06-13T06:30:00Z', status: 'dispatched', description: 'Despachado en reparto matutino' }
-    ]
+      {
+        id: 'h4',
+        date: '2026-06-12T16:30:00Z',
+        status: 'pending',
+        description: 'Pedido ingresado manualmente',
+      },
+      {
+        id: 'h5',
+        date: '2026-06-12T17:00:00Z',
+        status: 'preparing',
+        description: 'Preparacion iniciada',
+      },
+      {
+        id: 'h6',
+        date: '2026-06-13T06:30:00Z',
+        status: 'dispatched',
+        description: 'Despachado en reparto matutino',
+      },
+    ],
   },
   {
     id: asOrderId('ord-004'),
@@ -108,16 +202,52 @@ export const ORDERS_MOCK_DATA: Order[] = [
     totalAmount: 77319,
     notes: '',
     items: [
-      { id: asOrderLineId('oi-401'), sku: 'ACE-GIR-15', name: 'Aceite Girasol 1.5L', quantity: 24, unitPrice: 2100, subtotal: 50400, cantidadEntregada: 0 },
-      { id: asOrderLineId('oi-402'), sku: 'GAL-AGU-200', name: 'Galletitas de Agua 200g', quantity: 30, unitPrice: 450, subtotal: 13500, cantidadEntregada: 0 },
+      {
+        id: asOrderLineId('oi-401'),
+        sku: 'ACE-GIR-15',
+        name: 'Aceite Girasol 1.5L',
+        quantity: 24,
+        unitPrice: 2100,
+        subtotal: 50400,
+        cantidadEntregada: 0,
+      },
+      {
+        id: asOrderLineId('oi-402'),
+        sku: 'GAL-AGU-200',
+        name: 'Galletitas de Agua 200g',
+        quantity: 30,
+        unitPrice: 450,
+        subtotal: 13500,
+        cantidadEntregada: 0,
+      },
     ],
     history: [
-      { id: 'h7', date: '2026-06-12T11:00:00Z', status: 'pending', description: 'Pedido ingresado via Mobile App' },
-      { id: 'h8', date: '2026-06-12T11:30:00Z', status: 'preparing', description: 'Preparacion iniciada' },
+      {
+        id: 'h7',
+        date: '2026-06-12T11:00:00Z',
+        status: 'pending',
+        description: 'Pedido ingresado via Mobile App',
+      },
+      {
+        id: 'h8',
+        date: '2026-06-12T11:30:00Z',
+        status: 'preparing',
+        description: 'Preparacion iniciada',
+      },
       { id: 'h9', date: '2026-06-12T14:00:00Z', status: 'dispatched', description: 'Despachado' },
-      { id: 'h10', date: '2026-06-12T16:00:00Z', status: 'delivered', description: 'Entregado al cliente' },
-      { id: 'h11', date: '2026-06-12T18:00:00Z', status: 'invoiced', description: 'Factura A-0001-12345 generada' }
-    ]
+      {
+        id: 'h10',
+        date: '2026-06-12T16:00:00Z',
+        status: 'delivered',
+        description: 'Entregado al cliente',
+      },
+      {
+        id: 'h11',
+        date: '2026-06-12T18:00:00Z',
+        status: 'invoiced',
+        description: 'Factura A-0001-12345 generada',
+      },
+    ],
   },
   {
     id: asOrderId('ord-005'),
@@ -138,12 +268,30 @@ export const ORDERS_MOCK_DATA: Order[] = [
     totalAmount: 40656,
     notes: 'Cliente cancelo por quiebre de caja.',
     items: [
-      { id: asOrderLineId('oi-501'), sku: 'ACE-OLI-05', name: 'Aceite Oliva 500ml', quantity: 6, unitPrice: 5600, subtotal: 33600, cantidadEntregada: 0 },
+      {
+        id: asOrderLineId('oi-501'),
+        sku: 'ACE-OLI-05',
+        name: 'Aceite Oliva 500ml',
+        quantity: 6,
+        unitPrice: 5600,
+        subtotal: 33600,
+        cantidadEntregada: 0,
+      },
     ],
     history: [
-      { id: 'h12', date: '2026-06-11T09:20:00Z', status: 'pending', description: 'Pedido ingresado' },
-      { id: 'h13', date: '2026-06-11T10:00:00Z', status: 'cancelled', description: 'Cancelado por el vendedor' }
-    ]
+      {
+        id: 'h12',
+        date: '2026-06-11T09:20:00Z',
+        status: 'pending',
+        description: 'Pedido ingresado',
+      },
+      {
+        id: 'h13',
+        date: '2026-06-11T10:00:00Z',
+        status: 'cancelled',
+        description: 'Cancelado por el vendedor',
+      },
+    ],
   },
   {
     id: asOrderId('ord-006'),
@@ -164,13 +312,36 @@ export const ORDERS_MOCK_DATA: Order[] = [
     totalAmount: 52272,
     notes: '',
     items: [
-      { id: asOrderLineId('oi-601'), sku: 'YER-MAT-1K', name: 'Yerba Mate 1kg Paquete', quantity: 12, unitPrice: 3600, subtotal: 43200, cantidadEntregada: 0 },
+      {
+        id: asOrderLineId('oi-601'),
+        sku: 'YER-MAT-1K',
+        name: 'Yerba Mate 1kg Paquete',
+        quantity: 12,
+        unitPrice: 3600,
+        subtotal: 43200,
+        cantidadEntregada: 0,
+      },
     ],
     history: [
-      { id: 'h14', date: '2026-06-11T08:00:00Z', status: 'pending', description: 'Pedido ingresado via Mobile App' },
-      { id: 'h15', date: '2026-06-11T08:30:00Z', status: 'preparing', description: 'Preparacion iniciada' },
+      {
+        id: 'h14',
+        date: '2026-06-11T08:00:00Z',
+        status: 'pending',
+        description: 'Pedido ingresado via Mobile App',
+      },
+      {
+        id: 'h15',
+        date: '2026-06-11T08:30:00Z',
+        status: 'preparing',
+        description: 'Preparacion iniciada',
+      },
       { id: 'h16', date: '2026-06-11T10:00:00Z', status: 'dispatched', description: 'Despachado' },
-      { id: 'h17', date: '2026-06-11T13:00:00Z', status: 'delivered', description: 'Entregado al cliente (Remito R-0001)' }
-    ]
+      {
+        id: 'h17',
+        date: '2026-06-11T13:00:00Z',
+        status: 'delivered',
+        description: 'Entregado al cliente (Remito R-0001)',
+      },
+    ],
   },
-];
+]

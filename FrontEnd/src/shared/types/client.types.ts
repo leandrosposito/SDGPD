@@ -2,8 +2,8 @@
 // SHARED TYPE DEFINITIONS — Client domain
 // ============================================================
 
-import type { DateRangeQueryFilters } from '@/shared/types/pagination.types';
-import type { ClientId } from '@/shared/types/ids.types';
+import type { DateRangeQueryFilters } from '@/shared/types/pagination.types'
+import type { ClientId } from '@/shared/types/ids.types'
 
 // Moneda de un importe (ISO 4217). El mock incluye ARS y USD (C1,
 // DECISIONES_TECNICAS.md) para poder probar que los importes se
@@ -11,16 +11,16 @@ import type { ClientId } from '@/shared/types/ids.types';
 // daria un numero inventado. No se implementa conversion ni cotizacion
 // (fuera de alcance) — un cliente que debe en dos monedas simplemente
 // muestra dos importes, nunca un total combinado.
-export type Currency = 'ARS' | 'USD';
+export type Currency = 'ARS' | 'USD'
 
 interface ClientTransactionBase {
-  id: string;
-  date: string;
-  description: string;
-  debit: number; // Debe (Aumenta deuda)
-  credit: number; // Haber (Reduce deuda)
-  balance: number; // Saldo acumulado de la cuenta a esta transaccion
-  currency: Currency;
+  id: string
+  date: string
+  description: string
+  debit: number // Debe (Aumenta deuda)
+  credit: number // Haber (Reduce deuda)
+  balance: number // Saldo acumulado de la cuenta a esta transaccion
+  currency: Currency
 }
 
 // dueDate (vencimiento) solo existe en las facturas (M1,
@@ -31,32 +31,30 @@ interface ClientTransactionBase {
 // permita escribirlo en esos dos casos es mas honesto que dejarlo
 // opcional y confiar en que nadie lo llene por error.
 export interface ClientInvoiceTransaction extends ClientTransactionBase {
-  type: 'invoice';
-  dueDate: string;
+  type: 'invoice'
+  dueDate: string
 }
 
 export interface ClientPaymentTransaction extends ClientTransactionBase {
-  type: 'payment';
+  type: 'payment'
 }
 
 export interface ClientAdjustmentTransaction extends ClientTransactionBase {
-  type: 'adjustment';
+  type: 'adjustment'
 }
 
 export type ClientTransaction =
-  | ClientInvoiceTransaction
-  | ClientPaymentTransaction
-  | ClientAdjustmentTransaction;
+  ClientInvoiceTransaction | ClientPaymentTransaction | ClientAdjustmentTransaction
 
 export interface ClientAccount {
-  id: ClientId;
-  clientName: string;
-  cuit: string;
-  address: string;
-  phone: string;
-  zone: string;
-  sellerName: string;
-  creditLimit: number;
+  id: ClientId
+  clientName: string
+  cuit: string
+  address: string
+  phone: string
+  zone: string
+  sellerName: string
+  creditLimit: number
   // Tanda 12 (hallazgo propio): CreateClientModal ya tenia una tab
   // "Configuracion Comercial" con estos dos campos (ClientCommercialTab)
   // desde antes de esta tanda, pero buildClientInput() nunca los incluia
@@ -66,8 +64,8 @@ export interface ClientAccount {
   // fijo de opciones en el formulario, sin entidad de dominio propia
   // detras — "lista de precios" en este proyecto son margenes por
   // tramo, TabPriceLists.tsx, no entidades con id).
-  priceList: string;
-  saleCondition: string;
+  priceList: string
+  saleCondition: string
   // Tanda 16 (PENDIENTES.md item 15): conecta los 10 campos "fantasma"
   // de CreateClientModal que buildClientInput() descartaba en silencio
   // al guardar — mismo bug que priceList/saleCondition (Tanda 12),
@@ -78,22 +76,22 @@ export interface ClientAccount {
   // quitarse del formulario. Todos requeridos (sin `?`), mismo criterio
   // que `zone`/`sellerName`: son valores que siempre existen (select o
   // checkbox con default), nunca "ausentes" a proposito.
-  tradeName: string;
-  ivaCondition: string;
-  email: string;
-  googleMapsLink: string;
-  deliveryAddressSameAsFiscal: boolean;
-  deliveryAddress: string;
-  deliveryReferences: string;
-  businessCategory: string;
-  notes: string;
-  isActive: boolean;
-  totalDebit: number;
-  totalCredit: number;
-  currentBalance: number;
-  daysOverdue: number;
-  status: 'Al dia' | 'Con Deuda';
-  transactions: ClientTransaction[];
+  tradeName: string
+  ivaCondition: string
+  email: string
+  googleMapsLink: string
+  deliveryAddressSameAsFiscal: boolean
+  deliveryAddress: string
+  deliveryReferences: string
+  businessCategory: string
+  notes: string
+  isActive: boolean
+  totalDebit: number
+  totalCredit: number
+  currentBalance: number
+  daysOverdue: number
+  status: 'Al dia' | 'Con Deuda'
+  transactions: ClientTransaction[]
 }
 
 // ============================================================
@@ -104,7 +102,7 @@ export interface ClientAccount {
 // services/mock/clients.service.ts#getOverdueClientsPage.
 // ============================================================
 
-export type AgingBucket = '1-30' | '31-60' | '61-90' | '90+';
+export type AgingBucket = '1-30' | '31-60' | '61-90' | '90+'
 
 // Una factura despues de la imputacion FIFO (M2): `openBalance` es lo
 // que todavia debe ESA factura puntual, no el saldo total de la
@@ -112,13 +110,13 @@ export type AgingBucket = '1-30' | '31-60' | '61-90' | '90+';
 // hace a un cliente "moroso" para esta vista — no se deriva de
 // ClientAccount.status (M8).
 export interface OpenInvoice {
-  transactionId: ClientTransaction['id'];
-  dueDate: string;
-  originalAmount: number;
-  openBalance: number;
-  currency: Currency;
-  daysOverdue: number; // 0 si todavia no vencio
-  bucket: AgingBucket | null; // null si no vencio (M3): no entra en ningun tramo
+  transactionId: ClientTransaction['id']
+  dueDate: string
+  originalAmount: number
+  openBalance: number
+  currency: Currency
+  daysOverdue: number // 0 si todavia no vencio
+  bucket: AgingBucket | null // null si no vencio (M3): no entra en ningun tramo
 }
 
 // dateFrom/dateTo (DateRangeFilter, tarea transversal) filtran por
@@ -132,20 +130,20 @@ export interface OverdueClientsQueryFilters extends DateRangeQueryFilters {
   // explicito. Agregado en el barrido de AUDIT_2026-09-08_empresaId-sweep.md
   // (el mock sigue sin filtrar realmente por el, una sola empresa hoy,
   // mismo criterio que el resto del proyecto).
-  empresaId: string;
-  search?: string; // nombre o CUIT (M6)
-  bucket?: AgingBucket; // filtro por tramo de mayor antiguedad del cliente
+  empresaId: string
+  search?: string // nombre o CUIT (M6)
+  bucket?: AgingBucket // filtro por tramo de mayor antiguedad del cliente
 }
 
-export type OverdueClientsSortField = 'clientName' | 'overdueAmount' | 'oldestDueDate';
+export type OverdueClientsSortField = 'clientName' | 'overdueAmount' | 'oldestDueDate'
 
 // Monto vencido en UNA moneda (C1, DECISIONES_TECNICAS.md). Nunca se
 // suman dos entradas de este tipo entre si si tienen distinta
 // `currency` — para eso esta el array en OverdueClientRow, no un campo
 // numerico suelto.
 export interface OverdueAmountByCurrency {
-  currency: Currency;
-  amount: number;
+  currency: Currency
+  amount: number
 }
 
 // Fila de la tabla de cobranzas: UN cliente con al menos una factura
@@ -164,14 +162,14 @@ export interface OverdueAmountByCurrency {
 // antiguedad se mide en dias, no en dinero, asi que mezclar monedas ahi
 // no es un problema (a diferencia de sumar montos).
 export interface OverdueClientRow {
-  clientId: ClientAccount['id'];
-  clientName: string;
-  cuit: string;
-  overdueByCurrency: OverdueAmountByCurrency[]; // suma SOLO facturas vencidas (M3), agrupadas por moneda (M5), nunca sumadas entre si
-  oldestOverdueDays: number;
-  oldestBucket: AgingBucket;
-  creditLimit: number;
-  currentBalance: number;
+  clientId: ClientAccount['id']
+  clientName: string
+  cuit: string
+  overdueByCurrency: OverdueAmountByCurrency[] // suma SOLO facturas vencidas (M3), agrupadas por moneda (M5), nunca sumadas entre si
+  oldestOverdueDays: number
+  oldestBucket: AgingBucket
+  creditLimit: number
+  currentBalance: number
 }
 
 // Agregados de aging (M4): totales por tramo, nunca calculados sobre
@@ -181,12 +179,12 @@ export interface OverdueClientRow {
 // dos tramos cuenta en los dos, igual que un reporte de antiguedad de
 // saldos tradicional).
 export interface AgingBucketAggregate {
-  bucket: AgingBucket;
-  currency: Currency;
-  totalOverdue: number;
-  clientCount: number;
+  bucket: AgingBucket
+  currency: Currency
+  totalOverdue: number
+  clientCount: number
 }
 
 export interface OverdueClientsAggregates {
-  byBucket: AgingBucketAggregate[];
+  byBucket: AgingBucketAggregate[]
 }

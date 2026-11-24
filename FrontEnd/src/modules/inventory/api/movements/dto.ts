@@ -21,22 +21,22 @@
 // ============================================================
 
 export interface InventoryMovementDTO {
-  id: string;
-  fecha: string;
-  sku: string;
-  nombre_producto: string;
-  tipo: 'in' | 'out' | 'adjustment';
-  cantidad: number;
-  usuario: string;
-  notas: string;
-  sucursal_id: string;
+  id: string
+  fecha: string
+  sku: string
+  nombre_producto: string
+  tipo: 'in' | 'out' | 'adjustment'
+  cantidad: number
+  usuario: string
+  notas: string
+  sucursal_id: string
 }
 
 export interface InventoryMovementsPageDTO {
-  data: InventoryMovementDTO[];
+  data: InventoryMovementDTO[]
   meta: {
-    total: number;
-    page: number;
-    page_size: number;
-  };
+    total: number
+    page: number
+    page_size: number
+  }
 }

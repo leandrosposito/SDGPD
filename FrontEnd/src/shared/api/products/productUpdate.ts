@@ -1,4 +1,4 @@
-import type { ProductDTO, ProductLotDTO, ProductPayloadDTO } from './dto';
+import type { ProductDTO, ProductLotDTO, ProductPayloadDTO } from './dto'
 
 // ============================================================
 // productUpdate.ts (products) — Arma el registro resultante de editar
@@ -29,5 +29,5 @@ export function mergeProductUpdate(
     ...payload,
     id: previous.id,
     lotes: editedLots ?? previous.lotes,
-  };
+  }
 }

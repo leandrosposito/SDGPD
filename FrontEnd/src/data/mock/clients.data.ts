@@ -1,5 +1,5 @@
-import { asClientId } from '@/shared/types/ids.types';
-import type { ClientAccount } from '@/shared/types/client.types';
+import { asClientId } from '@/shared/types/ids.types'
+import type { ClientAccount } from '@/shared/types/client.types'
 
 // ============================================================
 // MOCK DATA — Clients (29 cuentas corrientes)
@@ -36,26 +36,26 @@ import type { ClientAccount } from '@/shared/types/client.types';
 // ============================================================
 
 function shiftDays(date: Date, days: number): Date {
-  const shifted = new Date(date);
-  shifted.setDate(shifted.getDate() + days);
-  return shifted;
+  const shifted = new Date(date)
+  shifted.setDate(shifted.getDate() + days)
+  return shifted
 }
 
 function isoAt(date: Date): string {
-  const d = new Date(date);
-  d.setHours(10, 0, 0, 0);
-  return d.toISOString();
+  const d = new Date(date)
+  d.setHours(10, 0, 0, 0)
+  return d.toISOString()
 }
 
-const TODAY = new Date();
+const TODAY = new Date()
 
 // dueIn(-15) = vencio hace 15 dias. issuedFor(-15) = fecha de emision
 // de una factura con vencimiento en -15 (termino estandar de 30 dias).
 function dueIn(days: number): string {
-  return isoAt(shiftDays(TODAY, days));
+  return isoAt(shiftDays(TODAY, days))
 }
 function issuedFor(dueDays: number, termDays = 30): string {
-  return isoAt(shiftDays(TODAY, dueDays - termDays));
+  return isoAt(shiftDays(TODAY, dueDays - termDays))
 }
 
 export const CLIENTS_MOCK_DATA: ClientAccount[] = [
@@ -1557,4 +1557,4 @@ export const CLIENTS_MOCK_DATA: ClientAccount[] = [
       },
     ],
   },
-];
+]

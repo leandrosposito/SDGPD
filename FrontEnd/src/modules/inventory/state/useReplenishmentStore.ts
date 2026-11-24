@@ -1,6 +1,6 @@
-import { create } from 'zustand';
-import type { ReplenishmentStatus } from '@/shared/types/inventory.types';
-import { registerResettableStore } from '@/shared/state/resettableStores';
+import { create } from 'zustand'
+import type { ReplenishmentStatus } from '@/shared/types/inventory.types'
+import { registerResettableStore } from '@/shared/state/resettableStores'
 
 // ============================================================
 // useReplenishmentStore — Estado de solicitudes de reposicion
@@ -16,43 +16,43 @@ import { registerResettableStore } from '@/shared/state/resettableStores';
 //   suppliers.
 // ============================================================
 
-export type ReplenishmentActionReason = 'already-requested';
+export type ReplenishmentActionReason = 'already-requested'
 
 export interface ReplenishmentActionResult {
-  success: boolean;
-  productId: string;
-  status: ReplenishmentStatus;
-  reason?: ReplenishmentActionReason;
+  success: boolean
+  productId: string
+  status: ReplenishmentStatus
+  reason?: ReplenishmentActionReason
 }
 
 interface ReplenishmentState {
-  statusByProductId: Record<string, ReplenishmentStatus>;
-  requestReplenishment: (productId: string) => ReplenishmentActionResult;
-  reset: () => void;
+  statusByProductId: Record<string, ReplenishmentStatus>
+  requestReplenishment: (productId: string) => ReplenishmentActionResult
+  reset: () => void
 }
 
 export const useReplenishmentStore = create<ReplenishmentState>()((set, get) => ({
   // Nada solicitado al arrancar; es estado de sesion, no viene del mock.
   statusByProductId: {},
 
-  requestReplenishment: (productId) => {
-    const currentStatus = get().statusByProductId[productId] ?? 'not_requested';
+  requestReplenishment: productId => {
+    const currentStatus = get().statusByProductId[productId] ?? 'not_requested'
 
     if (currentStatus === 'requested') {
-      return { success: false, productId, status: currentStatus, reason: 'already-requested' };
+      return { success: false, productId, status: currentStatus, reason: 'already-requested' }
     }
 
-    set((state) => ({
+    set(state => ({
       statusByProductId: { ...state.statusByProductId, [productId]: 'requested' },
-    }));
+    }))
 
-    return { success: true, productId, status: 'requested' };
+    return { success: true, productId, status: 'requested' }
   },
 
   // Vuelve a "nada solicitado" (estado inicial). Se invoca al cambiar
   // de sucursal — ver DECISIONES_TECNICAS.md, D5.
   reset: () => set({ statusByProductId: {} }),
-}));
+}))
 
 // Auto-registro: ver shared/state/resettableStores.ts para la convencion.
-registerResettableStore(() => useReplenishmentStore.getState().reset());
+registerResettableStore(() => useReplenishmentStore.getState().reset())

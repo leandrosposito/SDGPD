@@ -1,6 +1,6 @@
-import type { DashboardData } from '@/shared/types/dashboard.types';
-import { DASHBOARD_MOCK_DATA } from '@/data/mock/dashboard.data';
-import { httpClient } from '@/shared/api/httpClient';
+import type { DashboardData } from '@/shared/types/dashboard.types'
+import { DASHBOARD_MOCK_DATA } from '@/data/mock/dashboard.data'
+import { httpClient } from '@/shared/api/httpClient'
 
 // ============================================================
 // DASHBOARD SERVICE — pasa por httpClient (Tanda 2.5 de
@@ -25,14 +25,17 @@ import { httpClient } from '@/shared/api/httpClient';
 // tal cual, listadas en el informe de esta sesion.
 // ============================================================
 
-export async function fetchDashboardData(empresaId: string, signal?: AbortSignal): Promise<DashboardData> {
+export async function fetchDashboardData(
+  empresaId: string,
+  signal?: AbortSignal
+): Promise<DashboardData> {
   return httpClient.request<DashboardData>({
     method: 'GET',
     path: '/dashboard',
     params: { empresaId },
     signal,
     mock: () => structuredClone(DASHBOARD_MOCK_DATA),
-  });
+  })
 }
 
 export async function fetchKpis() {
@@ -40,7 +43,7 @@ export async function fetchKpis() {
     method: 'GET',
     path: '/dashboard/kpis',
     mock: () => structuredClone(DASHBOARD_MOCK_DATA.kpis),
-  });
+  })
 }
 
 export async function fetchSalesSeries() {
@@ -48,7 +51,7 @@ export async function fetchSalesSeries() {
     method: 'GET',
     path: '/dashboard/sales-series',
     mock: () => structuredClone(DASHBOARD_MOCK_DATA.salesSeries),
-  });
+  })
 }
 
 export async function fetchTopProducts() {
@@ -56,7 +59,7 @@ export async function fetchTopProducts() {
     method: 'GET',
     path: '/dashboard/top-products',
     mock: () => structuredClone(DASHBOARD_MOCK_DATA.topProducts),
-  });
+  })
 }
 
 export async function fetchRecentOrders() {
@@ -64,5 +67,5 @@ export async function fetchRecentOrders() {
     method: 'GET',
     path: '/dashboard/recent-orders',
     mock: () => structuredClone(DASHBOARD_MOCK_DATA.recentOrders),
-  });
+  })
 }

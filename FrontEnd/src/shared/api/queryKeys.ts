@@ -24,22 +24,22 @@
 // ============================================================
 
 export interface PagedQueryKeyParams {
-  queryName: string;
-  empresaId: string;
-  filters: unknown;
-  sort: unknown;
-  page: number;
-  pageSize: number;
+  queryName: string
+  empresaId: string
+  filters: unknown
+  sort: unknown
+  page: number
+  pageSize: number
 }
 
 export function pagedQueryKey(params: PagedQueryKeyParams) {
-  const { queryName, empresaId, filters, sort, page, pageSize } = params;
+  const { queryName, empresaId, filters, sort, page, pageSize } = params
   // Jerarquica a proposito (['paged', queryName, empresaId, ...resto]):
   // permite en el futuro invalidar/consultar por prefijo (ej. todo lo
   // de una empresa, o todo un listado) sin tener que rearmar la key
   // completa — no se usa asi todavia (la invalidacion de esta tanda es
   // total, ver queryClient.ts), pero la estructura no cuesta nada hoy.
-  return ['paged', queryName, empresaId, filters, sort, page, pageSize] as const;
+  return ['paged', queryName, empresaId, filters, sort, page, pageSize] as const
 }
 
 // ============================================================
@@ -66,12 +66,12 @@ export function pagedQueryKey(params: PagedQueryKeyParams) {
 // ============================================================
 
 export interface CachedQueryKeyParams {
-  queryName: string;
-  empresaId: string;
-  keyParams?: unknown;
+  queryName: string
+  empresaId: string
+  keyParams?: unknown
 }
 
 export function cachedQueryKey(params: CachedQueryKeyParams) {
-  const { queryName, empresaId, keyParams } = params;
-  return ['cached', queryName, empresaId, keyParams] as const;
+  const { queryName, empresaId, keyParams } = params
+  return ['cached', queryName, empresaId, keyParams] as const
 }

@@ -1,4 +1,4 @@
-import type { Currency } from '@/shared/types/client.types';
+import type { Currency } from '@/shared/types/client.types'
 
 // ============================================================
 // money — Modulo unico de dinero (ADR-008, Tanda 7 de la corrida
@@ -26,14 +26,14 @@ import type { Currency } from '@/shared/types/client.types';
 // ============================================================
 
 export interface Money {
-  readonly centavos: number;
-  readonly moneda: Currency;
+  readonly centavos: number
+  readonly moneda: Currency
 }
 
 export class MoneyCurrencyMismatchError extends Error {
   constructor(a: Currency, b: Currency) {
-    super(`No se pueden sumar montos de distinta moneda: ${a} y ${b}.`);
-    this.name = 'MoneyCurrencyMismatchError';
+    super(`No se pueden sumar montos de distinta moneda: ${a} y ${b}.`)
+    this.name = 'MoneyCurrencyMismatchError'
   }
 }
 
@@ -43,7 +43,7 @@ export class MoneyCurrencyMismatchError extends Error {
 // y su reverso se cancelen. Math.round solo no sirve: lleva -100.5 a
 // -100. El `+ 0` normaliza -0 a 0.
 export function money(centavos: number, moneda: Currency): Money {
-  return { centavos: Math.sign(centavos) * Math.round(Math.abs(centavos)) + 0, moneda };
+  return { centavos: Math.sign(centavos) * Math.round(Math.abs(centavos)) + 0, moneda }
 }
 
 // Suma dos Money de la MISMA moneda — nunca colapsa monedas distintas
@@ -51,15 +51,15 @@ export function money(centavos: number, moneda: Currency): Money {
 // AUDIT_10 "que esta bien"). Falla explicito si no coinciden, igual
 // que los constructores de branded types de ids.types.ts (Tanda 5).
 export function sumMoney(a: Money, b: Money): Money {
-  if (a.moneda !== b.moneda) throw new MoneyCurrencyMismatchError(a.moneda, b.moneda);
-  return money(a.centavos + b.centavos, a.moneda);
+  if (a.moneda !== b.moneda) throw new MoneyCurrencyMismatchError(a.moneda, b.moneda)
+  return money(a.centavos + b.centavos, a.moneda)
 }
 
 // `factor` no tiene por que ser entero (ej. una cantidad fraccionable o
 // un porcentaje de descuento) — el redondeo final lo hace money(), y
 // siempre cae en centavos enteros.
 export function multiplyMoney(m: Money, factor: number): Money {
-  return money(m.centavos * factor, m.moneda);
+  return money(m.centavos * factor, m.moneda)
 }
 
 // Unidad principal -> centavos SIN redondear, desplazando la coma en
@@ -68,8 +68,8 @@ export function multiplyMoney(m: Money, factor: number): Money {
 // Number('1.005e2') da 100.5 (redondea a 101). Vale igual con signo
 // (-1.005 -> -100.5).
 function principalToUnroundedCentavos(value: number): number {
-  const [mantissa, exponent = '0'] = String(value).split('e');
-  return Number(`${mantissa}e${Number(exponent) + 2}`);
+  const [mantissa, exponent = '0'] = String(value).split('e')
+  return Number(`${mantissa}e${Number(exponent) + 2}`)
 }
 
 // UNICO camino de conversion desde la unidad principal. Puente temporal
@@ -81,13 +81,15 @@ function principalToUnroundedCentavos(value: number): number {
 // si `value` no es finito: un NaN/Infinity nunca llega a centavos.
 export function moneyFromNumber(value: number, moneda: Currency): Money {
   if (!Number.isFinite(value)) {
-    throw new Error(`Monto invalido: ${value} no es un numero finito.`);
+    throw new Error(`Monto invalido: ${value} no es un numero finito.`)
   }
-  return money(principalToUnroundedCentavos(value), moneda);
+  return money(principalToUnroundedCentavos(value), moneda)
 }
 
 export function formatMoney(m: Money): string {
-  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: m.moneda }).format(m.centavos / 100);
+  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: m.moneda }).format(
+    m.centavos / 100
+  )
 }
 
 // Parseo desde un input de formulario (string del DOM) — coercion +
@@ -98,9 +100,9 @@ export function formatMoney(m: Money): string {
 // conversion en moneyFromNumber. Acepta negativos: la no-negatividad la
 // pone el schema de cada formulario.
 export function parseMoneyInput(raw: string, moneda: Currency): Money {
-  const parsed = Number(raw);
+  const parsed = Number(raw)
   if (raw.trim() === '' || !Number.isFinite(parsed)) {
-    throw new Error(`Monto invalido: "${raw}" no es un numero.`);
+    throw new Error(`Monto invalido: "${raw}" no es un numero.`)
   }
-  return moneyFromNumber(parsed, moneda);
+  return moneyFromNumber(parsed, moneda)
 }

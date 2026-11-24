@@ -1,5 +1,5 @@
-import { QueryClient } from '@tanstack/react-query';
-import { registerResettableStore } from '@/shared/state/resettableStores';
+import { QueryClient } from '@tanstack/react-query'
+import { registerResettableStore } from '@/shared/state/resettableStores'
 
 // ============================================================
 // queryClient — instancia global de TanStack Query (Tanda 2 de
@@ -56,7 +56,7 @@ export const queryClient = new QueryClient({
       retry: false,
     },
   },
-});
+})
 
 // ------------------------------------------------------------
 // Invalidacion cruzada al cambiar de sucursal o de empresa (decision
@@ -80,5 +80,5 @@ export const queryClient = new QueryClient({
 // no lo seria el dia que cambie la empresa.
 // ------------------------------------------------------------
 registerResettableStore(() => {
-  void queryClient.invalidateQueries();
-});
+  void queryClient.invalidateQueries()
+})

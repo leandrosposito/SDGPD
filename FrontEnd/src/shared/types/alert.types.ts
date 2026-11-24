@@ -7,12 +7,12 @@
 // contemplar un tipo nuevo).
 // ============================================================
 
-export type AlertSeverity = 'baja' | 'media' | 'alta';
+export type AlertSeverity = 'baja' | 'media' | 'alta'
 
 interface AlertBase {
-  id: string;
-  severidad: AlertSeverity;
-  creadoEn: string; // ISO
+  id: string
+  severidad: AlertSeverity
+  creadoEn: string // ISO
   // Leida/no leida es por USUARIO en el mundo real (ADR-007) — como
   // hoy no hay autenticacion multi-usuario real (AUDIT_6_ESTADO_GLOBAL.md:
   // no existe flujo de login/logout), se modela como un campo global
@@ -20,29 +20,29 @@ interface AlertBase {
   // campo pasa a vivir en una tabla de lectura por usuario+alerta, no
   // en la alerta misma — documentado para que no se asuma que ya esta
   // resuelto.
-  leida: boolean;
+  leida: boolean
 }
 
 export interface TransferenciaRetrasadaAlert extends AlertBase {
-  tipo: 'transferencia-retrasada';
-  deliveryId: string;
-  branchDestino: string;
-  diasRetraso: number;
+  tipo: 'transferencia-retrasada'
+  deliveryId: string
+  branchDestino: string
+  diasRetraso: number
 }
 
 export interface ProductoPorVencerAlert extends AlertBase {
-  tipo: 'producto-por-vencer';
-  productId: string;
-  productName: string;
-  branchId: string;
-  diasParaVencer: number;
+  tipo: 'producto-por-vencer'
+  productId: string
+  productName: string
+  branchId: string
+  diasParaVencer: number
 }
 
-export type Alert = TransferenciaRetrasadaAlert | ProductoPorVencerAlert;
-export type AlertType = Alert['tipo'];
+export type Alert = TransferenciaRetrasadaAlert | ProductoPorVencerAlert
+export type AlertType = Alert['tipo']
 
 export interface AlertsSummary {
-  totalNoLeidas: number;
-  porTipo: Record<AlertType, number>;
-  porSeveridad: Record<AlertSeverity, number>;
+  totalNoLeidas: number
+  porTipo: Record<AlertType, number>
+  porSeveridad: Record<AlertSeverity, number>
 }

@@ -1,6 +1,6 @@
-import type { PurchaseSuggestion } from '@/shared/types/inventory.types';
-import { asBranchId } from '@/shared/types/ids.types';
-import type { PurchaseSuggestionDTO } from './dto';
+import type { PurchaseSuggestion } from '@/shared/types/inventory.types'
+import { asBranchId } from '@/shared/types/ids.types'
+import type { PurchaseSuggestionDTO } from './dto'
 
 // ============================================================
 // mapper.ts (purchase-suggestions) — Único lugar que traduce
@@ -23,7 +23,7 @@ export function purchaseSuggestionFromDTO(dto: PurchaseSuggestionDTO): PurchaseS
     minStock: dto.stock_minimo,
     suggestedQuantity: dto.cantidad_sugerida,
     estimatedCost: dto.costo_estimado,
-  };
+  }
 }
 
 // Usada solo para sembrar el store desde data/mock/inventory.data.ts
@@ -40,5 +40,5 @@ export function purchaseSuggestionToDTO(item: PurchaseSuggestion): PurchaseSugge
     stock_minimo: item.minStock,
     cantidad_sugerida: item.suggestedQuantity,
     costo_estimado: item.estimatedCost,
-  };
+  }
 }

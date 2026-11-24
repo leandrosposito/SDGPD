@@ -1,6 +1,6 @@
-import type { Action, Module } from '@sdgpd/contracts';
-import { useSessionStore } from '@/shared/state/useSessionStore';
-import { hasPermission } from './permissions';
+import type { Action, Module } from '@sdgpd/contracts'
+import { useSessionStore } from '@/shared/state/useSessionStore'
+import { hasPermission } from './permissions'
 
 // ============================================================
 // usePermission — el UNICO lugar donde la UI pregunta por un permiso
@@ -16,5 +16,5 @@ import { hasPermission } from './permissions';
 export function usePermission(module: Module, action: Action): boolean {
   // El selector devuelve un booleano (estable por valor): no arma objetos
   // nuevos (regla de selectores de zustand, DECISIONES_TECNICAS.md).
-  return useSessionStore((s) => hasPermission(s.session?.permissions, module, action));
+  return useSessionStore(s => hasPermission(s.session?.permissions, module, action))
 }

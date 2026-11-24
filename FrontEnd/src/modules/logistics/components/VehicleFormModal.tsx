@@ -1,10 +1,10 @@
-import { useEffect, useState, type FC } from 'react';
-import { useForm, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { toast } from 'sonner';
-import { Modal } from '@/shared/components/ui/Modal';
-import type { Vehicle } from '@/shared/types/vehicle.types';
-import type { VehicleId } from '@/shared/types/ids.types';
+import { useEffect, useState, type FC } from 'react'
+import { useForm, Controller } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { toast } from 'sonner'
+import { Modal } from '@/shared/components/ui/Modal'
+import type { Vehicle } from '@/shared/types/vehicle.types'
+import type { VehicleId } from '@/shared/types/ids.types'
 import {
   vehicleFormSchema,
   vehicleFormDefaultValues,
@@ -12,8 +12,8 @@ import {
   ZONAS_DISPONIBLES,
   type VehicleFormInputValues,
   type VehicleFormValues,
-} from './VehicleFormModal.schema';
-import './VehicleDriverModals.css';
+} from './VehicleFormModal.schema'
+import './VehicleDriverModals.css'
 
 // ============================================================
 // VehicleFormModal — Tanda 10B (ADR-011). Alta/edicion de vehiculo,
@@ -22,14 +22,22 @@ import './VehicleDriverModals.css';
 // ============================================================
 
 interface VehicleFormModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  vehicle: Vehicle | null;
-  onSave: (input: ReturnType<typeof vehicleFormValuesToServiceInput>, vehicleId?: VehicleId) => Promise<void>;
+  isOpen: boolean
+  onClose: () => void
+  vehicle: Vehicle | null
+  onSave: (
+    input: ReturnType<typeof vehicleFormValuesToServiceInput>,
+    vehicleId?: VehicleId
+  ) => Promise<void>
 }
 
-export const VehicleFormModal: FC<VehicleFormModalProps> = ({ isOpen, onClose, vehicle, onSave }) => {
-  const [isSubmitting, setIsSubmitting] = useState(false);
+export const VehicleFormModal: FC<VehicleFormModalProps> = ({
+  isOpen,
+  onClose,
+  vehicle,
+  onSave,
+}) => {
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const {
     register,
@@ -40,24 +48,26 @@ export const VehicleFormModal: FC<VehicleFormModalProps> = ({ isOpen, onClose, v
   } = useForm<VehicleFormInputValues, unknown, VehicleFormValues>({
     resolver: zodResolver(vehicleFormSchema),
     defaultValues: vehicleFormDefaultValues(vehicle),
-  });
+  })
 
   useEffect(() => {
-    if (isOpen) reset(vehicleFormDefaultValues(vehicle));
-  }, [isOpen, vehicle, reset]);
+    if (isOpen) reset(vehicleFormDefaultValues(vehicle))
+  }, [isOpen, vehicle, reset])
 
   const onSubmit = async (values: VehicleFormValues) => {
-    setIsSubmitting(true);
+    setIsSubmitting(true)
     try {
-      await onSave(vehicleFormValuesToServiceInput(values), vehicle?.id);
-      toast.success(vehicle ? 'Vehículo actualizado correctamente.' : 'Vehículo creado correctamente.');
-      onClose();
+      await onSave(vehicleFormValuesToServiceInput(values), vehicle?.id)
+      toast.success(
+        vehicle ? 'Vehículo actualizado correctamente.' : 'Vehículo creado correctamente.'
+      )
+      onClose()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'No se pudo guardar el vehículo.');
+      toast.error(err instanceof Error ? err.message : 'No se pudo guardar el vehículo.')
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
 
   return (
     <Modal
@@ -67,16 +77,26 @@ export const VehicleFormModal: FC<VehicleFormModalProps> = ({ isOpen, onClose, v
       size="md"
       footer={
         <>
-          <button type="button" className="vd-modal__cancel" onClick={onClose} disabled={isSubmitting}>
+          <button
+            type="button"
+            className="vd-modal__cancel"
+            onClick={onClose}
+            disabled={isSubmitting}
+          >
             Cancelar
           </button>
-          <button type="button" className="vd-modal__confirm" onClick={handleSubmit(onSubmit)} disabled={isSubmitting}>
+          <button
+            type="button"
+            className="vd-modal__confirm"
+            onClick={handleSubmit(onSubmit)}
+            disabled={isSubmitting}
+          >
             {isSubmitting ? 'Guardando...' : 'Guardar'}
           </button>
         </>
       }
     >
-      <form className="vd-modal-form" onSubmit={(e) => e.preventDefault()}>
+      <form className="vd-modal-form" onSubmit={e => e.preventDefault()}>
         <div className="vd-modal-grid">
           <div className="vd-modal-field">
             <label>Patente</label>
@@ -85,7 +105,11 @@ export const VehicleFormModal: FC<VehicleFormModalProps> = ({ isOpen, onClose, v
           </div>
           <div className="vd-modal-field">
             <label>Tipo</label>
-            <input type="text" {...register('tipo')} placeholder="Camioneta, Camion, Utilitario..." />
+            <input
+              type="text"
+              {...register('tipo')}
+              placeholder="Camioneta, Camion, Utilitario..."
+            />
             {errors.tipo && <span className="vd-modal__error">{errors.tipo.message}</span>}
           </div>
         </div>
@@ -105,7 +129,9 @@ export const VehicleFormModal: FC<VehicleFormModalProps> = ({ isOpen, onClose, v
           <div className="vd-modal-field">
             <label>Volumen (m³)</label>
             <input type="number" min={0} step="0.1" {...register('volumenM3')} />
-            {errors.volumenM3 && <span className="vd-modal__error">{errors.volumenM3.message}</span>}
+            {errors.volumenM3 && (
+              <span className="vd-modal__error">{errors.volumenM3.message}</span>
+            )}
           </div>
         </div>
 
@@ -123,28 +149,32 @@ export const VehicleFormModal: FC<VehicleFormModalProps> = ({ isOpen, onClose, v
             control={control}
             render={({ field }) => (
               <div className="vd-modal__zone-checks">
-                {ZONAS_DISPONIBLES.map((zona) => {
-                  const checked = (field.value ?? []).includes(zona);
+                {ZONAS_DISPONIBLES.map(zona => {
+                  const checked = (field.value ?? []).includes(zona)
                   return (
                     <label key={zona} className="vd-modal__checkbox-label">
                       <input
                         type="checkbox"
                         checked={checked}
-                        onChange={(e) => {
-                          const current = field.value ?? [];
-                          field.onChange(e.target.checked ? [...current, zona] : current.filter((z) => z !== zona));
+                        onChange={e => {
+                          const current = field.value ?? []
+                          field.onChange(
+                            e.target.checked ? [...current, zona] : current.filter(z => z !== zona)
+                          )
                         }}
                       />
                       {zona}
                     </label>
-                  );
+                  )
                 })}
               </div>
             )}
           />
-          {errors.zonasHabilitadas && <span className="vd-modal__error">{errors.zonasHabilitadas.message}</span>}
+          {errors.zonasHabilitadas && (
+            <span className="vd-modal__error">{errors.zonasHabilitadas.message}</span>
+          )}
         </div>
       </form>
     </Modal>
-  );
-};
+  )
+}

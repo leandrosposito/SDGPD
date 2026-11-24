@@ -1,14 +1,14 @@
-import { useState, type FC } from 'react';
-import { toast } from 'sonner';
-import { Modal } from '@/shared/components/ui/Modal';
-import { useCachedQuery, CACHE_STALE_TIME } from '@/shared/hooks/useCachedQuery';
-import { useSessionStore } from '@/shared/state/useSessionStore';
-import { todayLocalDateString } from '@/shared/utils/date';
-import type { Delivery } from '@/shared/types/logistics.types';
-import { getMotivoCatalog } from '@/shared/api/motivos/motivos.service';
-import { MOTIVO_OTRO_CODIGO } from '@/shared/types/motivo.types';
-import { reprogramDelivery } from '../services/deliveries.service';
-import './ReprogramarModal.css';
+import { useState, type FC } from 'react'
+import { toast } from 'sonner'
+import { Modal } from '@/shared/components/ui/Modal'
+import { useCachedQuery, CACHE_STALE_TIME } from '@/shared/hooks/useCachedQuery'
+import { useSessionStore } from '@/shared/state/useSessionStore'
+import { todayLocalDateString } from '@/shared/utils/date'
+import type { Delivery } from '@/shared/types/logistics.types'
+import { getMotivoCatalog } from '@/shared/api/motivos/motivos.service'
+import { MOTIVO_OTRO_CODIGO } from '@/shared/types/motivo.types'
+import { reprogramDelivery } from '../services/deliveries.service'
+import './ReprogramarModal.css'
 
 // ============================================================
 // ReprogramarModal — ADR-002 (Tanda 8, corrida completa). Fecha
@@ -29,62 +29,68 @@ import './ReprogramarModal.css';
 // ============================================================
 
 interface ReprogramarModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  delivery: Delivery | null;
-  onReprogrammed: () => void;
+  isOpen: boolean
+  onClose: () => void
+  delivery: Delivery | null
+  onReprogrammed: () => void
 }
 
-export const ReprogramarModal: FC<ReprogramarModalProps> = ({ isOpen, onClose, delivery, onReprogrammed }) => {
-  const fullName = useSessionStore((s) => s.session?.fullName) ?? 'Usuario';
-  const empresaId = useSessionStore((s) => s.session?.company.id);
-  const [fechaNueva, setFechaNueva] = useState(todayLocalDateString());
-  const [motivoCodigo, setMotivoCodigo] = useState('');
-  const [motivoOtroTexto, setMotivoOtroTexto] = useState('');
-  const [responsable, setResponsable] = useState(fullName);
-  const [isSaving, setIsSaving] = useState(false);
-  const [idempotencyKey, setIdempotencyKey] = useState('');
+export const ReprogramarModal: FC<ReprogramarModalProps> = ({
+  isOpen,
+  onClose,
+  delivery,
+  onReprogrammed,
+}) => {
+  const fullName = useSessionStore(s => s.session?.fullName) ?? 'Usuario'
+  const empresaId = useSessionStore(s => s.session?.company.id)
+  const [fechaNueva, setFechaNueva] = useState(todayLocalDateString())
+  const [motivoCodigo, setMotivoCodigo] = useState('')
+  const [motivoOtroTexto, setMotivoOtroTexto] = useState('')
+  const [responsable, setResponsable] = useState(fullName)
+  const [isSaving, setIsSaving] = useState(false)
+  const [idempotencyKey, setIdempotencyKey] = useState('')
 
   // Ajuste de estado durante el render (react.dev/learn/you-might-not-
   // need-an-effect): cuando `openTrigger` cambia (el modal pasa a
   // abierto, para esta entrega u otra), se resetean campos + clave en
   // el mismo render extra que React descarta antes de pintar — no hay
   // useEffect involucrado.
-  const openTrigger = isOpen ? (delivery?.id ?? '') : null;
-  const [lastOpenTrigger, setLastOpenTrigger] = useState<string | null>(null);
+  const openTrigger = isOpen ? (delivery?.id ?? '') : null
+  const [lastOpenTrigger, setLastOpenTrigger] = useState<string | null>(null)
   if (openTrigger !== null && openTrigger !== lastOpenTrigger) {
-    setLastOpenTrigger(openTrigger);
-    setIdempotencyKey(crypto.randomUUID());
-    setFechaNueva(todayLocalDateString());
-    setMotivoCodigo('');
-    setMotivoOtroTexto('');
-    setResponsable(fullName);
+    setLastOpenTrigger(openTrigger)
+    setIdempotencyKey(crypto.randomUUID())
+    setFechaNueva(todayLocalDateString())
+    setMotivoCodigo('')
+    setMotivoOtroTexto('')
+    setResponsable(fullName)
   }
 
   const { data: motivoCatalog = [] } = useCachedQuery(
     'motivo-catalog',
     'reprogramacion',
-    (signal) => {
-      if (!empresaId) throw new Error('ReprogramarModal: fetch de catalogo de motivos sin empresaId.');
-      return getMotivoCatalog(empresaId, 'reprogramacion', signal);
+    signal => {
+      if (!empresaId)
+        throw new Error('ReprogramarModal: fetch de catalogo de motivos sin empresaId.')
+      return getMotivoCatalog(empresaId, 'reprogramacion', signal)
     },
     { enabled: isOpen && Boolean(empresaId), staleTime: CACHE_STALE_TIME.CATALOG }
-  );
+  )
 
-  if (!delivery) return null;
+  if (!delivery) return null
 
   async function handleConfirm() {
-    if (!delivery || !empresaId || !idempotencyKey) return;
+    if (!delivery || !empresaId || !idempotencyKey) return
     if (!motivoCodigo) {
-      toast.error('El motivo de la reprogramación es obligatorio.');
-      return;
+      toast.error('El motivo de la reprogramación es obligatorio.')
+      return
     }
     if (motivoCodigo === MOTIVO_OTRO_CODIGO && !motivoOtroTexto.trim()) {
-      toast.error('El motivo "Otro" necesita una aclaración.');
-      return;
+      toast.error('El motivo "Otro" necesita una aclaración.')
+      return
     }
 
-    setIsSaving(true);
+    setIsSaving(true)
     try {
       const result = await reprogramDelivery(empresaId, idempotencyKey, delivery.id, {
         fechaNueva,
@@ -92,24 +98,24 @@ export const ReprogramarModal: FC<ReprogramarModalProps> = ({ isOpen, onClose, d
         motivoOtroTexto: motivoCodigo === MOTIVO_OTRO_CODIGO ? motivoOtroTexto.trim() : undefined,
         motivoTipo: 'reprogramacion',
         responsable: responsable.trim() || fullName,
-      });
+      })
       if (result.success) {
-        toast.success('Entrega reprogramada — vuelve a estado Creada.');
-        onReprogrammed();
-        onClose();
-        return;
+        toast.success('Entrega reprogramada — vuelve a estado Creada.')
+        onReprogrammed()
+        onClose()
+        return
       }
       const message =
         result.reason === 'invalid-transition'
           ? 'Esta entrega ya no admite reprogramarse.'
           : result.reason === 'motivo-invalido'
             ? 'Revisá el motivo cargado.'
-            : 'No se encontró la entrega.';
-      toast.error(message);
+            : 'No se encontró la entrega.'
+      toast.error(message)
     } catch {
-      toast.error('No se pudo reprogramar la entrega.');
+      toast.error('No se pudo reprogramar la entrega.')
     } finally {
-      setIsSaving(false);
+      setIsSaving(false)
     }
   }
 
@@ -121,10 +127,20 @@ export const ReprogramarModal: FC<ReprogramarModalProps> = ({ isOpen, onClose, d
       size="sm"
       footer={
         <>
-          <button type="button" className="reprogramar__cancel" onClick={onClose} disabled={isSaving}>
+          <button
+            type="button"
+            className="reprogramar__cancel"
+            onClick={onClose}
+            disabled={isSaving}
+          >
             Cancelar
           </button>
-          <button type="button" className="reprogramar__confirm" onClick={handleConfirm} disabled={isSaving}>
+          <button
+            type="button"
+            className="reprogramar__confirm"
+            onClick={handleConfirm}
+            disabled={isSaving}
+          >
             {isSaving ? 'Guardando...' : 'Reprogramar'}
           </button>
         </>
@@ -133,13 +149,19 @@ export const ReprogramarModal: FC<ReprogramarModalProps> = ({ isOpen, onClose, d
       <div className="reprogramar">
         <label className="reprogramar__field">
           Fecha nueva
-          <input type="date" value={fechaNueva} onChange={(e) => setFechaNueva(e.target.value)} />
+          <input type="date" value={fechaNueva} onChange={e => setFechaNueva(e.target.value)} />
         </label>
         <label className="reprogramar__field">
           Motivo
-          <select value={motivoCodigo} onChange={(e) => { setMotivoCodigo(e.target.value); setMotivoOtroTexto(''); }}>
+          <select
+            value={motivoCodigo}
+            onChange={e => {
+              setMotivoCodigo(e.target.value)
+              setMotivoOtroTexto('')
+            }}
+          >
             <option value="">Seleccioná un motivo…</option>
-            {motivoCatalog.map((m) => (
+            {motivoCatalog.map(m => (
               <option key={m.codigo} value={m.codigo}>
                 {m.descripcion}
               </option>
@@ -149,14 +171,19 @@ export const ReprogramarModal: FC<ReprogramarModalProps> = ({ isOpen, onClose, d
         {motivoCodigo === MOTIVO_OTRO_CODIGO && (
           <label className="reprogramar__field">
             Especificar
-            <input type="text" value={motivoOtroTexto} onChange={(e) => setMotivoOtroTexto(e.target.value)} placeholder="Detalle del motivo" />
+            <input
+              type="text"
+              value={motivoOtroTexto}
+              onChange={e => setMotivoOtroTexto(e.target.value)}
+              placeholder="Detalle del motivo"
+            />
           </label>
         )}
         <label className="reprogramar__field">
           Responsable
-          <input type="text" value={responsable} onChange={(e) => setResponsable(e.target.value)} />
+          <input type="text" value={responsable} onChange={e => setResponsable(e.target.value)} />
         </label>
       </div>
     </Modal>
-  );
-};
+  )
+}

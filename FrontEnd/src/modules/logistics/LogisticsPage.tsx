@@ -1,30 +1,35 @@
-import { useEffect, useMemo, useState, type FC } from 'react';
-import { toast } from 'sonner';
-import { useLiveQuery } from '@/shared/hooks/useLiveQuery';
-import { useUrlListState } from '@/shared/hooks/useUrlListState';
-import { Pagination } from '@/shared/components/ui/Pagination';
-import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary';
-import { SkeletonTable } from '@/shared/components/ui/SkeletonLoader';
-import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay';
-import { DateRangeFilter } from '@/shared/components/ui/DateRangeFilter';
-import { readDateRangeFromUrl, dateRangeToUrlParams, type DateRangePreset, type DateRangeValue } from '@/shared/components/ui/dateRangePresets';
-import { ExportButton, type ExportColumn } from '@/shared/components/ui/ExportButton';
-import { useSessionStore } from '@/shared/state/useSessionStore';
-import type { Delivery } from '@/shared/types/logistics.types';
+import { useEffect, useMemo, useState, type FC } from 'react'
+import { toast } from 'sonner'
+import { useLiveQuery } from '@/shared/hooks/useLiveQuery'
+import { useUrlListState } from '@/shared/hooks/useUrlListState'
+import { Pagination } from '@/shared/components/ui/Pagination'
+import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary'
+import { SkeletonTable } from '@/shared/components/ui/SkeletonLoader'
+import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay'
+import { DateRangeFilter } from '@/shared/components/ui/DateRangeFilter'
+import {
+  readDateRangeFromUrl,
+  dateRangeToUrlParams,
+  type DateRangePreset,
+  type DateRangeValue,
+} from '@/shared/components/ui/dateRangePresets'
+import { ExportButton, type ExportColumn } from '@/shared/components/ui/ExportButton'
+import { useSessionStore } from '@/shared/state/useSessionStore'
+import type { Delivery } from '@/shared/types/logistics.types'
 import {
   getDeliveriesPage,
   exportDeliveries,
   transitionDelivery,
   type DeliveryQueryFilters,
-} from './services/deliveries.service';
-import { LogisticsKPIs } from './components/LogisticsKPIs';
-import { DeliveryFilters, type DeliveryStatusFilter } from './components/DeliveryFilters';
-import { DeliveriesTable } from './components/DeliveriesTable';
-import { RegistrarEntregaModal } from './components/RegistrarEntregaModal';
-import { ReprogramarModal } from './components/ReprogramarModal';
-import { DeliveryHistoryModal } from './components/DeliveryHistoryModal';
-import { DELIVERY_STATUS_LABEL } from './deliveryStatusLabels';
-import './LogisticsPage.css';
+} from './services/deliveries.service'
+import { LogisticsKPIs } from './components/LogisticsKPIs'
+import { DeliveryFilters, type DeliveryStatusFilter } from './components/DeliveryFilters'
+import { DeliveriesTable } from './components/DeliveriesTable'
+import { RegistrarEntregaModal } from './components/RegistrarEntregaModal'
+import { ReprogramarModal } from './components/ReprogramarModal'
+import { DeliveryHistoryModal } from './components/DeliveryHistoryModal'
+import { DELIVERY_STATUS_LABEL } from './deliveryStatusLabels'
+import './LogisticsPage.css'
 
 // ============================================================
 // LogisticsPage — Entregas del Dia
@@ -47,41 +52,46 @@ const PRIORITY_LABEL: Record<Delivery['priority'], string> = {
   high: 'Alta',
   medium: 'Media',
   low: 'Baja',
-};
+}
 
 // Unico listado con rango por defecto distinto de 'all' (historico: el
 // tablero de entregas siempre arranco en "hoy").
-const LOGISTICS_DEFAULT_DATE_PRESET: DateRangePreset = 'today';
+const LOGISTICS_DEFAULT_DATE_PRESET: DateRangePreset = 'today'
 
 export const LogisticsPage: FC = () => {
-  const activeBranchId = useSessionStore((s) => s.activeBranchId);
-  const session = useSessionStore((s) => s.session);
-  const empresaId = useSessionStore((s) => s.session?.company.id);
-  const fullName = session?.fullName ?? 'Usuario';
+  const activeBranchId = useSessionStore(s => s.activeBranchId)
+  const session = useSessionStore(s => s.session)
+  const empresaId = useSessionStore(s => s.session?.company.id)
+  const fullName = session?.fullName ?? 'Usuario'
 
   // Tanda 4 (corrida completa, A13): pagina, estado y rango de fecha en
   // la URL — unico listado de esta pagina, sin prefijo.
   const urlState = useUrlListState<never, 'preset' | 'from' | 'to' | 'status'>({
     filterKeys: ['preset', 'from', 'to', 'status'],
-  });
+  })
 
-  const statusFilter = (urlState.filters.status ?? 'all') as DeliveryStatusFilter;
-  const setStatusFilter = (value: DeliveryStatusFilter) => urlState.setFilter('status', value === 'all' ? undefined : value);
+  const statusFilter = (urlState.filters.status ?? 'all') as DeliveryStatusFilter
+  const setStatusFilter = (value: DeliveryStatusFilter) =>
+    urlState.setFilter('status', value === 'all' ? undefined : value)
 
   // Default 'today' (comportamiento historico, antes fijo a "hoy"
   // hardcodeado). Lectura y escritura del rango en la URL: helper
   // compartido de dateRangePresets.ts (Tanda 24, regla PROTOCOLO 3.8).
-  const { preset: urlPreset, from: urlFrom, to: urlTo } = urlState.filters;
+  const { preset: urlPreset, from: urlFrom, to: urlTo } = urlState.filters
   const dateRange: DateRangeValue = useMemo(
-    () => readDateRangeFromUrl({ preset: urlPreset, from: urlFrom, to: urlTo }, LOGISTICS_DEFAULT_DATE_PRESET),
+    () =>
+      readDateRangeFromUrl(
+        { preset: urlPreset, from: urlFrom, to: urlTo },
+        LOGISTICS_DEFAULT_DATE_PRESET
+      ),
     [urlPreset, urlFrom, urlTo]
-  );
+  )
 
   function setDateRange(next: DateRangeValue) {
-    urlState.setFilters(dateRangeToUrlParams(next, LOGISTICS_DEFAULT_DATE_PRESET));
+    urlState.setFilters(dateRangeToUrlParams(next, LOGISTICS_DEFAULT_DATE_PRESET))
   }
 
-  const activeBranchName = session?.branches.find((b) => b.id === activeBranchId)?.name ?? '';
+  const activeBranchName = session?.branches.find(b => b.id === activeBranchId)?.name ?? ''
 
   // Memoizado: usePagedQuery/useLiveQuery comparan `filters` por
   // referencia para decidir si hay que volver a pagina 1 (P9) — solo
@@ -96,7 +106,7 @@ export const LogisticsPage: FC = () => {
       status: statusFilter === 'all' ? undefined : statusFilter,
     }),
     [empresaId, activeBranchId, dateRange, statusFilter]
-  );
+  )
 
   const {
     items: deliveries,
@@ -114,58 +124,66 @@ export const LogisticsPage: FC = () => {
     enabled: activeBranchId !== null,
     page: urlState.page,
     onPageChange: urlState.setPage,
-  });
+  })
 
   useEffect(() => {
-    if (error) toast.error('No se pudo cargar la lista de entregas.');
-  }, [error]);
+    if (error) toast.error('No se pudo cargar la lista de entregas.')
+  }, [error])
 
   const handlePrintRoute = () => {
     // Mock print action
-    console.log('Imprimiendo hoja de ruta...');
-  };
+    console.log('Imprimiendo hoja de ruta...')
+  }
 
   // ------------------------------------------------------------
   // Modales (Tanda 8): un solo delivery "seleccionado" a la vez,
   // discriminado por cual modal esta abierto.
   // ------------------------------------------------------------
-  const [registrarTarget, setRegistrarTarget] = useState<Delivery | null>(null);
-  const [reprogramarTarget, setReprogramarTarget] = useState<Delivery | null>(null);
-  const [historialTarget, setHistorialTarget] = useState<Delivery | null>(null);
+  const [registrarTarget, setRegistrarTarget] = useState<Delivery | null>(null)
+  const [reprogramarTarget, setReprogramarTarget] = useState<Delivery | null>(null)
+  const [historialTarget, setHistorialTarget] = useState<Delivery | null>(null)
 
   const handleMarkInTransit = async (delivery: Delivery) => {
     // Idempotencia (ADR-010 seccion 4): esta accion no pasa por un
     // modal — el click ES la formacion de la intencion, la clave se
     // genera aca, una vez por click, nunca dentro del service.
-    const idempotencyKey = crypto.randomUUID();
-    const result = await transitionDelivery(empresaId ?? '', idempotencyKey, delivery.id, 'EN_TRANSITO', fullName);
+    const idempotencyKey = crypto.randomUUID()
+    const result = await transitionDelivery(
+      empresaId ?? '',
+      idempotencyKey,
+      delivery.id,
+      'EN_TRANSITO',
+      fullName
+    )
     if (result.success && result.newStatus) {
-      toast.success(`Entrega ${delivery.id} actualizada a "${DELIVERY_STATUS_LABEL[result.newStatus]}".`);
+      toast.success(
+        `Entrega ${delivery.id} actualizada a "${DELIVERY_STATUS_LABEL[result.newStatus]}".`
+      )
       // P10: la lista y los agregados son responsabilidad del servidor
       // (mock hoy); en vez de actualizar `deliveries`/`aggregates` a
       // mano en el cliente, se vuelve a pedir la pagina que se esta viendo.
-      refetch();
-      return;
+      refetch()
+      return
     }
-    toast.error('No se pudo marcar la entrega en ruta.');
-  };
+    toast.error('No se pudo marcar la entrega en ruta.')
+  }
 
   // Exportar (tarea transversal): mismos filtros vigentes en pantalla
   // (branchId/rango/estado) via exportDeliveries, que reusa el mismo
   // filtro+orden que getDeliveriesPage (no duplicado).
   const exportColumns: ExportColumn<Delivery>[] = [
-    { header: 'Codigo', accessor: (d) => d.id },
-    { header: 'Pedido', accessor: (d) => d.orderId },
-    { header: 'Cliente', accessor: (d) => d.clientName },
-    { header: 'Direccion', accessor: (d) => d.address },
+    { header: 'Codigo', accessor: d => d.id },
+    { header: 'Pedido', accessor: d => d.orderId },
+    { header: 'Cliente', accessor: d => d.clientName },
+    { header: 'Direccion', accessor: d => d.address },
     { header: 'Sucursal', accessor: () => activeBranchName },
-    { header: 'Fecha', accessor: (d) => d.date },
-    { header: 'Horario Estimado', accessor: (d) => d.estimatedTime },
-    { header: 'Zona', accessor: (d) => d.zone },
-    { header: 'Prioridad', accessor: (d) => PRIORITY_LABEL[d.priority] },
-    { header: 'Estado', accessor: (d) => DELIVERY_STATUS_LABEL[d.status] },
-    { header: 'Monto a Cobrar', accessor: (d) => d.collectionAmount },
-  ];
+    { header: 'Fecha', accessor: d => d.date },
+    { header: 'Horario Estimado', accessor: d => d.estimatedTime },
+    { header: 'Zona', accessor: d => d.zone },
+    { header: 'Prioridad', accessor: d => PRIORITY_LABEL[d.priority] },
+    { header: 'Estado', accessor: d => DELIVERY_STATUS_LABEL[d.status] },
+    { header: 'Monto a Cobrar', accessor: d => d.collectionAmount },
+  ]
 
   return (
     <div className="logistics-page page-enter">
@@ -175,7 +193,11 @@ export const LogisticsPage: FC = () => {
           <p className="page-header__subtitle">Entregas del dia, agrupadas por estado</p>
         </div>
         <div className="page-header__actions">
-          <ExportButton fileNamePrefix="entregas" columns={exportColumns} fetchRows={() => exportDeliveries(filters)} />
+          <ExportButton
+            fileNamePrefix="entregas"
+            columns={exportColumns}
+            fetchRows={() => exportDeliveries(filters)}
+          />
           <button className="logistics-header-btn" onClick={handlePrintRoute}>
             Imprimir Hoja de Ruta
           </button>
@@ -241,5 +263,5 @@ export const LogisticsPage: FC = () => {
         delivery={historialTarget}
       />
     </div>
-  );
-};
+  )
+}

@@ -96,7 +96,9 @@
   justify-content: center;
   border-radius: var(--radius-sm);
   color: var(--color-text-tertiary);
-  transition: background-color var(--transition-fast), color var(--transition-fast);
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast);
 }
 
 .alerts-bell__mark-read:hover:not(:disabled) {

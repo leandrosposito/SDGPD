@@ -1,5 +1,5 @@
-import type { Order } from '@/shared/types/order.types';
-import type { ClientAccount } from '@/shared/types/client.types';
+import type { Order } from '@/shared/types/order.types'
+import type { ClientAccount } from '@/shared/types/client.types'
 
 // ============================================================
 // resolveOrderClient — funcion pura que resuelve la relacion tipada
@@ -16,5 +16,5 @@ export function resolveOrderClient(
   order: Pick<Order, 'clientId'>,
   clients: readonly ClientAccount[]
 ): ClientAccount | undefined {
-  return clients.find((client) => client.id === order.clientId);
+  return clients.find(client => client.id === order.clientId)
 }

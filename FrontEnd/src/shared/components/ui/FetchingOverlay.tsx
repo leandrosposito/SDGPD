@@ -1,6 +1,6 @@
-import type { FC, ReactNode } from 'react';
-import { Loader2 } from 'lucide-react';
-import './FetchingOverlay.css';
+import type { FC, ReactNode } from 'react'
+import { Loader2 } from 'lucide-react'
+import './FetchingOverlay.css'
 
 // ============================================================
 // FetchingOverlay — Envuelve contenido paginado (una Table, etc.).
@@ -13,8 +13,8 @@ import './FetchingOverlay.css';
 // ============================================================
 
 interface FetchingOverlayProps {
-  isFetching: boolean;
-  children: ReactNode;
+  isFetching: boolean
+  children: ReactNode
 }
 
 export const FetchingOverlay: FC<FetchingOverlayProps> = ({ isFetching, children }) => (
@@ -31,4 +31,4 @@ export const FetchingOverlay: FC<FetchingOverlayProps> = ({ isFetching, children
       </div>
     )}
   </div>
-);
+)

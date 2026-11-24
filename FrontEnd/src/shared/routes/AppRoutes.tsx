@@ -1,11 +1,11 @@
-import { lazy } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { QueryClientProvider } from '@tanstack/react-query';
-import { AppShell } from '../layouts/AppShell';
-import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary';
-import { queryClient } from '@/shared/api/queryClient';
-import { LoginPage } from '@/shared/auth/LoginPage';
-import { RequireSession } from '@/shared/auth/RequireSession';
+import { lazy } from 'react'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { QueryClientProvider } from '@tanstack/react-query'
+import { AppShell } from '../layouts/AppShell'
+import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary'
+import { queryClient } from '@/shared/api/queryClient'
+import { LoginPage } from '@/shared/auth/LoginPage'
+import { RequireSession } from '@/shared/auth/RequireSession'
 
 // ============================================================
 // AppRoutes — Application routes (React Router v6)
@@ -22,45 +22,43 @@ import { RequireSession } from '@/shared/auth/RequireSession';
 
 const DashboardPage = lazy(() =>
   import('@/modules/dashboard/DashboardPage').then(m => ({ default: m.DashboardPage }))
-);
+)
 const ClientsPage = lazy(() =>
   import('@/modules/clients/ClientsPage').then(m => ({ default: m.ClientsPage }))
-);
+)
 const InventoryPage = lazy(() =>
   import('@/modules/inventory/InventoryPage').then(m => ({ default: m.InventoryPage }))
-);
+)
 const LogisticsPage = lazy(() =>
   import('@/modules/logistics/LogisticsPage').then(m => ({ default: m.LogisticsPage }))
-);
+)
 // Tanda 10B (ADR-011): capa operativa de logistica — chunks propios,
 // mismo criterio de code-splitting por ruta que el resto (ADR-012).
 const TripsPage = lazy(() =>
   import('@/modules/logistics/TripsPage').then(m => ({ default: m.TripsPage }))
-);
+)
 const VehiclesPage = lazy(() =>
   import('@/modules/logistics/VehiclesPage').then(m => ({ default: m.VehiclesPage }))
-);
+)
 const DriversPage = lazy(() =>
   import('@/modules/logistics/DriversPage').then(m => ({ default: m.DriversPage }))
-);
-const CashPage = lazy(() =>
-  import('@/modules/cash/CashPage').then(m => ({ default: m.CashPage }))
-);
+)
+const CashPage = lazy(() => import('@/modules/cash/CashPage').then(m => ({ default: m.CashPage })))
 const SuppliersPage = lazy(() =>
   import('@/modules/suppliers/SuppliersPage').then(m => ({ default: m.SuppliersPage }))
-);
+)
 const ComprasPage = lazy(() =>
   import('@/modules/compras/ComprasPage').then(m => ({ default: m.ComprasPage }))
-);
+)
 const OrdersPage = lazy(() =>
   import('@/modules/orders/OrdersPage').then(m => ({ default: m.OrdersPage }))
-);
+)
 const AnalyticsPage = lazy(() =>
   import('@/modules/analytics/AnalyticsPage').then(m => ({ default: m.AnalyticsPage }))
-);
+)
 const SettingsPage = lazy(() =>
   import('@/modules/settings/SettingsPage').then(m => ({ default: m.SettingsPage }))
-);
+)
 
 export function AppRoutes() {
   return (
@@ -99,70 +97,34 @@ export function AppRoutes() {
               <Route index element={<DashboardPage />} />
 
               {/* Pedidos y Ventas */}
-              <Route
-                path="pedidos"
-                element={<OrdersPage />}
-              />
+              <Route path="pedidos" element={<OrdersPage />} />
 
               {/* Inventario */}
-              <Route
-                path="inventario"
-                element={<InventoryPage />}
-              />
+              <Route path="inventario" element={<InventoryPage />} />
 
               {/* Clientes */}
-              <Route
-                path="clientes"
-                element={<ClientsPage />}
-              />
+              <Route path="clientes" element={<ClientsPage />} />
 
               {/* Proveedores */}
-              <Route
-                path="proveedores"
-                element={<SuppliersPage />}
-              />
+              <Route path="proveedores" element={<SuppliersPage />} />
 
               {/* Compras */}
-              <Route
-                path="compras"
-                element={<ComprasPage />}
-              />
+              <Route path="compras" element={<ComprasPage />} />
 
               {/* Logistica */}
-              <Route
-                path="logistica"
-                element={<LogisticsPage />}
-              />
-              <Route
-                path="logistica/viajes"
-                element={<TripsPage />}
-              />
-              <Route
-                path="logistica/vehiculos"
-                element={<VehiclesPage />}
-              />
-              <Route
-                path="logistica/choferes"
-                element={<DriversPage />}
-              />
+              <Route path="logistica" element={<LogisticsPage />} />
+              <Route path="logistica/viajes" element={<TripsPage />} />
+              <Route path="logistica/vehiculos" element={<VehiclesPage />} />
+              <Route path="logistica/choferes" element={<DriversPage />} />
 
               {/* Caja */}
-              <Route
-                path="caja"
-                element={<CashPage />}
-              />
+              <Route path="caja" element={<CashPage />} />
 
               {/* Analitica */}
-              <Route
-                path="analitica"
-                element={<AnalyticsPage />}
-              />
+              <Route path="analitica" element={<AnalyticsPage />} />
 
               {/* Configuración */}
-              <Route
-                path="settings"
-                element={<SettingsPage />}
-              />
+              <Route path="settings" element={<SettingsPage />} />
 
               {/* Catch-all redirect */}
               <Route path="*" element={<Navigate to="/" replace />} />
@@ -171,5 +133,5 @@ export function AppRoutes() {
         </QueryClientProvider>
       </ErrorBoundary>
     </BrowserRouter>
-  );
+  )
 }

@@ -1,12 +1,12 @@
-import type { FC } from 'react';
-import { Modal } from '@/shared/components/ui/Modal';
-import { Badge } from '@/shared/components/ui/Badge';
-import { useSessionStore } from '@/shared/state/useSessionStore';
-import type { Delivery } from '@/shared/types/logistics.types';
-import { isRechazoTotal } from '@/shared/types/deliveryNote.types';
-import { DELIVERY_STATUS_LABEL } from '../deliveryStatusLabels';
-import { getDeliveryNotesForDelivery } from '../services/deliveries.service';
-import './DeliveryHistoryModal.css';
+import type { FC } from 'react'
+import { Modal } from '@/shared/components/ui/Modal'
+import { Badge } from '@/shared/components/ui/Badge'
+import { useSessionStore } from '@/shared/state/useSessionStore'
+import type { Delivery } from '@/shared/types/logistics.types'
+import { isRechazoTotal } from '@/shared/types/deliveryNote.types'
+import { DELIVERY_STATUS_LABEL } from '../deliveryStatusLabels'
+import { getDeliveryNotesForDelivery } from '../services/deliveries.service'
+import './DeliveryHistoryModal.css'
 
 // ============================================================
 // DeliveryHistoryModal — historial append-only de una entrega (ADR-002):
@@ -19,17 +19,21 @@ import './DeliveryHistoryModal.css';
 // ============================================================
 
 interface DeliveryHistoryModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  delivery: Delivery | null;
+  isOpen: boolean
+  onClose: () => void
+  delivery: Delivery | null
 }
 
-export const DeliveryHistoryModal: FC<DeliveryHistoryModalProps> = ({ isOpen, onClose, delivery }) => {
-  const empresaId = useSessionStore((s) => s.session?.company.id);
+export const DeliveryHistoryModal: FC<DeliveryHistoryModalProps> = ({
+  isOpen,
+  onClose,
+  delivery,
+}) => {
+  const empresaId = useSessionStore(s => s.session?.company.id)
 
-  if (!delivery) return null;
+  if (!delivery) return null
 
-  const notes = getDeliveryNotesForDelivery(empresaId ?? '', delivery.id);
+  const notes = getDeliveryNotesForDelivery(empresaId ?? '', delivery.id)
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={`Historial — ${delivery.id}`} size="md">
@@ -37,9 +41,10 @@ export const DeliveryHistoryModal: FC<DeliveryHistoryModalProps> = ({ isOpen, on
         <section>
           <h4>Transiciones de estado</h4>
           <ul className="delivery-history__list">
-            {delivery.historial.map((event) => (
+            {delivery.historial.map(event => (
               <li key={event.id}>
-                {event.desde ? DELIVERY_STATUS_LABEL[event.desde] : 'Alta'} → {DELIVERY_STATUS_LABEL[event.hasta]}
+                {event.desde ? DELIVERY_STATUS_LABEL[event.desde] : 'Alta'} →{' '}
+                {DELIVERY_STATUS_LABEL[event.hasta]}
                 {' — '}
                 {event.quien} ({new Date(event.cuando).toLocaleString('es-AR')})
               </li>
@@ -53,7 +58,8 @@ export const DeliveryHistoryModal: FC<DeliveryHistoryModalProps> = ({ isOpen, on
             <ul className="delivery-history__list">
               {delivery.reprogramaciones.map((r, i) => (
                 <li key={i}>
-                  {r.fechaAnterior} → {r.fechaNueva} — {r.motivo} ({r.responsable}, {new Date(r.timestamp).toLocaleString('es-AR')})
+                  {r.fechaAnterior} → {r.fechaNueva} — {r.motivo} ({r.responsable},{' '}
+                  {new Date(r.timestamp).toLocaleString('es-AR')})
                 </li>
               ))}
             </ul>
@@ -64,9 +70,10 @@ export const DeliveryHistoryModal: FC<DeliveryHistoryModalProps> = ({ isOpen, on
           <section>
             <h4>Remitos</h4>
             <ul className="delivery-history__list">
-              {notes.map((note) => (
+              {notes.map(note => (
                 <li key={note.id}>
-                  {note.id} — {note.lines.length} línea(s), {note.creadoPor} ({new Date(note.creadoEn).toLocaleString('es-AR')})
+                  {note.id} — {note.lines.length} línea(s), {note.creadoPor} (
+                  {new Date(note.creadoEn).toLocaleString('es-AR')})
                   {note.evidenciaIds.length > 0 && ` — ${note.evidenciaIds.length} evidencia(s)`}
                   {isRechazoTotal(note.lines) && (
                     <>
@@ -81,5 +88,5 @@ export const DeliveryHistoryModal: FC<DeliveryHistoryModalProps> = ({ isOpen, on
         )}
       </div>
     </Modal>
-  );
-};
+  )
+}

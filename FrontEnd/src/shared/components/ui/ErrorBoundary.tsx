@@ -1,8 +1,8 @@
-import { Component, type ErrorInfo, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
-import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
-import { logError } from '@/shared/utils/logError';
-import './ErrorBoundary.css';
+import { Component, type ErrorInfo, type ReactNode } from 'react'
+import { Link } from 'react-router-dom'
+import { AlertTriangle, RefreshCw, Home } from 'lucide-react'
+import { logError } from '@/shared/utils/logError'
+import './ErrorBoundary.css'
 
 // ============================================================
 // ErrorBoundary — Aisla errores de render de una seccion para
@@ -28,31 +28,31 @@ import './ErrorBoundary.css';
 // ============================================================
 
 interface ErrorBoundaryProps {
-  children: ReactNode;
-  fallback?: (args: { error: unknown; reset: () => void }) => ReactNode;
-  fallbackTitle?: string;
-  fallbackMessage?: string;
-  onReset?: () => void;
+  children: ReactNode
+  fallback?: (args: { error: unknown; reset: () => void }) => ReactNode
+  fallbackTitle?: string
+  fallbackMessage?: string
+  onReset?: () => void
   // Cuando cambia (por referencia/valor) mientras hay un error, el
   // boundary se resetea automaticamente — pensado para atarlo a
   // location.pathname en el boundary de ruta (ver AppShell.tsx).
-  resetKey?: unknown;
+  resetKey?: unknown
 }
 
 interface ErrorBoundaryState {
-  hasError: boolean;
-  error: unknown;
+  hasError: boolean
+  error: unknown
 }
 
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  state: ErrorBoundaryState = { hasError: false, error: null };
+  state: ErrorBoundaryState = { hasError: false, error: null }
 
   static getDerivedStateFromError(error: unknown): ErrorBoundaryState {
-    return { hasError: true, error };
+    return { hasError: true, error }
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    logError(error, { componentStack: errorInfo.componentStack });
+    logError(error, { componentStack: errorInfo.componentStack })
   }
 
   componentDidUpdate(prevProps: ErrorBoundaryProps): void {
@@ -60,19 +60,19 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     // no llama a onReset a proposito — es un reseteo silencioso por
     // navegacion, no una accion explicita del usuario como "Reintentar".
     if (this.state.hasError && prevProps.resetKey !== this.props.resetKey) {
-      this.setState({ hasError: false, error: null });
+      this.setState({ hasError: false, error: null })
     }
   }
 
   handleReset = (): void => {
-    this.setState({ hasError: false, error: null });
-    this.props.onReset?.();
-  };
+    this.setState({ hasError: false, error: null })
+    this.props.onReset?.()
+  }
 
   render(): ReactNode {
     if (this.state.hasError) {
       if (this.props.fallback) {
-        return this.props.fallback({ error: this.state.error, reset: this.handleReset });
+        return this.props.fallback({ error: this.state.error, reset: this.handleReset })
       }
 
       return (
@@ -105,9 +105,9 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
             </div>
           </div>
         </div>
-      );
+      )
     }
 
-    return this.props.children;
+    return this.props.children
   }
 }

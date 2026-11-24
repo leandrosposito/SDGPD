@@ -1,5 +1,5 @@
-import type { Trip, Stop, TripStatus } from '@/shared/types/trip.types';
-import type { Delivery } from '@/shared/types/logistics.types';
+import type { Trip, Stop, TripStatus } from '@/shared/types/trip.types'
+import type { Delivery } from '@/shared/types/logistics.types'
 
 // ============================================================
 // stopVisitEligibility — Tanda 13. HALLAZGO ALTO (ADR-013, enmienda):
@@ -30,32 +30,37 @@ import type { Delivery } from '@/shared/types/logistics.types';
 // 'Planificado' (todavia no goes ni siquiera Despachado) no puede
 // tener una visita fallida porque no hubo visita posible; 'Rendido'/
 // 'Cancelado' son terminales, el viaje ya se cerro.
-export const TRIP_EN_CURSO_STATUSES: readonly TripStatus[] = ['Despachado', 'EnTransito'];
+export const TRIP_EN_CURSO_STATUSES: readonly TripStatus[] = ['Despachado', 'EnTransito']
 
-const DELIVERY_TERMINAL_STATUSES: readonly Delivery['status'][] = ['FINALIZADO', 'CANCELADO'];
+const DELIVERY_TERMINAL_STATUSES: readonly Delivery['status'][] = ['FINALIZADO', 'CANCELADO']
 
 export type StopNoVisitadaBlockReason =
-  | 'trip-not-en-curso'
-  | 'stop-not-pendiente'
-  | 'no-deliveries'
-  | 'delivery-en-estado-terminal';
+  'trip-not-en-curso' | 'stop-not-pendiente' | 'no-deliveries' | 'delivery-en-estado-terminal'
 
 // `deliveries` son las Delivery REALES de `stop.deliveryIds` (no solo
 // los ids) — quien llama las resuelve (getDeliveryById server-side,
 // el mapa `deliveriesById` ya cargado client-side). Si alguna no se
 // pudo resolver, se omite de la lista en vez de romper: el llamador ya
 // maneja "no-found" por su cuenta en otro lado.
-export function getStopNoVisitadaBlockReason(trip: Trip, stop: Stop, deliveries: Delivery[]): StopNoVisitadaBlockReason | null {
-  if (!TRIP_EN_CURSO_STATUSES.includes(trip.estado)) return 'trip-not-en-curso';
-  if (stop.estado !== 'Pendiente') return 'stop-not-pendiente';
-  if (stop.deliveryIds.length === 0) return 'no-deliveries';
-  if (deliveries.some((d) => DELIVERY_TERMINAL_STATUSES.includes(d.status))) return 'delivery-en-estado-terminal';
-  return null;
+export function getStopNoVisitadaBlockReason(
+  trip: Trip,
+  stop: Stop,
+  deliveries: Delivery[]
+): StopNoVisitadaBlockReason | null {
+  if (!TRIP_EN_CURSO_STATUSES.includes(trip.estado)) return 'trip-not-en-curso'
+  if (stop.estado !== 'Pendiente') return 'stop-not-pendiente'
+  if (stop.deliveryIds.length === 0) return 'no-deliveries'
+  if (deliveries.some(d => DELIVERY_TERMINAL_STATUSES.includes(d.status)))
+    return 'delivery-en-estado-terminal'
+  return null
 }
 
 export const STOP_NO_VISITADA_BLOCK_MESSAGE: Record<StopNoVisitadaBlockReason, string> = {
-  'trip-not-en-curso': 'El viaje todavía no salió (o ya se rindió/canceló) — solo se puede marcar una parada como no visitada con el viaje en curso.',
-  'stop-not-pendiente': 'Esta parada ya no está Pendiente (ya se visitó o ya está marcada como no visitada).',
+  'trip-not-en-curso':
+    'El viaje todavía no salió (o ya se rindió/canceló) — solo se puede marcar una parada como no visitada con el viaje en curso.',
+  'stop-not-pendiente':
+    'Esta parada ya no está Pendiente (ya se visitó o ya está marcada como no visitada).',
   'no-deliveries': 'Esta parada no tiene entregas.',
-  'delivery-en-estado-terminal': 'Alguna entrega de esta parada ya está Finalizada o Cancelada — no se puede reprogramar.',
-};
+  'delivery-en-estado-terminal':
+    'Alguna entrega de esta parada ya está Finalizada o Cancelada — no se puede reprogramar.',
+}

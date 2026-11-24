@@ -1,7 +1,7 @@
-import type { Pod, PodReceptor, PodUbicacion } from '@/shared/types/pod.types';
-import type { DeliveryId, StopId } from '@/shared/types/ids.types';
-import { asPodId } from '@/shared/types/ids.types';
-import { httpClient } from '@/shared/api/httpClient';
+import type { Pod, PodReceptor, PodUbicacion } from '@/shared/types/pod.types'
+import type { DeliveryId, StopId } from '@/shared/types/ids.types'
+import { asPodId } from '@/shared/types/ids.types'
+import { httpClient } from '@/shared/api/httpClient'
 
 // ============================================================
 // pod.service — Proof of Delivery (Tanda 10B, ADR-010 seccion 7).
@@ -12,17 +12,17 @@ import { httpClient } from '@/shared/api/httpClient';
 // respecto de deliveriesStore en deliveries.service.ts.
 // ============================================================
 
-let podsStore: Pod[] = [];
+let podsStore: Pod[] = []
 
 export interface PodInput {
-  receptor: PodReceptor;
-  firmaEvidenciaId?: string;
-  imagenesIds: string[];
-  ubicacion?: PodUbicacion;
-  observaciones?: string;
+  receptor: PodReceptor
+  firmaEvidenciaId?: string
+  imagenesIds: string[]
+  ubicacion?: PodUbicacion
+  observaciones?: string
   // Capturado al ABRIR PodModal (ADR-010 seccion 7), no al confirmar —
   // mismo criterio que la clave de idempotencia (ADR-010 seccion 4).
-  timestampDispositivo: string;
+  timestampDispositivo: string
 }
 
 // Llamada "servidor a servidor" (mismo criterio que
@@ -37,7 +37,7 @@ export async function registerPodEvidence(
   input: PodInput,
   quien: string
 ): Promise<Pod> {
-  void empresaId;
+  void empresaId
   const pod: Pod = {
     id: asPodId(`pod-${Date.now()}`),
     deliveryId,
@@ -50,21 +50,25 @@ export async function registerPodEvidence(
     timestampDispositivo: input.timestampDispositivo,
     timestampServidor: new Date().toISOString(),
     creadoPor: quien,
-  };
-  podsStore = [...podsStore, pod];
-  return pod;
+  }
+  podsStore = [...podsStore, pod]
+  return pod
 }
 
 // Consumido por TripDetailPanel: si una entrega ya tiene POD, el boton
 // "Registrar POD" se deshabilita en vez de permitir sobreescribirlo
 // (el POD, como el remito, es un hecho ya ocurrido — append-only,
 // nunca se edita).
-export async function getPodForDelivery(empresaId: string, deliveryId: DeliveryId, signal?: AbortSignal): Promise<Pod | null> {
+export async function getPodForDelivery(
+  empresaId: string,
+  deliveryId: DeliveryId,
+  signal?: AbortSignal
+): Promise<Pod | null> {
   return httpClient.request<Pod | null>({
     method: 'GET',
     path: `/deliveries/${deliveryId}/pod`,
     params: { empresaId },
     signal,
-    mock: () => podsStore.find((p) => p.deliveryId === deliveryId) ?? null,
-  });
+    mock: () => podsStore.find(p => p.deliveryId === deliveryId) ?? null,
+  })
 }

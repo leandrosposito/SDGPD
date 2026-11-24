@@ -1,26 +1,26 @@
-import { useEffect, useMemo, useState, type FC } from 'react';
-import { toast } from 'sonner';
-import { Pagination } from '@/shared/components/ui/Pagination';
-import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary';
-import { ErrorState } from '@/shared/components/ui/ErrorState';
-import { LoadingState } from '@/shared/components/ui/LoadingState';
-import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay';
-import { ExportButton, type ExportColumn } from '@/shared/components/ui/ExportButton';
-import { usePagedQuery } from '@/shared/hooks/usePagedQuery';
-import { useUrlListState } from '@/shared/hooks/useUrlListState';
-import { useSessionStore } from '@/shared/state/useSessionStore';
-import type { CashTransaction } from '@/shared/types/cash.types';
-import { CashKPIs } from './components/CashKPIs';
-import { CashTransactionsTable } from './components/CashTransactionsTable';
-import { NewTransactionModal } from './components/NewTransactionModal';
+import { useEffect, useMemo, useState, type FC } from 'react'
+import { toast } from 'sonner'
+import { Pagination } from '@/shared/components/ui/Pagination'
+import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary'
+import { ErrorState } from '@/shared/components/ui/ErrorState'
+import { LoadingState } from '@/shared/components/ui/LoadingState'
+import { FetchingOverlay } from '@/shared/components/ui/FetchingOverlay'
+import { ExportButton, type ExportColumn } from '@/shared/components/ui/ExportButton'
+import { usePagedQuery } from '@/shared/hooks/usePagedQuery'
+import { useUrlListState } from '@/shared/hooks/useUrlListState'
+import { useSessionStore } from '@/shared/state/useSessionStore'
+import type { CashTransaction } from '@/shared/types/cash.types'
+import { CashKPIs } from './components/CashKPIs'
+import { CashTransactionsTable } from './components/CashTransactionsTable'
+import { NewTransactionModal } from './components/NewTransactionModal'
 import {
   getCashTransactionsPage,
   createCashTransaction,
   exportCashTransactions,
   type CashMovementsQueryFilters,
   type CashTransactionFormInput,
-} from './api/cash.service';
-import './CashPage.css';
+} from './api/cash.service'
+import './CashPage.css'
 
 // ============================================================
 // CashPage — Caja (Flujo de caja diario), Tanda 3b de escalabilidad.
@@ -38,24 +38,27 @@ import './CashPage.css';
 // ============================================================
 
 const cashExportColumns: ExportColumn<CashTransaction>[] = [
-  { header: 'Hora', accessor: (t) => t.time },
-  { header: 'Tipo', accessor: (t) => (t.type === 'income' ? 'Ingreso' : 'Egreso') },
-  { header: 'Categoria', accessor: (t) => t.category },
-  { header: 'Entidad', accessor: (t) => t.entity ?? '' },
-  { header: 'Comprobante', accessor: (t) => t.linkedVoucher ?? '' },
-  { header: 'Descripcion', accessor: (t) => t.description },
-  { header: 'Monto', accessor: (t) => t.amount },
-];
+  { header: 'Hora', accessor: t => t.time },
+  { header: 'Tipo', accessor: t => (t.type === 'income' ? 'Ingreso' : 'Egreso') },
+  { header: 'Categoria', accessor: t => t.category },
+  { header: 'Entidad', accessor: t => t.entity ?? '' },
+  { header: 'Comprobante', accessor: t => t.linkedVoucher ?? '' },
+  { header: 'Descripcion', accessor: t => t.description },
+  { header: 'Monto', accessor: t => t.amount },
+]
 
 export const CashPage: FC = () => {
-  const empresaId = useSessionStore((s) => s.session?.company.id);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const empresaId = useSessionStore(s => s.session?.company.id)
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
-  const filters: CashMovementsQueryFilters = useMemo(() => ({ empresaId: empresaId ?? '' }), [empresaId]);
+  const filters: CashMovementsQueryFilters = useMemo(
+    () => ({ empresaId: empresaId ?? '' }),
+    [empresaId]
+  )
 
   // Tanda 4 (corrida completa, A13): pagina en la URL — sin busqueda ni
   // orden propios en este listado, asi que solo se controla `page`.
-  const urlState = useUrlListState();
+  const urlState = useUrlListState()
 
   const {
     items: transactions,
@@ -74,11 +77,11 @@ export const CashPage: FC = () => {
     enabled: Boolean(empresaId),
     page: urlState.page,
     onPageChange: urlState.setPage,
-  });
+  })
 
   useEffect(() => {
-    if (error) toast.error('No se pudo cargar el movimiento de caja.');
-  }, [error]);
+    if (error) toast.error('No se pudo cargar el movimiento de caja.')
+  }, [error])
 
   // P10 (DECISIONES_TECNICAS.md): tras crear un movimiento se vuelve a
   // pedir la página vigente al service (refetch), en vez de actualizar
@@ -89,18 +92,18 @@ export const CashPage: FC = () => {
   // reales (P3), sin riesgo de desincronizarse.
   const handleSaveTransaction = async (data: CashTransactionFormInput) => {
     if (!empresaId) {
-      toast.error('Todavia no hay una sesion activa.');
-      return;
+      toast.error('Todavia no hay una sesion activa.')
+      return
     }
     try {
-      await createCashTransaction(empresaId, data);
-      toast.success('Movimiento guardado con exito!');
-      refetch();
-      setIsModalOpen(false);
+      await createCashTransaction(empresaId, data)
+      toast.success('Movimiento guardado con exito!')
+      refetch()
+      setIsModalOpen(false)
     } catch {
-      toast.error('No se pudo guardar el movimiento.');
+      toast.error('No se pudo guardar el movimiento.')
     }
-  };
+  }
 
   return (
     <div className="cash-page page-enter">
@@ -115,10 +118,16 @@ export const CashPage: FC = () => {
             columns={cashExportColumns}
             fetchRows={() => exportCashTransactions(filters)}
           />
-          <button className="client-modal-btn client-modal-btn--outline" style={{ marginRight: '0.5rem' }}>
+          <button
+            className="client-modal-btn client-modal-btn--outline"
+            style={{ marginRight: '0.5rem' }}
+          >
             Cierre de Caja
           </button>
-          <button className="client-modal-btn client-modal-btn--primary" onClick={() => setIsModalOpen(true)}>
+          <button
+            className="client-modal-btn client-modal-btn--primary"
+            onClick={() => setIsModalOpen(true)}
+          >
             + Nuevo Movimiento
           </button>
         </div>
@@ -160,5 +169,5 @@ export const CashPage: FC = () => {
         onSave={handleSaveTransaction}
       />
     </div>
-  );
-};
+  )
+}

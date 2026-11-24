@@ -1,7 +1,7 @@
-import * as XLSX from 'xlsx';
-import { toLocalDateString } from '@/shared/utils/date';
-import type { ExportColumn, ExportFormat } from './exportTypes';
-import type { BuildFileResult } from './exportJobs';
+import * as XLSX from 'xlsx'
+import { toLocalDateString } from '@/shared/utils/date'
+import type { ExportColumn, ExportFormat } from './exportTypes'
+import type { BuildFileResult } from './exportJobs'
 
 // ============================================================
 // buildExportFile — la UNICA pieza de la Tanda 6 que depende del
@@ -22,21 +22,23 @@ export function buildExportFile<T>(
   formato: ExportFormat,
   fileNamePrefix: string
 ): BuildFileResult {
-  const rows = items.map((row) => Object.fromEntries(columns.map((col) => [col.header, col.accessor(row)])));
-  const worksheet = XLSX.utils.json_to_sheet(rows, { header: columns.map((c) => c.header) });
-  const fileName = `${fileNamePrefix}_${toLocalDateString(new Date())}.${formato}`;
+  const rows = items.map(row =>
+    Object.fromEntries(columns.map(col => [col.header, col.accessor(row)]))
+  )
+  const worksheet = XLSX.utils.json_to_sheet(rows, { header: columns.map(c => c.header) })
+  const fileName = `${fileNamePrefix}_${toLocalDateString(new Date())}.${formato}`
 
   if (formato === 'xlsx') {
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Datos');
-    const bytes = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' }) as ArrayBuffer;
-    const blob = new Blob([bytes], { type: 'application/octet-stream' });
-    return { downloadUrl: URL.createObjectURL(blob), fileName };
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Datos')
+    const bytes = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' }) as ArrayBuffer
+    const blob = new Blob([bytes], { type: 'application/octet-stream' })
+    return { downloadUrl: URL.createObjectURL(blob), fileName }
   }
 
-  const csv = XLSX.utils.sheet_to_csv(worksheet);
+  const csv = XLSX.utils.sheet_to_csv(worksheet)
   // BOM UTF-8: Excel abre el CSV con acentos/ñ correctos en vez de
   // romper el encoding al doble-clickearlo en Windows.
-  const blob = new Blob(['﻿', csv], { type: 'text/csv;charset=utf-8;' });
-  return { downloadUrl: URL.createObjectURL(blob), fileName };
+  const blob = new Blob(['﻿', csv], { type: 'text/csv;charset=utf-8;' })
+  return { downloadUrl: URL.createObjectURL(blob), fileName }
 }

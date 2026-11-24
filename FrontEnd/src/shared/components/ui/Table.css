@@ -23,9 +23,15 @@
   white-space: nowrap;
 }
 
-.table__th--left { text-align: left; }
-.table__th--center { text-align: center; }
-.table__th--right { text-align: right; }
+.table__th--left {
+  text-align: left;
+}
+.table__th--center {
+  text-align: center;
+}
+.table__th--right {
+  text-align: right;
+}
 
 .table__row {
   transition: background-color var(--transition-fast);
@@ -45,9 +51,15 @@
   white-space: nowrap;
 }
 
-.table__td--left { text-align: left; }
-.table__td--center { text-align: center; }
-.table__td--right { text-align: right; }
+.table__td--left {
+  text-align: left;
+}
+.table__td--center {
+  text-align: center;
+}
+.table__td--right {
+  text-align: right;
+}
 
 .table-empty {
   padding: var(--space-6);

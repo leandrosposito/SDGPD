@@ -23,34 +23,46 @@
   background-color: var(--color-success-muted);
   color: var(--color-success);
 }
-.badge--success .badge__dot { background-color: var(--color-success); }
+.badge--success .badge__dot {
+  background-color: var(--color-success);
+}
 
 .badge--warning {
   background-color: var(--color-warning-muted);
   color: var(--color-warning);
 }
-.badge--warning .badge__dot { background-color: var(--color-warning); }
+.badge--warning .badge__dot {
+  background-color: var(--color-warning);
+}
 
 .badge--danger {
   background-color: var(--color-danger-muted);
   color: var(--color-danger);
 }
-.badge--danger .badge__dot { background-color: var(--color-danger); }
+.badge--danger .badge__dot {
+  background-color: var(--color-danger);
+}
 
 .badge--info {
   background-color: var(--color-info-muted);
   color: var(--color-info);
 }
-.badge--info .badge__dot { background-color: var(--color-info); }
+.badge--info .badge__dot {
+  background-color: var(--color-info);
+}
 
 .badge--neutral {
   background-color: var(--color-bg-subtle);
   color: var(--color-text-secondary);
 }
-.badge--neutral .badge__dot { background-color: var(--color-text-tertiary); }
+.badge--neutral .badge__dot {
+  background-color: var(--color-text-tertiary);
+}
 
 .badge--accent {
   background-color: var(--color-accent-muted);
   color: var(--color-accent-light);
 }
-.badge--accent .badge__dot { background-color: var(--color-accent-light); }
+.badge--accent .badge__dot {
+  background-color: var(--color-accent-light);
+}

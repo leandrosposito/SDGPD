@@ -1,32 +1,32 @@
-import { type FC } from 'react';
-import { SidePanel } from '@/shared/components/ui/SidePanel';
-import { Table } from '@/shared/components/ui/Table';
-import { Badge } from '@/shared/components/ui/Badge';
-import type { InventoryItem } from '@/shared/types/inventory.types';
-import { isExpired, isExpiringSoon } from '@/shared/utils/lotExpiration';
+import { type FC } from 'react'
+import { SidePanel } from '@/shared/components/ui/SidePanel'
+import { Table } from '@/shared/components/ui/Table'
+import { Badge } from '@/shared/components/ui/Badge'
+import type { InventoryItem } from '@/shared/types/inventory.types'
+import { isExpired, isExpiringSoon } from '@/shared/utils/lotExpiration'
 
 // ============================================================
 // ProductLotsPanel — Visualiza los lotes de un producto
 // ============================================================
 
 interface ProductLotsPanelProps {
-  isOpen: boolean;
-  onClose: () => void;
-  product: InventoryItem | null;
+  isOpen: boolean
+  onClose: () => void
+  product: InventoryItem | null
 }
 
 function formatDate(isoString: string): string {
   return new Date(isoString).toLocaleDateString('es-AR', {
     day: '2-digit',
     month: 'short',
-    year: 'numeric'
-  });
+    year: 'numeric',
+  })
 }
 
 export const ProductLotsPanel: FC<ProductLotsPanelProps> = ({ isOpen, onClose, product }) => {
-  if (!product) return null;
+  if (!product) return null
 
-  const lots = product.lots || [];
+  const lots = product.lots || []
 
   return (
     <SidePanel
@@ -37,21 +37,39 @@ export const ProductLotsPanel: FC<ProductLotsPanelProps> = ({ isOpen, onClose, p
     >
       <div style={{ marginBottom: 'var(--space-6)' }}>
         <p className="text-secondary text-sm mb-4">
-          Visualiza la composicion del stock de este producto según sus lotes activos. El despacho se realizara bajo la regla FEFO (First Expired, First Out).
+          Visualiza la composicion del stock de este producto según sus lotes activos. El despacho
+          se realizara bajo la regla FEFO (First Expired, First Out).
         </p>
 
         <Table
           data={lots}
-          keyExtractor={(lot) => lot.id}
+          keyExtractor={lot => lot.id}
           columns={[
-            { header: 'N° Lote', accessor: (lot) => <span className="font-mono text-xs">{lot.lotNumber}</span> },
-            { header: 'Cantidad', align: 'right', accessor: (lot) => <span className="font-medium">{lot.quantity}</span> },
-            { header: 'Vencimiento', accessor: (lot) => <span className="text-tertiary text-sm">{formatDate(lot.expirationDate)}</span> },
-            { header: 'Estado', align: 'center', accessor: (lot) => {
-              if (isExpired(lot.expirationDate)) return <Badge label="VENCIDO" variant="danger" />;
-              if (isExpiringSoon(lot.expirationDate)) return <Badge label="Proximo a vencer" variant="warning" />;
-              return <Badge label="OK" variant="success" />;
-            }}
+            {
+              header: 'N° Lote',
+              accessor: lot => <span className="font-mono text-xs">{lot.lotNumber}</span>,
+            },
+            {
+              header: 'Cantidad',
+              align: 'right',
+              accessor: lot => <span className="font-medium">{lot.quantity}</span>,
+            },
+            {
+              header: 'Vencimiento',
+              accessor: lot => (
+                <span className="text-tertiary text-sm">{formatDate(lot.expirationDate)}</span>
+              ),
+            },
+            {
+              header: 'Estado',
+              align: 'center',
+              accessor: lot => {
+                if (isExpired(lot.expirationDate)) return <Badge label="VENCIDO" variant="danger" />
+                if (isExpiringSoon(lot.expirationDate))
+                  return <Badge label="Proximo a vencer" variant="warning" />
+                return <Badge label="OK" variant="success" />
+              },
+            },
           ]}
         />
 
@@ -62,5 +80,5 @@ export const ProductLotsPanel: FC<ProductLotsPanelProps> = ({ isOpen, onClose, p
         )}
       </div>
     </SidePanel>
-  );
-};
+  )
+}

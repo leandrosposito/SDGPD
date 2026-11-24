@@ -60,7 +60,9 @@
   padding: var(--space-2) var(--space-8) var(--space-2) var(--space-8);
   font-size: var(--font-size-sm);
   color: var(--color-text-primary);
-  transition: border-color var(--transition-fast), background-color var(--transition-fast);
+  transition:
+    border-color var(--transition-fast),
+    background-color var(--transition-fast);
 }
 
 .header__search-input::placeholder {
@@ -104,7 +106,9 @@
   border-radius: var(--radius-md);
   color: var(--color-text-secondary);
   background: transparent;
-  transition: background-color var(--transition-fast), color var(--transition-fast);
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast);
   position: relative;
 }
 

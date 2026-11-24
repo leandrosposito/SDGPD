@@ -1,8 +1,8 @@
-import { useEffect, type FC, type ReactNode } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
-import { LoadingState } from '@/shared/components/ui/LoadingState';
-import { ErrorState } from '@/shared/components/ui/ErrorState';
-import { AUTH_IS_HTTP, useSessionStore } from '@/shared/state/useSessionStore';
+import { useEffect, type FC, type ReactNode } from 'react'
+import { Navigate, useLocation } from 'react-router-dom'
+import { LoadingState } from '@/shared/components/ui/LoadingState'
+import { ErrorState } from '@/shared/components/ui/ErrorState'
+import { AUTH_IS_HTTP, useSessionStore } from '@/shared/state/useSessionStore'
 
 // ============================================================
 // RequireSession — guard de rutas (BE-1b). Envuelve a AppShell en
@@ -18,25 +18,29 @@ import { AUTH_IS_HTTP, useSessionStore } from '@/shared/state/useSessionStore';
 // ============================================================
 
 interface RequireSessionProps {
-  children: ReactNode;
+  children: ReactNode
 }
 
 export const RequireSession: FC<RequireSessionProps> = ({ children }) => {
-  const status = useSessionStore((s) => s.status);
-  const loadSession = useSessionStore((s) => s.loadSession);
-  const location = useLocation();
+  const status = useSessionStore(s => s.status)
+  const loadSession = useSessionStore(s => s.loadSession)
+  const location = useLocation()
 
   useEffect(() => {
-    if (AUTH_IS_HTTP && status === 'idle') void loadSession();
-  }, [status, loadSession]);
+    if (AUTH_IS_HTTP && status === 'idle') void loadSession()
+  }, [status, loadSession])
 
-  if (!AUTH_IS_HTTP) return <>{children}</>;
-  if (status === 'authenticated') return <>{children}</>;
+  if (!AUTH_IS_HTTP) return <>{children}</>
+  if (status === 'authenticated') return <>{children}</>
   if (status === 'unauthenticated') {
-    return <Navigate to="/login" replace state={{ from: `${location.pathname}${location.search}` }} />;
+    return (
+      <Navigate to="/login" replace state={{ from: `${location.pathname}${location.search}` }} />
+    )
   }
   if (status === 'error') {
-    return <ErrorState message="No se pudo cargar la sesion." onRetry={() => window.location.reload()} />;
+    return (
+      <ErrorState message="No se pudo cargar la sesion." onRetry={() => window.location.reload()} />
+    )
   }
-  return <LoadingState message="Cargando sesion..." />;
-};
+  return <LoadingState message="Cargando sesion..." />
+}

@@ -10,17 +10,17 @@
 // ============================================================
 
 export interface AuditLogItem {
-  id: string;
-  timestamp: string;
-  user: string;
-  action: string;
-  details: string;
+  id: string
+  timestamp: string
+  user: string
+  action: string
+  details: string
 }
 
 export interface InvoiceRecord {
-  id: string;
-  date: string;
-  amount: number;
-  status: 'paid' | 'pending';
-  plan: string;
+  id: string
+  date: string
+  amount: number
+  status: 'paid' | 'pending'
+  plan: string
 }

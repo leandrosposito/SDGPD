@@ -61,12 +61,12 @@
 /* ----------------------------------------------------------
    Dynamic Form Variables based on Context
    ---------------------------------------------------------- */
-.cash-modal-container[data-type="income"] {
+.cash-modal-container[data-type='income'] {
   --active-accent: var(--color-success);
   --active-accent-muted: var(--color-success-muted);
 }
 
-.cash-modal-container[data-type="expense"] {
+.cash-modal-container[data-type='expense'] {
   --active-accent: var(--color-danger);
   --active-accent-muted: var(--color-danger-muted);
 }
@@ -96,7 +96,9 @@
   color: var(--color-text-secondary);
 }
 
-.tx-input, .tx-select, .tx-textarea {
+.tx-input,
+.tx-select,
+.tx-textarea {
   width: 100%;
   padding: var(--space-3);
   background: var(--color-bg-base);
@@ -107,7 +109,9 @@
   transition: border-color var(--transition-fast);
 }
 
-.tx-input:focus, .tx-select:focus, .tx-textarea:focus {
+.tx-input:focus,
+.tx-select:focus,
+.tx-textarea:focus {
   outline: none;
   border-color: var(--active-accent, var(--color-accent));
 }
@@ -142,7 +146,9 @@
   color: var(--color-text-primary);
   font-size: var(--font-size-2xl);
   font-weight: var(--font-weight-bold);
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
 }
 
 .tx-amount-input:focus {
@@ -212,7 +218,7 @@
 
 .tx-btn--primary {
   background: var(--active-accent, var(--color-accent));
-  color: #FFFFFF;
+  color: #ffffff;
 }
 
 .tx-btn--primary:hover {

@@ -1,8 +1,8 @@
-import { type FC } from 'react';
-import type { ClientAccount } from '@/shared/types/client.types';
+import { type FC } from 'react'
+import type { ClientAccount } from '@/shared/types/client.types'
 
 interface ClientDirectoryTableProps {
-  clients: ClientAccount[];
+  clients: ClientAccount[]
 }
 
 export const ClientDirectoryTable: FC<ClientDirectoryTableProps> = ({ clients }) => {
@@ -27,27 +27,58 @@ export const ClientDirectoryTable: FC<ClientDirectoryTableProps> = ({ clients })
               <td className="font-medium text-primary">{client.clientName}</td>
               <td className="font-mono text-xs text-tertiary">{client.cuit}</td>
               <td>{client.address}</td>
-              <td><span className="client-badge client-badge--neutral">{client.zone}</span></td>
+              <td>
+                <span className="client-badge client-badge--neutral">{client.zone}</span>
+              </td>
               <td>{client.phone}</td>
               <td>{client.sellerName}</td>
               {/* Tanda 17/18 (ADR-015): un cliente dado de baja sigue en el
                   Directorio (conserva historial y cuenta corriente), pero
                   no recibe pedidos nuevos — el badge lo hace visible. */}
               <td>
-                <span className={`client-badge ${client.isActive ? 'client-badge--success' : 'client-badge--danger'}`}>
+                <span
+                  className={`client-badge ${client.isActive ? 'client-badge--success' : 'client-badge--danger'}`}
+                >
                   {client.isActive ? 'Activo' : 'Inactivo'}
                 </span>
               </td>
               <td className="text-right">
                 <div className="client-actions-row">
                   <button className="client-btn-icon" title="Nuevo Pedido">
-                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="18"
+                      height="18"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
                     </svg>
                   </button>
-                  <button className="client-btn-icon client-btn-icon--success" title="Enviar WhatsApp">
-                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <button
+                    className="client-btn-icon client-btn-icon--success"
+                    title="Enviar WhatsApp"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="18"
+                      height="18"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
                     </svg>
                   </button>
                 </div>
@@ -64,5 +95,5 @@ export const ClientDirectoryTable: FC<ClientDirectoryTableProps> = ({ clients })
         </tbody>
       </table>
     </div>
-  );
-};
+  )
+}

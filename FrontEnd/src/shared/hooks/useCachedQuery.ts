@@ -1,6 +1,6 @@
-import { useQuery } from '@tanstack/react-query';
-import { cachedQueryKey } from '@/shared/api/queryKeys';
-import { useSessionStore } from '@/shared/state/useSessionStore';
+import { useQuery } from '@tanstack/react-query'
+import { cachedQueryKey } from '@/shared/api/queryKeys'
+import { useSessionStore } from '@/shared/state/useSessionStore'
 
 // ============================================================
 // useCachedQuery — Hermano de usePagedQuery para datos que NO se
@@ -51,30 +51,30 @@ export const CACHE_STALE_TIME = {
   CATALOG: 5 * 60_000,
   OPERATIONAL: 30_000,
   DERIVED: 2 * 60_000,
-} as const;
+} as const
 
 export interface UseCachedQueryOptions {
   // Permite diferir el fetch (ej. un panel cerrado, o un id que
   // todavia no existe) — mismo criterio que usePagedQuery. Default true.
-  enabled?: boolean;
+  enabled?: boolean
   // Una de las constantes CACHE_STALE_TIME de arriba — deliberadamente
   // sin default silencioso a una categoria "segura": cada call site
   // documenta explicitamente a que categoria de dato pertenece.
-  staleTime: number;
+  staleTime: number
 }
 
 export interface UseCachedQueryResult<TResult> {
-  data: TResult | undefined;
+  data: TResult | undefined
   // true solo hasta que llega la primera respuesta (exito o error) de
   // esta consulta — mismo significado que en usePagedQuery.
-  isLoading: boolean;
+  isLoading: boolean
   // true mientras hay un pedido en vuelo. Igual que en usePagedQuery,
   // `!queryEnabled || query.isFetching` para que quedar deshabilitado
   // (ej. panel cerrado) se vea como "todavia no hay nada", no como
   // "ya se resolvio y no hay nada".
-  isFetching: boolean;
-  error: string | null;
-  refetch: () => void;
+  isFetching: boolean
+  error: string | null
+  refetch: () => void
 }
 
 export function useCachedQuery<TResult>(
@@ -101,29 +101,29 @@ export function useCachedQuery<TResult>(
   fetchFn: (signal: AbortSignal) => Promise<TResult>,
   options: UseCachedQueryOptions
 ): UseCachedQueryResult<TResult> {
-  const { enabled = true, staleTime } = options;
+  const { enabled = true, staleTime } = options
 
-  const empresaId = useSessionStore((s) => s.session?.company.id);
-  const queryEnabled = enabled && Boolean(empresaId);
+  const empresaId = useSessionStore(s => s.session?.company.id)
+  const queryEnabled = enabled && Boolean(empresaId)
 
   const query = useQuery({
     queryKey: cachedQueryKey({ queryName, empresaId: empresaId ?? '', keyParams }),
     queryFn: ({ signal }) => fetchFn(signal),
     enabled: queryEnabled,
     staleTime,
-  });
+  })
 
-  const isLoading = query.isPending;
-  const isFetching = !queryEnabled || query.isFetching;
+  const isLoading = query.isPending
+  const isFetching = !queryEnabled || query.isFetching
   const error = query.error
     ? query.error instanceof Error
       ? query.error.message
       : 'No se pudo cargar la informacion.'
-    : null;
+    : null
 
   function refetch() {
-    void query.refetch();
+    void query.refetch()
   }
 
-  return { data: query.data, isLoading, isFetching, error, refetch };
+  return { data: query.data, isLoading, isFetching, error, refetch }
 }
