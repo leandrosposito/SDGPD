@@ -25,8 +25,8 @@ Los tests corren contra `sdgpd_test` como `sdgpd_app_test`, y se niegan a arranc
 
 1. `BackEnd/docs/README.md`: los 11 ADRs, la trazabilidad de las 26 decisiones, los hallazgos y el plan de tandas BE-0 a BE-10.
 2. Los ADRs `BackEnd/docs/adr/ADR-BE-0NN-*.md` que aplica la tanda (el plan dice cuáles). **Leé también sus secciones "Objeciones"**: están todas resueltas (2026-10-08), y cada resolución cambia algo del texto original del ADR. Ninguna bloquea ya el plan.
-3. `FrontEnd/docs/PROTOCOLO.md`: el proceso de trabajo (fases, gates, merge) vale también para el backend. Los gates propios de una tanda de backend están en ADR-BE-001.
-4. Para la evidencia de cualquier decisión: `FrontEnd/docs/historial/auditorias/backend/` (auditoría del 2026-10-07; empezá por `00_RESUMEN.md`).
+3. `docs/PROTOCOLO.md`: el proceso de trabajo (fases, gates, merge) vale también para el backend. Los gates propios de una tanda de backend están en ADR-BE-001.
+4. Para la evidencia de cualquier decisión: `BackEnd/docs/auditoria-previa/` (auditoría del 2026-10-07; empezá por `00_RESUMEN.md`).
 
 ## Invariantes (no se reabren sin un ADR nuevo)
 

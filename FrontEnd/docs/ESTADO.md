@@ -1,6 +1,6 @@
 # Estado — SDGPD Frontend
 
-**Corresponde a: 2026-10-09, rama `lean` (hasta `sesion-be1c-2026-10-09` incluida — BE-1c, los dos MEDIO de BE-1b, ver `docs/historial/reportes/REPORTE_2026-10-10_be1c.md`; BE-1b, conexión del frontend a la autenticación, ver `REPORTE_2026-10-09_be1b.md`; backend BE-1a, ver `REPORTE_2026-10-09_be1a.md`; frontend Tanda 25, ver `docs/historial/reportes/REPORTE_2026-10-09_tanda25.md`; Tandas 23/24, ver `REPORTE_2026-10-09_tandas23-24.md`, y Tanda 22, ver `REPORTE_2026-10-09_tanda22.md`; backend BE-0b, ver `docs/historial/reportes/REPORTE_2026-10-09.md`, y BE-0a, ver `REPORTE_2026-10-08.md`; Tandas 17-21 en `REPORTE_2026-10-07.md` y `REPORTE_2026-10-07b.md`).** Este es el único snapshot vigente del proyecto — reemplaza a `docs/historial/auditorias/AUDIT_00_RESUMEN.md` (que quedó fijado al 2026-09-06 y ya no describe el estado real) como lectura de entrada. **Reescribilo al cerrar cada sesión** — no alcanza con dejar el `REPORTE_<fecha>.md`, ese documenta lo que se hizo, este documenta dónde está el proyecto AHORA.
+**Corresponde a: 2026-10-09, rama `lean` (hasta `sesion-be1c-2026-10-09` incluida — BE-1c, los dos MEDIO de BE-1b, ver `BackEnd/docs/reportes/REPORTE_2026-10-10_be1c.md`; BE-1b, conexión del frontend a la autenticación, ver `REPORTE_2026-10-09_be1b.md`; backend BE-1a, ver `REPORTE_2026-10-09_be1a.md`; frontend Tanda 25, ver `docs/historial/reportes/REPORTE_2026-10-09_tanda25.md`; Tandas 23/24, ver `REPORTE_2026-10-09_tandas23-24.md`, y Tanda 22, ver `REPORTE_2026-10-09_tanda22.md`; backend BE-0b, ver `docs/historial/reportes/REPORTE_2026-10-09.md`, y BE-0a, ver `REPORTE_2026-10-08.md`; Tandas 17-21 en `REPORTE_2026-10-07.md` y `REPORTE_2026-10-07b.md`).** Este es el único snapshot vigente del proyecto — reemplaza a `docs/historial/auditorias/AUDIT_00_RESUMEN.md` (que quedó fijado al 2026-09-06 y ya no describe el estado real) como lectura de entrada. **Reescribilo al cerrar cada sesión** — no alcanza con dejar el `REPORTE_<fecha>.md`, ese documenta lo que se hizo, este documenta dónde está el proyecto AHORA.
 
 ## Tandas — todas cerradas hasta acá (verificado contra `git log --oneline lean` + la sesión en curso)
 
@@ -10,7 +10,7 @@ Tanda 0 (contención de errores) → Tanda 1 (capa `api/`, piloto `suppliers`) �
 
 ## BE-1c hecha — refresh entre pestañas y una sola zod (2026-10-10, `sesion-be1c-2026-10-09`)
 
-Cierra los dos MEDIO de BE-1b. Detalle en `docs/historial/reportes/REPORTE_2026-10-10_be1c.md`. Checklist sin ejecutar: `docs/historial/verificaciones/VERIFICACION_BE-1c.md`. Sub-decisiones: ADR-BE-003 (29) y ADR-BE-001 (17).
+Cierra los dos MEDIO de BE-1b. Detalle en `BackEnd/docs/reportes/REPORTE_2026-10-10_be1c.md`. Checklist sin ejecutar: `BackEnd/docs/verificaciones/VERIFICACION_BE-1c.md`. Sub-decisiones: ADR-BE-003 (29) y ADR-BE-001 (17).
 
 - **Refresh entre pestañas:** el refresh corre dentro de `navigator.locks.request('sdgpd-auth-refresh')`, así que hay uno solo a la vez en todo el navegador. El single-flight por pestaña sigue adentro. Sin Web Locks se sigue sin lock, con un aviso en modo debug. El servidor no cambia. Smoke `be-1c` (15): sin el lock en el core, 9 FAIL; con el lock, todo en verde.
 - **Una sola zod (4.4.3):**
@@ -23,7 +23,7 @@ Cierra los dos MEDIO de BE-1b. Detalle en `docs/historial/reportes/REPORTE_2026-
 
 ## BE-1b hecha — el frontend conectado a la autenticación (2026-10-09, `sesion-be1b-2026-10-09`)
 
-Detalle en `docs/historial/reportes/REPORTE_2026-10-09_be1b.md`. Checklist de navegador sin ejecutar: `docs/historial/verificaciones/VERIFICACION_BE-1b.md`. Sub-decisiones nuevas: ADR-BE-003 (24-28), ADR-BE-005 (enmienda de la sub-decisión 2), ADR-BE-001 (15-16), ADR-BE-002 (22) y la enmienda de ADR-006.
+Detalle en `BackEnd/docs/reportes/REPORTE_2026-10-09_be1b.md`. Checklist de navegador sin ejecutar: `BackEnd/docs/verificaciones/VERIFICACION_BE-1b.md`. Sub-decisiones nuevas: ADR-BE-003 (24-28), ADR-BE-005 (enmienda de la sub-decisión 2), ADR-BE-001 (15-16), ADR-BE-002 (22) y la enmienda de ADR-006.
 
 - **Parte 0, backend:**
   - HMAC-SHA256 de idempotencia con `IDEMPOTENCY_HMAC_KEY` (cierra el MEDIO de BE-1a);
@@ -50,7 +50,7 @@ Detalle en `docs/historial/reportes/REPORTE_2026-10-09_be1b.md`. Checklist de na
 
 ## Backend — BE-1a hecha (2026-10-09, `sesion-be1a-2026-10-09`)
 
-Autenticación, identidad y permisos en el backend (ADR-BE-003). **`FrontEnd/` no cambió**: la conexión es **BE-1b**. Detalle en `docs/historial/reportes/REPORTE_2026-10-09_be1a.md`, estructura en `BackEnd/docs/ARQUITECTURA.md`, sub-decisiones nuevas en ADR-BE-003 (9-23) y ADR-BE-002 (16-21).
+Autenticación, identidad y permisos en el backend (ADR-BE-003). **`FrontEnd/` no cambió**: la conexión es **BE-1b**. Detalle en `BackEnd/docs/reportes/REPORTE_2026-10-09_be1a.md`, estructura en `BackEnd/docs/ARQUITECTURA.md`, sub-decisiones nuevas en ADR-BE-003 (9-23) y ADR-BE-002 (16-21).
 
 - **Paso 0:** ADR-BE-005, objeción 3, **resuelta**. El backend honra `Idempotency-Key` también en PUT/PATCH/DELETE cuando viene (en POST sigue obligatoria); el hash cubre body y parámetros de la ruta. El frontend no cambia.
 - **Modelo:** `users` (email único global, argon2id), `roles` + `role_permissions` (10 módulos × 7 acciones; 4 roles iniciales), `user_branches`, `refresh_tokens` (solo el hash, por familia) y `login_attempts`. RLS forzado y FK compuestas. La FK de `user_id` en `idempotency_keys` y `audit_log` es `NOT VALID`, y un usuario auditado no se borra. Sin tenant, `users` y `refresh_tokens` solo se leen por dos funciones `SECURITY DEFINER`.
@@ -129,7 +129,7 @@ La infraestructura de mutaciones que usan todos los módulos, más su arrastre e
   - Los ids aceptan UUID o el prefijo legado.
   - La lógica de `httpClient` vive en `httpClientCore.ts`.
 - **Tests:** 86 del backend y 18 de `contracts` (eran 39 y 12). Hay 32 scripts del frontend en verde, incluido el smoke nuevo `be-0b.smoke.mjs`.
-- **Checklist sin ejecutar:** `FrontEnd/docs/historial/verificaciones/VERIFICACION_BE-0b.md` (modo mock, sin cambios visibles esperados).
+- **Checklist sin ejecutar:** `BackEnd/docs/verificaciones/VERIFICACION_BE-0b.md` (modo mock, sin cambios visibles esperados).
 - ~~**Abierto, a resolver antes de BE-2:** ADR-BE-005, objeción 3.~~ **Resuelta en el Paso 0 de BE-1a** (el backend honra la clave en PUT/PATCH/DELETE).
 - **Riesgo residual documentado:** la auditoría obligatoria se garantiza por la API tipada y por lint (V2). SQL crudo dentro de `src/db/`, o una reflexión ofuscada que el lint no ve, quedan a la revisión de código.
 - **Siguió:** BE-1a (hecha), que agregó la FK de `user_id` y llama a `bindActor` desde la autenticación.
@@ -180,7 +180,7 @@ Lo que las resoluciones cambiaron, y que hay que tener presente al implementar:
 
 ## Auditoría de backend (2026-10-07, solo lectura) — punto de entrada para la fase de ADRs de backend
 
-**`docs/historial/auditorias/backend/00_RESUMEN.md` alcanza solo para arrancar.** El detalle con evidencia está en los archivos `01` a `08` de la misma carpeta. No se tocó código, y no se tomó ninguna decisión: la regla 2.9 no aplicó en esta sesión.
+**`BackEnd/docs/auditoria-previa/00_RESUMEN.md` alcanza solo para arrancar.** El detalle con evidencia está en los archivos `01` a `08` de la misma carpeta. No se tocó código, y no se tomó ninguna decisión: la regla 2.9 no aplicó en esta sesión.
 
 - **Qué hay:** 91 llamadas a `httpClient` (no 88: 3 están partidas en dos líneas), 25 entidades, 72 reglas de negocio del mock, 26 decisiones abiertas (9 bloqueantes).
 - **Cobertura del Doc 04:** de los 83 RF, 2 tienen contrato completo, 37 parcial y **44 ninguno** (29 de ellos son MVP).
@@ -276,7 +276,7 @@ Quedó explícitamente fuera de alcance (documentado en ADR-010/011 y en `VERIFI
 
 ## Checklists de verificación en navegador — sin evidencia de haberse ejecutado
 
-Ningún commit en el historial dice "confirmado en navegador" sobre ninguno de los checklists de `docs/historial/verificaciones/` (43 archivos, incluidos `VERIFICACION_TANDA_9.md` a `VERIFICACION_TANDA_25.md`, `VERIFICACION_BE-0b.md`, `VERIFICACION_BE-1b.md`, `VERIFICACION_BE-1c.md` y los 2 de la sesión 2026-09-30: `VERIFICACION_2026-09-30_T2_lotes.md` y `VERIFICACION_2026-09-30_T4_reposicion.md`). Hay que asumir que **todos** siguen pendientes de que Leandro los corra, no solo los que dicen explícitamente "PENDIENTE"/"NO EJECUTADA" en su propio texto.
+Ningún commit en el historial dice "confirmado en navegador" sobre ninguno de los checklists de `docs/historial/verificaciones/` (40 archivos; los 3 de BE-* viven en `BackEnd/docs/verificaciones/`, incluidos `VERIFICACION_TANDA_9.md` a `VERIFICACION_TANDA_25.md`, `VERIFICACION_BE-0b.md`, `VERIFICACION_BE-1b.md`, `VERIFICACION_BE-1c.md` y los 2 de la sesión 2026-09-30: `VERIFICACION_2026-09-30_T2_lotes.md` y `VERIFICACION_2026-09-30_T4_reposicion.md`). Hay que asumir que **todos** siguen pendientes de que Leandro los corra, no solo los que dicen explícitamente "PENDIENTE"/"NO EJECUTADA" en su propio texto.
 
 **Por dónde empezar:** `docs/VERIFICACION_PENDIENTE_UNIFICADA.md` junta en 42 puntos, ordenados por riesgo, todo lo pendiente de las Tandas 0/1, 3a-3d, 3g, 4-8, ADR-009 y el barrido de `empresaId`. Quedan fuera del unificado, pendientes en su archivo original: Tandas 2, 2.5, 3e, 3f, 9, 10A, 10B, 11-18, 20-25, B, C1, C2, los 2 de 2026-09-30 y BE-0b, BE-1b y BE-1c (más `BackEnd/docs/verificaciones/VERIFICACION_BE-0a.md` y `VERIFICACION_BE-1a.md`, este último ajustado en BE-1b al prefijo `/api`).
 

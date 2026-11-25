@@ -235,7 +235,7 @@
 ### 26. ¿Dónde vive el código del backend?
 
 - **Contexto:** `BackEnd/` existe vacío y **está en `.gitignore`** (`.gitignore:9-10`, "# BackEnd vacía por ahora"). Todo lo que se escriba ahí **no se versiona**, y no da ningún aviso.
-- **Además:** la regla no tiene barra inicial, así que se aplica a toda carpeta `BackEnd/` en cualquier nivel. Con `core.ignorecase=true` (esta máquina, Windows) también atrapa `backend/` en minúscula: le pasó a esta misma auditoría (`FrontEnd/docs/historial/auditorias/backend/`, que tuvo que agregarse con `git add -f`). En Linux no ocurriría.
+- **Además:** la regla no tiene barra inicial, así que se aplica a toda carpeta `BackEnd/` en cualquier nivel. Con `core.ignorecase=true` (esta máquina, Windows) también atrapa `backend/` en minúscula: le pasó a esta misma auditoría (`BackEnd/docs/auditoria-previa/`, que tuvo que agregarse con `git add -f`). En Linux no ocurriría.
 - **Opciones:**
   - A. Sacarlo del `.gitignore` y trabajar en un monorepo.
   - B. Repositorio separado.

@@ -1,6 +1,6 @@
 # ADR-BE-003 — Autenticación, identidad y permisos
 
-**Estado:** Aceptado. **Fecha:** 2026-10-07. **Resuelve:** decisión #2 de [`08_DECISIONES_ABIERTAS.md`](../../../FrontEnd/docs/historial/auditorias/backend/08_DECISIONES_ABIERTAS.md).
+**Estado:** Aceptado. **Fecha:** 2026-10-07. **Resuelve:** decisión #2 de [`08_DECISIONES_ABIERTAS.md`](../auditoria-previa/08_DECISIONES_ABIERTAS.md).
 
 **Enmienda a ADRs del frontend:** ninguno.
 
@@ -70,7 +70,7 @@ Hallazgo **B2** (`00_RESUMEN.md`; `04_TRANSVERSALES.md` §1 y §3).
 7. **Email único global**, consecuencia de "un usuario pertenece a una sola empresa", necesaria para el login sin tenant (ADR-BE-002, sub-decisión 2).
 8. **Parámetros de argon2id:** los valores recomendados por OWASP vigentes al implementar, con los parámetros guardados junto al hash para poder subirlos después sin romper hashes viejos.
 
-### Sub-decisiones de la tanda BE-1a (2026-10-09, tomadas al implementar sin consulta, PROTOCOLO regla 2.9; ver `FrontEnd/docs/historial/reportes/REPORTE_2026-10-09_be1a.md`)
+### Sub-decisiones de la tanda BE-1a (2026-10-09, tomadas al implementar sin consulta, PROTOCOLO regla 2.9; ver `BackEnd/docs/reportes/REPORTE_2026-10-09_be1a.md`)
 
 9. **Firma del access token:** JWT **HS256** con una clave de 32 bytes aleatorios (`JWT_SECRET`), que genera `db:setup` y vive solo en `BackEnd/.env`. Sin la clave, o con menos de 32 bytes, el backend no arranca. La verificación fija el algoritmo (`alg: none` y cualquier otro se rechazan), el emisor (`sdgpd`) y la audiencia (`sdgpd-api`), y exige `exp`, `iat` y `sub`. HS256 alcanza mientras un solo servicio emita y verifique; si aparece otro verificador, se pasa a una clave asimétrica.
 10. **Claim `sid`, además de los cuatro de la sub-decisión 2:** el id de la familia de refresh del login. Lo usa el logout (sub-decisión 11) y no es un secreto (es un id, no el token).
@@ -88,7 +88,7 @@ Hallazgo **B2** (`00_RESUMEN.md`; `04_TRANSVERSALES.md` §1 y §3).
 22. **La rama `native` del login responde 501 `not-implemented`** hasta que exista la app (objeción 1). El contrato ya la tiene (`clientType`).
 23. **`refresh_tokens` y `login_attempts` no pasan por `audit_log`:** son infraestructura de la sesión, como `idempotency_keys`. Lo que cambia un usuario o un rol sí se audita (con el hash de la contraseña excluido). Para las filas hijas sin `version` (permisos de un rol, sucursales de un usuario), `CommandTx` gana `removeChild`: un borrado auditado cuya concurrencia controla la versión del padre.
 
-### Sub-decisiones de la tanda BE-1b (2026-10-09, tomadas al implementar sin consulta, PROTOCOLO regla 2.9; ver `FrontEnd/docs/historial/reportes/REPORTE_2026-10-09_be1b.md`)
+### Sub-decisiones de la tanda BE-1b (2026-10-09, tomadas al implementar sin consulta, PROTOCOLO regla 2.9; ver `BackEnd/docs/reportes/REPORTE_2026-10-09_be1b.md`)
 
 24. **Prefijo global `/api`** en todas las rutas del backend (`configureApp`, `src/http/api-prefix.ts`), y la cookie de refresh con **`Path=/api/auth/refresh`** (reemplaza el `Path=/auth/refresh` de la sub-decisión 3). El navegador ve el mismo path que el backend: en desarrollo, Vite hace proxy de `/api` **sin reescribir la ruta** (resuelve el riesgo del Path de BE-1a, y la objeción 2 sigue resuelta: mismo origen).
 25. **Guarda de último admin:** ningún cambio de usuario (rol, activo) ni de matriz puede dejar a la empresa sin al menos un usuario activo con `settings.editar`; si pasaría, **422 `last-admin`** y el comando se revierte entero. Se chequea al final del comando, en su transacción, después de un **advisory lock de transacción por empresa** (`CommandTx.lockScope('identity')`): dos cambios concurrentes que juntos dejarían a la empresa sin admin se serializan, y el segundo ve el efecto del primero (sin write skew; probado con dos admins que se desactivan entre sí a la vez).

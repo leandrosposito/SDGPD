@@ -1,6 +1,6 @@
 # ADR-BE-010 — Cuenta corriente y caja
 
-**Estado:** Aceptado. **Fecha:** 2026-10-07. **Resuelve:** decisión #17 de [`08_DECISIONES_ABIERTAS.md`](../../../FrontEnd/docs/historial/auditorias/backend/08_DECISIONES_ABIERTAS.md), y el detalle de caja de la #18. En la tabla de trazabilidad, la #18 está asignada a ADR-BE-002, que fija los alcances.
+**Estado:** Aceptado. **Fecha:** 2026-10-07. **Resuelve:** decisión #17 de [`08_DECISIONES_ABIERTAS.md`](../auditoria-previa/08_DECISIONES_ABIERTAS.md), y el detalle de caja de la #18. En la tabla de trazabilidad, la #18 está asignada a ADR-BE-002, que fija los alcances.
 
 **Enmienda a ADRs del frontend:** ninguno.
 
