@@ -11,4 +11,6 @@ export interface Driver {
   licencia: string
   telefono: string
   activo: boolean
+  // Concurrencia optimista (ADR-BE-005): solo la trae el backend (BE-2); el mock no la usa.
+  version?: number
 }

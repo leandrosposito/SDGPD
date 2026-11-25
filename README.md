@@ -29,6 +29,7 @@ El plan de tandas del backend está en [`BackEnd/docs/README.md`](BackEnd/docs/R
 BackEnd/              API en NestJS + PostgreSQL (Drizzle ORM)
 FrontEnd/             aplicación React (Vite)
 packages/contracts/   contrato HTTP compartido (Zod)
+docs/                 documentación transversal (protocolo de trabajo)
 Documentacion/        visión de producto y especificación funcional del negocio
 ```
 
@@ -50,6 +51,7 @@ Configurar la base de datos: [`BackEnd/docs/SETUP_SUPABASE.md`](BackEnd/docs/SET
 - Arquitectura del frontend: [`FrontEnd/docs/ARQUITECTURA.md`](FrontEnd/docs/ARQUITECTURA.md)
 - Decisiones del frontend: [`FrontEnd/docs/adr/`](FrontEnd/docs/adr/)
 - Decisiones del backend: [`BackEnd/docs/adr/`](BackEnd/docs/adr/)
+- Protocolo de trabajo: [`docs/PROTOCOLO.md`](docs/PROTOCOLO.md)
 - Negocio y dominio: [`Documentacion/README.md`](Documentacion/README.md)
 
 ---

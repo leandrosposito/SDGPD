@@ -1,6 +1,6 @@
 # ADR-BE-002 — Tenancy y Row-Level Security
 
-**Estado:** Aceptado. **Fecha:** 2026-10-07. **Resuelve:** decisiones #1 y #18 de [`08_DECISIONES_ABIERTAS.md`](../../../FrontEnd/docs/historial/auditorias/backend/08_DECISIONES_ABIERTAS.md). El detalle de caja de la #18 está en ADR-BE-010.
+**Estado:** Aceptado. **Fecha:** 2026-10-07. **Resuelve:** decisiones #1 y #18 de [`08_DECISIONES_ABIERTAS.md`](../auditoria-previa/08_DECISIONES_ABIERTAS.md). El detalle de caja de la #18 está en ADR-BE-010.
 
 **Enmienda a ADRs del frontend:** ninguno (reemplaza la regla 3.5 del protocolo y la decisión D1 del log se cumple).
 
@@ -110,13 +110,13 @@ SELECT set_config('app.empresa_id', $1, true);   -- equivale a SET LOCAL
 
 ## Objeciones
 
-1. **Caja SUCURSAL contradice el texto vigente del protocolo**, que pone caja en EMPRESA (`FrontEnd/docs/PROTOCOLO.md:17`). Se resuelve en esta misma sesión, porque §1 del protocolo está dentro del alcance. Lo dejo anotado para que conste que el cambio es deliberado.
+1. **Caja SUCURSAL contradice el texto vigente del protocolo**, que pone caja en EMPRESA (`docs/PROTOCOLO.md:17`). Se resuelve en esta misma sesión, porque §1 del protocolo está dentro del alcance. Lo dejo anotado para que conste que el cambio es deliberado.
 
    **Resolución (2026-10-08):** **confirmado.** Caja es de alcance SUCURSAL y el cambio es deliberado: una caja física es de un lugar y el arqueo se hace por caja (ADR-BE-010). El texto del protocolo ya quedó reescrito en la sesión del 2026-10-07 (`PROTOCOLO.md` §1).
 2. **"Reposición" figura como SUCURSAL, pero hoy su estado "solicitado" vive solo en el navegador** (`FrontEnd/src/modules/inventory/state/useReplenishmentStore.ts:29-49`, hallazgo A19). El alcance queda decidido, pero no hay entidad persistida a la cual aplicárselo hasta que una tanda la cree.
 
    **Resolución (2026-10-08):** la entidad la crea la **sub-decisión 5 de ADR-BE-009** (`replenishment_requests`, de alcance sucursal, con estado `requested` y el usuario que la pidió), aprobada el 2026-10-08. El alcance SUCURSAL de este ADR ya tiene a qué aplicarse, y se materializa en BE-4.
 
-3. **El alcance EMPRESA gana "listas de precios"** (resolución de la objeción 1 de ADR-BE-006, 2026-10-08), pero la enumeración de alcances de `FrontEnd/docs/PROTOCOLO.md` §1 **no** la incluye: §1 del protocolo está fuera del alcance de la sesión de cierre, que solo puede tocar la regla 2.2, la línea de D8 y la trampa 6.6. La tabla de este ADR es la fuente de verdad hasta que una sesión con §1 en alcance lo sincronice. **Objeción nueva, sin resolver.**
+3. **El alcance EMPRESA gana "listas de precios"** (resolución de la objeción 1 de ADR-BE-006, 2026-10-08), pero la enumeración de alcances de `docs/PROTOCOLO.md` §1 **no** la incluye: §1 del protocolo está fuera del alcance de la sesión de cierre, que solo puede tocar la regla 2.2, la línea de D8 y la trampa 6.6. La tabla de este ADR es la fuente de verdad hasta que una sesión con §1 en alcance lo sincronice. **Objeción nueva, sin resolver.**
 
    **Resolución (2026-10-08, sesión BE-0a, Paso 0):** `PROTOCOLO.md` §1 ya incluye "listas de precios" en el alcance EMPRESA. Protocolo y tabla de este ADR quedan sincronizados.

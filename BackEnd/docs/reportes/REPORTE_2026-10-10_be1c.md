@@ -168,7 +168,7 @@ sdgpd@ C:\proyectos\SDGPD
 
 ## Qué tiene que probar Leandro a mano, en orden de riesgo
 
-Está en `docs/historial/verificaciones/VERIFICACION_BE-1c.md`:
+Está en `BackEnd/docs/verificaciones/VERIFICACION_BE-1c.md`:
 
 1. Dos pestañas: forzar el vencimiento del access token en las dos y recargar ambas casi a la vez; las dos siguen con sesión (sección 1).
 2. Formularios con validación zod (login, alta de usuario, Nuevo Producto, Compras) y el tamaño de `vendor-zod` (sección 2).

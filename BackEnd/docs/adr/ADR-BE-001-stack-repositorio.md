@@ -1,18 +1,18 @@
 # ADR-BE-001 — Stack, repositorio y forma de trabajo
 
-**Estado:** Aceptado. **Fecha:** 2026-10-07. **Resuelve:** decisión #26 de [`08_DECISIONES_ABIERTAS.md`](../../../FrontEnd/docs/historial/auditorias/backend/08_DECISIONES_ABIERTAS.md).
+**Estado:** Aceptado. **Fecha:** 2026-10-07. **Resuelve:** decisión #26 de [`08_DECISIONES_ABIERTAS.md`](../auditoria-previa/08_DECISIONES_ABIERTAS.md).
 
 **Enmienda a ADRs del frontend:** ninguno (cambia la regla 2.3 del protocolo y el `.gitignore`).
 
 ## Contexto
 
-La auditoría de backend (`FrontEnd/docs/historial/auditorias/backend/`, 2026-10-07) encontró que `BackEnd/` existía vacío y estaba en `.gitignore`. La regla `BackEnd/` no tenía barra inicial y, con `core.ignorecase=true`, ignoraba cualquier carpeta `backend/` del repo, incluida la de la propia auditoría (hallazgo **A18**, `00_RESUMEN.md`). El frontend ya tiene contratos tipados y una capa `api/` sobre `httpClient` con adaptador mock (`FrontEnd/src/shared/api/httpClient.ts:5-12`). Lo que no existe es un lugar compartido donde backend y frontend acuerden el contrato: 59 de 91 respuestas devuelven hoy el tipo de dominio del frontend (hallazgo **B4**).
+La auditoría de backend (`BackEnd/docs/auditoria-previa/`, 2026-10-07) encontró que `BackEnd/` existía vacío y estaba en `.gitignore`. La regla `BackEnd/` no tenía barra inicial y, con `core.ignorecase=true`, ignoraba cualquier carpeta `backend/` del repo, incluida la de la propia auditoría (hallazgo **A18**, `00_RESUMEN.md`). El frontend ya tiene contratos tipados y una capa `api/` sobre `httpClient` con adaptador mock (`FrontEnd/src/shared/api/httpClient.ts:5-12`). Lo que no existe es un lugar compartido donde backend y frontend acuerden el contrato: 59 de 91 respuestas devuelven hoy el tipo de dominio del frontend (hallazgo **B4**).
 
 La regla `BackEnd/` se sacó del `.gitignore` en el commit `509963b` de esta misma sesión (Paso 0).
 
 ## Decisión
 
-1. **Monorepo.** El backend vive en `BackEnd/` de este repositorio, con las mismas reglas de rama, tags y merge que el frontend (`FrontEnd/docs/PROTOCOLO.md` §2.1 y §8).
+1. **Monorepo.** El backend vive en `BackEnd/` de este repositorio, con las mismas reglas de rama, tags y merge que el frontend (`docs/PROTOCOLO.md` §2.1 y §8).
 2. **Stack:** Node LTS + TypeScript estricto + NestJS + PostgreSQL. **PostgreSQL es la única infraestructura obligatoria hasta BE-6 inclusive**: nada de Redis, colas externas ni otros servicios hasta que una medición lo pida. Lo que suele resolverse con esas piezas (jobs, colas, locks, caché) se resuelve con Postgres (tablas de trabajo con `FOR UPDATE SKIP LOCKED`, advisory locks). **Desde BE-7** se suma una sola pieza más, y solo en producción: un **object storage compatible con S3** para los archivos (evidencia de POD y archivos de exportación), según ADR-BE-011 §Storage. En desarrollo esa pieza es disco local, así que para trabajar sigue alcanzando con Postgres.
 3. **Acceso a datos: Drizzle ORM**, con migraciones SQL versionadas en el repo. **Nunca** sincronización automática de esquema (`drizzle-kit push` prohibido).
 4. **Contrato compartido:** paquete `packages/contracts`, con schemas Zod y los tipos inferidos de ellos, consumido por `BackEnd` y `FrontEnd` vía **npm workspaces**. Un cambio de contrato que rompe al otro lado tiene que fallar en `tsc`.
@@ -89,12 +89,12 @@ La regla `BackEnd/` se sacó del `.gitignore` en el commit `509963b` de esta mis
 
 ## Objeciones
 
-1. **La regla 2.2 del protocolo prohíbe instalar dependencias** (`FrontEnd/docs/PROTOCOLO.md:24`: "Prohibido instalar dependencias. Si algo parece requerirla, resolverlo sin ella o dejarlo documentado como no hecho"). Construir este stack requiere instalar NestJS, Drizzle, Zod, el driver de Postgres y Vitest. La sesión solo autoriza reescribir §1, 2.3, 3.1 y 3.5, así que **la 2.2 queda vigente y bloquea BE-0** hasta que se la acote (por ejemplo, "en `FrontEnd/`") o se defina un mecanismo de aprobación de dependencias.
+1. **La regla 2.2 del protocolo prohíbe instalar dependencias** (`docs/PROTOCOLO.md:24`: "Prohibido instalar dependencias. Si algo parece requerirla, resolverlo sin ella o dejarlo documentado como no hecho"). Construir este stack requiere instalar NestJS, Drizzle, Zod, el driver de Postgres y Vitest. La sesión solo autoriza reescribir §1, 2.3, 3.1 y 3.5, así que **la 2.2 queda vigente y bloquea BE-0** hasta que se la acote (por ejemplo, "en `FrontEnd/`") o se defina un mecanismo de aprobación de dependencias.
 
-   **Resolución (2026-10-08):** la regla 2.2 queda **acotada a `FrontEnd/`**. En `BackEnd/` y `packages/` se instalan **solo las dependencias que la consigna de la tanda liste explícitamente**; cualquier otra es **condición de parada**. La 2.2 reescrita así está en `FrontEnd/docs/PROTOCOLO.md` §2.2, y la decisión 6 de este ADR la refleja. BE-0 deja de estar bloqueado.
+   **Resolución (2026-10-08):** la regla 2.2 queda **acotada a `FrontEnd/`**. En `BackEnd/` y `packages/` se instalan **solo las dependencias que la consigna de la tanda liste explícitamente**; cualquier otra es **condición de parada**. La 2.2 reescrita así está en `docs/PROTOCOLO.md` §2.2, y la decisión 6 de este ADR la refleja. BE-0 deja de estar bloqueado.
 2. **npm workspaces mueve el lockfile a la raíz.** Hoy `FrontEnd/package-lock.json` es el lockfile, y la verificación D8 exige "Confirmar con `git diff` que `package.json` y el lockfile no cambiaron" (`PROTOCOLO.md:77`). La primera tanda que cree el workspace cambia ambos por diseño, así que D8 necesita una excepción explícita para esa tanda.
 
-   **Resolución (2026-10-08):** D8 pasa a decir que **el lockfile solo puede cambiar en una tanda cuya consigna autorice dependencias, y su diff tiene que corresponderse con esa lista**. La tanda que crea los workspaces (BE-0) mueve el lockfile a la raíz **por diseño**, y eso cuenta como cambio autorizado. Reescrito en `FrontEnd/docs/PROTOCOLO.md` §4, D8.
+   **Resolución (2026-10-08):** D8 pasa a decir que **el lockfile solo puede cambiar en una tanda cuya consigna autorice dependencias, y su diff tiene que corresponderse con esa lista**. La tanda que crea los workspaces (BE-0) mueve el lockfile a la raíz **por diseño**, y eso cuenta como cambio autorizado. Reescrito en `docs/PROTOCOLO.md` §4, D8.
 3. `FrontEnd/CLAUDE.md` dice que todos los comandos corren desde `FrontEnd/` y que el package manager es npm con `package-lock.json` en esa carpeta. Con workspaces, eso deja de ser cierto. Ese archivo está fuera del alcance de esta sesión y queda desactualizado hasta BE-0.
 
    **Resolución (2026-10-08):** `FrontEnd/CLAUDE.md` **se actualiza en BE-0**, la tanda que crea los workspaces, no ahora. Queda anotado como entregable de BE-0 en el plan de tandas (`BackEnd/docs/README.md`). Hasta entonces la desactualización es conocida y acotada a dónde vive el lockfile.
