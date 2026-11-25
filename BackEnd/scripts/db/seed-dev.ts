@@ -9,6 +9,7 @@
 // El id de la empresa B, los emails y las contraseñas de los admins se generan la primera vez y
 // quedan SOLO en BackEnd/.env (SEED_*). Nunca se imprimen. Si la contraseña de un admin no coincide
 // con la de .env, se vuelve a hashear con la de .env.
+// BE-2: también siembra el catálogo inicial de motivos de cada empresa (src/masters/default-motivos.ts).
 // Las filas del seed no pasan por audit_log: no hay actor todavía (es preparación de datos).
 // Uso: npm run db:seed-dev -w @sdgpd/backend
 import { randomBytes } from 'node:crypto'
@@ -18,6 +19,7 @@ import { DEFAULT_ROLES } from '../../src/auth/default-roles.ts'
 import { type DemoBranchOutcome, ensureDemoBranches } from './demo-branches.ts'
 import { DEMO_BRANCHES, DEMO_EMPRESA_ID, type DemoBranch } from './demo-ids.ts'
 import { hashPassword, verifyPassword } from '../../src/auth/passwords.ts'
+import { DEFAULT_MOTIVOS } from '../../src/masters/default-motivos.ts'
 import { connectAs, envValue, pgErrorText, readEnvFile, ROLES, SCHEMAS, writeEnvValues } from './lib.ts'
 
 type SeedBranch = { name: string; code: string; city: string; address: string; status: 'active' | 'inactive' }
@@ -146,6 +148,14 @@ async function seedCompany(client: pg.Client, company: SeedCompany, env: Record<
         `insert into user_branches (id, empresa_id, user_id, branch_id) values ($1, $2, $3, $4)
          on conflict (empresa_id, user_id, branch_id) do nothing`,
         [v7(), empresaId, userId, branchId],
+      )
+    }
+    // Catálogo inicial de motivos (BE-2): solo agrega los que faltan, sin pisar lo que se editó.
+    for (const motivo of DEFAULT_MOTIVOS) {
+      await client.query(
+        `insert into motivos (id, empresa_id, codigo, tipo, descripcion, requiere_evidencia, dispara_logistica_inversa)
+         values ($1, $2, $3, $4, $5, $6, $7) on conflict (empresa_id, tipo, codigo) do nothing`,
+        [v7(), empresaId, motivo.codigo, motivo.tipo, motivo.descripcion, motivo.requiereEvidencia, motivo.disparaLogisticaInversa],
       )
     }
     const counts = await client.query<{ branches: number; roles: number }>(

@@ -2,7 +2,8 @@ import type { Supplier } from '@/shared/types/supplier.types'
 import type { PageQuery, PageResult, ExportResult } from '@/shared/types/pagination.types'
 import { MAX_EXPORT_ROWS } from '@/shared/types/pagination.types'
 import { SUPPLIERS_MOCK_DATA } from '@/data/mock/suppliers.data'
-import { httpClient } from '@/shared/api/httpClient'
+import { supplierPageSchema, supplierSchema, type Supplier as SupplierWire } from '@sdgpd/contracts'
+import { httpClient, isHttpService } from '@/shared/api/httpClient'
 import { ApiError } from '@/shared/api/ApiError'
 import type { SupplierDTO, SuppliersPageDTO } from './dto'
 import {
@@ -49,6 +50,85 @@ export type SuppliersSortField = 'name' | 'cuit' | 'currentBalance' | 'category'
 // create/update, mismo patron que el resto de services/mock/*.ts.
 // ------------------------------------------------------------
 let suppliersDTOStore: SupplierDTO[] = SUPPLIERS_MOCK_DATA.map(supplierToDTO)
+
+// ------------------------------------------------------------
+// BE-2: con 'suppliers' en VITE_HTTP_SERVICES el wire es el de
+// @sdgpd/contracts (camelCase, sin empresaId: el tenant sale de la sesion,
+// ADR-BE-002), validado con su schema. El backend solo sirve el maestro:
+// el saldo, las ordenes pendientes y los productos llegan con Compras y
+// Cuenta corriente (BE-8, BE-9), asi que hasta entonces valen cero/vacio.
+// El mapper y el dto.ts de arriba son solo del mock.
+// ------------------------------------------------------------
+const NO_MOCK = (): never => {
+  throw new Error('suppliers: el mock no aplica con el service por http.')
+}
+
+function supplierFromWire(wire: SupplierWire): Supplier {
+  return {
+    id: wire.id,
+    name: wire.name,
+    cuit: wire.cuit,
+    phone: wire.phone,
+    contactName: wire.contactName,
+    contactEmail: wire.contactEmail,
+    address: wire.address,
+    city: wire.city,
+    paymentTerms: wire.paymentTerms,
+    category: wire.category,
+    pendingOrdersCount: 0,
+    daysUntilExpiration: null,
+    currentBalance: 0,
+    hasOverdueDebt: false,
+    products: [],
+    version: wire.version,
+  }
+}
+
+// El backend ordena por name, cuit o category; "saldo" no existe todavia (BE-9): cae al default.
+function wireSortField(field: SuppliersSortField | undefined): string | undefined {
+  return field === 'currentBalance' ? undefined : field
+}
+
+async function fetchSuppliersWirePage(
+  filters: SuppliersQueryFilters,
+  page: number,
+  pageSize: number,
+  sort: { field: SuppliersSortField; direction: 'asc' | 'desc' } | undefined,
+  signal?: AbortSignal
+) {
+  const raw = await httpClient.request<unknown>({
+    method: 'GET',
+    path: 'suppliers',
+    service: 'suppliers',
+    params: {
+      search: filters.search?.trim() || undefined,
+      category: filters.category || undefined,
+      page,
+      pageSize,
+      sortField: wireSortField(sort?.field),
+      sortDirection: wireSortField(sort?.field) ? sort?.direction : undefined,
+    },
+    signal,
+    mock: NO_MOCK,
+  })
+  return supplierPageSchema.parse(raw)
+}
+
+// Todo lo de la empresa para selectores y exportacion: recorre las paginas (tope de 100 por
+// pagina, ADR-BE-004) hasta MAX_EXPORT_ROWS. La exportacion por job llega en BE-10.
+async function fetchAllSuppliersFromWire(
+  filters: SuppliersQueryFilters,
+  sort: { field: SuppliersSortField; direction: 'asc' | 'desc' } | undefined,
+  signal?: AbortSignal
+): Promise<{ items: Supplier[]; truncated: boolean }> {
+  const items: Supplier[] = []
+  for (let page = 1; items.length < MAX_EXPORT_ROWS; page++) {
+    const result = await fetchSuppliersWirePage(filters, page, 100, sort, signal)
+    items.push(...result.items.map(supplierFromWire))
+    if (items.length >= result.total || result.items.length === 0) return { items, truncated: false }
+  }
+  return { items: items.slice(0, MAX_EXPORT_ROWS), truncated: true }
+}
 
 function matchesFilters(dto: SupplierDTO, filters: SuppliersQueryFilters): boolean {
   const search = filters.search?.trim().toLowerCase()
@@ -120,6 +200,21 @@ export async function fetchSuppliersPage(
   query: PageQuery<SuppliersQueryFilters, SuppliersSortField>,
   signal?: AbortSignal
 ): Promise<PageResult<Supplier, undefined>> {
+  if (isHttpService('suppliers')) {
+    const result = await fetchSuppliersWirePage(
+      query.filters,
+      query.page,
+      query.pageSize,
+      query.sort,
+      signal
+    )
+    return {
+      items: result.items.map(supplierFromWire),
+      total: result.total,
+      page: result.page,
+      pageSize: result.pageSize,
+    }
+  }
   const pageDTO = await httpClient.request<SuppliersPageDTO>({
     method: 'GET',
     path: '/suppliers',
@@ -152,6 +247,7 @@ export async function exportSuppliers(
   filters: SuppliersQueryFilters,
   sort?: { field: SuppliersSortField; direction: 'asc' | 'desc' }
 ): Promise<ExportResult<Supplier>> {
+  if (isHttpService('suppliers')) return fetchAllSuppliersFromWire(filters, sort)
   const sorted = await httpClient.request<SupplierDTO[]>({
     method: 'GET',
     path: '/suppliers/export',
@@ -169,6 +265,9 @@ export async function exportSuppliers(
 // todo lo de la empresa, mismo alcance que el fetchSuppliers() previo
 // a esta tanda.
 export async function fetchSuppliers(empresaId: string, signal?: AbortSignal): Promise<Supplier[]> {
+  if (isHttpService('suppliers')) {
+    return (await fetchAllSuppliersFromWire({ empresaId }, undefined, signal)).items
+  }
   const dtos = await httpClient.request<SupplierDTO[]>({
     method: 'GET',
     path: '/suppliers',
@@ -201,8 +300,21 @@ function isCuitDuplicado(cuit: string, excludeSupplierId?: string): boolean {
 
 export async function createSupplier(
   empresaId: string,
-  input: SupplierFormInput
+  input: SupplierFormInput,
+  // BE-2: todo POST lleva Idempotency-Key (ADR-BE-005). Sin clave del formulario, una por llamada.
+  idempotencyKey: string = crypto.randomUUID()
 ): Promise<Supplier> {
+  if (isHttpService('suppliers')) {
+    const raw = await httpClient.request<unknown>({
+      method: 'POST',
+      path: 'suppliers',
+      service: 'suppliers',
+      body: input,
+      idempotencyKey,
+      mock: NO_MOCK,
+    })
+    return supplierFromWire(supplierSchema.parse(raw))
+  }
   const dto = await httpClient.request<SupplierDTO>({
     method: 'POST',
     path: '/suppliers',
@@ -241,8 +353,21 @@ export async function createSupplier(
 export async function updateSupplier(
   empresaId: string,
   id: string,
-  input: SupplierFormInput
+  input: SupplierFormInput,
+  // BE-2: la version que leyo el formulario (409 version-conflict si cambio). Solo la usa http.
+  version?: number
 ): Promise<Supplier> {
+  if (isHttpService('suppliers')) {
+    const raw = await httpClient.request<unknown>({
+      method: 'PUT',
+      path: `suppliers/${id}`,
+      service: 'suppliers',
+      body: { ...input, version },
+      idempotencyKey: crypto.randomUUID(),
+      mock: NO_MOCK,
+    })
+    return supplierFromWire(supplierSchema.parse(raw))
+  }
   const dto = await httpClient.request<SupplierDTO>({
     method: 'PUT',
     path: `/suppliers/${id}`,

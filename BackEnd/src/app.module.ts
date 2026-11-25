@@ -5,6 +5,7 @@ import { DatabaseModule } from './db/database.module.ts'
 import { HealthController } from './health/health.controller.ts'
 import { CommandModule } from './http/command.module.ts'
 import { HttpCoreModule } from './http/http.module.ts'
+import { MastersModule } from './masters/masters.module.ts'
 import { SettingsModule } from './settings/settings.module.ts'
 
 @Module({})
@@ -14,7 +15,7 @@ export class AppModule {
     return {
       module: AppModule,
       global: true,
-      imports: [DatabaseModule, HttpCoreModule, AuthModule, CommandModule, SettingsModule],
+      imports: [DatabaseModule, HttpCoreModule, AuthModule, CommandModule, SettingsModule, MastersModule],
       controllers: [HealthController],
       providers: [{ provide: APP_CONFIG, useValue: config }],
       exports: [APP_CONFIG],

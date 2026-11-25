@@ -1,6 +1,7 @@
 import type { MotivoCatalogItem, MotivoTipo } from '@/shared/types/motivo.types'
 import { MOTIVOS_MOCK_DATA } from '@/data/mock/motivos.data'
-import { httpClient } from '@/shared/api/httpClient'
+import { motivoListSchema } from '@sdgpd/contracts'
+import { httpClient, isHttpService } from '@/shared/api/httpClient'
 
 // ============================================================
 // motivos.service — Catalogo de motivos (Tanda 9, ADR-010 seccion 5).
@@ -21,17 +22,29 @@ import { httpClient } from '@/shared/api/httpClient'
 const motivosStore: MotivoCatalogItem[] = structuredClone(MOTIVOS_MOCK_DATA)
 
 export async function getMotivoCatalog(
-  empresaId: string,
+  _empresaId: string,
   tipo: MotivoTipo,
   signal?: AbortSignal
 ): Promise<MotivoCatalogItem[]> {
-  return httpClient.request<MotivoCatalogItem[]>({
+  const raw = await httpClient.request<MotivoCatalogItem[] | { items: unknown }>({
     method: 'GET',
-    path: '/motivos',
-    params: { empresaId, tipo },
+    path: 'motivos',
+    service: 'motivos',
+    // Sin empresaId: el tenant sale de la sesion (ADR-BE-002). El backend devuelve solo los activos.
+    params: { tipo },
     signal,
     mock: () => motivosStore.filter(m => m.tipo === tipo && m.activo),
   })
+  if (!isHttpService('motivos') && Array.isArray(raw)) return raw
+  // El wire es { items: [...] } (catalogo de tamano fijo, ADR-BE-004 sub-decision 6).
+  return motivoListSchema.parse(raw).items.map(motivo => ({
+    codigo: motivo.codigo,
+    tipo: motivo.tipo,
+    descripcion: motivo.descripcion,
+    activo: motivo.activo,
+    requiereEvidencia: motivo.requiereEvidencia,
+    disparaLogisticaInversa: motivo.disparaLogisticaInversa,
+  }))
 }
 
 // Nota de alcance (ADR-010 seccion 5): "los textos de Otro deben

@@ -46,7 +46,7 @@ Detalle en `docs/historial/reportes/REPORTE_2026-10-09_be1b.md`. Checklist de na
   - `TabUsersRoles` conectado: alta, edición, matriz 10 × 7, 409 y 422 con mensaje;
   - rama de fallo de v13 probada.
 - **Tests y scripts:** 177 del backend y 27 de `contracts`. Hay 31 scripts del frontend, con los nuevos `be-1b`, `be-1b-ui` y `v18-ids-demo`; `v-adr009` se actualizó por los ids.
-- **Sigue: BE-2** (proveedores, motivos, vehículos y choferes). Pendiente sin tanda: el alta de empresas en producción.
+- **Sigue: cerrar BE-2** (proveedores, motivos, vehículos y choferes): el backend está escrito (2026-11-24, rama `be-2-maestros`) y falta correr sus tests contra `sdgpd_test` y conectar el frontend. Pendiente sin tanda: el alta de empresas en producción.
 
 ## Backend — BE-1a hecha (2026-10-09, `sesion-be1a-2026-10-09`)
 

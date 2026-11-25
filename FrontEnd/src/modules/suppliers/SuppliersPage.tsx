@@ -128,7 +128,7 @@ export const SuppliersPage: FC = () => {
   const handleSaveSupplier = async (input: SupplierFormInput, supplierId?: string) => {
     if (!empresaId) throw new Error('Todavia no hay una sesion activa.')
     const saved = supplierId
-      ? await updateSupplier(empresaId, supplierId, input)
+      ? await updateSupplier(empresaId, supplierId, input, selectedSupplier?.version)
       : await createSupplier(empresaId, input)
     refetch()
     // Invalidacion por mutacion (Tanda 2.5, tabla completa en
