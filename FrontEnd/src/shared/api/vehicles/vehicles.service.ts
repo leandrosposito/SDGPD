@@ -3,7 +3,9 @@ import type { VehicleId } from '@/shared/types/ids.types'
 import { asVehicleId } from '@/shared/types/ids.types'
 import type { PageQuery, PageResult } from '@/shared/types/pagination.types'
 import { VEHICLES_MOCK_DATA } from '@/data/mock/vehicles.data'
-import { httpClient } from '@/shared/api/httpClient'
+import { vehiclePageSchema, vehicleSchema, type Vehicle as VehicleDTO } from '@sdgpd/contracts'
+import { httpClient, isHttpService } from '@/shared/api/httpClient'
+import { ApiError } from '@/shared/api/ApiError'
 import { withIdempotency } from '@/shared/utils/idempotency'
 import { normalizePatente } from '@/shared/utils/patente'
 
@@ -16,6 +18,44 @@ import { normalizePatente } from '@/shared/utils/patente'
 // ============================================================
 
 let vehiclesStore: Vehicle[] = structuredClone(VEHICLES_MOCK_DATA)
+
+// BE-2: con 'vehicles' en VITE_HTTP_SERVICES el wire es el de @sdgpd/contracts
+// (sin empresaId: el tenant sale de la sesion, ADR-BE-002) y cada respuesta se
+// valida con su schema. El dominio solo cambia el id (branded) y suma `version`.
+function vehicleFromWire(dto: VehicleDTO): Vehicle {
+  return {
+    id: asVehicleId(dto.id),
+    patente: dto.patente,
+    tipo: dto.tipo,
+    capacidad: dto.capacidad,
+    activo: dto.activo,
+    version: dto.version,
+  }
+}
+
+// Rechazos de negocio del backend -> el `reason` que ya entiende la UI. Cualquier
+// otro error (red, 5xx, 403) se relanza: no es un resultado de la operacion.
+function reasonFromError(error: unknown): VehicleMutationReason | undefined {
+  if (!(error instanceof ApiError)) return undefined
+  if (error.serverCode === 'patente-duplicada') return 'patente-duplicada'
+  if (error.serverCode === 'not-found') return 'not-found'
+  if (error.serverCode === 'version-conflict') return 'version-conflict'
+  return undefined
+}
+
+async function httpMutation(request: () => Promise<unknown>): Promise<VehicleMutationResult> {
+  try {
+    return { success: true, vehicle: vehicleFromWire(vehicleSchema.parse(await request())) }
+  } catch (error) {
+    const reason = reasonFromError(error)
+    if (reason) return { success: false, reason }
+    throw error
+  }
+}
+
+const NO_MOCK = (): never => {
+  throw new Error('vehicles: el mock no aplica con el service por http.')
+}
 
 export interface VehiclesQueryFilters {
   empresaId: string
@@ -55,11 +95,11 @@ export async function getVehiclesPage(
   query: PageQuery<VehiclesQueryFilters, VehiclesSortField>,
   signal?: AbortSignal
 ): Promise<PageResult<Vehicle, undefined>> {
-  return httpClient.request<PageResult<Vehicle, undefined>>({
+  const page = await httpClient.request<PageResult<Vehicle, undefined>>({
     method: 'GET',
-    path: '/vehicles',
+    path: 'vehicles',
+    service: 'vehicles',
     params: {
-      empresaId: query.filters.empresaId,
       search: query.filters.search,
       soloActivos: query.filters.soloActivos,
       page: query.page,
@@ -91,6 +131,9 @@ export async function getVehiclesPage(
       }
     },
   })
+  if (!isHttpService('vehicles')) return page
+  const parsed = vehiclePageSchema.parse(page)
+  return { ...parsed, items: parsed.items.map(vehicleFromWire) }
 }
 
 export interface VehicleFormInput {
@@ -99,7 +142,7 @@ export interface VehicleFormInput {
   capacidad: VehicleCapacity
 }
 
-export type VehicleMutationReason = 'not-found' | 'patente-duplicada'
+export type VehicleMutationReason = 'not-found' | 'patente-duplicada' | 'version-conflict'
 
 export interface VehicleMutationResult {
   success: boolean
@@ -121,6 +164,18 @@ export async function createVehicle(
   idempotencyKey: string,
   input: VehicleFormInput
 ): Promise<VehicleMutationResult> {
+  if (isHttpService('vehicles')) {
+    return httpMutation(() =>
+      httpClient.request<unknown>({
+        method: 'POST',
+        path: 'vehicles',
+        service: 'vehicles',
+        body: input,
+        idempotencyKey,
+        mock: NO_MOCK,
+      })
+    )
+  }
   return httpClient.request<VehicleMutationResult>({
     method: 'POST',
     path: '/vehicles',
@@ -149,8 +204,22 @@ export async function updateVehicle(
   empresaId: string,
   idempotencyKey: string,
   vehicleId: VehicleId,
-  input: VehicleFormInput
+  input: VehicleFormInput,
+  // BE-2: la version que leyo el formulario (409 version-conflict si cambio). Solo la usa http.
+  version?: number
 ): Promise<VehicleMutationResult> {
+  if (isHttpService('vehicles')) {
+    return httpMutation(() =>
+      httpClient.request<unknown>({
+        method: 'PUT',
+        path: `vehicles/${vehicleId}`,
+        service: 'vehicles',
+        body: { ...input, version },
+        idempotencyKey,
+        mock: NO_MOCK,
+      })
+    )
+  }
   return httpClient.request<VehicleMutationResult>({
     method: 'PUT',
     path: `/vehicles/${vehicleId}`,
@@ -181,8 +250,22 @@ export async function updateVehicle(
 export async function toggleVehicleActivo(
   empresaId: string,
   idempotencyKey: string,
-  vehicleId: VehicleId
+  vehicleId: VehicleId,
+  // BE-2: estado y version leidos; el backend tiene activate/deactivate (ADR-BE-004, sub-decision 2).
+  current?: Pick<Vehicle, 'activo' | 'version'>
 ): Promise<VehicleMutationResult> {
+  if (isHttpService('vehicles')) {
+    return httpMutation(() =>
+      httpClient.request<unknown>({
+        method: 'POST',
+        path: `vehicles/${vehicleId}/${current?.activo ? 'deactivate' : 'activate'}`,
+        service: 'vehicles',
+        body: { version: current?.version },
+        idempotencyKey,
+        mock: NO_MOCK,
+      })
+    )
+  }
   return httpClient.request<VehicleMutationResult>({
     method: 'PUT',
     path: `/vehicles/${vehicleId}/toggle-activo`,
@@ -208,6 +291,18 @@ export async function fetchActiveVehicles(
   empresaId: string,
   signal?: AbortSignal
 ): Promise<Vehicle[]> {
+  if (isHttpService('vehicles')) {
+    // Sin endpoint "activos" (ADR-016): el listado con soloActivos, hasta el tope de pagina.
+    const page = await httpClient.request<unknown>({
+      method: 'GET',
+      path: 'vehicles',
+      service: 'vehicles',
+      params: { soloActivos: true, pageSize: 100 },
+      signal,
+      mock: NO_MOCK,
+    })
+    return vehiclePageSchema.parse(page).items.map(vehicleFromWire)
+  }
   return httpClient.request<Vehicle[]>({
     method: 'GET',
     path: '/vehicles/active',

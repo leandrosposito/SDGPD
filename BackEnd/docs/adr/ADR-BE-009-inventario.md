@@ -1,6 +1,6 @@
 # ADR-BE-009 — Inventario
 
-**Estado:** Aceptado. **Fecha:** 2026-10-07. **Resuelve:** decisión #10 de [`08_DECISIONES_ABIERTAS.md`](../../../FrontEnd/docs/historial/auditorias/backend/08_DECISIONES_ABIERTAS.md).
+**Estado:** Aceptado. **Fecha:** 2026-10-07. **Resuelve:** decisión #10 de [`08_DECISIONES_ABIERTAS.md`](../auditoria-previa/08_DECISIONES_ABIERTAS.md).
 
 **Enmienda a ADRs del frontend:** [ADR-010](../../../FrontEnd/docs/adr/ADR-010-modelo-logistico.md) (confirma §6 y agrega cuarentena). RF del Documento 04: RF-ENT-002.
 

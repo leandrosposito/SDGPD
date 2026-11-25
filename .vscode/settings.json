@@ -1,0 +1,15 @@
+{
+  "files.exclude": {
+    "**/node_modules": true,
+    "**/dist": true,
+    "graphify-out": true,
+    "package-lock.json": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/dist": true,
+    "graphify-out": true,
+    "package-lock.json": true
+  },
+  "explorer.compactFolders": false
+}

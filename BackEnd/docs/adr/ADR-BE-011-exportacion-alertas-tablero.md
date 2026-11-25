@@ -1,6 +1,6 @@
 # ADR-BE-011 — Exportación, alertas, tablero y analítica
 
-**Estado:** Aceptado. **Fecha:** 2026-10-07. **Resuelve:** decisiones #5, #21 y #23 de [`08_DECISIONES_ABIERTAS.md`](../../../FrontEnd/docs/historial/auditorias/backend/08_DECISIONES_ABIERTAS.md).
+**Estado:** Aceptado. **Fecha:** 2026-10-07. **Resuelve:** decisiones #5, #21 y #23 de [`08_DECISIONES_ABIERTAS.md`](../auditoria-previa/08_DECISIONES_ABIERTAS.md).
 
 **Enmienda a ADRs del frontend:** [ADR-004](../../../FrontEnd/docs/adr/ADR-004-exportacion.md), [ADR-007](../../../FrontEnd/docs/adr/ADR-007-alertas.md), [ADR-009](../../../FrontEnd/docs/adr/ADR-009-alcance-dashboard.md).
 

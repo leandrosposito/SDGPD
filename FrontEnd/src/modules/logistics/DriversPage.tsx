@@ -73,16 +73,22 @@ export const DriversPage: FC = () => {
     if (!empresaId) throw new Error('Todavía no hay una sesión activa.')
     const idempotencyKey = crypto.randomUUID()
     const result = driverId
-      ? await updateDriver(empresaId, idempotencyKey, driverId, input)
+      ? await updateDriver(empresaId, idempotencyKey, driverId, input, formTarget?.version)
       : await createDriver(empresaId, idempotencyKey, input)
-    if (!result.success) throw new Error('No se pudo guardar el chofer.')
+    if (!result.success) {
+      throw new Error(
+        result.reason === 'version-conflict'
+          ? 'El chofer cambió mientras lo editabas. Cerrá el formulario y volvé a abrirlo.'
+          : 'No se pudo guardar el chofer.'
+      )
+    }
     refetch()
   }
 
   const handleToggleActivo = async (driver: Driver) => {
     if (!empresaId) return
     const idempotencyKey = crypto.randomUUID()
-    const result = await toggleDriverActivo(empresaId, idempotencyKey, driver.id)
+    const result = await toggleDriverActivo(empresaId, idempotencyKey, driver.id, driver)
     if (result.success) {
       toast.success(
         `Chofer ${driver.nombre} ${result.driver?.activo ? 'activado' : 'desactivado'}.`

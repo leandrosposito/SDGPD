@@ -1,8 +1,8 @@
 # PROTOCOLO SDGPD — documento permanente de trabajo
 
-Este archivo vive en el repo, en `FrontEnd/docs/PROTOCOLO.md`. No hay que volver a escribir prompts. Para arrancar cualquier sesión, alcanza con:
+Este archivo vive en el repo, en `docs/PROTOCOLO.md`. No hay que volver a escribir prompts. Para arrancar cualquier sesión, alcanza con:
 
-> Leé `FrontEnd/docs/PROTOCOLO.md` y aplicalo de punta a punta a estas tareas:
+> Leé `docs/PROTOCOLO.md` y aplicalo de punta a punta a estas tareas:
 > - <tarea 1>
 > - <tarea 2>
 

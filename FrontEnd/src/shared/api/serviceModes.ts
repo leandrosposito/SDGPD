@@ -14,12 +14,23 @@
 // mensaje. Reglas de coherencia:
 // - 'auth' y 'session' van juntos (el login devuelve la sesion y la
 //   sesion necesita el token del login);
-// - 'users', 'roles' y 'branches' exigen 'auth' (necesitan el token).
+// - 'users', 'roles', 'branches' y, desde BE-2, 'suppliers', 'vehicles',
+//   'drivers' y 'motivos' exigen 'auth' (necesitan el token).
 // Este archivo no lee import.meta.env: asi lo puede ejercitar `node`
 // (scripts/smoke/be-1b.smoke.mjs).
 // ============================================================
 
-export const CONNECTABLE_SERVICES = ['auth', 'session', 'users', 'roles', 'branches'] as const
+export const CONNECTABLE_SERVICES = [
+  'auth',
+  'session',
+  'users',
+  'roles',
+  'branches',
+  'suppliers',
+  'vehicles',
+  'drivers',
+  'motivos',
+] as const
 export type ServiceName = (typeof CONNECTABLE_SERVICES)[number]
 
 export class ServiceModesError extends Error {
@@ -50,7 +61,15 @@ export function parseHttpServices(raw: string | undefined): ReadonlySet<ServiceN
   if (services.has('auth') !== services.has('session')) {
     throw new ServiceModesError('"auth" y "session" se declaran juntos')
   }
-  for (const name of ['users', 'roles', 'branches'] as const) {
+  for (const name of [
+    'users',
+    'roles',
+    'branches',
+    'suppliers',
+    'vehicles',
+    'drivers',
+    'motivos',
+  ] as const) {
     if (services.has(name) && !services.has('auth')) {
       throw new ServiceModesError(`"${name}" necesita "auth" (va con el token de la sesion)`)
     }

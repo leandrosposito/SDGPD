@@ -1,6 +1,6 @@
 # ADR-BE-006 — Dinero, impuestos y numeración
 
-**Estado:** Aceptado. **Fecha:** 2026-10-07. **Resuelve:** decisiones #11 y #25 de [`08_DECISIONES_ABIERTAS.md`](../../../FrontEnd/docs/historial/auditorias/backend/08_DECISIONES_ABIERTAS.md).
+**Estado:** Aceptado. **Fecha:** 2026-10-07. **Resuelve:** decisiones #11 y #25 de [`08_DECISIONES_ABIERTAS.md`](../auditoria-previa/08_DECISIONES_ABIERTAS.md).
 
 **Enmienda a ADRs del frontend:** [ADR-008](../../../FrontEnd/docs/adr/ADR-008-dinero-cantidades.md), [ADR-014](../../../FrontEnd/docs/adr/ADR-014-numero-pedido-correlativo.md).
 

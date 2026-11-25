@@ -3,7 +3,9 @@ import type { DriverId } from '@/shared/types/ids.types'
 import { asDriverId } from '@/shared/types/ids.types'
 import type { PageQuery, PageResult } from '@/shared/types/pagination.types'
 import { DRIVERS_MOCK_DATA } from '@/data/mock/drivers.data'
-import { httpClient } from '@/shared/api/httpClient'
+import { driverPageSchema, driverSchema, type Driver as DriverDTO } from '@sdgpd/contracts'
+import { httpClient, isHttpService } from '@/shared/api/httpClient'
+import { ApiError } from '@/shared/api/ApiError'
 import { withIdempotency } from '@/shared/utils/idempotency'
 
 // ============================================================
@@ -13,6 +15,40 @@ import { withIdempotency } from '@/shared/utils/idempotency'
 // ============================================================
 
 let driversStore: Driver[] = structuredClone(DRIVERS_MOCK_DATA)
+
+// BE-2: con 'drivers' por http, wire de @sdgpd/contracts validado con su schema
+// (mismo criterio que vehicles.service.ts, ver ahi el razonamiento).
+function driverFromWire(dto: DriverDTO): Driver {
+  return {
+    id: asDriverId(dto.id),
+    nombre: dto.nombre,
+    licencia: dto.licencia,
+    telefono: dto.telefono,
+    activo: dto.activo,
+    version: dto.version,
+  }
+}
+
+function reasonFromError(error: unknown): DriverMutationReason | undefined {
+  if (!(error instanceof ApiError)) return undefined
+  if (error.serverCode === 'not-found') return 'not-found'
+  if (error.serverCode === 'version-conflict') return 'version-conflict'
+  return undefined
+}
+
+async function httpMutation(request: () => Promise<unknown>): Promise<DriverMutationResult> {
+  try {
+    return { success: true, driver: driverFromWire(driverSchema.parse(await request())) }
+  } catch (error) {
+    const reason = reasonFromError(error)
+    if (reason) return { success: false, reason }
+    throw error
+  }
+}
+
+const NO_MOCK = (): never => {
+  throw new Error('drivers: el mock no aplica con el service por http.')
+}
 
 export interface DriversQueryFilters {
   empresaId: string
@@ -46,11 +82,11 @@ export async function getDriversPage(
   query: PageQuery<DriversQueryFilters, DriversSortField>,
   signal?: AbortSignal
 ): Promise<PageResult<Driver, undefined>> {
-  return httpClient.request<PageResult<Driver, undefined>>({
+  const page = await httpClient.request<PageResult<Driver, undefined>>({
     method: 'GET',
-    path: '/drivers',
+    path: 'drivers',
+    service: 'drivers',
     params: {
-      empresaId: query.filters.empresaId,
       search: query.filters.search,
       soloActivos: query.filters.soloActivos,
       page: query.page,
@@ -82,6 +118,9 @@ export async function getDriversPage(
       }
     },
   })
+  if (!isHttpService('drivers')) return page
+  const parsed = driverPageSchema.parse(page)
+  return { ...parsed, items: parsed.items.map(driverFromWire) }
 }
 
 export interface DriverFormInput {
@@ -90,7 +129,7 @@ export interface DriverFormInput {
   telefono: string
 }
 
-export type DriverMutationReason = 'not-found'
+export type DriverMutationReason = 'not-found' | 'version-conflict'
 
 export interface DriverMutationResult {
   success: boolean
@@ -103,6 +142,18 @@ export async function createDriver(
   idempotencyKey: string,
   input: DriverFormInput
 ): Promise<DriverMutationResult> {
+  if (isHttpService('drivers')) {
+    return httpMutation(() =>
+      httpClient.request<unknown>({
+        method: 'POST',
+        path: 'drivers',
+        service: 'drivers',
+        body: input,
+        idempotencyKey,
+        mock: NO_MOCK,
+      })
+    )
+  }
   return httpClient.request<DriverMutationResult>({
     method: 'POST',
     path: '/drivers',
@@ -127,8 +178,22 @@ export async function updateDriver(
   empresaId: string,
   idempotencyKey: string,
   driverId: DriverId,
-  input: DriverFormInput
+  input: DriverFormInput,
+  // BE-2: la version que leyo el formulario (409 version-conflict si cambio). Solo la usa http.
+  version?: number
 ): Promise<DriverMutationResult> {
+  if (isHttpService('drivers')) {
+    return httpMutation(() =>
+      httpClient.request<unknown>({
+        method: 'PUT',
+        path: `drivers/${driverId}`,
+        service: 'drivers',
+        body: { ...input, version },
+        idempotencyKey,
+        mock: NO_MOCK,
+      })
+    )
+  }
   return httpClient.request<DriverMutationResult>({
     method: 'PUT',
     path: `/drivers/${driverId}`,
@@ -155,8 +220,22 @@ export async function updateDriver(
 export async function toggleDriverActivo(
   empresaId: string,
   idempotencyKey: string,
-  driverId: DriverId
+  driverId: DriverId,
+  // BE-2: estado y version leidos; el backend tiene activate/deactivate (ADR-BE-004, sub-decision 2).
+  current?: Pick<Driver, 'activo' | 'version'>
 ): Promise<DriverMutationResult> {
+  if (isHttpService('drivers')) {
+    return httpMutation(() =>
+      httpClient.request<unknown>({
+        method: 'POST',
+        path: `drivers/${driverId}/${current?.activo ? 'deactivate' : 'activate'}`,
+        service: 'drivers',
+        body: { version: current?.version },
+        idempotencyKey,
+        mock: NO_MOCK,
+      })
+    )
+  }
   return httpClient.request<DriverMutationResult>({
     method: 'PUT',
     path: `/drivers/${driverId}/toggle-activo`,
@@ -181,6 +260,17 @@ export async function fetchActiveDrivers(
   empresaId: string,
   signal?: AbortSignal
 ): Promise<Driver[]> {
+  if (isHttpService('drivers')) {
+    const page = await httpClient.request<unknown>({
+      method: 'GET',
+      path: 'drivers',
+      service: 'drivers',
+      params: { soloActivos: true, pageSize: 100 },
+      signal,
+      mock: NO_MOCK,
+    })
+    return driverPageSchema.parse(page).items.map(driverFromWire)
+  }
   return httpClient.request<Driver[]>({
     method: 'GET',
     path: '/drivers/active',

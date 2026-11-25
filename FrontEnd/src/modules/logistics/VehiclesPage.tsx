@@ -74,13 +74,15 @@ export const VehiclesPage: FC = () => {
     if (!empresaId) throw new Error('Todavía no hay una sesión activa.')
     const idempotencyKey = crypto.randomUUID()
     const result = vehicleId
-      ? await updateVehicle(empresaId, idempotencyKey, vehicleId, input)
+      ? await updateVehicle(empresaId, idempotencyKey, vehicleId, input, formTarget?.version)
       : await createVehicle(empresaId, idempotencyKey, input)
     if (!result.success) {
       throw new Error(
         result.reason === 'patente-duplicada'
           ? 'Ya existe un vehículo con esa patente.'
-          : 'No se pudo guardar el vehículo.'
+          : result.reason === 'version-conflict'
+            ? 'El vehículo cambió mientras lo editabas. Cerrá el formulario y volvé a abrirlo.'
+            : 'No se pudo guardar el vehículo.'
       )
     }
     refetch()
@@ -89,7 +91,7 @@ export const VehiclesPage: FC = () => {
   const handleToggleActivo = async (vehicle: Vehicle) => {
     if (!empresaId) return
     const idempotencyKey = crypto.randomUUID()
-    const result = await toggleVehicleActivo(empresaId, idempotencyKey, vehicle.id)
+    const result = await toggleVehicleActivo(empresaId, idempotencyKey, vehicle.id, vehicle)
     if (result.success) {
       toast.success(
         `Vehículo ${vehicle.patente} ${result.vehicle?.activo ? 'activado' : 'desactivado'}.`

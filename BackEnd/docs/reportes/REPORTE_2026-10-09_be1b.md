@@ -196,7 +196,7 @@ Restaurado desde la copia (`cmp` sin diferencias); el smoke vuelve a dar `todos 
 
 ## Qué tiene que probar Leandro a mano, en orden de riesgo
 
-Está en `docs/historial/verificaciones/VERIFICACION_BE-1b.md`:
+Está en `BackEnd/docs/verificaciones/VERIFICACION_BE-1b.md`:
 
 1. Sesión: login, recarga, token vencido forzado y logout (sección 1).
 2. Último admin y conflicto de versión (sección 3).

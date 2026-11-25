@@ -1,6 +1,6 @@
 # ADR-BE-007 — Pedido: estados, sucursal, producto y snapshot
 
-**Estado:** Aceptado. **Fecha:** 2026-10-07. **Resuelve:** decisiones #9, #16, #19 y #24 de [`08_DECISIONES_ABIERTAS.md`](../../../FrontEnd/docs/historial/auditorias/backend/08_DECISIONES_ABIERTAS.md).
+**Estado:** Aceptado. **Fecha:** 2026-10-07. **Resuelve:** decisiones #9, #16, #19 y #24 de [`08_DECISIONES_ABIERTAS.md`](../auditoria-previa/08_DECISIONES_ABIERTAS.md).
 
 **Enmienda a ADRs del frontend:** [ADR-009](../../../FrontEnd/docs/adr/ADR-009-alcance-dashboard.md), [ADR-016](../../../FrontEnd/docs/adr/ADR-016-filtro-estado-server-side.md). RF del Documento 04: RF-ENT-002.
 

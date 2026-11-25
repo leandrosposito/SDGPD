@@ -6,13 +6,17 @@ import {
   branches,
   companies,
   documentCounters,
+  drivers,
   idempotencyKeys,
   loginAttempts,
+  motivos,
   refreshTokens,
   rolePermissions,
   roles,
+  suppliers,
   userBranches,
   users,
+  vehicles,
 } from '../../src/db/schema/index.ts'
 import { pgCode } from './db.ts'
 
@@ -71,6 +75,10 @@ export async function removeTestCompany(db: Database, tenant: TestTenant | undef
     await tx.delete(loginAttempts).where(eq(loginAttempts.empresaId, empresaId))
     await tx.delete(userBranches).where(eq(userBranches.empresaId, empresaId))
     await tx.delete(rolePermissions).where(eq(rolePermissions.empresaId, empresaId))
+    await tx.delete(suppliers).where(eq(suppliers.empresaId, empresaId))
+    await tx.delete(vehicles).where(eq(vehicles.empresaId, empresaId))
+    await tx.delete(drivers).where(eq(drivers.empresaId, empresaId))
+    await tx.delete(motivos).where(eq(motivos.empresaId, empresaId))
     await tx.delete(branches).where(eq(branches.empresaId, empresaId))
   })
   try {

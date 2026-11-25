@@ -68,7 +68,7 @@ Este archivo alcanza solo para arrancar la fase de ADRs. El detalle con evidenci
 - **A15** Las alertas tienen `leida` **global** (ADR-007 pide por usuario) y nada las genera. La auditoría **no la escribe ninguna mutación** (04 §13, §15).
 - **A16** El dinero es float en todas las entidades. ADR-008 está decidido pero no implementado; ya era ALTO en `ESTADO.md` (04 §9).
 - **A17** La matriz de permisos no la consulta nadie, y hay un rol fijo `USER_ROLE='ADMIN'` (`InventoryPage.tsx:69`) (04 §3).
-- **A18** **`BackEnd/` está en `.gitignore`** (`.gitignore:9-10`), y la regla es **más amplia de lo que parece**: sin barra inicial, se aplica a cualquier carpeta con ese nombre **en cualquier nivel**. Como esta máquina tiene `core.ignorecase=true`, también atrapa `backend/` en minúscula, **incluida la carpeta de estos entregables**. Evidencia: `git check-ignore -v FrontEnd/docs/historial/auditorias/backend/00_RESUMEN.md` → `.gitignore:10:BackEnd/`. En un CI Linux (case-sensitive) no la ignoraría, así que el comportamiento depende de la máquina. Lo que se escriba en `BackEnd/` no se versiona y no da aviso (08#26). **No se corrigió** (consigna). Los entregables se agregaron con `git add -f` (ver V5).
+- **A18** **`BackEnd/` está en `.gitignore`** (`.gitignore:9-10`), y la regla es **más amplia de lo que parece**: sin barra inicial, se aplica a cualquier carpeta con ese nombre **en cualquier nivel**. Como esta máquina tiene `core.ignorecase=true`, también atrapa `backend/` en minúscula, **incluida la carpeta de estos entregables**. Evidencia: `git check-ignore -v BackEnd/docs/auditoria-previa/00_RESUMEN.md` → `.gitignore:10:BackEnd/`. En un CI Linux (case-sensitive) no la ignoraría, así que el comportamiento depende de la máquina. Lo que se escriba en `BackEnd/` no se versiona y no da aviso (08#26). **No se corrigió** (consigna). Los entregables se agregaron con `git add -f` (ver V5).
 - **A19** El estado "reposición solicitada" vive solo en el navegador (`useReplenishmentStore.ts:29-49`) (02).
 - **A20** `analytics` lee su mock directo, sin contrato (`AnalyticsPage.tsx:2`). Ya era ALTO en `ESTADO.md`.
 - **A21** Ninguna operación escribe la cuenta corriente del cliente: no hay vínculo pedido o remito → deuda, y los saldos están persistidos como derivados que nunca se recalculan (02, 08#17).
@@ -162,7 +162,7 @@ $ grep -rnE "httpClient\.request" src | grep -vE ":[0-9]+:\s*(//|\*)" | wc -l
 88
 $ grep -rnE -B1 "^\s*\.request<" src | grep -cE "httpClient\s*$"
 3
-$ grep -cE "^\| [0-9]+ \| (GET|POST|PUT|PATCH|DELETE) \|" docs/historial/auditorias/backend/01_ENDPOINTS.md
+$ grep -cE "^\| [0-9]+ \| (GET|POST|PUT|PATCH|DELETE) \|" BackEnd/docs/auditoria-previa/01_ENDPOINTS.md
 91
 ```
 (desde `FrontEnd/`). **88 + 3 = 91 = 91 filas. PASA.**
@@ -219,21 +219,21 @@ MVP: total 61 / sin contrato 29 · Crecimiento: 18 / 11 · Enterprise: 4 / 4
 
 ### V5 — Cambios solo en `FrontEnd/docs/`
 
-**Primera corrida:** `git status --porcelain --untracked-files=all` salió **vacío**, con los 9 archivos en disco. Causa: `git check-ignore -v FrontEnd/docs/historial/auditorias/backend/00_RESUMEN.md` → `.gitignore:10:BackEnd/` (ver A18). Se agregaron con `git add -f` **sin tocar `.gitignore`**: un archivo fuera de `FrontEnd/docs/` está prohibido, y es justamente el hallazgo.
+**Primera corrida:** `git status --porcelain --untracked-files=all` salió **vacío**, con los 9 archivos en disco. Causa: `git check-ignore -v BackEnd/docs/auditoria-previa/00_RESUMEN.md` → `.gitignore:10:BackEnd/` (ver A18). Se agregaron con `git add -f` **sin tocar `.gitignore`**: un archivo fuera de `FrontEnd/docs/` está prohibido, y es justamente el hallazgo.
 
-**Segunda corrida** (después de `git add -f FrontEnd/docs/historial/auditorias/backend/`):
+**Segunda corrida** (después de `git add -f BackEnd/docs/auditoria-previa/`):
 
 ```
 $ git status --porcelain --untracked-files=all
-A  FrontEnd/docs/historial/auditorias/backend/00_RESUMEN.md
-A  FrontEnd/docs/historial/auditorias/backend/01_ENDPOINTS.md
-A  FrontEnd/docs/historial/auditorias/backend/02_MODELO_DE_DATOS.md
-A  FrontEnd/docs/historial/auditorias/backend/03_REGLAS_DE_NEGOCIO.md
-A  FrontEnd/docs/historial/auditorias/backend/04_TRANSVERSALES.md
-A  FrontEnd/docs/historial/auditorias/backend/05_LO_QUE_EL_MOCK_NO_PUEDE_HEREDAR.md
-A  FrontEnd/docs/historial/auditorias/backend/06_COBERTURA_RF.md
-A  FrontEnd/docs/historial/auditorias/backend/07_CUMPLIMIENTO_PARCIAL.md
-A  FrontEnd/docs/historial/auditorias/backend/08_DECISIONES_ABIERTAS.md
+A  BackEnd/docs/auditoria-previa/00_RESUMEN.md
+A  BackEnd/docs/auditoria-previa/01_ENDPOINTS.md
+A  BackEnd/docs/auditoria-previa/02_MODELO_DE_DATOS.md
+A  BackEnd/docs/auditoria-previa/03_REGLAS_DE_NEGOCIO.md
+A  BackEnd/docs/auditoria-previa/04_TRANSVERSALES.md
+A  BackEnd/docs/auditoria-previa/05_LO_QUE_EL_MOCK_NO_PUEDE_HEREDAR.md
+A  BackEnd/docs/auditoria-previa/06_COBERTURA_RF.md
+A  BackEnd/docs/auditoria-previa/07_CUMPLIMIENTO_PARCIAL.md
+A  BackEnd/docs/auditoria-previa/08_DECISIONES_ABIERTAS.md
 $ git diff --stat
 (vacío: no hay cambios sin stagear en archivos trackeados)
 $ git diff --cached --stat

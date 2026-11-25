@@ -13,6 +13,6 @@ Verificado con `ls`/`git ls-files` el 2026-09-09. Los `.docx`/`.pdf` no se puede
 
 `Documento 02 — Arquitectura Funcional del ERP.docx`/`.pdf`: versión **anterior y distinta** del Documento 02 (estructura de 5 capas técnicas + 9 dominios, no las 13 de la serie de capítulos vigente) — no es un duplicado, es un borrador temprano que la serie `02 a`..`02 s` reemplazó en alcance. No usar para nada nuevo.
 
-## `_historial-auditoria-doc04/` — no vigente, proceso ya cerrado
+## `_archivo/historial-auditoria-doc04/` — no vigente, proceso ya cerrado
 
 5 informes (`inventario_auditoria_doc04.md` → `informe_auditoria_cobertura.md` → `informe_calidad_doc04.md` → `dictamen_final_doc04.md` → `informe_cierre_documento_04.md`) del proceso de 4 fases que auditó y consolidó el Documento 04 en agosto 2026. Documentan cómo se armó el Documento 04, no son fuente de reglas de negocio en sí — para eso, usar `negocio/`.
